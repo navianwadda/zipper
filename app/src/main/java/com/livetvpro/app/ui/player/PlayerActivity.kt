@@ -832,7 +832,9 @@ class PlayerActivity : AppCompatActivity() {
         val overlay = binding.channelNumberOverlay ?: return
         val logoView = overlay.findViewById<android.widget.ImageView>(R.id.channel_overlay_logo)
         val numberView = overlay.findViewById<android.widget.TextView>(R.id.channel_overlay_number)
+        val nameView = overlay.findViewById<android.widget.TextView>(R.id.channel_overlay_name)
         numberView?.text = number
+        nameView?.text = channel?.name ?: ""
         if (channel != null && channel.logoUrl.isNotEmpty()) {
             logoView?.visibility = View.VISIBLE
             logoView?.let { com.livetvpro.app.utils.GlideExtensions.loadImage(it, channel.logoUrl) }

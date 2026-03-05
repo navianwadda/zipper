@@ -718,7 +718,6 @@ class PlayerActivity : AppCompatActivity() {
             }
             android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
             android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 if (showChannelList.value) return super.onKeyDown(keyCode, event)
                 player?.let {
                     val newPosition = it.currentPosition + skipMs
@@ -735,19 +734,16 @@ class PlayerActivity : AppCompatActivity() {
             }
             android.view.KeyEvent.KEYCODE_MEDIA_REWIND,
             android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 if (showChannelList.value) return super.onKeyDown(keyCode, event)
                 player?.let { it.seekTo((it.currentPosition - skipMs).coerceAtLeast(0L)) }
                 controlsState.show(lifecycleScope)
                 true
             }
             android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 controlsState.show(lifecycleScope)
                 true
             }
             android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 val channelListItems = viewModel.channelListItems.value
                 val isChannelListAvailable = contentType == ContentType.CHANNEL &&
                     !channelListItems.isNullOrEmpty() &&
@@ -762,7 +758,6 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_DPAD_CENTER,
             android.view.KeyEvent.KEYCODE_ENTER,
             android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 if (showChannelList.value) {
                     showChannelList.value = false
                 } else {
@@ -782,6 +777,10 @@ class PlayerActivity : AppCompatActivity() {
                     val currentIndex = items.indexOfFirst { it.id == contentId }
                     val nextIndex = if (currentIndex == -1) 0 else (currentIndex + 1).coerceAtMost(items.size - 1)
                     if (nextIndex != currentIndex) switchToChannel(items[nextIndex])
+                    val displayIndex = (if (nextIndex != currentIndex) nextIndex else currentIndex) + 1
+                    showChannelOverlay(displayIndex.toString(), items[if (nextIndex != currentIndex) nextIndex else currentIndex])
+                    channelNumberHandler.removeCallbacks(channelNumberRunnable)
+                    channelNumberHandler.postDelayed({ binding.channelNumberOverlay?.visibility = View.GONE }, 2000)
                     controlsState.show(lifecycleScope)
                 }
                 true
@@ -792,6 +791,10 @@ class PlayerActivity : AppCompatActivity() {
                     val currentIndex = items.indexOfFirst { it.id == contentId }
                     val prevIndex = if (currentIndex == -1) 0 else (currentIndex - 1).coerceAtLeast(0)
                     if (prevIndex != currentIndex) switchToChannel(items[prevIndex])
+                    val displayIndex = (if (prevIndex != currentIndex) prevIndex else currentIndex) + 1
+                    showChannelOverlay(displayIndex.toString(), items[if (prevIndex != currentIndex) prevIndex else currentIndex])
+                    channelNumberHandler.removeCallbacks(channelNumberRunnable)
+                    channelNumberHandler.postDelayed({ binding.channelNumberOverlay?.visibility = View.GONE }, 2000)
                     controlsState.show(lifecycleScope)
                 }
                 true
@@ -816,14 +819,27 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_9 -> {
                 val digit = keyCode - android.view.KeyEvent.KEYCODE_0
                 channelNumberInput += digit.toString()
-                binding.channelNumberOverlay?.text = channelNumberInput
-                binding.channelNumberOverlay?.visibility = View.VISIBLE
+                showChannelOverlay(channelNumberInput, null)
                 channelNumberHandler.removeCallbacks(channelNumberRunnable)
                 channelNumberHandler.postDelayed(channelNumberRunnable, 2000)
                 true
             }
             else -> super.onKeyDown(keyCode, event)
         }
+    }
+
+    private fun showChannelOverlay(number: String, channel: com.livetvpro.app.data.models.Channel?) {
+        val overlay = binding.channelNumberOverlay ?: return
+        val logoView = overlay.findViewById<android.widget.ImageView>(R.id.channel_overlay_logo)
+        val numberView = overlay.findViewById<android.widget.TextView>(R.id.channel_overlay_number)
+        numberView?.text = number
+        if (channel != null && channel.logoUrl.isNotEmpty()) {
+            logoView?.visibility = View.VISIBLE
+            logoView?.let { com.livetvpro.app.utils.GlideExtensions.loadImage(it, channel.logoUrl) }
+        } else {
+            logoView?.visibility = View.GONE
+        }
+        overlay.visibility = View.VISIBLE
     }
 
     private fun navigateToChannelByNumber() {

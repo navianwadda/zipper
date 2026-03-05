@@ -703,7 +703,6 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
-        if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
         return when (keyCode) {
             android.view.KeyEvent.KEYCODE_MEDIA_PLAY,
             android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,
@@ -719,6 +718,7 @@ class PlayerActivity : AppCompatActivity() {
             }
             android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
             android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 if (showChannelList.value) return super.onKeyDown(keyCode, event)
                 player?.let {
                     val newPosition = it.currentPosition + skipMs
@@ -735,16 +735,19 @@ class PlayerActivity : AppCompatActivity() {
             }
             android.view.KeyEvent.KEYCODE_MEDIA_REWIND,
             android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 if (showChannelList.value) return super.onKeyDown(keyCode, event)
                 player?.let { it.seekTo((it.currentPosition - skipMs).coerceAtLeast(0L)) }
                 controlsState.show(lifecycleScope)
                 true
             }
             android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 controlsState.show(lifecycleScope)
                 true
             }
             android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 val channelListItems = viewModel.channelListItems.value
                 val isChannelListAvailable = contentType == ContentType.CHANNEL &&
                     !channelListItems.isNullOrEmpty() &&
@@ -759,6 +762,7 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_DPAD_CENTER,
             android.view.KeyEvent.KEYCODE_ENTER,
             android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 if (showChannelList.value) {
                     showChannelList.value = false
                 } else {

@@ -76,7 +76,14 @@ class PlayerSettingsDialog(
             (displayMetrics.widthPixels * 0.85).toInt()
         }
 
-        val dialogHeight = (displayMetrics.heightPixels * 0.80).toInt()
+        val isLandscape = context.resources.configuration.orientation ==
+            android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+        val dialogHeight = if (isLandscape) {
+            (displayMetrics.heightPixels * 0.95).toInt()
+        } else {
+            (displayMetrics.heightPixels * 0.75).toInt()
+        }
 
         window?.setLayout(dialogWidth, dialogHeight)
         window?.setBackgroundDrawableResource(android.R.color.transparent)

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- DARK THEME (Default) -->
+    <style name="Theme.LiveTVPro" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">#1F1F1F</item>
+        <item name="colorPrimaryVariant">#0A0A0A</item>
+        <item name="colorSecondary">@color/secondary_dark</item>
+
+        <item name="android:colorBackground">@color/background_dark</item>
+        <item name="colorSurface">@color/surface_dark</item>
+
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorOnBackground">@color/text_primary_dark</item>
+        <item name="colorOnSurface">@color/text_secondary_dark</item>
+
+        <item name="colorAccent">@color/accent</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.LiveTVPro.Dialog</item>
+
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">@color/surface_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- API 35: opt out of forced edge-to-edge so statusBarColor is respected -->
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+
+    <!-- LIGHT THEME -->
+    <style name="Theme.LiveTVPro.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">#FFFFFF</item>
+        <item name="colorPrimaryVariant">#F5F5F5</item>
+        <item name="colorSecondary">#2196F3</item>
+
+        <!-- Light backgrounds -->
+        <item name="android:colorBackground">#FAFAFA</item>
+        <item name="colorSurface">#FFFFFF</item>
+
+        <!-- Dark text on light background -->
+        <item name="colorOnPrimary">#000000</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorOnBackground">#000000</item>
+        <item name="colorOnSurface">#666666</item>
+
+        <!-- Red accent color -->
+        <item name="colorAccent">@color/accent</item>
+
+        <!-- Light status bar -->
+        <item name="android:statusBarColor">#FAFAFA</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- API 35: opt out of forced edge-to-edge -->
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+
+    <!-- FULLSCREEN THEME -->
+    <!-- Note: We handle fullscreen programmatically based on orientation -->
+    <!-- Portrait = status bar visible, Landscape = truly fullscreen -->
+    <style name="Theme.LiveTVPro.Fullscreen" parent="Theme.LiveTVPro">
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- SPLASH THEME -->
+    <style name="Theme.LiveTVPro.Splash" parent="Theme.LiveTVPro">
+        <item name="android:windowBackground">@color/background_dark</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:statusBarColor">@color/background_dark</item>
+    </style>
+
+    <!-- TAB TEXT STYLE -->
+    <style name="TabTextStyle" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <!-- Network Stream EditText: amber cursor + selection handles, red focused border -->
+    <style name="NetworkStreamEditText" parent="Widget.Material3.TextInputEditText.OutlinedBox">
+        <item name="android:textCursorDrawable">@null</item>
+    </style>
+
+    <!-- Theme overlay applied via android:theme on the root of NetworkStream and
+         Playlists fragments. colorControlActivated drives handle/cursor tint.
+         android:fontFamily applies bergen_sans to all text in those fragments. -->
+    <style name="ThemeOverlay.NetworkStream.AmberHandles" parent="">
+        <item name="colorControlActivated">#EF4444</item>
+        <item name="colorAccent">#EF4444</item>
+        <item name="colorPrimary">#EF4444</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="colorOutline">#666666</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorHint">#888888</item>
+        <item name="android:fontFamily">@font/bergen_sans</item>
+        <item name="fontFamily">@font/bergen_sans</item>
+    </style>
+
+    <!-- Bottom nav label text appearance -->
+    <style name="BottomNav.TextAppearance" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:fontFamily">@font/bergen_sans</item>
+        <item name="fontFamily">@font/bergen_sans</item>
+    </style>
+
+    <!-- DIALOG THEME — ensures title, list items and buttons are always clearly visible -->
+    <style name="ThemeOverlay.LiveTVPro.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">#1F1F1F</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="colorPrimary">#EF4444</item>
+        <item name="colorOutline">#666666</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
+        <item name="android:textColorHint">#888888</item>
+        <item name="android:textColorAlertDialogListItem">#FFFFFF</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/Dialog.TitleText</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/Dialog.BodyText</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Dialog.ButtonText</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Dialog.ButtonText</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Dialog.ButtonText</item>
+        <item name="android:fontFamily">@font/bergen_sans</item>
+        <item name="fontFamily">@font/bergen_sans</item>
+    </style>
+
+    <style name="Dialog.TitleText" parent="MaterialAlertDialog.Material3.Title.Text">
+        <item name="android:fontFamily">@font/bergen_sans</item>
+        <item name="fontFamily">@font/bergen_sans</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
+    <style name="Dialog.BodyText" parent="MaterialAlertDialog.Material3.Body.Text">
+        <item name="android:fontFamily">@font/bergen_sans</item>
+        <item name="fontFamily">@font/bergen_sans</item>
+        <item name="android:textColor">#CCCCCC</item>
+    </style>
+
+    <style name="Dialog.ButtonText" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:fontFamily">@font/bergen_sans</item>
+        <item name="fontFamily">@font/bergen_sans</item>
+        <item name="android:textColor">#EF4444</item>
+        <item name="android:backgroundTint">#1AEF4444</item>
+        <item name="backgroundTint">#1AEF4444</item>
+        <item name="rippleColor">#33EF4444</item>
+        <item name="materialThemeOverlay">@style/Dialog.ButtonText.ColorOverlay</item>
+    </style>
+
+    <!-- Forces colorPrimary to red so Material3's internal ColorStateList resolves correctly -->
+    <style name="Dialog.ButtonText.ColorOverlay" parent="">
+        <item name="colorPrimary">#EF4444</item>
+    </style>
+
+</resources>

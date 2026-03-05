@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/networkStreamFragment"
+            android:icon="@drawable/ic_network_stream"
+            android:title="@string/nav_network_stream" />
+
+        <item
+            android:id="@+id/playlistsFragment"
+            android:icon="@drawable/ic_playlist"
+            android:title="@string/nav_playlists" />
+
+        <item
+            android:id="@+id/floating_player_settings"
+            android:icon="@drawable/ic_pip"
+            android:title="Floating Player" />
+
+        <item
+            android:id="@+id/cricketScoreFragment"
+            android:icon="@drawable/ic_cricket"
+            android:title="@string/nav_cricket_score" />
+
+        <item
+            android:id="@+id/footballScoreFragment"
+            android:icon="@drawable/ic_football"
+            android:title="@string/nav_football_score" />
+
+        <item
+            android:id="@+id/nav_notice"
+            android:icon="@drawable/ic_error_outline"
+            android:title="Notice" />
+
+        <item
+            android:id="@+id/nav_contact_browser"
+            android:icon="@drawable/ic_contact"
+            android:title="@string/nav_contact" />
+
+        <item
+            android:id="@+id/nav_website"
+            android:icon="@drawable/ic_website"
+            android:title="@string/nav_website" />
+
+        <item
+            android:id="@+id/nav_email_us"
+            android:icon="@drawable/ic_email"
+            android:title="@string/nav_email_us" />
+
+        <item
+            android:id="@+id/nav_copyright"
+            android:icon="@drawable/ic_copyright"
+            android:title="Copyright" />
+
+        <item
+            android:id="@+id/nav_share_app"
+            android:icon="@drawable/ic_share"
+            android:title="Share App" />
+
+        <item
+            android:id="@+id/deviceIdFragment"
+            android:icon="@drawable/ic_device_id"
+            android:title="@string/nav_device_id" />
+
+        <item
+            android:id="@+id/nav_exit"
+            android:icon="@drawable/ic_exit"
+            android:title="Exit" />
+    </group>
+</menu>

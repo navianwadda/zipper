@@ -1,0 +1,190 @@
+package com.livetvpro.app.ui.live
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import com.livetvpro.app.data.models.EventCategory
+import com.livetvpro.app.data.models.EventStatus
+import com.livetvpro.app.data.models.LiveEvent
+import com.livetvpro.app.data.repository.LiveEventRepository
+import com.livetvpro.app.utils.RetryViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
+import timber.log.Timber
+import javax.inject.Inject
+
+@HiltViewModel
+class LiveEventsViewModel @Inject constructor(
+    private val liveEventRepository: LiveEventRepository
+) : RetryViewModel() {
+
+    private val _events = MutableLiveData<List<LiveEvent>>()
+    val events: LiveData<List<LiveEvent>> = _events
+
+    private val _eventCategories = MutableLiveData<List<EventCategory>>()
+    val eventCategories: LiveData<List<EventCategory>> = _eventCategories
+
+    private val _filteredEvents = MutableLiveData<List<LiveEvent>>()
+    val filteredEvents: LiveData<List<LiveEvent>> = _filteredEvents
+
+    var pendingStatusFilter: EventStatus? = null
+        private set
+    var pendingCategoryId: String = "evt_cat_all"
+        private set
+    var pendingSearchQuery: String = ""
+        private set
+
+    private val sdf = java.text.SimpleDateFormat(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault()
+    ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+
+    init {
+        loadData()
+    }
+
+    override fun loadData() {
+        loadEvents()
+    }
+
+    override fun onResume() {
+    }
+
+    private fun loadEvents() {
+        viewModelScope.launch {
+            try {
+                startLoading()
+                val events = liveEventRepository.getLiveEvents()
+                _events.value = events
+                Timber.d("Loaded ${events.size} live events")
+                finishLoading(dataIsEmpty = events.isEmpty())
+
+                filterEvents(pendingStatusFilter, pendingCategoryId)
+            } catch (e: Exception) {
+                Timber.e(e, "Error loading live events")
+                _events.value = emptyList()
+                finishLoading(dataIsEmpty = true, error = e)
+            }
+        }
+    }
+
+    fun loadEventCategories() {
+
+        if (_eventCategories.value != null) return
+        viewModelScope.launch {
+            try {
+                val categories = liveEventRepository.getEventCategories()
+                _eventCategories.value = categories
+                Timber.d("Loaded ${categories.size} event categories")
+            } catch (e: Exception) {
+                Timber.e(e, "Error loading event categories")
+            }
+        }
+    }
+
+    fun filterEvents(status: EventStatus?, categoryId: String = "evt_cat_all") {
+
+        pendingStatusFilter = status
+        pendingCategoryId = categoryId
+        val allEvents = _events.value ?: return
+        val currentTime = System.currentTimeMillis()
+
+        var filtered = allEvents
+
+        if (categoryId != "evt_cat_all") {
+            filtered = filtered.filter { event ->
+                event.eventCategoryId == categoryId
+            }
+        }
+
+        if (pendingSearchQuery.isNotEmpty()) {
+            val q = pendingSearchQuery.lowercase()
+            filtered = filtered.filter { event ->
+                event.title.lowercase().contains(q) ||
+                event.team1Name.lowercase().contains(q) ||
+                event.team2Name.lowercase().contains(q)
+            }
+        }
+
+        filtered = when (status) {
+            EventStatus.LIVE -> {
+                filtered.filter { event ->
+                    event.isLive || isEventLiveByTime(event, currentTime)
+                }.sortedWith(
+                    compareByDescending<LiveEvent> { it.wrapper.isNotEmpty() }
+                        .thenBy { it.startTime }
+                )
+            }
+            EventStatus.UPCOMING -> {
+                filtered.filter { event ->
+                    !event.isLive && !isEventLiveByTime(event, currentTime) && isEventUpcoming(event, currentTime)
+                }.sortedWith(
+                    compareByDescending<LiveEvent> { it.wrapper.isNotEmpty() }
+                        .thenBy { it.startTime }
+                )
+            }
+            EventStatus.RECENT -> {
+                filtered.filter { event ->
+                    !event.isLive && isEventEnded(event, currentTime)
+                }.sortedByDescending { it.startTime }
+            }
+            null -> {
+                filtered.sortedWith(
+                    compareBy<LiveEvent> { event ->
+                        when {
+                            event.isLive || isEventLiveByTime(event, currentTime) -> 0
+                            isEventUpcoming(event, currentTime) -> 1
+                            else -> 2
+                        }
+                    }.thenByDescending { it.wrapper.isNotEmpty() }
+                     .thenBy { it.startTime }
+                )
+            }
+        }
+
+        if (filtered != _filteredEvents.value) {
+            _filteredEvents.value = filtered
+        }
+    }
+
+    fun searchEvents(query: String) {
+        pendingSearchQuery = query
+        filterEvents(pendingStatusFilter, pendingCategoryId)
+    }
+
+    private fun isEventLiveByTime(event: LiveEvent, currentTime: Long): Boolean {
+        return try {
+            val startTime = parseTimestamp(event.startTime)
+            val endTime = event.endTime?.let { parseTimestamp(it) } ?: Long.MAX_VALUE
+            currentTime in startTime..endTime
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun isEventUpcoming(event: LiveEvent, currentTime: Long): Boolean {
+        return try {
+            val startTime = parseTimestamp(event.startTime)
+            currentTime < startTime
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun isEventEnded(event: LiveEvent, currentTime: Long): Boolean {
+        return try {
+            val endTime = event.endTime?.let { parseTimestamp(it) }
+                ?: parseTimestamp(event.startTime)
+            currentTime > endTime
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun parseTimestamp(timeString: String): Long {
+        return try {
+            sdf.parse(timeString)?.time ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
+    }
+}

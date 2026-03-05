@@ -1,0 +1,86 @@
+package com.livetvpro.app.ui.adapters
+
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
+import com.livetvpro.app.R
+
+data class CategoryGroup(
+    val name: String,
+    val isSelected: Boolean = false
+)
+
+class CategoryGroupChipAdapter(
+    private val onGroupSelected: (String) -> Unit
+) : ListAdapter<CategoryGroup, CategoryGroupChipAdapter.GroupViewHolder>(CategoryGroupDiffCallback()) {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GroupViewHolder {
+        val chip = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_category_group_chip, parent, false) as Chip
+        return GroupViewHolder(chip, onGroupSelected)
+    }
+
+    override fun onBindViewHolder(holder: GroupViewHolder, position: Int) {
+        holder.bind(getItem(position))
+    }
+
+    class GroupViewHolder(
+        private val chip: Chip,
+        private val onGroupSelected: (String) -> Unit
+    ) : RecyclerView.ViewHolder(chip) {
+
+        fun bind(group: CategoryGroup) {
+            chip.text = group.name
+            chip.isChecked = group.isSelected
+            chip.isFocusable = true
+            chip.isFocusableInTouchMode = false
+
+            chip.setOnFocusChangeListener { v, hasFocus ->
+                v.animate().scaleX(if (hasFocus) 1.08f else 1f)
+                    .scaleY(if (hasFocus) 1.08f else 1f).setDuration(100).start()
+            }
+
+            chip.setOnKeyListener { _, keyCode, event ->
+                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+                when (keyCode) {
+                    android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+                    android.view.KeyEvent.KEYCODE_ENTER,
+                    android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                        chip.performClick()
+                        true
+                    }
+                    else -> false
+                }
+            }
+
+            chip.isChipIconVisible = false
+            
+            // Update chip appearance based on selection
+            if (group.isSelected) {
+                chip.chipBackgroundColor = ContextCompat.getColorStateList(chip.context, R.color.chip_background_selected)
+                chip.setTextColor(ContextCompat.getColor(chip.context, R.color.chip_text_selected))
+            } else {
+                chip.chipBackgroundColor = ContextCompat.getColorStateList(chip.context, R.color.chip_background_color)
+                chip.setTextColor(ContextCompat.getColor(chip.context, android.R.color.white))
+            }
+            
+            chip.setOnClickListener {
+                onGroupSelected(group.name)
+            }
+        }
+    }
+
+    private class CategoryGroupDiffCallback : DiffUtil.ItemCallback<CategoryGroup>() {
+        override fun areItemsTheSame(oldItem: CategoryGroup, newItem: CategoryGroup): Boolean {
+            return oldItem.name == newItem.name
+        }
+
+        override fun areContentsTheSame(oldItem: CategoryGroup, newItem: CategoryGroup): Boolean {
+            return oldItem == newItem
+        }
+    }
+}

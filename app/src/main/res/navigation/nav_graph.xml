@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/liveEventsFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.livetvpro.app.ui.home.HomeFragment"
+        android:label="Home">
+        <action
+            android:id="@+id/action_home_to_category"
+            app:destination="@id/categoryChannelsFragment" />
+        <action
+            android:id="@+id/action_home_to_favorites"
+            app:destination="@id/favoritesFragment" />
+        <action
+            android:id="@+id/action_home_to_live"
+            app:destination="@id/liveEventsFragment" />
+        <action
+            android:id="@+id/action_home_to_sports"
+            app:destination="@id/sportsFragment" />
+        <action
+            android:id="@+id/action_home_to_network_stream"
+            app:destination="@id/networkStreamFragment" />
+        <action
+            android:id="@+id/action_home_to_contact"
+            app:destination="@id/contactFragment" />
+        <action
+            android:id="@+id/action_home_to_playlists"
+            app:destination="@id/playlistsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/categoryChannelsFragment"
+        android:name="com.livetvpro.app.ui.categories.CategoryChannelsFragment"
+        android:label="Channels">
+        <argument
+            android:name="categoryId"
+            app:argType="string" />
+        <argument
+            android:name="categoryName"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_category_to_favorites"
+            app:destination="@id/favoritesFragment" />
+        <action
+            android:id="@+id/action_category_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/favoritesFragment"
+        android:name="com.livetvpro.app.ui.favorites.FavoritesFragment"
+        android:label="Favorites">
+        <action
+            android:id="@+id/action_favorites_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_favorites_to_live"
+            app:destination="@id/liveEventsFragment" />
+        <action
+            android:id="@+id/action_favorites_to_sports"
+            app:destination="@id/sportsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/liveEventsFragment"
+        android:name="com.livetvpro.app.ui.live.LiveEventsFragment"
+        android:label="Live Events">
+        <action
+            android:id="@+id/action_live_to_favorites"
+            app:destination="@id/favoritesFragment" />
+        <action
+            android:id="@+id/action_live_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_live_to_sports"
+            app:destination="@id/sportsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/sportsFragment"
+        android:name="com.livetvpro.app.ui.sports.SportsFragment"
+        android:label="Sports">
+        <action
+            android:id="@+id/action_sports_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_sports_to_favorites"
+            app:destination="@id/favoritesFragment" />
+        <action
+            android:id="@+id/action_sports_to_live"
+            app:destination="@id/liveEventsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/contactFragment"
+        android:name="com.livetvpro.app.ui.contact.ContactFragment"
+        android:label="Contact">
+        <action
+            android:id="@+id/action_contact_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_contact_to_favorites"
+            app:destination="@id/favoritesFragment" />
+        <action
+            android:id="@+id/action_contact_to_live"
+            app:destination="@id/liveEventsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/networkStreamFragment"
+        android:name="com.livetvpro.app.ui.networkstream.NetworkStreamFragment"
+        android:label="Network Stream">
+        <action
+            android:id="@+id/action_network_stream_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/playlistsFragment"
+        android:name="com.livetvpro.app.ui.playlists.PlaylistsFragment"
+        android:label="Playlists">
+        <action
+            android:id="@+id/action_playlists_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_playlists_to_category"
+            app:destination="@id/categoryChannelsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/cricketScoreFragment"
+        android:name="com.livetvpro.app.ui.score.CricketScoreFragment"
+        android:label="Cricket Score">
+        <action
+            android:id="@+id/action_cricket_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/footballScoreFragment"
+        android:name="com.livetvpro.app.ui.score.FootballScoreFragment"
+        android:label="Football Score">
+        <action
+            android:id="@+id/action_football_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/deviceIdFragment"
+        android:name="com.livetvpro.app.ui.deviceid.DeviceIdFragment"
+        android:label="Device ID" />
+
+</navigation>

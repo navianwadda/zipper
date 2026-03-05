@@ -1,0 +1,277 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
+    id("kotlin-parcelize")
+    id("androidx.navigation.safeargs.kotlin")
+    id("com.google.gms.google-services")
+}
+
+android {
+    namespace = "com.livetvpro.app"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "com.livetvpro.app"
+        minSdk = 24
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+        
+        // NDK Configuration
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+        
+        // CMake Configuration
+        externalNativeBuild {
+            cmake {
+                cppFlags += ""
+                arguments += listOf(
+                    "-DANDROID_ARM_NEON=TRUE",
+                    "-DANDROID_STL=c++_static"
+                )
+            }
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("KEYSTORE_FILE") ?: "../release-keystore.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("release")
+            
+            ndk {
+                abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            }
+        }
+        debug {
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+        
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.media3.common.util.UnstableApi"
+        )
+    }
+
+    buildFeatures {
+        viewBinding = true
+        buildConfig = true
+        compose = true  // Required for PlayerActivity Compose controls
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+    
+    // Native Build Configuration
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+    
+    // ABI Splits Configuration
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
+    }
+}
+
+dependencies {
+    // Core Android
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.13.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation("androidx.drawerlayout:drawerlayout:1.2.0")
+
+    // Lifecycle Components
+    val lifecycleVersion = "2.9.1"
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleVersion")
+
+    // Navigation Components
+    val navVersion = "2.9.0"
+    implementation("androidx.navigation:navigation-fragment-ktx:$navVersion")
+    implementation("androidx.navigation:navigation-ui-ktx:$navVersion")
+
+    // Room Database
+    val roomVersion = "2.7.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+
+    // Jetpack Compose - Required for PlayerActivity
+    val composeBom = platform("androidx.compose:compose-bom:2025.06.01")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    // Compose UI
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    
+    // Material 3 for Compose
+    implementation("androidx.compose.material3:material3")
+    
+    // Material Icons Extended
+    implementation("androidx.compose.material:material-icons-extended")
+    
+    // Activity Compose
+    implementation("androidx.activity:activity-compose:1.10.1")
+    
+    // Compose Runtime
+    implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.compose.runtime:runtime-livedata")
+    
+    // Compose Tooling (debug builds only)
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Media3 (ExoPlayer)
+    val media3Version = "1.9.0"
+    implementation("androidx.media3:media3-exoplayer:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-dash:$media3Version")
+    implementation("androidx.media3:media3-ui:$media3Version")
+    implementation("androidx.media3:media3-common:$media3Version")
+    implementation("androidx.media3:media3-session:$media3Version")
+    // Prebuilt FFmpeg decoder AAR by Jellyfin (published to Maven Central).
+    // androidx.media3:media3-exoplayer-ffmpeg is NOT on Maven — it needs manual native compilation.
+    // This drop-in provides the same libffmpegjni.so for all ABIs from the same source.
+    // License: GPL-3.0  |  https://github.com/jellyfin/jellyfin-androidx-media
+    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
+
+    // Network - OkHttp & Retrofit
+    val okhttpVersion = "4.12.0"
+    implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
+    implementation("com.squareup.okhttp3:logging-interceptor:$okhttpVersion")
+    
+    val retrofitVersion = "2.11.0"
+    implementation("com.squareup.retrofit2:retrofit:$retrofitVersion")
+    implementation("com.squareup.retrofit2:converter-gson:$retrofitVersion")
+
+    // Coroutines
+    val coroutinesVersion = "1.10.2"
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutinesVersion")
+
+    // Dependency Injection - Hilt
+    val hiltVersion = "2.56.2"
+    implementation("com.google.dagger:hilt-android:$hiltVersion")
+    ksp("com.google.dagger:hilt-compiler:$hiltVersion")
+
+    // Image Loading - Glide with SVG support
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    ksp("com.github.bumptech.glide:ksp:4.16.0")
+    implementation("com.github.bumptech.glide:okhttp3-integration:4.16.0")
+    implementation("com.caverock:androidsvg-aar:1.4")
+
+    // RecyclerView
+    implementation("androidx.recyclerview:recyclerview:1.4.0")
+
+    // SwipeRefreshLayout
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+
+    // JSON - Gson
+    implementation("com.google.code.gson:gson:2.13.1")
+
+    // Logging - Timber
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
+    // Browser
+    implementation("androidx.browser:browser:1.8.0")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
+    implementation("com.google.firebase:firebase-config-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // Lottie Animations
+    implementation("com.airbnb.android:lottie:6.6.0")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+}
+
+// KSP Configuration
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "true")
+    arg("room.generateKotlin", "true")
+}
+
+// Version Code Configuration for ABI Splits
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val abiName = output.filters.find { 
+                it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI 
+            }?.identifier
+            
+            if (abiName != null) {
+                val abiVersionCode = when (abiName) {
+                    "armeabi-v7a" -> 1
+                    "arm64-v8a" -> 2
+                    "x86" -> 3
+                    "x86_64" -> 4
+                    else -> 0
+                }
+                val newVersionCode = (variant.outputs.first().versionCode.orNull ?: 1) * 10 + abiVersionCode
+                output.versionCode.set(newVersionCode)
+            }
+        }
+    }
+}

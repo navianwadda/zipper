@@ -1,0 +1,69 @@
+package com.livetvpro.app.ui.home
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import com.livetvpro.app.data.models.Category
+import com.livetvpro.app.data.repository.CategoryRepository
+import com.livetvpro.app.utils.RetryViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val categoryRepository: CategoryRepository
+) : RetryViewModel() {
+
+    private val _categories = MutableLiveData<List<Category>>()
+    val categories: LiveData<List<Category>> = _categories
+
+    private val _filteredCategories = MutableLiveData<List<Category>>()
+    val filteredCategories: LiveData<List<Category>> = _filteredCategories
+
+    private var currentSearchQuery = ""
+
+    init {
+        loadData()
+    }
+
+    override fun loadData() {
+        viewModelScope.launch {
+            try {
+                startLoading()
+                
+                val categories = categoryRepository.getCategories()
+                
+                _categories.value = categories
+                searchCategories(currentSearchQuery)
+                
+                finishLoading(dataIsEmpty = categories.isEmpty())
+            } catch (e: Exception) {
+                _categories.value = emptyList()
+                _filteredCategories.value = emptyList()
+                
+                finishLoading(dataIsEmpty = true, error = e)
+            }
+        }
+    }
+
+    override fun onResume() {
+    }
+
+    fun searchCategories(query: String) {
+        try {
+            currentSearchQuery = query
+            val allCategories = _categories.value ?: emptyList()
+
+            if (query.isBlank()) {
+                _filteredCategories.value = allCategories
+            } else {
+                _filteredCategories.value = allCategories.filter {
+                    it.name.contains(query, ignoreCase = true) ||
+                    it.slug.contains(query, ignoreCase = true)
+                }
+            }
+        } catch (e: Exception) {
+        }
+    }
+}

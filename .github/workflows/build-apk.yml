@@ -1,0 +1,127 @@
+name: Build Release APK
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK 27
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Create google-services.json from secrets
+        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
+
+      - name: Build Release APK (Multi-ABI)
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/release-keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: List build outputs
+        if: always()
+        run: find app/build/outputs -name "*.apk" -type f -exec ls -lh {} \;
+
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: app-arm64-v8a-release
+          path: app/build/outputs/apk/release/app-arm64-v8a-release.apk
+          retention-days: 14
+
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: app-armeabi-v7a-release
+          path: app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+          retention-days: 14
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: app-x86_64-release
+          path: app/build/outputs/apk/release/app-x86_64-release.apk
+          retention-days: 14
+
+      - name: Upload x86 APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: app-x86-release
+          path: app/build/outputs/apk/release/app-x86-release.apk
+          retention-days: 14
+
+      - name: Upload Universal APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: app-universal-release
+          path: app/build/outputs/apk/release/app-universal-release.apk
+          retention-days: 14
+
+      - name: Upload build reports on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-reports
+          path: |
+            app/build/reports/
+            app/build/outputs/logs/
+          retention-days: 7
+
+      - name: Build Summary
+        if: success()
+        run: |
+          echo "## 🎉 Build Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📱 APK Variants:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Architecture | Size | Targets |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          for abi in arm64-v8a armeabi-v7a x86_64 x86 universal; do
+            apk="app/build/outputs/apk/release/app-${abi}-release.apk"
+            if [ -f "$apk" ]; then
+              size=$(du -h "$apk" | cut -f1)
+              case $abi in
+                arm64-v8a)   targets="Modern phones & tablets" ;;
+                armeabi-v7a) targets="Older & budget phones" ;;
+                x86_64)      targets="Emulators, Chromebooks, Android TV" ;;
+                x86)         targets="Legacy emulators" ;;
+                universal)   targets="All devices" ;;
+              esac
+              echo "| $abi | $size | $targets |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done

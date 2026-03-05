@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:theme="@style/ThemeOverlay.NetworkStream.AmberHandles">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:padding="16dp"
+        android:focusable="false"
+        android:descendantFocusability="afterDescendants"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="80dp">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilStreamUrl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/media_stream_url"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="@color/input_background"
+                app:boxStrokeColor="@color/input_stroke_color"
+                app:hintTextColor="@color/input_hint"
+                app:endIconMode="custom"
+                app:endIconTint="@color/input_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    style="@style/NetworkStreamEditText"
+                    android:id="@+id/etStreamUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri"
+                    android:textColor="@color/input_text"
+                    android:textColorHint="@color/input_hint"
+                    android:textSize="14sp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusDown="@id/etCookie"
+                    android:nextFocusUp="@id/etCustomUserAgent" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilCookie"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/cookie_value"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="@color/input_background"
+                app:boxStrokeColor="@color/input_stroke_color"
+                app:hintTextColor="@color/input_hint"
+                app:endIconMode="custom"
+                app:endIconTint="@color/input_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    style="@style/NetworkStreamEditText"
+                    android:id="@+id/etCookie"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textColor="@color/input_text"
+                    android:textColorHint="@color/input_hint"
+                    android:textSize="14sp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusDown="@id/etReferer"
+                    android:nextFocusUp="@id/etStreamUrl" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilReferer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/referer_value"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="@color/input_background"
+                app:boxStrokeColor="@color/input_stroke_color"
+                app:hintTextColor="@color/input_hint"
+                app:endIconMode="custom"
+                app:endIconTint="@color/input_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    style="@style/NetworkStreamEditText"
+                    android:id="@+id/etReferer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri"
+                    android:textColor="@color/input_text"
+                    android:textColorHint="@color/input_hint"
+                    android:textSize="14sp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusDown="@id/etOrigin"
+                    android:nextFocusUp="@id/etCookie" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilOrigin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/origin_value"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="@color/input_background"
+                app:boxStrokeColor="@color/input_stroke_color"
+                app:hintTextColor="@color/input_hint"
+                app:endIconMode="custom"
+                app:endIconTint="@color/input_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    style="@style/NetworkStreamEditText"
+                    android:id="@+id/etOrigin"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri"
+                    android:textColor="@color/input_text"
+                    android:textColorHint="@color/input_hint"
+                    android:textSize="14sp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusDown="@id/etDrmLicense"
+                    android:nextFocusUp="@id/etReferer" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilDrmLicense"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/drm_license_url"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="@color/input_background"
+                app:boxStrokeColor="@color/input_stroke_color"
+                app:hintTextColor="@color/input_hint"
+                app:endIconMode="custom"
+                app:endIconTint="@color/input_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    style="@style/NetworkStreamEditText"
+                    android:id="@+id/etDrmLicense"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri"
+                    android:textColor="@color/input_text"
+                    android:textColorHint="@color/input_hint"
+                    android:textSize="14sp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusDown="@id/actvUserAgent"
+                    android:nextFocusUp="@id/etOrigin" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilUserAgent"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:hint="@string/user_agent"
+                    app:boxBackgroundColor="@color/input_background"
+                    app:boxStrokeColor="@color/input_stroke_color"
+                    app:hintTextColor="@color/input_hint">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/actvUserAgent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:textColor="@color/input_text"
+                        android:textSize="14sp"
+                        android:focusable="true"
+                        android:focusableInTouchMode="false"
+                        android:nextFocusDown="@id/actvDrmScheme"
+                        android:nextFocusUp="@id/etDrmLicense"
+                        android:nextFocusRight="@id/actvDrmScheme" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilDrmScheme"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:hint="@string/drm_scheme"
+                    app:boxBackgroundColor="@color/input_background"
+                    app:boxStrokeColor="@color/input_stroke_color"
+                    app:hintTextColor="@color/input_hint">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/actvDrmScheme"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:textColor="@color/input_text"
+                        android:textSize="14sp"
+                        android:focusable="true"
+                        android:focusableInTouchMode="false"
+                        android:nextFocusDown="@id/etCustomUserAgent"
+                        android:nextFocusUp="@id/etDrmLicense"
+                        android:nextFocusLeft="@id/actvUserAgent" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilCustomUserAgent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/custom_user_agent"
+                android:visibility="gone"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="@color/input_background"
+                app:boxStrokeColor="@color/input_stroke_color"
+                app:hintTextColor="@color/input_hint"
+                app:endIconMode="custom"
+                app:endIconTint="@color/input_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    style="@style/NetworkStreamEditText"
+                    android:id="@+id/etCustomUserAgent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textColor="@color/input_text"
+                    android:textColorHint="@color/input_hint"
+                    android:textSize="14sp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusDown="@id/fabPlay"
+                    android:nextFocusUp="@id/actvDrmScheme" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabPlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="24dp"
+        android:contentDescription="@string/play"
+        android:src="@drawable/ic_play_custom"
+        app:fabSize="normal"
+        app:elevation="6dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="@android:color/white"
+        android:focusable="true"
+        android:focusableInTouchMode="false"
+        android:nextFocusUp="@id/etStreamUrl" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

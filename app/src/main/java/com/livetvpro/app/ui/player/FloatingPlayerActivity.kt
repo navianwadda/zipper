@@ -545,6 +545,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             binding.playerView.player = player
         }
         binding.playerView.onResume()
+        binding.playerView.requestFocus()
     }
 
     override fun onPictureInPictureModeChanged(

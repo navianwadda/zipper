@@ -116,6 +116,16 @@
                 android:textSize="32sp"
                 android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/channel_overlay_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
         </LinearLayout>
 
                 <androidx.compose.ui.platform.ComposeView

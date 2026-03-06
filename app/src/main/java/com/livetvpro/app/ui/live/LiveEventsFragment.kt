@@ -125,8 +125,8 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
             chip.setOnKeyListener { _, keyCode, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
                 when (keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_CENTER
-                    android.view.KeyEvent.KEYCODE_ENTER
+                    android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+                    android.view.KeyEvent.KEYCODE_ENTER,
                     android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                         chip.performClick()
                         true
@@ -154,12 +154,12 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
 
     private fun setupRetryHandling() {
         RetryHandler.setupGlobal(
-            lifecycleOwner = viewLifecycleOwner
-            viewModel = viewModel
-            activity = requireActivity() as androidx.appcompat.app.AppCompatActivity
-            contentView = binding.recyclerViewEvents
-            swipeRefresh = binding.swipeRefresh
-            progressBar = binding.progressBar
+            lifecycleOwner = viewLifecycleOwner,
+            viewModel = viewModel,
+            activity = requireActivity() as androidx.appcompat.app.AppCompatActivity,
+            contentView = binding.recyclerViewEvents,
+            swipeRefresh = binding.swipeRefresh,
+            progressBar = binding.progressBar,
             emptyView = binding.emptyView
         )
     }
@@ -195,9 +195,9 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     private fun setupEventRecycler() {
         if (eventAdapter == null) {
             eventAdapter = LiveEventAdapter(
-                context = requireContext()
-                events = emptyList()
-                preferencesManager = preferencesManager
+                context = requireContext(),
+                events = emptyList(),
+                preferencesManager = preferencesManager,
                 onEventInteraction = { event, playerAction ->
                     val redirected = RedirectHelper.tryRedirect(
                         fragment    = this@LiveEventsFragment,

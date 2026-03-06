@@ -17,6 +17,7 @@ import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ChannelLink
 import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.models.ListenerConfig
+import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.data.repository.CategoryRepository
 import com.livetvpro.app.data.repository.FavoritesRepository
 import com.livetvpro.app.databinding.FragmentSportsBinding
@@ -157,6 +158,9 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var cooldownManager: RedirectCooldownManager
     @Inject lateinit var preferencesManager: PreferencesManager
 
+
+    }
+
     override fun onSearchQuery(query: String) { viewModel.searchSports(query) }
     override fun refreshData() { viewModel.refresh() }
 
@@ -207,12 +211,13 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                 } else {
                     { launchPlayer(channel, -1) }
                 }
-                val redirected = cooldownManager.tryFire(ListenerConfig.PAGE_SPORTS, channel.id) {
-                    listenerManager.onPageInteraction(
-                        pageType = ListenerConfig.PAGE_SPORTS,
-                        uniqueId = channel.id
-                    )
-                }
+                val redirected = RedirectHelper.tryRedirect(
+                    fragment    = this@SportsFragment,
+                    pageType    = ListenerConfig.PAGE_SPORTS,
+                    uniqueId    = channel.id,
+                    cooldownMgr = cooldownManager,
+                    listenerMgr = listenerManager
+                )
                 if (!redirected) {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null

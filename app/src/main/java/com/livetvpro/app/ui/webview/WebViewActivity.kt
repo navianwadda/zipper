@@ -1,4 +1,4 @@
-package com.livetvpro.app.ui.player.dialogs
+package com.livetvpro.app.ui.webview
 
 import android.annotation.SuppressLint
 import android.content.Context

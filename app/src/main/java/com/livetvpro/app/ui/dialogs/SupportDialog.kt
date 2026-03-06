@@ -1,7 +1,9 @@
 package com.livetvpro.app.ui.dialogs
 
-import android.app.Activity
+import android.app.UiModeManager
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -32,22 +34,35 @@ class SupportDialog : DialogFragment() {
         if (result.resultCode == WebViewActivity.RESULT_VALIDATED) {
             onTimerCompleted?.invoke()
         }
-        // RESULT_CANCELED (X pressed, VPN detected, no internet) — not validated, do nothing
+    }
+
+    private fun isTv(): Boolean {
+        val uiModeManager = requireContext().getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+        return uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+    }
+
+    private fun isLargeScreen(): Boolean {
+        return resources.configuration.smallestScreenWidthDp >= 600
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val dp = requireContext().resources.displayMetrics.density
-        val px16 = (16 * dp).toInt()
-        val px12 = (12 * dp).toInt()
-        val px8 = (8 * dp).toInt()
-        val px6 = (6 * dp).toInt()
-        val px2 = (2 * dp).toInt()
+        val isTv = isTv()
+        val isLarge = isLargeScreen()
+
+        val basePadding = if (isTv || isLarge) (24 * dp).toInt() else (16 * dp).toInt()
+        val titleSize = if (isTv) 22f else if (isLarge) 20f else 18f
+        val bodySize = if (isTv) 16f else if (isLarge) 15f else 14f
+        val bottomMarginItem = if (isTv || isLarge) (10 * dp).toInt() else (6 * dp).toInt()
+        val titleBottomMargin = if (isTv || isLarge) (16 * dp).toInt() else (12 * dp).toInt()
+        val buttonTopMargin = if (isTv || isLarge) (24 * dp).toInt() else (16 * dp).toInt()
+        val dividerBottom = if (isTv || isLarge) (20 * dp).toInt() else (16 * dp).toInt()
 
         val root = FrameLayout(requireContext())
 
         val card = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(px16, px16, px16, px16)
+            setPadding(basePadding, basePadding, basePadding, basePadding)
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                 cornerRadius = (12 * dp)
@@ -60,23 +75,23 @@ class SupportDialog : DialogFragment() {
 
             addView(TextView(requireContext()).apply {
                 text = "We Need Your Support"
-                textSize = 18f
+                textSize = titleSize
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(android.graphics.Color.WHITE)
                 gravity = android.view.Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.bottomMargin = px12 }
+                ).also { it.bottomMargin = titleBottomMargin }
             })
 
             addView(View(requireContext()).apply {
                 setBackgroundColor(android.graphics.Color.parseColor("#00BCD4"))
                 layoutParams = LinearLayout.LayoutParams(
-                    (60 * dp).toInt(), px2
+                    (60 * dp).toInt(), (2 * dp).toInt()
                 ).also {
                     it.gravity = android.view.Gravity.CENTER_HORIZONTAL
-                    it.bottomMargin = px16
+                    it.bottomMargin = dividerBottom
                 }
             })
 
@@ -88,12 +103,12 @@ class SupportDialog : DialogFragment() {
             ).forEach { line ->
                 addView(TextView(requireContext()).apply {
                     text = line
-                    textSize = 14f
+                    textSize = bodySize
                     setTextColor(android.graphics.Color.LTGRAY)
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).also { it.bottomMargin = px6 }
+                    ).also { it.bottomMargin = bottomMarginItem }
                 })
             }
 
@@ -103,17 +118,20 @@ class SupportDialog : DialogFragment() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.topMargin = px16 }
+                ).also { it.topMargin = buttonTopMargin }
             }
 
             buttonRow.addView(Button(requireContext()).apply {
                 text = "Cancel"
+                textSize = bodySize
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 setTextColor(android.graphics.Color.LTGRAY)
+                isFocusable = true
+                isFocusableInTouchMode = !isTv
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.marginEnd = px8 }
+                ).also { it.marginEnd = (8 * dp).toInt() }
                 setOnClickListener {
                     onDismissedEarly?.invoke()
                     dismiss()
@@ -122,6 +140,9 @@ class SupportDialog : DialogFragment() {
 
             buttonRow.addView(Button(requireContext()).apply {
                 text = "Click Here"
+                textSize = bodySize
+                isFocusable = true
+                isFocusableInTouchMode = !isTv
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -145,9 +166,16 @@ class SupportDialog : DialogFragment() {
 
     override fun onStart() {
         super.onStart()
+        val isTv = isTv()
+        val isLarge = isLargeScreen()
+        val widthFraction = when {
+            isTv -> 0.55
+            isLarge -> 0.65
+            else -> 0.92
+        }
         dialog?.window?.apply {
             setLayout(
-                (requireContext().resources.displayMetrics.widthPixels * 0.92).toInt(),
+                (requireContext().resources.displayMetrics.widthPixels * widthFraction).toInt(),
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             setBackgroundDrawableResource(android.R.color.transparent)

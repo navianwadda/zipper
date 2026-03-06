@@ -1,16 +1,44 @@
 package com.livetvpro.app.utils
 
+import android.content.Intent
+import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.livetvpro.app.ui.dialogs.SupportDialog
+import com.livetvpro.app.ui.webview.WebActivity
 
 object RedirectHelper {
+
+    fun registerLauncher(
+        fragment: Fragment,
+        cooldownMgr: RedirectCooldownManager,
+        pageTypeProvider: () -> String?,
+        uniqueIdProvider: () -> String?,
+        pendingActionProvider: () -> (() -> Unit)?,
+        clearPendingAction: () -> Unit
+    ): ActivityResultLauncher<Intent> {
+        return fragment.registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result: ActivityResult ->
+            if (result.resultCode == WebActivity.RESULT_VALIDATED) {
+                val pageType = pageTypeProvider() ?: return@registerForActivityResult
+                cooldownMgr.recordFired(pageType, uniqueIdProvider())
+                Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
+                pendingActionProvider()?.invoke()
+            }
+            clearPendingAction()
+        }
+    }
 
     fun tryRedirect(
         fragment: Fragment,
         pageType: String,
         uniqueId: String? = null,
         cooldownMgr: RedirectCooldownManager,
-        listenerMgr: NativeListenerManager
+        listenerMgr: NativeListenerManager,
+        launcher: ActivityResultLauncher<Intent>
     ): Boolean {
         if (!cooldownMgr.canFire(pageType, uniqueId)) return false
 
@@ -19,7 +47,7 @@ object RedirectHelper {
         if (!redirected) return false
 
         if (listenerMgr.isInAppRedirectEnabled()) {
-            showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr)
+            showSupportDialog(fragment, pageType, uniqueId, listenerMgr, launcher)
         } else {
             cooldownMgr.recordFired(pageType, uniqueId)
         }
@@ -31,7 +59,7 @@ object RedirectHelper {
         pageType: String,
         uniqueId: String?,
         listenerMgr: NativeListenerManager,
-        cooldownMgr: RedirectCooldownManager
+        launcher: ActivityResultLauncher<Intent>
     ) {
         try {
             val fm = fragment.parentFragmentManager
@@ -43,8 +71,14 @@ object RedirectHelper {
             SupportDialog.newInstance().apply {
                 this.url = url
                 this.durationSeconds = listenerMgr.getAdDurationSeconds()
-                onTimerCompleted = { cooldownMgr.recordFired(pageType, uniqueId) }
-                onDismissedEarly = {}
+                onClickHere = {
+                    val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
+                        putExtra("extra_url", url)
+                        putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
+                    }
+                    launcher.launch(intent)
+                }
+                onCancel = {}
             }.show(fm, SupportDialog.TAG)
         } catch (e: Exception) {}
     }

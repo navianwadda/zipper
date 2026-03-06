@@ -134,6 +134,8 @@ class PlayerActivity : AppCompatActivity() {
     private val channelNumberRunnable = Runnable { navigateToChannelByNumber() }
     private val overlayHideRunnable = Runnable { binding.channelNumberOverlay?.visibility = View.GONE }
     private var pendingChannelIndex: Int = -1
+    private var pendingChannelDirection: Int = 0 // +1 = up, -1 = down, 0 = none
+    private var pendingChannelNumber: Int = -1   // number pad target when list wasn't ready
     private var channelData: Channel? = null
     private var eventData: LiveEvent? = null
     private var allEventLinks = listOf<LiveEventLink>()
@@ -333,6 +335,45 @@ class PlayerActivity : AppCompatActivity() {
                     val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                     updateLinksForOrientation(isLandscape)
                 }
+            }
+        }
+
+        viewModel.channelListItems.observe(this) { items ->
+            if (items.isNullOrEmpty() || contentType != ContentType.CHANNEL) return@observe
+
+            // Execute pending number pad navigation first (takes priority over direction)
+            val pendingNum = pendingChannelNumber
+            if (pendingNum != -1) {
+                pendingChannelNumber = -1
+                pendingChannelDirection = 0
+                val index = pendingNum - 1
+                if (index in items.indices) {
+                    val targetChannel = items[index]
+                    if (targetChannel.id != contentId) switchToChannel(targetChannel)
+                    showChannelOverlay((index + 1).toString(), targetChannel)
+                    channelNumberHandler.removeCallbacks(overlayHideRunnable)
+                    channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
+                } else {
+                    // Number out of range — just hide overlay
+                    binding.channelNumberOverlay?.visibility = View.GONE
+                }
+                return@observe
+            }
+
+            // Execute pending direction navigation
+            val direction = pendingChannelDirection
+            if (direction != 0) {
+                pendingChannelDirection = 0
+                val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                val targetIndex = (currentIndex + direction).coerceIn(0, items.size - 1)
+                val targetChannel = items[targetIndex]
+                if (targetChannel.id != contentId) {
+                    switchToChannel(targetChannel)
+                }
+                // Always update overlay — clears "..." and shows real channel info
+                showChannelOverlay((targetIndex + 1).toString(), targetChannel)
+                channelNumberHandler.removeCallbacks(overlayHideRunnable)
+                channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
             }
         }
 
@@ -704,8 +745,7 @@ class PlayerActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 when {
                     isInPipMode -> return
-                    channelNumberInput.isNotEmpty() -> cancelNumberInput()
-                    pendingChannelIndex != -1 -> cancelNumberInput()
+                    channelNumberInput.isNotEmpty() || pendingChannelIndex != -1 || pendingChannelDirection != 0 || pendingChannelNumber != -1 -> cancelNumberInput()
                     showChannelList.value -> showChannelList.value = false
                     else -> finish()
                 }
@@ -716,17 +756,19 @@ class PlayerActivity : AppCompatActivity() {
     private fun cancelNumberInput() {
         channelNumberInput = ""
         pendingChannelIndex = -1
+        pendingChannelDirection = 0
+        pendingChannelNumber = -1
         channelNumberHandler.removeCallbacks(channelNumberRunnable)
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
         binding.channelNumberOverlay?.visibility = View.GONE
     }
 
-    // Like cancelNumberInput but preserves pendingChannelIndex for hold-to-scroll
+    // Clears typed number input only. Preserves pendingChannelIndex and pendingChannelDirection for hold-to-scroll.
     private fun clearNumberTyping() {
         channelNumberInput = ""
         channelNumberHandler.removeCallbacks(channelNumberRunnable)
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
-        // Don't hide overlay here — caller (CHANNEL_UP/DOWN) will immediately show it again
+        // Don't hide overlay — caller will immediately show updated overlay
     }
 
     override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
@@ -735,13 +777,49 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_MEDIA_NEXT,
             android.view.KeyEvent.KEYCODE_CHANNEL_DOWN,
             android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                val direction = when (keyCode) {
+                    android.view.KeyEvent.KEYCODE_CHANNEL_UP,
+                    android.view.KeyEvent.KEYCODE_MEDIA_NEXT -> +1
+                    else -> -1
+                }
                 val index = pendingChannelIndex
                 pendingChannelIndex = -1
                 val items = viewModel.channelListItems.value
-                if (index != -1 && contentType == ContentType.CHANNEL && !items.isNullOrEmpty() && index in items.indices) {
-                    val targetChannel = items[index]
-                    if (targetChannel.id != contentId) switchToChannel(targetChannel)
-                    channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
+
+                when {
+                    contentType != ContentType.CHANNEL -> { /* non-channel, ignore */ }
+
+                    // Normal path: list was ready during keyDown, index computed
+                    index != -1 && !items.isNullOrEmpty() && index in items.indices -> {
+                        pendingChannelDirection = 0
+                        val targetChannel = items[index]
+                        if (targetChannel.id != contentId) switchToChannel(targetChannel)
+                        channelNumberHandler.removeCallbacks(overlayHideRunnable)
+                        channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
+                    }
+
+                    // List loaded between keyDown and keyUp — compute now
+                    index == -1 && !items.isNullOrEmpty() && pendingChannelDirection != 0 -> {
+                        val dir = pendingChannelDirection
+                        pendingChannelDirection = 0
+                        val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                        val targetIndex = (currentIndex + dir).coerceIn(0, items.size - 1)
+                        val targetChannel = items[targetIndex]
+                        if (targetChannel.id != contentId) {
+                            switchToChannel(targetChannel)
+                            showChannelOverlay((targetIndex + 1).toString(), targetChannel)
+                        }
+                        channelNumberHandler.removeCallbacks(overlayHideRunnable)
+                        channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
+                    }
+
+                    // List still empty — keep direction queued, trigger load
+                    items.isNullOrEmpty() -> {
+                        pendingChannelDirection = direction
+                        viewModel.loadAllChannelsForList(
+                            intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: ""
+                        )
+                    }
                 }
                 true
             }
@@ -834,14 +912,19 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 clearNumberTyping()
                 val items = viewModel.channelListItems.value
-                if (contentType == ContentType.CHANNEL && !items.isNullOrEmpty()) {
-                    val currentIndex = if (pendingChannelIndex != -1) pendingChannelIndex
-                        else items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
-                    val nextIndex = (currentIndex + 1).coerceAtMost(items.size - 1)
-                    pendingChannelIndex = nextIndex
-                    val targetChannel = items[nextIndex]
-                    channelNumberHandler.removeCallbacks(overlayHideRunnable)
-                    showChannelOverlay((nextIndex + 1).toString(), targetChannel)
+                if (contentType == ContentType.CHANNEL) {
+                    if (!items.isNullOrEmpty()) {
+                        val currentIndex = if (pendingChannelIndex != -1) pendingChannelIndex
+                            else items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                        val nextIndex = (currentIndex + 1).coerceAtMost(items.size - 1)
+                        pendingChannelIndex = nextIndex
+                        channelNumberHandler.removeCallbacks(overlayHideRunnable)
+                        showChannelOverlay((nextIndex + 1).toString(), items[nextIndex])
+                    } else {
+                        pendingChannelDirection = +1
+                        showChannelOverlay("...", null)
+                        channelNumberHandler.postDelayed(overlayHideRunnable, 4000)
+                    }
                     controlsState.show(lifecycleScope)
                 }
                 true
@@ -855,14 +938,19 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 clearNumberTyping()
                 val items = viewModel.channelListItems.value
-                if (contentType == ContentType.CHANNEL && !items.isNullOrEmpty()) {
-                    val currentIndex = if (pendingChannelIndex != -1) pendingChannelIndex
-                        else items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
-                    val prevIndex = (currentIndex - 1).coerceAtLeast(0)
-                    pendingChannelIndex = prevIndex
-                    val targetChannel = items[prevIndex]
-                    channelNumberHandler.removeCallbacks(overlayHideRunnable)
-                    showChannelOverlay((prevIndex + 1).toString(), targetChannel)
+                if (contentType == ContentType.CHANNEL) {
+                    if (!items.isNullOrEmpty()) {
+                        val currentIndex = if (pendingChannelIndex != -1) pendingChannelIndex
+                            else items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                        val prevIndex = (currentIndex - 1).coerceAtLeast(0)
+                        pendingChannelIndex = prevIndex
+                        channelNumberHandler.removeCallbacks(overlayHideRunnable)
+                        showChannelOverlay((prevIndex + 1).toString(), items[prevIndex])
+                    } else {
+                        pendingChannelDirection = -1
+                        showChannelOverlay("...", null)
+                        channelNumberHandler.postDelayed(overlayHideRunnable, 4000)
+                    }
                     controlsState.show(lifecycleScope)
                 }
                 true
@@ -880,6 +968,7 @@ class PlayerActivity : AppCompatActivity() {
                 if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 if (event?.repeatCount != 0) return true
                 if (showChannelList.value) return true
+                pendingChannelDirection = 0  // typing overrides any queued direction
                 channelNumberInput += (keyCode - android.view.KeyEvent.KEYCODE_0).toString()
                 channelNumberHandler.removeCallbacks(overlayHideRunnable)
                 showChannelOverlay(channelNumberInput, null)
@@ -911,11 +1000,27 @@ class PlayerActivity : AppCompatActivity() {
     private fun navigateToChannelByNumber() {
         val number = channelNumberInput.toIntOrNull()
         channelNumberInput = ""
-        binding.channelNumberOverlay?.visibility = View.GONE
-        if (number == null || number <= 0) return
-        val items = viewModel.channelListItems.value ?: return
-        if (contentType != ContentType.CHANNEL || items.isEmpty()) return
+        if (number == null || number <= 0) {
+            binding.channelNumberOverlay?.visibility = View.GONE
+            return
+        }
+        if (contentType != ContentType.CHANNEL) {
+            binding.channelNumberOverlay?.visibility = View.GONE
+            return
+        }
+        val items = viewModel.channelListItems.value
+        if (items.isNullOrEmpty()) {
+            // Store the number so the observer can execute it once the list loads
+            pendingChannelNumber = number
+            showChannelOverlay("...", null)
+            viewModel.loadAllChannelsForList(
+                intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: ""
+            )
+            channelNumberHandler.postDelayed(overlayHideRunnable, 3000)
+            return
+        }
         val index = number - 1
+        binding.channelNumberOverlay?.visibility = View.GONE
         if (index in items.indices) {
             switchToChannel(items[index])
             showChannelOverlay((index + 1).toString(), items[index])

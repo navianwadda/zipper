@@ -126,8 +126,8 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setOnClickListener {
-                    dismiss()
                     onClickHere?.invoke()
+                    dismiss()
                 }
             })
 

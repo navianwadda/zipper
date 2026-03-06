@@ -31,7 +31,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabColorSchemeParams
-import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 
 class WebActivity : AppCompatActivity() {
@@ -41,6 +40,7 @@ class WebActivity : AppCompatActivity() {
     private var pageLoaded = false
     private var timerStarted = false
     private var usingCustomTabs = false
+    private var validated = false
     private lateinit var timerLabelRef: TextView
 
     companion object {
@@ -154,6 +154,7 @@ class WebActivity : AppCompatActivity() {
         if (usingCustomTabs && !timerStarted) {
             timerStarted = true
             val durationSeconds = intent.getLongExtra(EXTRA_DURATION, 10L)
+            Toast.makeText(this, "Ad timer started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
             startTimer(durationSeconds)
         }
     }
@@ -246,6 +247,7 @@ class WebActivity : AppCompatActivity() {
                 override fun onPageFinished(view: WebView, url: String) {
                     if (!pageLoaded && url != "about:blank") {
                         pageLoaded = true
+                        Toast.makeText(this@WebActivity, "Ad timer started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
                         startTimer(durationSeconds)
                     }
                 }
@@ -299,10 +301,23 @@ class WebActivity : AppCompatActivity() {
                 }
             }
             override fun onFinish() {
+                validated = true
+                Toast.makeText(this@WebActivity, "Thank you! Returning to app…", Toast.LENGTH_SHORT).show()
                 setResult(RESULT_VALIDATED)
+                if (usingCustomTabs) {
+                    val bringFront = Intent(this@WebActivity, WebActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    }
+                    startActivity(bringFront)
+                }
                 finish()
             }
         }.start()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        finish()
     }
 
     private fun buildUserAgent(): String {

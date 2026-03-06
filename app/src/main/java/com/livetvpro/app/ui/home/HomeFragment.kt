@@ -1,5 +1,4 @@
-package com.livetvpro.app.ui.
-home
+package com.livetvpro.app.ui.home
 
 import android.content.Intent
 import androidx.activity.result.ActivityResultLauncher

@@ -1,6 +1,9 @@
-package com.livetvpro.app.ui.favorites
+package com.livetvpro.app.ui.
+favorites
 
 import android.content.DialogInterface
+import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -35,13 +38,7 @@ class FavoritesFragment : Fragment() {
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
-    private val redirectLauncher =
-        RedirectHelper.registerLauncher(
-            fragment = this,
-            cooldownMgr = cooldownManager,
-            pageTypeProvider = { lastPageType },
-            uniqueIdProvider = { lastUniqueId }
-        )
+    private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
 
@@ -58,6 +55,16 @@ class FavoritesFragment : Fragment() {
             clearPendingAction = { pendingChannelAction = null },
             pendingExternalRedirect = pendingExternalRedirect,
             clearPendingRedirect = { pendingExternalRedirect = false }
+        )
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        redirectLauncher = RedirectHelper.registerLauncher(
+            fragment = this,
+            cooldownMgr = cooldownManager,
+            pageTypeProvider = { lastPageType },
+            uniqueIdProvider = { lastUniqueId }
         )
     }
 

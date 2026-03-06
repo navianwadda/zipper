@@ -34,7 +34,7 @@ import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 
-class WebViewActivity : AppCompatActivity() {
+class WebActivity : AppCompatActivity() {
 
     private var webView: WebView? = null
     private var countDownTimer: CountDownTimer? = null
@@ -50,21 +50,58 @@ class WebViewActivity : AppCompatActivity() {
 
         fun start(context: Context, url: String, durationSeconds: Long) {
             context.startActivity(
-                Intent(context, WebViewActivity::class.java).apply {
+                Intent(context, WebActivity::class.java).apply {
                     putExtra(EXTRA_URL, url)
                     putExtra(EXTRA_DURATION, durationSeconds)
                 }
             )
         }
 
+        private val CUSTOM_TABS_BROWSERS = listOf(
+            "com.android.chrome",
+            "com.chrome.beta",
+            "com.chrome.dev",
+            "com.chrome.canary",
+            "org.mozilla.firefox",
+            "org.mozilla.firefox_beta",
+            "com.microsoft.emmx",
+            "com.brave.browser",
+            "com.opera.browser",
+            "com.opera.mini.native",
+            "com.sec.android.app.sbrowser",
+            "com.UCMobile.intl"
+        )
+
         fun isCustomTabsSupported(context: Context): Boolean {
-            val packageName = CustomTabsClient.getPackageName(context, null) ?: return false
-            return try {
-                context.packageManager.getPackageInfo(packageName, 0)
-                true
-            } catch (e: PackageManager.NameNotFoundException) {
-                false
+            val pm = context.packageManager
+            val serviceIntent = Intent("android.support.customtabs.action.CustomTabsService")
+            val resolvedList = pm.queryIntentServices(serviceIntent, 0)
+            if (resolvedList.isNotEmpty()) return true
+            for (pkg in CUSTOM_TABS_BROWSERS) {
+                try {
+                    pm.getPackageInfo(pkg, 0)
+                    return true
+                } catch (e: PackageManager.NameNotFoundException) {
+                    continue
+                }
             }
+            return false
+        }
+
+        fun getCustomTabsPackage(context: Context): String? {
+            val pm = context.packageManager
+            val serviceIntent = Intent("android.support.customtabs.action.CustomTabsService")
+            val resolvedList = pm.queryIntentServices(serviceIntent, 0)
+            if (resolvedList.isNotEmpty()) return resolvedList.first().serviceInfo.packageName
+            for (pkg in CUSTOM_TABS_BROWSERS) {
+                try {
+                    pm.getPackageInfo(pkg, 0)
+                    return pkg
+                } catch (e: PackageManager.NameNotFoundException) {
+                    continue
+                }
+            }
+            return null
         }
     }
 
@@ -107,6 +144,8 @@ class WebViewActivity : AppCompatActivity() {
             .setUrlBarHidingEnabled(false)
             .setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
             .build()
+        val pkg = getCustomTabsPackage(this)
+        if (pkg != null) customTabsIntent.intent.setPackage(pkg)
         customTabsIntent.launchUrl(this, Uri.parse(url))
     }
 
@@ -212,7 +251,7 @@ class WebViewActivity : AppCompatActivity() {
                 }
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                     if (request.isForMainFrame && !pageLoaded) {
-                        Toast.makeText(this@WebViewActivity, "Failed to load page", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@WebActivity, "Failed to load page", Toast.LENGTH_SHORT).show()
                     }
                 }
             }

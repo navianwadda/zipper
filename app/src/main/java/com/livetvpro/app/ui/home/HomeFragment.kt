@@ -14,38 +14,38 @@ import com.livetvpro.app.SearchableFragment
 import com.livetvpro.app.data.models.ListenerConfig
 import com.livetvpro.app.databinding.FragmentHomeBinding
 import com.livetvpro.app.ui.adapters.CategoryAdapter
+import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
 import com.livetvpro.app.utils.RetryHandler
 import com.livetvpro.app.utils.Refreshable
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+
 @AndroidEntryPoint
 class HomeFragment : Fragment(), SearchableFragment, Refreshable {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private val viewModel: HomeViewModel by viewModels()
     private lateinit var categoryAdapter: CategoryAdapter
-    @Inject
-    lateinit var listenerManager: NativeListenerManager
-    @Inject
-    lateinit var cooldownManager: RedirectCooldownManager
-    override fun onSearchQuery(query: String) {
-        viewModel.searchCategories(query)
-    }
-    override fun refreshData() {
-        viewModel.refresh()
-    }
+
+    @Inject lateinit var listenerManager: NativeListenerManager
+    @Inject lateinit var cooldownManager: RedirectCooldownManager
+
+    override fun onSearchQuery(query: String) { viewModel.searchCategories(query) }
+    override fun refreshData() { viewModel.refresh() }
+
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         val columnCount = resources.getInteger(R.integer.grid_column_count)
         (binding.recyclerViewCategories.layoutManager as? GridLayoutManager)?.spanCount = columnCount
     }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
@@ -54,9 +54,8 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
             binding.swipeRefresh.isEnabled = false
         }
     }
-    override fun onResume() {
-        super.onResume()
-    }
+
+    override fun onResume() { super.onResume() }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -70,18 +69,20 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
             binding.recyclerViewCategories.layoutManager?.onRestoreInstanceState(it)
         }
     }
+
     private fun setupRecyclerView() {
         categoryAdapter = CategoryAdapter { category ->
             val bundle = bundleOf(
                 "categoryId" to category.id,
                 "categoryName" to category.name
             )
-            cooldownManager.tryFire(ListenerConfig.PAGE_HOME, category.id) {
-                listenerManager.onPageInteraction(
-                    pageType = ListenerConfig.PAGE_HOME,
-                    uniqueId = category.id
-                )
-            }
+            RedirectHelper.tryRedirect(
+                fragment    = this@HomeFragment,
+                pageType    = ListenerConfig.PAGE_HOME,
+                uniqueId    = category.id,
+                cooldownMgr = cooldownManager,
+                listenerMgr = listenerManager
+            )
             findNavController().navigate(R.id.action_home_to_category, bundle)
         }
         val columnCount = resources.getInteger(R.integer.grid_column_count)
@@ -91,6 +92,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
             setHasFixedSize(true)
         }
     }
+
     private fun setupRetryHandling() {
         RetryHandler.setupGlobal(
             lifecycleOwner = viewLifecycleOwner,
@@ -117,6 +119,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
             }
         }
     }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

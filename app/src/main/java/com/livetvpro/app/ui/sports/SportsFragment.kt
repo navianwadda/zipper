@@ -158,9 +158,6 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var cooldownManager: RedirectCooldownManager
     @Inject lateinit var preferencesManager: PreferencesManager
 
-
-    }
-
     override fun onSearchQuery(query: String) { viewModel.searchSports(query) }
     override fun refreshData() { viewModel.refresh() }
 

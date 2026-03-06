@@ -19,6 +19,7 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.EventCategory
 import com.livetvpro.app.data.models.EventStatus
 import com.livetvpro.app.data.models.ListenerConfig
+import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.databinding.FragmentLiveEventsBinding
 import com.livetvpro.app.ui.adapters.EventCategoryAdapter
@@ -42,6 +43,9 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
     @Inject lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
+
+
+    }
 
     private var selectedCategoryId: String = "evt_cat_all"
     private var selectedStatusFilter: EventStatus? = null
@@ -124,8 +128,8 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
             chip.setOnKeyListener { _, keyCode, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
                 when (keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-                    android.view.KeyEvent.KEYCODE_ENTER,
+                    android.view.KeyEvent.KEYCODE_DPAD_CENTER
+                    android.view.KeyEvent.KEYCODE_ENTER
                     android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                         chip.performClick()
                         true
@@ -153,12 +157,12 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
 
     private fun setupRetryHandling() {
         RetryHandler.setupGlobal(
-            lifecycleOwner = viewLifecycleOwner,
-            viewModel = viewModel,
-            activity = requireActivity() as androidx.appcompat.app.AppCompatActivity,
-            contentView = binding.recyclerViewEvents,
-            swipeRefresh = binding.swipeRefresh,
-            progressBar = binding.progressBar,
+            lifecycleOwner = viewLifecycleOwner
+            viewModel = viewModel
+            activity = requireActivity() as androidx.appcompat.app.AppCompatActivity
+            contentView = binding.recyclerViewEvents
+            swipeRefresh = binding.swipeRefresh
+            progressBar = binding.progressBar
             emptyView = binding.emptyView
         )
     }
@@ -194,18 +198,18 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     private fun setupEventRecycler() {
         if (eventAdapter == null) {
             eventAdapter = LiveEventAdapter(
-                context = requireContext(),
-                events = emptyList(),
-                preferencesManager = preferencesManager,
+                context = requireContext()
+                events = emptyList()
+                preferencesManager = preferencesManager
                 onEventInteraction = { event, playerAction ->
-                    val redirected = cooldownManager.tryFire(ListenerConfig.PAGE_LIVE_EVENTS, event.id) {
-                        listenerManager.onPageInteraction(
-                            pageType = ListenerConfig.PAGE_LIVE_EVENTS,
-                            uniqueId = event.id
-                        )
-                    }
+                    val redirected = RedirectHelper.tryRedirect(
+                        fragment    = this@LiveEventsFragment,
+                        pageType    = ListenerConfig.PAGE_LIVE_EVENTS,
+                        uniqueId    = event.id,
+                        cooldownMgr = cooldownManager,
+                        listenerMgr = listenerManager
+                    )
                     if (redirected) {
-                        // Store action so it can be re-fired after returning from the redirect
                         pendingEventAction = playerAction
                     } else {
                         pendingEventAction = null

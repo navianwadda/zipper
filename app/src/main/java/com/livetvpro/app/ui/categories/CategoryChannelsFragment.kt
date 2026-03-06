@@ -27,6 +27,7 @@ import com.livetvpro.app.SearchableFragment
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ListenerConfig
 import com.livetvpro.app.databinding.FragmentCategoryChannelsBinding
+import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.ui.adapters.CategoryGroupDialogAdapter
 import com.livetvpro.app.ui.adapters.ChannelAdapter
 import com.livetvpro.app.ui.player.PlayerActivity
@@ -165,9 +166,13 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 } else {
                     { launchPlayer(channel, -1) }
                 }
-                val redirected = cooldownManager.tryFire(ListenerConfig.PAGE_CHANNELS, channel.id) {
-                    listenerManager.onPageInteraction(ListenerConfig.PAGE_CHANNELS, uniqueId = channel.id)
-                }
+                val redirected = RedirectHelper.tryRedirect(
+                    fragment    = this@CategoryChannelsFragment,
+                    pageType    = ListenerConfig.PAGE_CHANNELS,
+                    uniqueId    = channel.id,
+                    cooldownMgr = cooldownManager,
+                    listenerMgr = listenerManager
+                )
                 if (!redirected) {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null

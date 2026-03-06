@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.dialogs
 
 import android.content.Context
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,6 +18,9 @@ class SupportDialog : DialogFragment() {
     var durationSeconds: Long = 10L
     var onClickHere: (() -> Unit)? = null
     var onCancel: (() -> Unit)? = null
+
+    private var clickHereInvoked = false
+    private var cancelInvoked = false
 
     companion object {
         const val TAG = "SupportDialog"
@@ -111,6 +115,7 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).also { it.marginEnd = (8 * dp).toInt() }
                 setOnClickListener {
+                    cancelInvoked = true
                     onCancel?.invoke()
                     dismiss()
                 }
@@ -126,6 +131,7 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setOnClickListener {
+                    clickHereInvoked = true
                     onClickHere?.invoke()
                     dismiss()
                 }
@@ -136,6 +142,14 @@ class SupportDialog : DialogFragment() {
 
         root.addView(card)
         return root
+    }
+
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
+        if (!clickHereInvoked && !cancelInvoked) {
+            cancelInvoked = true
+            onCancel?.invoke()
+        }
     }
 
     override fun onStart() {

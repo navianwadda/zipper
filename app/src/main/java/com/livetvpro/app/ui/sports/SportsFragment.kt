@@ -3,83 +3,44 @@ package com.livetvpro.app.ui.sports
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.content.Intent
 import android.view.LayoutInflater
-import android.content.Intent
 import android.view.View
-import android.content.Intent
 import android.view.ViewGroup
-import android.content.Intent
 import androidx.fragment.app.Fragment
-import android.content.Intent
 import androidx.fragment.app.viewModels
-import android.content.Intent
 import androidx.lifecycle.LiveData
-import android.content.Intent
 import androidx.lifecycle.MutableLiveData
-import android.content.Intent
 import androidx.lifecycle.viewModelScope
-import android.content.Intent
 import androidx.recyclerview.widget.GridLayoutManager
-import android.content.Intent
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import android.content.Intent
 import com.livetvpro.app.SearchableFragment
-import android.content.Intent
 import com.livetvpro.app.data.models.Channel
-import android.content.Intent
 import com.livetvpro.app.data.models.ChannelLink
-import android.content.Intent
 import com.livetvpro.app.data.models.FavoriteChannel
-import android.content.Intent
 import com.livetvpro.app.data.models.ListenerConfig
-import android.content.Intent
 import com.livetvpro.app.utils.RedirectHelper
-import android.content.Intent
 import com.livetvpro.app.data.repository.CategoryRepository
-import android.content.Intent
 import com.livetvpro.app.data.repository.FavoritesRepository
-import android.content.Intent
 import com.livetvpro.app.databinding.FragmentSportsBinding
-import android.content.Intent
 import com.livetvpro.app.ui.adapters.ChannelAdapter
-import android.content.Intent
 import com.livetvpro.app.ui.player.PlayerActivity
-import android.content.Intent
 import com.livetvpro.app.utils.NativeListenerManager
-import android.content.Intent
 import com.livetvpro.app.utils.RedirectCooldownManager
-import android.content.Intent
 import com.livetvpro.app.utils.RetryViewModel
-import android.content.Intent
 import com.livetvpro.app.utils.RetryHandler
-import android.content.Intent
 import com.livetvpro.app.utils.Refreshable
-import android.content.Intent
 import com.livetvpro.app.data.local.PreferencesManager
-import android.content.Intent
 import com.livetvpro.app.utils.FloatingPlayerHelper
-import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
-import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import android.content.Intent
 import kotlinx.coroutines.flow.MutableStateFlow
-import android.content.Intent
 import kotlinx.coroutines.flow.catch
-import android.content.Intent
 import kotlinx.coroutines.flow.onStart
-import android.content.Intent
 import kotlinx.coroutines.launch
-import android.content.Intent
 import kotlinx.coroutines.MainScope
-import android.content.Intent
 import kotlinx.coroutines.delay
-import android.content.Intent
 import com.livetvpro.app.utils.DeviceUtils
-import android.content.Intent
 import javax.inject.Inject
-import android.content.Intent
 
 @HiltViewModel
 class SportsViewModel @Inject constructor(
@@ -271,11 +232,9 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                 ,
                         launcher     = redirectLauncher)
                 if (!redirected) {
+                    pendingChannelAction?.invoke()
+                    pendingChannelAction = null
                 }
-            },
-            onFavoriteToggle = { channel ->
-                viewModel.toggleFavorite(channel)
-                MainScope().launch {
                     delay(50)
                     if (_binding != null) channelAdapter.refreshItem(channel.id)
                 }

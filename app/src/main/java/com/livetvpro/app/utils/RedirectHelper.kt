@@ -21,9 +21,10 @@ object RedirectHelper {
             ActivityResultContracts.StartActivityForResult()
         ) { result: ActivityResult ->
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
-                val pageType = pageTypeProvider() ?: return@registerForActivityResult
-                cooldownMgr.recordFired(pageType, uniqueIdProvider())
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
+            } else {
+                val pageType = pageTypeProvider() ?: return@registerForActivityResult
+                cooldownMgr.undoLastFire(pageType, uniqueIdProvider())
             }
         }
     }
@@ -43,7 +44,8 @@ object RedirectHelper {
         if (!redirected) return false
 
         if (listenerMgr.isInAppRedirectEnabled()) {
-            showSupportDialog(fragment, pageType, uniqueId, listenerMgr, launcher)
+            cooldownMgr.recordFired(pageType, uniqueId)
+            showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher)
         } else {
             cooldownMgr.recordFired(pageType, uniqueId)
         }
@@ -68,6 +70,7 @@ object RedirectHelper {
         pageType: String,
         uniqueId: String?,
         listenerMgr: NativeListenerManager,
+        cooldownMgr: RedirectCooldownManager,
         launcher: ActivityResultLauncher<Intent>
     ) {
         try {
@@ -87,7 +90,9 @@ object RedirectHelper {
                     }
                     launcher.launch(intent)
                 }
-                onCancel = {}
+                onCancel = {
+                    cooldownMgr.undoLastFire(pageType, uniqueId)
+                }
             }.show(fm, SupportDialog.TAG)
         } catch (e: Exception) {}
     }

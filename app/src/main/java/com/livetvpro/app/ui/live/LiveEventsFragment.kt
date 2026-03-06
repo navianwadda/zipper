@@ -44,9 +44,6 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var cooldownManager: RedirectCooldownManager
     @Inject lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
 
-
-    }
-
     private var selectedCategoryId: String = "evt_cat_all"
     private var selectedStatusFilter: EventStatus? = null
     private var eventAdapter: LiveEventAdapter? = null

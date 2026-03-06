@@ -159,14 +159,13 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
-    private val redirectLauncher by lazy {
+    private val redirectLauncher =
         RedirectHelper.registerLauncher(
             fragment = this,
             cooldownMgr = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
         )
-    }
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
     @Inject lateinit var preferencesManager: PreferencesManager

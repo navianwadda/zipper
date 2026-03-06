@@ -11,9 +11,13 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.Gravity
 import android.view.View
+import android.webkit.CookieManager
+import android.webkit.GeolocationPermissions
+import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
@@ -27,9 +31,10 @@ class WebViewActivity : AppCompatActivity() {
 
     private var webView: WebView? = null
     private var countDownTimer: CountDownTimer? = null
-
     private var pageLoaded = false
     private var timerFinished = false
+    private lateinit var progressBarRef: ProgressBar
+    private lateinit var timerLabelRef: TextView
 
     companion object {
         private const val EXTRA_URL = "extra_url"
@@ -70,55 +75,6 @@ class WebViewActivity : AppCompatActivity() {
 
         val root = FrameLayout(this)
 
-        webView = WebView(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.loadWithOverviewMode = true
-            settings.useWideViewPort = true
-            settings.setSupportMultipleWindows(true)
-
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    view.loadUrl(request.url.toString())
-                    return true
-                }
-                override fun onPageFinished(view: WebView, url: String) {
-                    if (!pageLoaded && url != "about:blank") {
-                        pageLoaded = true
-                        startTimer(durationSeconds)
-                    }
-                }
-                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                    if (request.isForMainFrame && !pageLoaded) {
-                        Toast.makeText(this@WebViewActivity, "Failed to load page", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-            webChromeClient = object : WebChromeClient() {
-                override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                    progressBar.progress = newProgress
-                    progressBar.visibility = if (newProgress < 100) View.VISIBLE else View.GONE
-                }
-                override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
-                    val newWebView = WebView(view.context)
-                    newWebView.webViewClient = object : WebViewClient() {
-                        override fun onPageStarted(v: WebView, url: String, favicon: Bitmap?) {
-                            view.loadUrl(url)
-                        }
-                    }
-                    val transport = resultMsg.obj as WebView.WebViewTransport
-                    transport.webView = newWebView
-                    resultMsg.sendToTarget()
-                    return true
-                }
-            }
-            loadUrl(url.ifEmpty { "about:blank" })
-        }
-
         val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false
             max = 100
@@ -133,7 +89,6 @@ class WebViewActivity : AppCompatActivity() {
             setBackgroundColor(android.graphics.Color.parseColor("#AA000000"))
             setPadding((8 * dp).toInt(), (4 * dp).toInt(), (8 * dp).toInt(), (4 * dp).toInt())
             text = "Waiting for page..."
-            visibility = View.VISIBLE
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
@@ -155,6 +110,8 @@ class WebViewActivity : AppCompatActivity() {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
             setColorFilter(android.graphics.Color.WHITE)
+            isFocusable = true
+            isFocusableInTouchMode = true
             layoutParams = FrameLayout.LayoutParams(
                 (40 * dp).toInt(), (40 * dp).toInt()
             ).also { it.gravity = Gravity.TOP or Gravity.END }
@@ -164,6 +121,84 @@ class WebViewActivity : AppCompatActivity() {
             }
         }
 
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setAcceptThirdPartyCookies(null, true)
+
+        webView = WebView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+
+            cookieManager.setAcceptThirdPartyCookies(this, true)
+
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                loadWithOverviewMode = true
+                useWideViewPort = true
+                setSupportMultipleWindows(true)
+                setSupportZoom(true)
+                builtInZoomControls = true
+                displayZoomControls = false
+                allowFileAccess = true
+                allowContentAccess = true
+                loadsImagesAutomatically = true
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                mediaPlaybackRequiresUserGesture = false
+                javaScriptCanOpenWindowsAutomatically = true
+                setGeolocationEnabled(true)
+                userAgentString = buildUserAgent()
+            }
+
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                    view.loadUrl(request.url.toString())
+                    return true
+                }
+                override fun onPageFinished(view: WebView, url: String) {
+                    if (!pageLoaded && url != "about:blank") {
+                        pageLoaded = true
+                        startTimer(durationSeconds)
+                    }
+                }
+                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                    if (request.isForMainFrame && !pageLoaded) {
+                        Toast.makeText(this@WebViewActivity, "Failed to load page", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                    progressBar.progress = newProgress
+                    progressBar.visibility = if (newProgress < 100) View.VISIBLE else View.GONE
+                }
+                override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
+                    callback.invoke(origin, true, false)
+                }
+                override fun onPermissionRequest(request: PermissionRequest) {
+                    request.grant(request.resources)
+                }
+                override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
+                    val newWebView = WebView(view.context)
+                    newWebView.webViewClient = object : WebViewClient() {
+                        override fun onPageStarted(v: WebView, url: String, favicon: Bitmap?) {
+                            view.loadUrl(url)
+                        }
+                    }
+                    val transport = resultMsg.obj as WebView.WebViewTransport
+                    transport.webView = newWebView
+                    resultMsg.sendToTarget()
+                    return true
+                }
+            }
+
+            loadUrl(url.ifEmpty { "about:blank" })
+        }
+
         root.addView(webView)
         root.addView(topBar)
         root.addView(progressBar)
@@ -171,12 +206,29 @@ class WebViewActivity : AppCompatActivity() {
         root.addView(closeBtn)
         setContentView(root)
 
-        this.progressBarRef = progressBar
-        this.timerLabelRef = timerLabel
+        progressBarRef = progressBar
+        timerLabelRef = timerLabel
     }
 
-    private lateinit var progressBarRef: ProgressBar
-    private lateinit var timerLabelRef: TextView
+    private fun buildUserAgent(): String {
+        val androidVersion = android.os.Build.VERSION.RELEASE
+        val model = android.os.Build.MODEL
+        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        return when (uiModeManager.currentModeType) {
+            android.content.res.Configuration.UI_MODE_TYPE_TELEVISION ->
+                "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/4.0 Chrome/124.0.0.0 TV Safari/537.36"
+            android.content.res.Configuration.UI_MODE_TYPE_DESK ->
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            else -> {
+                val isTablet = resources.configuration.smallestScreenWidthDp >= 600
+                if (isTablet) {
+                    "Mozilla/5.0 (Linux; Android $androidVersion; $model) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                } else {
+                    "Mozilla/5.0 (Linux; Android $androidVersion; $model) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+                }
+            }
+        }
+    }
 
     private fun startTimer(durationSeconds: Long) {
         countDownTimer?.cancel()
@@ -195,17 +247,11 @@ class WebViewActivity : AppCompatActivity() {
 
     private fun isVpnOrProxyActive(): Boolean {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        val network = cm?.activeNetwork
-        val caps = cm?.getNetworkCapabilities(network)
+        val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
         if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true
-
-        val proxyHost = Proxy.getDefaultHost()
-        if (!proxyHost.isNullOrEmpty()) return true
-
-        val httpProxy = System.getProperty("http.proxyHost")
-        val httpsProxy = System.getProperty("https.proxyHost")
-        if (!httpProxy.isNullOrEmpty() || !httpsProxy.isNullOrEmpty()) return true
-
+        if (!Proxy.getDefaultHost().isNullOrEmpty()) return true
+        if (!System.getProperty("http.proxyHost").isNullOrEmpty()) return true
+        if (!System.getProperty("https.proxyHost").isNullOrEmpty()) return true
         return false
     }
 

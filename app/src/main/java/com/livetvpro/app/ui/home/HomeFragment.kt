@@ -1,5 +1,8 @@
-package com.livetvpro.app.ui.home
+package com.livetvpro.app.ui.
+home
 
+import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -35,13 +38,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
     private var pendingNavAction: (() -> Unit)? = null
     private var pendingExternalRedirect: Boolean = false
 
-    private val redirectLauncher =
-        RedirectHelper.registerLauncher(
-            fragment = this,
-            cooldownMgr = cooldownManager,
-            pageTypeProvider = { lastPageType },
-            uniqueIdProvider = { lastUniqueId }
-        )
+    private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
 
@@ -52,6 +49,16 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
         super.onConfigurationChanged(newConfig)
         val columnCount = resources.getInteger(R.integer.grid_column_count)
         (binding.recyclerViewCategories.layoutManager as? GridLayoutManager)?.spanCount = columnCount
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        redirectLauncher = RedirectHelper.registerLauncher(
+            fragment = this,
+            cooldownMgr = cooldownManager,
+            pageTypeProvider = { lastPageType },
+            uniqueIdProvider = { lastUniqueId }
+        )
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

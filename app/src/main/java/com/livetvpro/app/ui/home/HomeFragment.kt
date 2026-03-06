@@ -1,7 +1,6 @@
 package com.livetvpro.app.ui.home
 
 import android.os.Bundle
-import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -33,15 +32,15 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
+    private var pendingNavAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
+
     private val redirectLauncher by lazy {
         RedirectHelper.registerLauncher(
             fragment = this,
             cooldownMgr = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
-        ,
-            pendingActionProvider = { null },
-            clearPendingAction = {}
         )
     }
     private var lastPageType: String? = null
@@ -70,7 +69,15 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
         }
     }
 
-    override fun onResume() { super.onResume() }
+    override fun onResume() {
+        super.onResume()
+        RedirectHelper.executePendingActionOnResume(
+            pendingActionProvider = { pendingNavAction },
+            clearPendingAction = { pendingNavAction = null },
+            pendingExternalRedirect = pendingExternalRedirect,
+            clearPendingRedirect = { pendingExternalRedirect = false }
+        )
+    }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -93,15 +100,26 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
             )
             lastPageType = ListenerConfig.PAGE_HOME
             lastUniqueId = category.id
-            RedirectHelper.tryRedirect(
+            pendingNavAction = { findNavController().navigate(R.id.action_home_to_category, bundle) }
+
+            val redirected = RedirectHelper.tryRedirect(
                 fragment    = this@HomeFragment,
                 pageType    = ListenerConfig.PAGE_HOME,
                 uniqueId    = category.id,
                 cooldownMgr = cooldownManager,
-                listenerMgr = listenerManager
-            ,
-                        launcher     = redirectLauncher)
-            findNavController().navigate(R.id.action_home_to_category, bundle)
+                listenerMgr = listenerManager,
+                launcher    = redirectLauncher
+            )
+            if (redirected) {
+                if (!listenerManager.isInAppRedirectEnabled()) {
+                    pendingExternalRedirect = true
+                } else {
+                    pendingNavAction = null
+                }
+            } else {
+                pendingNavAction?.invoke()
+                pendingNavAction = null
+            }
         }
         val columnCount = resources.getInteger(R.integer.grid_column_count)
         binding.recyclerViewCategories.apply {

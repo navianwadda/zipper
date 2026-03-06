@@ -1,12 +1,16 @@
 package com.livetvpro.app.ui.webview
 
 import android.annotation.SuppressLint
+import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Proxy
+import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.Gravity
@@ -26,14 +30,17 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabColorSchemeParams
+import androidx.browser.customtabs.CustomTabsClient
+import androidx.browser.customtabs.CustomTabsIntent
 
 class WebViewActivity : AppCompatActivity() {
 
     private var webView: WebView? = null
     private var countDownTimer: CountDownTimer? = null
     private var pageLoaded = false
-    private var timerFinished = false
-    private lateinit var progressBarRef: ProgressBar
+    private var timerStarted = false
+    private var usingCustomTabs = false
     private lateinit var timerLabelRef: TextView
 
     companion object {
@@ -49,15 +56,23 @@ class WebViewActivity : AppCompatActivity() {
                 }
             )
         }
+
+        fun isCustomTabsSupported(context: Context): Boolean {
+            val packageName = CustomTabsClient.getPackageName(context, null) ?: return false
+            return try {
+                context.packageManager.getPackageInfo(packageName, 0)
+                true
+            } catch (e: PackageManager.NameNotFoundException) {
+                false
+            }
+        }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val url = intent.getStringExtra(EXTRA_URL) ?: ""
         val durationSeconds = intent.getLongExtra(EXTRA_DURATION, 10L)
-        val dp = resources.displayMetrics.density
 
         if (isVpnOrProxyActive()) {
             Toast.makeText(this, "Please disable VPN/Proxy to continue", Toast.LENGTH_LONG).show()
@@ -73,6 +88,40 @@ class WebViewActivity : AppCompatActivity() {
             return
         }
 
+        if (isCustomTabsSupported(this)) {
+            usingCustomTabs = true
+            launchCustomTab(url)
+        } else {
+            usingCustomTabs = false
+            launchWebView(url, durationSeconds)
+        }
+    }
+
+    private fun launchCustomTab(url: String) {
+        val colorSchemeParams = CustomTabColorSchemeParams.Builder()
+            .setToolbarColor(android.graphics.Color.parseColor("#CC000000"))
+            .build()
+        val customTabsIntent = CustomTabsIntent.Builder()
+            .setDefaultColorSchemeParams(colorSchemeParams)
+            .setShowTitle(true)
+            .setUrlBarHidingEnabled(false)
+            .setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+            .build()
+        customTabsIntent.launchUrl(this, Uri.parse(url))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (usingCustomTabs && !timerStarted) {
+            timerStarted = true
+            val durationSeconds = intent.getLongExtra(EXTRA_DURATION, 10L)
+            startTimer(durationSeconds)
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun launchWebView(url: String, durationSeconds: Long) {
+        val dp = resources.displayMetrics.density
         val root = FrameLayout(this)
 
         val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
@@ -98,6 +147,7 @@ class WebViewActivity : AppCompatActivity() {
                 it.marginEnd = (8 * dp).toInt()
             }
         }
+        timerLabelRef = timerLabel
 
         val topBar = View(this).apply {
             setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
@@ -123,16 +173,13 @@ class WebViewActivity : AppCompatActivity() {
 
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
-        cookieManager.setAcceptThirdPartyCookies(null, true)
 
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
-
             cookieManager.setAcceptThirdPartyCookies(this, true)
-
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
@@ -152,7 +199,6 @@ class WebViewActivity : AppCompatActivity() {
                 setGeolocationEnabled(true)
                 userAgentString = buildUserAgent()
             }
-
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     view.loadUrl(request.url.toString())
@@ -170,7 +216,6 @@ class WebViewActivity : AppCompatActivity() {
                     }
                 }
             }
-
             webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                     progressBar.progress = newProgress
@@ -195,7 +240,6 @@ class WebViewActivity : AppCompatActivity() {
                     return true
                 }
             }
-
             loadUrl(url.ifEmpty { "about:blank" })
         }
 
@@ -205,19 +249,31 @@ class WebViewActivity : AppCompatActivity() {
         root.addView(timerLabel)
         root.addView(closeBtn)
         setContentView(root)
+    }
 
-        progressBarRef = progressBar
-        timerLabelRef = timerLabel
+    private fun startTimer(durationSeconds: Long) {
+        countDownTimer?.cancel()
+        countDownTimer = object : CountDownTimer(durationSeconds * 1000L, 1000L) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (!usingCustomTabs) {
+                    timerLabelRef.text = "Closing in ${millisUntilFinished / 1000}s"
+                }
+            }
+            override fun onFinish() {
+                setResult(RESULT_VALIDATED)
+                finish()
+            }
+        }.start()
     }
 
     private fun buildUserAgent(): String {
         val androidVersion = android.os.Build.VERSION.RELEASE
         val model = android.os.Build.MODEL
-        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
         return when (uiModeManager.currentModeType) {
-            android.content.res.Configuration.UI_MODE_TYPE_TELEVISION ->
+            Configuration.UI_MODE_TYPE_TELEVISION ->
                 "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/4.0 Chrome/124.0.0.0 TV Safari/537.36"
-            android.content.res.Configuration.UI_MODE_TYPE_DESK ->
+            Configuration.UI_MODE_TYPE_DESK ->
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
             else -> {
                 val isTablet = resources.configuration.smallestScreenWidthDp >= 600
@@ -228,21 +284,6 @@ class WebViewActivity : AppCompatActivity() {
                 }
             }
         }
-    }
-
-    private fun startTimer(durationSeconds: Long) {
-        countDownTimer?.cancel()
-        timerFinished = false
-        countDownTimer = object : CountDownTimer(durationSeconds * 1000L, 1000L) {
-            override fun onTick(millisUntilFinished: Long) {
-                timerLabelRef.text = "Closing in ${millisUntilFinished / 1000}s"
-            }
-            override fun onFinish() {
-                timerFinished = true
-                setResult(RESULT_VALIDATED)
-                finish()
-            }
-        }.start()
     }
 
     private fun isVpnOrProxyActive(): Boolean {
@@ -264,7 +305,7 @@ class WebViewActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        if (webView?.canGoBack() == true) {
+        if (!usingCustomTabs && webView?.canGoBack() == true) {
             webView?.goBack()
         } else {
             setResult(RESULT_CANCELED)

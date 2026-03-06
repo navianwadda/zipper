@@ -1,5 +1,4 @@
-package com.livetvpro.app.ui.
-favorites
+package com.livetvpro.app.ui.favorites
 
 import android.content.DialogInterface
 import android.content.Intent

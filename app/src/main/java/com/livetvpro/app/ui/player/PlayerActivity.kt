@@ -705,6 +705,7 @@ class PlayerActivity : AppCompatActivity() {
                 when {
                     isInPipMode -> return
                     channelNumberInput.isNotEmpty() -> cancelNumberInput()
+                    pendingChannelIndex != -1 -> cancelNumberInput()
                     showChannelList.value -> showChannelList.value = false
                     else -> finish()
                 }
@@ -725,7 +726,7 @@ class PlayerActivity : AppCompatActivity() {
         channelNumberInput = ""
         channelNumberHandler.removeCallbacks(channelNumberRunnable)
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
-        binding.channelNumberOverlay?.visibility = View.GONE
+        // Don't hide overlay here — caller (CHANNEL_UP/DOWN) will immediately show it again
     }
 
     override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {

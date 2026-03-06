@@ -151,6 +151,7 @@ class SportsViewModel @Inject constructor(
 class SportsFragment : Fragment(), SearchableFragment, Refreshable {
     private var _binding: FragmentSportsBinding? = null
     private var pendingChannelAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
     private val binding get() = _binding!!
     private val viewModel: SportsViewModel by viewModels()
     private lateinit var channelAdapter: ChannelAdapter
@@ -164,9 +165,6 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
             cooldownMgr = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
-        ,
-            pendingActionProvider = { pendingChannelAction },
-            clearPendingAction = { pendingChannelAction = null }
         )
     }
     private var lastPageType: String? = null
@@ -198,6 +196,12 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
 
     override fun onResume() {
         super.onResume()
+        RedirectHelper.executePendingActionOnResume(
+            pendingActionProvider = { pendingChannelAction },
+            clearPendingAction = { pendingChannelAction = null },
+            pendingExternalRedirect = pendingExternalRedirect,
+            clearPendingRedirect = { pendingExternalRedirect = false }
+        )
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -229,9 +233,15 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                     uniqueId    = channel.id,
                     cooldownMgr = cooldownManager,
                     listenerMgr = listenerManager,
-                    launcher     = redirectLauncher
+                    launcher    = redirectLauncher
                 )
-                if (!redirected) {
+                if (redirected) {
+                    if (!listenerManager.isInAppRedirectEnabled()) {
+                        pendingExternalRedirect = true
+                    } else {
+                        pendingChannelAction = null
+                    }
+                } else {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null
                 }

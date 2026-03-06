@@ -891,6 +891,7 @@ class PlayerActivity : AppCompatActivity() {
                 if (showChannelList.value) {
                     cancelNumberInput()
                     showChannelList.value = false
+                    controlsState.show(lifecycleScope)
                 } else {
                     cancelNumberInput()
                     player?.let {

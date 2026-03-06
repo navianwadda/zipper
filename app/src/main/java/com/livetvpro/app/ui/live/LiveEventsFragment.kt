@@ -42,6 +42,20 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
 
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
+
+    private val redirectLauncher by lazy {
+        RedirectHelper.registerLauncher(
+            fragment = this,
+            cooldownMgr = cooldownManager,
+            pageTypeProvider = { lastPageType },
+            uniqueIdProvider = { lastUniqueId }
+        ,
+            pendingActionProvider = { pendingEventAction },
+            clearPendingAction = { pendingEventAction = null }
+        )
+    }
+    private var lastPageType: String? = null
+    private var lastUniqueId: String? = null
     @Inject lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
 
     private var selectedCategoryId: String = "evt_cat_all"
@@ -199,13 +213,16 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                 events = emptyList(),
                 preferencesManager = preferencesManager,
                 onEventInteraction = { event, playerAction ->
+                    lastPageType = ListenerConfig.PAGE_LIVE_EVENTS
+                    lastUniqueId = event.id
                     val redirected = RedirectHelper.tryRedirect(
                         fragment    = this@LiveEventsFragment,
                         pageType    = ListenerConfig.PAGE_LIVE_EVENTS,
                         uniqueId    = event.id,
                         cooldownMgr = cooldownManager,
                         listenerMgr = listenerManager
-                    )
+                    ,
+                        launcher     = redirectLauncher)
                     if (redirected) {
                         pendingEventAction = playerAction
                     } else {
@@ -313,8 +330,6 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     override fun onResume() {
         super.onResume()
         startDynamicUpdates()
-        pendingEventAction?.invoke()
-        pendingEventAction = null
     }
 
     override fun onPause() {

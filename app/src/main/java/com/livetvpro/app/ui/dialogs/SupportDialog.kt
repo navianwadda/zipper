@@ -1,29 +1,17 @@
 package com.livetvpro.app.ui.dialogs
 
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.DialogFragment
+import com.livetvpro.app.ui.player.dialogs.WebViewActivity
 
 class SupportDialog : DialogFragment() {
-
-    private var webView: WebView? = null
-    private var progressBar: ProgressBar? = null
-    private var countDownTimer: CountDownTimer? = null
-    private var timerFinished = false
-    private var webViewStarted = false
 
     var url: String = ""
     var durationSeconds: Long = 10L
@@ -36,16 +24,6 @@ class SupportDialog : DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val frame = FrameLayout(requireContext())
-        frame.layoutParams = ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
-        frame.addView(buildInstructionsView(frame))
-        return frame
-    }
-
-    private fun buildInstructionsView(parent: FrameLayout): LinearLayout {
         val dp = requireContext().resources.displayMetrics.density
         val px16 = (16 * dp).toInt()
         val px12 = (12 * dp).toInt()
@@ -53,9 +31,16 @@ class SupportDialog : DialogFragment() {
         val px6 = (6 * dp).toInt()
         val px2 = (2 * dp).toInt()
 
-        return LinearLayout(requireContext()).apply {
+        val root = FrameLayout(requireContext())
+
+        val card = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(px16, px16, px16, px16)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = (12 * dp)
+                setColor(android.graphics.Color.parseColor("#FF2C2C2C"))
+            }
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
@@ -65,6 +50,7 @@ class SupportDialog : DialogFragment() {
                 text = "We Need Your Support"
                 textSize = 18f
                 setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(android.graphics.Color.WHITE)
                 gravity = android.view.Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -91,6 +77,7 @@ class SupportDialog : DialogFragment() {
                 addView(TextView(requireContext()).apply {
                     text = line
                     textSize = 14f
+                    setTextColor(android.graphics.Color.LTGRAY)
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -110,11 +97,15 @@ class SupportDialog : DialogFragment() {
             buttonRow.addView(Button(requireContext()).apply {
                 text = "Cancel"
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setTextColor(android.graphics.Color.LTGRAY)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).also { it.marginEnd = px8 }
-                setOnClickListener { dismiss() }
+                setOnClickListener {
+                    onDismissedEarly?.invoke()
+                    dismiss()
+                }
             })
 
             buttonRow.addView(Button(requireContext()).apply {
@@ -124,89 +115,27 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setOnClickListener {
-                    parent.removeAllViews()
-                    parent.addView(buildWebView())
-                    webViewStarted = true
-                    startTimer()
+                    WebViewActivity.start(requireContext(), url, durationSeconds)
+                    onTimerCompleted?.invoke()
+                    dismiss()
                 }
             })
 
             addView(buttonRow)
         }
-    }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun buildWebView(): FrameLayout {
-        val frame = FrameLayout(requireContext())
-        frame.layoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        )
-
-        progressBar = ProgressBar(requireContext(), null, android.R.attr.progressBarStyleHorizontal).apply {
-            isIndeterminate = false
-            max = 100
-            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 8)
-        }
-
-        webView = WebView(requireContext()).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            ).also { it.topMargin = 8 }
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.loadWithOverviewMode = true
-            settings.useWideViewPort = true
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    view.loadUrl(request.url.toString())
-                    return true
-                }
-            }
-            webChromeClient = object : WebChromeClient() {
-                override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                    progressBar?.progress = newProgress
-                    progressBar?.visibility = if (newProgress < 100) View.VISIBLE else View.GONE
-                }
-            }
-            loadUrl(url?.ifEmpty { "about:blank" } ?: "about:blank")
-        }
-
-        frame.addView(progressBar)
-        frame.addView(webView)
-        return frame
+        root.addView(card)
+        return root
     }
 
     override fun onStart() {
         super.onStart()
-        dialog?.window?.setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
-    }
-
-    private fun startTimer() {
-        countDownTimer?.cancel()
-        timerFinished = false
-        countDownTimer = object : CountDownTimer(durationSeconds * 1000L, 1000L) {
-            override fun onTick(millisUntilFinished: Long) {}
-            override fun onFinish() {
-                timerFinished = true
-                onTimerCompleted?.invoke()
-                dismissAllowingStateLoss()
-            }
-        }.start()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        countDownTimer?.cancel()
-        webView?.stopLoading()
-        webView?.destroy()
-        webView = null
-        if (webViewStarted && !timerFinished) {
-            onDismissedEarly?.invoke()
+        dialog?.window?.apply {
+            setLayout(
+                (requireContext().resources.displayMetrics.widthPixels * 0.92).toInt(),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            setBackgroundDrawableResource(android.R.color.transparent)
         }
     }
 }

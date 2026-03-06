@@ -20,6 +20,10 @@ class NativeListenerManager @Inject constructor(
         init {
             System.loadLibrary("native-lib")
         }
+
+        const val REMOTE_CONFIG_IN_APP_REDIRECT     = "ad_redirect_in_app"
+        const val REMOTE_CONFIG_AD_DURATION_SECONDS = "ad_duration_seconds"
+        const val DEFAULT_AD_DURATION_SECONDS       = 10L
     }
 
     private external fun nativeShouldShowLink(pageType: String, uniqueId: String?): Boolean
@@ -35,6 +39,7 @@ class NativeListenerManager @Inject constructor(
     private external fun nativeGetMessageUrl(): String
     private external fun nativeGetAppVersion(): String
     private external fun nativeGetDownloadUrl(): String
+
     @Volatile private var directLinkDisabled: Boolean? = null
 
     fun getDeviceFingerprint(): String {
@@ -48,13 +53,13 @@ class NativeListenerManager @Inject constructor(
             ""
         }
     }
+
     fun refreshDirectLinkState() {
         directLinkDisabled = try {
             val disabledIds = Firebase.remoteConfig
                 .getString(NativeDataRepository.REMOTE_CONFIG_DIRECT_LINK_DISABLED_DEVICES)
-            if (disabledIds.isBlank()) {
-                false
-            } else {
+            if (disabledIds.isBlank()) false
+            else {
                 val deviceId = getDeviceFingerprint()
                 if (deviceId.isBlank()) false
                 else disabledIds.split(",").any { it.trim() == deviceId }
@@ -79,6 +84,27 @@ class NativeListenerManager @Inject constructor(
         }
     }
 
+    fun isInAppRedirectEnabled(): Boolean {
+        return try {
+            Firebase.remoteConfig.getBoolean(REMOTE_CONFIG_IN_APP_REDIRECT)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun getAdDurationSeconds(): Long {
+        return try {
+            val v = Firebase.remoteConfig.getLong(REMOTE_CONFIG_AD_DURATION_SECONDS)
+            if (v <= 0L) DEFAULT_AD_DURATION_SECONDS else v
+        } catch (e: Exception) {
+            DEFAULT_AD_DURATION_SECONDS
+        }
+    }
+
+    fun getDirectLinkUrl(): String {
+        return try { nativeGetDirectLinkUrl() } catch (e: Exception) { "" }
+    }
+
     fun onPageInteraction(pageType: String, uniqueId: String? = null): Boolean {
         return try {
             if (isDirectLinkDisabled()) return false
@@ -86,7 +112,9 @@ class NativeListenerManager @Inject constructor(
             if (shouldShow) {
                 val url = nativeGetDirectLinkUrl()
                 if (url.isNotEmpty()) {
-                    openDirectLink(url)
+                    if (!isInAppRedirectEnabled()) {
+                        openDirectLink(url)
+                    }
                     return true
                 }
             }

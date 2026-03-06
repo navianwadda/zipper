@@ -99,6 +99,7 @@ class FavoritesFragment : Fragment() {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null
                 }
+                redirected
             },
             onFavoriteToggle = { favorite -> viewModel.removeFavorite(favorite.id) },
             getLiveChannel = { channelId ->

@@ -771,6 +771,21 @@ class PlayerActivity : AppCompatActivity() {
         // Don't hide overlay — caller will immediately show updated overlay
     }
 
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val code = event.keyCode
+        if (code == android.view.KeyEvent.KEYCODE_MEDIA_NEXT ||
+            code == android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS ||
+            code == android.view.KeyEvent.KEYCODE_CHANNEL_UP ||
+            code == android.view.KeyEvent.KEYCODE_CHANNEL_DOWN) {
+            return when (event.action) {
+                android.view.KeyEvent.ACTION_DOWN -> onKeyDown(code, event)
+                android.view.KeyEvent.ACTION_UP   -> onKeyUp(code, event)
+                else -> super.dispatchKeyEvent(event)
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
         return when (keyCode) {
             android.view.KeyEvent.KEYCODE_CHANNEL_UP,

@@ -37,6 +37,7 @@ import javax.inject.Inject
 class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     private var _binding: FragmentLiveEventsBinding? = null
     private var pendingEventAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
     private val binding get() = _binding!!
     private val viewModel: LiveEventsViewModel by viewModels()
 
@@ -49,9 +50,6 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
             cooldownMgr = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
-        ,
-            pendingActionProvider = { pendingEventAction },
-            clearPendingAction = { pendingEventAction = null }
         )
     }
     private var lastPageType: String? = null
@@ -220,11 +218,14 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                         pageType    = ListenerConfig.PAGE_LIVE_EVENTS,
                         uniqueId    = event.id,
                         cooldownMgr = cooldownManager,
-                        listenerMgr = listenerManager
-                    ,
-                        launcher     = redirectLauncher)
+                        listenerMgr = listenerManager,
+                        launcher    = redirectLauncher
+                    )
                     if (redirected) {
-                        pendingEventAction = playerAction
+                        if (!listenerManager.isInAppRedirectEnabled()) {
+                            pendingEventAction = playerAction
+                            pendingExternalRedirect = true
+                        }
                     } else {
                         pendingEventAction = null
                     }
@@ -330,6 +331,12 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     override fun onResume() {
         super.onResume()
         startDynamicUpdates()
+        RedirectHelper.executePendingActionOnResume(
+            pendingActionProvider = { pendingEventAction },
+            clearPendingAction = { pendingEventAction = null },
+            pendingExternalRedirect = pendingExternalRedirect,
+            clearPendingRedirect = { pendingExternalRedirect = false }
+        )
     }
 
     override fun onPause() {

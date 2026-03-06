@@ -1,7 +1,6 @@
 package com.livetvpro.app.ui.favorites
 
 import android.content.DialogInterface
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -27,6 +26,7 @@ import javax.inject.Inject
 class FavoritesFragment : Fragment() {
     private var _binding: FragmentFavoritesBinding? = null
     private var pendingChannelAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
     private val binding get() = _binding!!
     private val viewModel: FavoritesViewModel by viewModels()
     private lateinit var favoriteAdapter: FavoriteAdapter
@@ -41,9 +41,6 @@ class FavoritesFragment : Fragment() {
             cooldownMgr = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
-        ,
-            pendingActionProvider = { pendingChannelAction },
-            clearPendingAction = { pendingChannelAction = null }
         )
     }
     private var lastPageType: String? = null
@@ -57,6 +54,12 @@ class FavoritesFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        RedirectHelper.executePendingActionOnResume(
+            pendingActionProvider = { pendingChannelAction },
+            clearPendingAction = { pendingChannelAction = null },
+            pendingExternalRedirect = pendingExternalRedirect,
+            clearPendingRedirect = { pendingExternalRedirect = false }
+        )
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -84,13 +87,18 @@ class FavoritesFragment : Fragment() {
                     uniqueId    = favorite.id,
                     cooldownMgr = cooldownManager,
                     listenerMgr = listenerManager,
-                    launcher     = redirectLauncher
+                    launcher    = redirectLauncher
                 )
-                if (!redirected) {
+                if (redirected) {
+                    if (!listenerManager.isInAppRedirectEnabled()) {
+                        pendingExternalRedirect = true
+                    } else {
+                        pendingChannelAction = null
+                    }
+                } else {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null
                 }
-                redirected
             },
             onFavoriteToggle = { favorite -> viewModel.removeFavorite(favorite.id) },
             getLiveChannel = { channelId ->

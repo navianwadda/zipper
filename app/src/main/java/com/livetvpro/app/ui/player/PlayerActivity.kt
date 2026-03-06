@@ -772,7 +772,8 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 true
             }
-            android.view.KeyEvent.KEYCODE_CHANNEL_UP -> {
+            android.view.KeyEvent.KEYCODE_CHANNEL_UP,
+            android.view.KeyEvent.KEYCODE_MEDIA_NEXT -> {
                 val items = viewModel.channelListItems.value
                 if (contentType == ContentType.CHANNEL && !items.isNullOrEmpty()) {
                     val currentIndex = items.indexOfFirst { it.id == contentId }
@@ -786,7 +787,8 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 true
             }
-            android.view.KeyEvent.KEYCODE_CHANNEL_DOWN -> {
+            android.view.KeyEvent.KEYCODE_CHANNEL_DOWN,
+            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
                 val items = viewModel.channelListItems.value
                 if (contentType == ContentType.CHANNEL && !items.isNullOrEmpty()) {
                     val currentIndex = items.indexOfFirst { it.id == contentId }

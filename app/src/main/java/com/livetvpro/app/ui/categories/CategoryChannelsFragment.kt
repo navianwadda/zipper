@@ -1,47 +1,89 @@
 package com.livetvpro.app.ui.categories
 
 import android.content.DialogInterface
+import android.content.Intent
 import android.os.Bundle
+import android.content.Intent
 import android.os.Handler
+import android.content.Intent
 import android.os.Looper
+import android.content.Intent
 import android.text.Editable
+import android.content.Intent
 import android.text.TextWatcher
+import android.content.Intent
 import android.view.KeyEvent
+import android.content.Intent
 import android.view.LayoutInflater
+import android.content.Intent
 import android.view.View
+import android.content.Intent
 import android.view.ViewGroup
+import android.content.Intent
 import android.view.inputmethod.InputMethodManager
+import android.content.Intent
 import android.widget.EditText
+import android.content.Intent
 import android.widget.ImageView
+import android.content.Intent
 import android.widget.TextView
+import android.content.Intent
 import androidx.fragment.app.Fragment
+import android.content.Intent
 import androidx.fragment.app.viewModels
+import android.content.Intent
 import androidx.lifecycle.lifecycleScope
+import android.content.Intent
 import androidx.recyclerview.widget.GridLayoutManager
+import android.content.Intent
 import androidx.recyclerview.widget.LinearLayoutManager
+import android.content.Intent
 import androidx.recyclerview.widget.RecyclerView
+import android.content.Intent
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.content.Intent
 import com.google.android.material.tabs.TabLayout
+import android.content.Intent
 import com.livetvpro.app.R
+import android.content.Intent
 import com.livetvpro.app.SearchableFragment
+import android.content.Intent
 import com.livetvpro.app.data.models.Channel
+import android.content.Intent
 import com.livetvpro.app.data.models.ListenerConfig
+import android.content.Intent
 import com.livetvpro.app.databinding.FragmentCategoryChannelsBinding
+import android.content.Intent
 import com.livetvpro.app.utils.RedirectHelper
+import android.content.Intent
 import com.livetvpro.app.ui.adapters.CategoryGroupDialogAdapter
+import android.content.Intent
 import com.livetvpro.app.ui.adapters.ChannelAdapter
+import android.content.Intent
 import com.livetvpro.app.ui.player.PlayerActivity
+import android.content.Intent
 import com.livetvpro.app.utils.DeviceUtils
+import android.content.Intent
 import com.livetvpro.app.utils.NativeListenerManager
+import android.content.Intent
 import com.livetvpro.app.utils.RedirectCooldownManager
+import android.content.Intent
 import com.livetvpro.app.utils.RetryHandler
+import android.content.Intent
 import com.livetvpro.app.utils.Refreshable
+import android.content.Intent
 import com.livetvpro.app.data.local.PreferencesManager
+import android.content.Intent
 import com.livetvpro.app.utils.FloatingPlayerHelper
+import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
+import android.content.Intent
 import kotlinx.coroutines.delay
+import android.content.Intent
 import kotlinx.coroutines.launch
+import android.content.Intent
 import javax.inject.Inject
+import android.content.Intent
 
 @AndroidEntryPoint
 class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
@@ -53,6 +95,20 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
 
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
+
+    private val redirectLauncher by lazy {
+        RedirectHelper.registerLauncher(
+            fragment = this,
+            cooldownMgr = cooldownManager,
+            pageTypeProvider = { lastPageType },
+            uniqueIdProvider = { lastUniqueId }
+        ,
+            pendingActionProvider = { pendingChannelAction },
+            clearPendingAction = { pendingChannelAction = null }
+        )
+    }
+    private var lastPageType: String? = null
+    private var lastUniqueId: String? = null
     @Inject lateinit var preferencesManager: PreferencesManager
 
     private var currentCategoryId: String? = null
@@ -166,16 +222,17 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 } else {
                     { launchPlayer(channel, -1) }
                 }
+                lastPageType = ListenerConfig.PAGE_CHANNELS
+                lastUniqueId = channel.id
                 val redirected = RedirectHelper.tryRedirect(
                     fragment    = this@CategoryChannelsFragment,
                     pageType    = ListenerConfig.PAGE_CHANNELS,
                     uniqueId    = channel.id,
                     cooldownMgr = cooldownManager,
                     listenerMgr = listenerManager
-                )
+                ,
+                        launcher     = redirectLauncher)
                 if (!redirected) {
-                    pendingChannelAction?.invoke()
-                    pendingChannelAction = null
                 }
             },
             onFavoriteToggle = { channel ->
@@ -412,8 +469,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
 
     override fun onResume() {
         super.onResume()
-        pendingChannelAction?.invoke()
-        pendingChannelAction = null
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

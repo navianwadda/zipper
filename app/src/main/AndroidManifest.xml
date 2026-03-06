@@ -111,7 +111,7 @@
         </activity>
 
         <activity
-            android:name=".ui.player.dialogs.WebViewActivity"
+            android:name=".ui.webview.WebViewActivity"
             android:exported="false"
             android:theme="@style/Theme.LiveTVPro.Fullscreen"
             android:screenOrientation="user"

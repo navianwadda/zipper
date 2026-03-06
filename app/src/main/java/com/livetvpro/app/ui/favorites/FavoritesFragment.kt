@@ -1,26 +1,47 @@
 package com.livetvpro.app.ui.favorites
 
 import android.content.DialogInterface
+import android.content.Intent
 import android.os.Bundle
+import android.content.Intent
 import android.view.LayoutInflater
+import android.content.Intent
 import android.view.View
+import android.content.Intent
 import android.view.ViewGroup
+import android.content.Intent
 import androidx.fragment.app.Fragment
+import android.content.Intent
 import androidx.fragment.app.viewModels
+import android.content.Intent
 import androidx.recyclerview.widget.GridLayoutManager
+import android.content.Intent
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.content.Intent
 import com.livetvpro.app.R
+import android.content.Intent
 import com.livetvpro.app.data.local.PreferencesManager
+import android.content.Intent
 import com.livetvpro.app.data.models.FavoriteChannel
+import android.content.Intent
 import com.livetvpro.app.data.models.ListenerConfig
+import android.content.Intent
 import com.livetvpro.app.utils.RedirectHelper
+import android.content.Intent
 import com.livetvpro.app.databinding.FragmentFavoritesBinding
+import android.content.Intent
 import com.livetvpro.app.ui.adapters.FavoriteAdapter
+import android.content.Intent
 import com.livetvpro.app.utils.DeviceUtils
+import android.content.Intent
 import com.livetvpro.app.utils.NativeListenerManager
+import android.content.Intent
 import com.livetvpro.app.utils.RedirectCooldownManager
+import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
+import android.content.Intent
 import javax.inject.Inject
+import android.content.Intent
 
 @AndroidEntryPoint
 class FavoritesFragment : Fragment() {
@@ -34,6 +55,20 @@ class FavoritesFragment : Fragment() {
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
+    private val redirectLauncher by lazy {
+        RedirectHelper.registerLauncher(
+            fragment = this,
+            cooldownMgr = cooldownManager,
+            pageTypeProvider = { lastPageType },
+            uniqueIdProvider = { lastUniqueId }
+        ,
+            pendingActionProvider = { pendingChannelAction },
+            clearPendingAction = { pendingChannelAction = null }
+        )
+    }
+    private var lastPageType: String? = null
+    private var lastUniqueId: String? = null
+
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         val columnCount = resources.getInteger(R.integer.grid_column_count)
@@ -42,8 +77,6 @@ class FavoritesFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        pendingChannelAction?.invoke()
-        pendingChannelAction = null
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -63,16 +96,17 @@ class FavoritesFragment : Fragment() {
             preferencesManager = preferencesManager,
             onChannelClick = { favorite, playerAction ->
                 pendingChannelAction = playerAction
+                lastPageType = ListenerConfig.PAGE_FAVORITES
+                lastUniqueId = favorite.id
                 val redirected = RedirectHelper.tryRedirect(
                     fragment    = this@FavoritesFragment,
                     pageType    = ListenerConfig.PAGE_FAVORITES,
                     uniqueId    = favorite.id,
                     cooldownMgr = cooldownManager,
                     listenerMgr = listenerManager
-                )
+                ,
+                        launcher     = redirectLauncher)
                 if (!redirected) {
-                    pendingChannelAction?.invoke()
-                    pendingChannelAction = null
                 }
                 redirected
             },

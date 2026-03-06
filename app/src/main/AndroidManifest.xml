@@ -19,6 +19,16 @@
         android:name="android.software.leanback"
         android:required="false" />
 
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:name=".LiveTVProApplication"
         android:allowBackup="true"
@@ -111,7 +121,7 @@
         </activity>
 
         <activity
-            android:name=".ui.webview.WebViewActivity"
+            android:name=".ui.webview.WebActivity"
             android:exported="false"
             android:theme="@style/Theme.LiveTVPro.Fullscreen"
             android:screenOrientation="user"

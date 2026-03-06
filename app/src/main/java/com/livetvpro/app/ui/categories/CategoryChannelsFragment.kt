@@ -48,6 +48,7 @@ import javax.inject.Inject
 class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     private var _binding: FragmentCategoryChannelsBinding? = null
     private var pendingChannelAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
     private val binding get() = _binding!!
     private val viewModel: CategoryChannelsViewModel by viewModels()
     private lateinit var channelAdapter: ChannelAdapter
@@ -61,9 +62,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
             cooldownMgr = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
-        ,
-            pendingActionProvider = { pendingChannelAction },
-            clearPendingAction = { pendingChannelAction = null }
         )
     }
     private var lastPageType: String? = null
@@ -188,10 +186,16 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                     pageType    = ListenerConfig.PAGE_CHANNELS,
                     uniqueId    = channel.id,
                     cooldownMgr = cooldownManager,
-                    listenerMgr = listenerManager
-                ,
-                        launcher     = redirectLauncher)
-                if (!redirected) {
+                    listenerMgr = listenerManager,
+                    launcher    = redirectLauncher
+                )
+                if (redirected) {
+                    if (!listenerManager.isInAppRedirectEnabled()) {
+                        pendingExternalRedirect = true
+                    } else {
+                        pendingChannelAction = null
+                    }
+                } else {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null
                 }
@@ -430,6 +434,12 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
 
     override fun onResume() {
         super.onResume()
+        RedirectHelper.executePendingActionOnResume(
+            pendingActionProvider = { pendingChannelAction },
+            clearPendingAction = { pendingChannelAction = null },
+            pendingExternalRedirect = pendingExternalRedirect,
+            clearPendingRedirect = { pendingExternalRedirect = false }
+        )
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

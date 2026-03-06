@@ -66,6 +66,12 @@ class PlayerControlsState(
         }
     }
 
+    // Show and keep visible indefinitely (no auto-hide) — used when TV focus is inside controls
+    fun showPersistent() {
+        hideJob?.cancel()
+        isVisible = true
+    }
+
     fun hide() {
         if (!isLocked) {
             hideJob?.cancel()
@@ -146,8 +152,12 @@ fun PlayerControls(
     var showVolumeOsd     by remember { mutableStateOf(false) }
     var showBrightnessOsd by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isPlaying) {
-        if (isPlaying && state.isVisible && !state.isLocked) {
+    // Track whether focus is currently inside the controls UI (TV only).
+    // While focused, suppress auto-hide so the user can navigate buttons freely.
+    var isFocusWithinControls by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isPlaying, isFocusWithinControls) {
+        if (isPlaying && state.isVisible && !state.isLocked && !isFocusWithinControls) {
             delay(state.autoHideDelay)
             state.hide()
         }
@@ -216,7 +226,12 @@ fun PlayerControls(
                 onFullscreenClick = onFullscreenClick,
                 onChannelListClick = onChannelListClick,
                 isChannelListAvailable = isChannelListAvailable,
-                onInteraction = { state.show(scope) }
+                onInteraction = { state.show(scope) },
+                onFocusWithinControls = { hasFocus ->
+                    isFocusWithinControls = hasFocus
+                    if (hasFocus) state.showPersistent()
+                    else state.show(scope)
+                },
             )
         }
 
@@ -244,12 +259,26 @@ fun PlayerControls(
                     }
             ) {
                 val lockInteractionSource = remember { MutableInteractionSource() }
+                var isUnlockFocused by remember { mutableStateOf(false) }
+                val unlockFocusRequester = remember { FocusRequester() }
+                LaunchedEffect(Unit) { runCatching { unlockFocusRequester.requestFocus() } }
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(start = 4.dp, top = 4.dp)
                         .size(40.dp)
+                        .focusRequester(unlockFocusRequester)
+                        .focusable(interactionSource = lockInteractionSource)
+                        .onFocusChanged { isUnlockFocused = it.isFocused }
+                        .onKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyUp &&
+                                (event.key == Key.DirectionCenter || event.key == Key.Enter)) {
+                                state.unlock(scope)
+                                onLockClick(false)
+                                true
+                            } else false
+                        }
                         .clickable(
                             interactionSource = lockInteractionSource,
                             indication = ripple(bounded = true, color = Color.White.copy(alpha = 0.25f)),
@@ -258,11 +287,17 @@ fun PlayerControls(
                                 onLockClick(false)
                             }
                         )
+                        .then(
+                            if (isUnlockFocused) Modifier.background(
+                                Color.White.copy(alpha = 0.18f),
+                                androidx.compose.foundation.shape.CircleShape
+                            ) else Modifier
+                        )
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_lock_closed),
                         contentDescription = "Unlock controls",
-                        tint = Color.White,
+                        tint = if (isUnlockFocused) Color(0xFFEF4444) else Color.White,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -312,9 +347,35 @@ private fun PlayerControlsContent(
     onChannelListClick: () -> Unit,
     isChannelListAvailable: Boolean,
     onInteraction: () -> Unit,
+    onFocusWithinControls: (Boolean) -> Unit = {},
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    // Play/pause button gets initial focus when controls become visible on TV
+    val playPauseFocusRequester = remember { FocusRequester() }
 
+    LaunchedEffect(isTvMode) {
+        if (isTvMode) runCatching { playPauseFocusRequester.requestFocus() }
+    }
+
+    // When controls re-appear (AnimatedVisibility), re-request focus on play/pause
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        if (isTvMode) {
+            // Small delay to let AnimatedVisibility finish its enter animation
+            delay(160)
+            runCatching { playPauseFocusRequester.requestFocus() }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // Track whether any focus is inside this controls layer
+            .onFocusChanged { focusState ->
+                if (isTvMode) onFocusWithinControls(focusState.hasFocus)
+            }
+    ) {
+
+        // Top gradient
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -327,6 +388,7 @@ private fun PlayerControlsContent(
                 )
         )
 
+        // Bottom gradient
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -339,6 +401,7 @@ private fun PlayerControlsContent(
                 )
         )
 
+        // ── Top row ──────────────────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -348,7 +411,7 @@ private fun PlayerControlsContent(
             horizontalArrangement = Arrangement.Start
         ) {
             PlayerIconButton(
-                onClick = onBackClick,
+                onClick = { onBackClick(); onInteraction() },
                 iconRes = R.drawable.ic_arrow_back,
                 contentDescription = "Back",
                 size = 40
@@ -369,7 +432,7 @@ private fun PlayerControlsContent(
 
             if (showPipButton) {
                 PlayerIconButton(
-                    onClick = onPipClick,
+                    onClick = { onPipClick(); onInteraction() },
                     iconRes = R.drawable.ic_pip,
                     contentDescription = "Picture in Picture",
                     size = 40
@@ -391,7 +454,7 @@ private fun PlayerControlsContent(
 
             if (!isTvMode) {
                 PlayerIconButton(
-                    onClick = onLockClick,
+                    onClick = { onLockClick(); onInteraction() },
                     iconRes = R.drawable.ic_lock_open,
                     contentDescription = "Lock controls",
                     size = 40,
@@ -400,6 +463,7 @@ private fun PlayerControlsContent(
             }
         }
 
+        // ── Bottom controls ───────────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -410,7 +474,7 @@ private fun PlayerControlsContent(
                 currentPosition  = currentPosition,
                 duration         = duration,
                 bufferedPosition = bufferedPosition,
-                onSeek           = onSeek,
+                onSeek           = { pos -> onSeek(pos); onInteraction() },
                 isTvMode         = isTvMode,
                 modifier         = Modifier
                     .fillMaxWidth()
@@ -443,12 +507,15 @@ private fun PlayerControlsContent(
                     size = 48,
                     modifier = Modifier.padding(end = 16.dp)
                 )
+                // Play/pause is the default focus target when controls appear
                 PlayerIconButton(
                     onClick = { onPlayPauseClick(); onInteraction() },
                     iconRes = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
                     contentDescription = if (isPlaying) "Pause" else "Play",
                     size = 64,
-                    modifier = Modifier.padding(end = 16.dp)
+                    modifier = Modifier
+                        .padding(end = 16.dp)
+                        .focusRequester(playPauseFocusRequester)
                 )
                 PlayerIconButton(
                     onClick = { onForwardClick(); onInteraction() },
@@ -480,7 +547,7 @@ private fun PlayerControlsContent(
                         )
                     }
                     PlayerIconButton(
-                        onClick = onFullscreenClick,
+                        onClick = { onFullscreenClick(); onInteraction() },
                         iconRes = if (isLandscape) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen,
                         contentDescription = "Toggle fullscreen",
                         size = 40
@@ -589,12 +656,6 @@ private fun ExoPlayerTimeBar(
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(isTvMode) {
-        if (isTvMode) {
-            runCatching { focusRequester.requestFocus() }
-        }
-    }
 
     Row(
         modifier = modifier

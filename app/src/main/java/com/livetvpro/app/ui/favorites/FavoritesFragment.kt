@@ -3,45 +3,25 @@ package com.livetvpro.app.ui.favorites
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.content.Intent
 import android.view.LayoutInflater
-import android.content.Intent
 import android.view.View
-import android.content.Intent
 import android.view.ViewGroup
-import android.content.Intent
 import androidx.fragment.app.Fragment
-import android.content.Intent
 import androidx.fragment.app.viewModels
-import android.content.Intent
 import androidx.recyclerview.widget.GridLayoutManager
-import android.content.Intent
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import android.content.Intent
 import com.livetvpro.app.R
-import android.content.Intent
 import com.livetvpro.app.data.local.PreferencesManager
-import android.content.Intent
 import com.livetvpro.app.data.models.FavoriteChannel
-import android.content.Intent
 import com.livetvpro.app.data.models.ListenerConfig
-import android.content.Intent
 import com.livetvpro.app.utils.RedirectHelper
-import android.content.Intent
 import com.livetvpro.app.databinding.FragmentFavoritesBinding
-import android.content.Intent
 import com.livetvpro.app.ui.adapters.FavoriteAdapter
-import android.content.Intent
 import com.livetvpro.app.utils.DeviceUtils
-import android.content.Intent
 import com.livetvpro.app.utils.NativeListenerManager
-import android.content.Intent
 import com.livetvpro.app.utils.RedirectCooldownManager
-import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
-import android.content.Intent
 import javax.inject.Inject
-import android.content.Intent
 
 @AndroidEntryPoint
 class FavoritesFragment : Fragment() {
@@ -107,11 +87,9 @@ class FavoritesFragment : Fragment() {
                 ,
                         launcher     = redirectLauncher)
                 if (!redirected) {
+                    pendingChannelAction?.invoke()
+                    pendingChannelAction = null
                 }
-                redirected
-            },
-            onFavoriteToggle = { favChannel ->
-                showRemoveConfirmation(favChannel)
             },
             getLiveChannel = { channelId ->
                 viewModel.getLiveChannel(channelId)

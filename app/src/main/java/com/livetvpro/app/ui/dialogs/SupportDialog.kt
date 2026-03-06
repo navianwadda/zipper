@@ -1,5 +1,7 @@
 package com.livetvpro.app.ui.dialogs
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -8,6 +10,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.DialogFragment
 import com.livetvpro.app.ui.webview.WebViewActivity
 
@@ -21,6 +24,15 @@ class SupportDialog : DialogFragment() {
     companion object {
         const val TAG = "SupportDialog"
         fun newInstance() = SupportDialog()
+    }
+
+    private val webViewLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == WebViewActivity.RESULT_VALIDATED) {
+            onTimerCompleted?.invoke()
+        }
+        // RESULT_CANCELED (X pressed, VPN detected, no internet) — not validated, do nothing
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -115,8 +127,11 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setOnClickListener {
-                    WebViewActivity.start(requireContext(), url, durationSeconds)
-                    onTimerCompleted?.invoke()
+                    val intent = Intent(requireContext(), WebViewActivity::class.java).apply {
+                        putExtra("extra_url", url)
+                        putExtra("extra_duration", durationSeconds)
+                    }
+                    webViewLauncher.launch(intent)
                     dismiss()
                 }
             })

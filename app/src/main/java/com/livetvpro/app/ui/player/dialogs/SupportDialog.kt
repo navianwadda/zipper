@@ -170,7 +170,7 @@ class SupportDialog : DialogFragment() {
                     progressBar?.visibility = if (newProgress < 100) View.VISIBLE else View.GONE
                 }
             }
-            loadUrl(url)
+            loadUrl(url.ifEmpty { "about:blank" })
         }
 
         frame.addView(progressBar)

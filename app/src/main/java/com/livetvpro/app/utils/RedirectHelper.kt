@@ -15,9 +15,7 @@ object RedirectHelper {
         fragment: Fragment,
         cooldownMgr: RedirectCooldownManager,
         pageTypeProvider: () -> String?,
-        uniqueIdProvider: () -> String?,
-        pendingActionProvider: () -> (() -> Unit)?,
-        clearPendingAction: () -> Unit
+        uniqueIdProvider: () -> String?
     ): ActivityResultLauncher<Intent> {
         return fragment.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -26,9 +24,7 @@ object RedirectHelper {
                 val pageType = pageTypeProvider() ?: return@registerForActivityResult
                 cooldownMgr.recordFired(pageType, uniqueIdProvider())
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
-                pendingActionProvider()?.invoke()
             }
-            clearPendingAction()
         }
     }
 
@@ -52,6 +48,19 @@ object RedirectHelper {
             cooldownMgr.recordFired(pageType, uniqueId)
         }
         return true
+    }
+
+    fun executePendingActionOnResume(
+        pendingActionProvider: () -> (() -> Unit)?,
+        clearPendingAction: () -> Unit,
+        pendingExternalRedirect: Boolean,
+        clearPendingRedirect: () -> Unit
+    ) {
+        if (pendingExternalRedirect) {
+            clearPendingRedirect()
+            pendingActionProvider()?.invoke()
+            clearPendingAction()
+        }
     }
 
     private fun showSupportDialog(

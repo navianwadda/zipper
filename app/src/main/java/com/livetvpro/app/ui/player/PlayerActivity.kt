@@ -132,6 +132,8 @@ class PlayerActivity : AppCompatActivity() {
     private var channelNumberInput: String = ""
     private val channelNumberHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val channelNumberRunnable = Runnable { navigateToChannelByNumber() }
+    private val overlayHideRunnable = Runnable { binding.channelNumberOverlay?.visibility = View.GONE }
+    private var pendingChannelIndex: Int = -1
     private var channelData: Channel? = null
     private var eventData: LiveEvent? = null
     private var allEventLinks = listOf<LiveEventLink>()
@@ -212,6 +214,9 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun handleNewIntent(intent: Intent) {
+        cancelNumberInput()
+        showChannelList.value = false
+
         val newChannel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(EXTRA_CHANNEL, Channel::class.java)
         } else {
@@ -578,6 +583,9 @@ class PlayerActivity : AppCompatActivity() {
         if (player == null) {
             setupPlayer()
         }
+        if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
+            viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
+        }
         binding.playerView.onResume()
         binding.playerView.player = player
         binding.playerView.requestFocus()
@@ -695,12 +703,49 @@ class PlayerActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    isInPipMode && isFinishing -> finish()
                     isInPipMode -> return
+                    channelNumberInput.isNotEmpty() -> cancelNumberInput()
+                    showChannelList.value -> showChannelList.value = false
                     else -> finish()
                 }
             }
         })
+    }
+
+    private fun cancelNumberInput() {
+        channelNumberInput = ""
+        pendingChannelIndex = -1
+        channelNumberHandler.removeCallbacks(channelNumberRunnable)
+        channelNumberHandler.removeCallbacks(overlayHideRunnable)
+        binding.channelNumberOverlay?.visibility = View.GONE
+    }
+
+    // Like cancelNumberInput but preserves pendingChannelIndex for hold-to-scroll
+    private fun clearNumberTyping() {
+        channelNumberInput = ""
+        channelNumberHandler.removeCallbacks(channelNumberRunnable)
+        channelNumberHandler.removeCallbacks(overlayHideRunnable)
+        binding.channelNumberOverlay?.visibility = View.GONE
+    }
+
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        return when (keyCode) {
+            android.view.KeyEvent.KEYCODE_CHANNEL_UP,
+            android.view.KeyEvent.KEYCODE_MEDIA_NEXT,
+            android.view.KeyEvent.KEYCODE_CHANNEL_DOWN,
+            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                val index = pendingChannelIndex
+                pendingChannelIndex = -1
+                val items = viewModel.channelListItems.value
+                if (index != -1 && contentType == ContentType.CHANNEL && !items.isNullOrEmpty() && index in items.indices) {
+                    val targetChannel = items[index]
+                    if (targetChannel.id != contentId) switchToChannel(targetChannel)
+                    channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
+                }
+                true
+            }
+            else -> super.onKeyUp(keyCode, event)
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
@@ -708,6 +753,7 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_MEDIA_PLAY,
             android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,
             android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                cancelNumberInput()
                 player?.let {
                     val hasError = binding.errorView.visibility == View.VISIBLE
                     val hasEnded = it.playbackState == Player.STATE_ENDED
@@ -720,6 +766,7 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
             android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 if (showChannelList.value) return super.onKeyDown(keyCode, event)
+                cancelNumberInput()
                 player?.let {
                     val newPosition = it.currentPosition + skipMs
                     if (it.isCurrentWindowLive && it.duration != C.TIME_UNSET && newPosition >= it.duration) {
@@ -736,11 +783,13 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_MEDIA_REWIND,
             android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
                 if (showChannelList.value) return super.onKeyDown(keyCode, event)
+                cancelNumberInput()
                 player?.let { it.seekTo((it.currentPosition - skipMs).coerceAtLeast(0L)) }
                 controlsState.show(lifecycleScope)
                 true
             }
             android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                cancelNumberInput()
                 controlsState.show(lifecycleScope)
                 true
             }
@@ -750,6 +799,7 @@ class PlayerActivity : AppCompatActivity() {
                     !channelListItems.isNullOrEmpty() &&
                     (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE || DeviceUtils.isTvDevice)
                 if (isChannelListAvailable) {
+                    if (!showChannelList.value) cancelNumberInput()
                     showChannelList.value = !showChannelList.value
                 } else {
                     controlsState.show(lifecycleScope)
@@ -760,8 +810,10 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_ENTER,
             android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                 if (showChannelList.value) {
+                    cancelNumberInput()
                     showChannelList.value = false
                 } else {
+                    cancelNumberInput()
                     player?.let {
                         val hasError = binding.errorView.visibility == View.VISIBLE
                         val hasEnded = it.playbackState == Player.STATE_ENDED
@@ -774,39 +826,43 @@ class PlayerActivity : AppCompatActivity() {
             }
             android.view.KeyEvent.KEYCODE_CHANNEL_UP,
             android.view.KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                if (showChannelList.value) {
+                    cancelNumberInput()
+                    showChannelList.value = false
+                    return true
+                }
+                clearNumberTyping()
                 val items = viewModel.channelListItems.value
                 if (contentType == ContentType.CHANNEL && !items.isNullOrEmpty()) {
-                    val currentIndex = items.indexOfFirst { it.id == contentId }
-                    val nextIndex = if (currentIndex == -1) 0 else (currentIndex + 1).coerceAtMost(items.size - 1)
-                    if (nextIndex != currentIndex) switchToChannel(items[nextIndex])
-                    val displayIndex = (if (nextIndex != currentIndex) nextIndex else currentIndex) + 1
-                    showChannelOverlay(displayIndex.toString(), items[if (nextIndex != currentIndex) nextIndex else currentIndex])
-                    channelNumberHandler.removeCallbacks(channelNumberRunnable)
-                    channelNumberHandler.postDelayed({ binding.channelNumberOverlay?.visibility = View.GONE }, 2000)
+                    val currentIndex = if (pendingChannelIndex != -1) pendingChannelIndex
+                        else items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                    val nextIndex = (currentIndex + 1).coerceAtMost(items.size - 1)
+                    pendingChannelIndex = nextIndex
+                    val targetChannel = items[nextIndex]
+                    channelNumberHandler.removeCallbacks(overlayHideRunnable)
+                    showChannelOverlay((nextIndex + 1).toString(), targetChannel)
                     controlsState.show(lifecycleScope)
                 }
                 true
             }
             android.view.KeyEvent.KEYCODE_CHANNEL_DOWN,
             android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                if (showChannelList.value) {
+                    cancelNumberInput()
+                    showChannelList.value = false
+                    return true
+                }
+                clearNumberTyping()
                 val items = viewModel.channelListItems.value
                 if (contentType == ContentType.CHANNEL && !items.isNullOrEmpty()) {
-                    val currentIndex = items.indexOfFirst { it.id == contentId }
-                    val prevIndex = if (currentIndex == -1) 0 else (currentIndex - 1).coerceAtLeast(0)
-                    if (prevIndex != currentIndex) switchToChannel(items[prevIndex])
-                    val displayIndex = (if (prevIndex != currentIndex) prevIndex else currentIndex) + 1
-                    showChannelOverlay(displayIndex.toString(), items[if (prevIndex != currentIndex) prevIndex else currentIndex])
-                    channelNumberHandler.removeCallbacks(channelNumberRunnable)
-                    channelNumberHandler.postDelayed({ binding.channelNumberOverlay?.visibility = View.GONE }, 2000)
+                    val currentIndex = if (pendingChannelIndex != -1) pendingChannelIndex
+                        else items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                    val prevIndex = (currentIndex - 1).coerceAtLeast(0)
+                    pendingChannelIndex = prevIndex
+                    val targetChannel = items[prevIndex]
+                    channelNumberHandler.removeCallbacks(overlayHideRunnable)
+                    showChannelOverlay((prevIndex + 1).toString(), targetChannel)
                     controlsState.show(lifecycleScope)
-                }
-                true
-            }
-            android.view.KeyEvent.KEYCODE_BACK -> {
-                if (showChannelList.value) {
-                    showChannelList.value = false
-                } else {
-                    finish()
                 }
                 true
             }
@@ -821,8 +877,10 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_8,
             android.view.KeyEvent.KEYCODE_9 -> {
                 if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
-                val digit = keyCode - android.view.KeyEvent.KEYCODE_0
-                channelNumberInput += digit.toString()
+                if (event?.repeatCount != 0) return true
+                if (showChannelList.value) return true
+                channelNumberInput += (keyCode - android.view.KeyEvent.KEYCODE_0).toString()
+                channelNumberHandler.removeCallbacks(overlayHideRunnable)
                 showChannelOverlay(channelNumberInput, null)
                 channelNumberHandler.removeCallbacks(channelNumberRunnable)
                 channelNumberHandler.postDelayed(channelNumberRunnable, 2000)
@@ -852,20 +910,16 @@ class PlayerActivity : AppCompatActivity() {
     private fun navigateToChannelByNumber() {
         val number = channelNumberInput.toIntOrNull()
         channelNumberInput = ""
-        if (number == null || number <= 0) {
-            binding.channelNumberOverlay?.visibility = View.GONE
-            return
-        }
+        binding.channelNumberOverlay?.visibility = View.GONE
+        if (number == null || number <= 0) return
         val items = viewModel.channelListItems.value ?: return
         if (contentType != ContentType.CHANNEL || items.isEmpty()) return
         val index = number - 1
         if (index in items.indices) {
             switchToChannel(items[index])
             showChannelOverlay((index + 1).toString(), items[index])
-            channelNumberHandler.removeCallbacks(channelNumberRunnable)
-            channelNumberHandler.postDelayed({ binding.channelNumberOverlay?.visibility = View.GONE }, 2000)
-        } else {
-            binding.channelNumberOverlay?.visibility = View.GONE
+            channelNumberHandler.removeCallbacks(overlayHideRunnable)
+            channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
         }
     }
 
@@ -1428,6 +1482,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        cancelNumberInput()
 
         val isPip = isEnteringPip ||
                 (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode)
@@ -1453,6 +1508,7 @@ class PlayerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         channelNumberHandler.removeCallbacks(channelNumberRunnable)
+        channelNumberHandler.removeCallbacks(overlayHideRunnable)
         mainHandler.removeCallbacksAndMessages(null)
         unregisterPipReceiver()
         releasePlayer()
@@ -1677,7 +1733,7 @@ class PlayerActivity : AppCompatActivity() {
                                 Player.STATE_READY -> {
                                     binding.progressBar.visibility = View.GONE
                                     binding.errorView.visibility = View.GONE
-                                    updatePipParams()
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) updatePipParams()
                                 }
                                 Player.STATE_BUFFERING -> {
                                     binding.progressBar.visibility = View.VISIBLE
@@ -1695,15 +1751,11 @@ class PlayerActivity : AppCompatActivity() {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPipMode) {
                                 setPictureInPictureParams(updatePipParams(enter = false))
                             }
-
-                            if (isInPipMode) {
-                                updatePipParams()
-                            }
                         }
 
                         override fun onVideoSizeChanged(videoSize: VideoSize) {
                             super.onVideoSizeChanged(videoSize)
-                            updatePipParams()
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) updatePipParams()
                         }
 
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {

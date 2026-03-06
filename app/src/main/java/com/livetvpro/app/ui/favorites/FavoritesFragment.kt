@@ -13,6 +13,7 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.models.ListenerConfig
+import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.databinding.FragmentFavoritesBinding
 import com.livetvpro.app.ui.adapters.FavoriteAdapter
 import com.livetvpro.app.utils.DeviceUtils
@@ -32,6 +33,9 @@ class FavoritesFragment : Fragment() {
     @Inject lateinit var preferencesManager: PreferencesManager
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
+
+
+    }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
@@ -62,12 +66,13 @@ class FavoritesFragment : Fragment() {
             preferencesManager = preferencesManager,
             onChannelClick = { favorite, playerAction ->
                 pendingChannelAction = playerAction
-                val redirected = cooldownManager.tryFire(ListenerConfig.PAGE_FAVORITES, favorite.id) {
-                    listenerManager.onPageInteraction(
-                        pageType = ListenerConfig.PAGE_FAVORITES,
-                        uniqueId = favorite.id
-                    )
-                }
+                val redirected = RedirectHelper.tryRedirect(
+                    fragment    = this@FavoritesFragment,
+                    pageType    = ListenerConfig.PAGE_FAVORITES,
+                    uniqueId    = favorite.id,
+                    cooldownMgr = cooldownManager,
+                    listenerMgr = listenerManager
+                )
                 if (!redirected) {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null

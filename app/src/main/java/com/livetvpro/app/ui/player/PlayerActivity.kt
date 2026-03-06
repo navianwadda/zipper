@@ -820,6 +820,7 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_7,
             android.view.KeyEvent.KEYCODE_8,
             android.view.KeyEvent.KEYCODE_9 -> {
+                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 val digit = keyCode - android.view.KeyEvent.KEYCODE_0
                 channelNumberInput += digit.toString()
                 showChannelOverlay(channelNumberInput, null)
@@ -838,6 +839,7 @@ class PlayerActivity : AppCompatActivity() {
         val nameView = overlay.findViewById<android.widget.TextView>(R.id.channel_overlay_name)
         numberView?.text = number
         nameView?.text = channel?.name ?: ""
+        nameView?.visibility = if (channel != null) View.VISIBLE else View.GONE
         if (channel != null && channel.logoUrl.isNotEmpty()) {
             logoView?.visibility = View.VISIBLE
             logoView?.let { com.livetvpro.app.utils.GlideExtensions.loadImage(it, channel.logoUrl) }
@@ -850,13 +852,20 @@ class PlayerActivity : AppCompatActivity() {
     private fun navigateToChannelByNumber() {
         val number = channelNumberInput.toIntOrNull()
         channelNumberInput = ""
-        binding.channelNumberOverlay?.visibility = View.GONE
-        if (number == null || number <= 0) return
+        if (number == null || number <= 0) {
+            binding.channelNumberOverlay?.visibility = View.GONE
+            return
+        }
         val items = viewModel.channelListItems.value ?: return
         if (contentType != ContentType.CHANNEL || items.isEmpty()) return
         val index = number - 1
         if (index in items.indices) {
             switchToChannel(items[index])
+            showChannelOverlay((index + 1).toString(), items[index])
+            channelNumberHandler.removeCallbacks(channelNumberRunnable)
+            channelNumberHandler.postDelayed({ binding.channelNumberOverlay?.visibility = View.GONE }, 2000)
+        } else {
+            binding.channelNumberOverlay?.visibility = View.GONE
         }
     }
 

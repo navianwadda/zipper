@@ -14,7 +14,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.DialogFragment
-import com.livetvpro.app.ui.webview.WebViewActivity
+import com.livetvpro.app.ui.webview.WebActivity
 
 class SupportDialog : DialogFragment() {
 
@@ -31,7 +31,7 @@ class SupportDialog : DialogFragment() {
     private val webViewLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == WebViewActivity.RESULT_VALIDATED) {
+        if (result.resultCode == WebActivity.RESULT_VALIDATED) {
             onTimerCompleted?.invoke()
         }
     }
@@ -148,7 +148,7 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setOnClickListener {
-                    val intent = Intent(requireContext(), WebViewActivity::class.java).apply {
+                    val intent = Intent(requireContext(), WebActivity::class.java).apply {
                         putExtra("extra_url", url)
                         putExtra("extra_duration", durationSeconds)
                     }

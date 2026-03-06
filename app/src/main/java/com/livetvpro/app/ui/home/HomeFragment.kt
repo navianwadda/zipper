@@ -3,45 +3,25 @@ package com.livetvpro.app.ui.home
 import android.os.Bundle
 import android.content.Intent
 import android.view.LayoutInflater
-import android.content.Intent
 import android.view.View
-import android.content.Intent
 import android.view.ViewGroup
-import android.content.Intent
 import androidx.core.os.bundleOf
-import android.content.Intent
 import androidx.fragment.app.Fragment
-import android.content.Intent
 import androidx.fragment.app.viewModels
-import android.content.Intent
 import androidx.navigation.fragment.findNavController
-import android.content.Intent
 import androidx.recyclerview.widget.GridLayoutManager
-import android.content.Intent
 import com.livetvpro.app.R
-import android.content.Intent
 import com.livetvpro.app.SearchableFragment
-import android.content.Intent
 import com.livetvpro.app.data.models.ListenerConfig
-import android.content.Intent
 import com.livetvpro.app.databinding.FragmentHomeBinding
-import android.content.Intent
 import com.livetvpro.app.ui.adapters.CategoryAdapter
-import android.content.Intent
 import com.livetvpro.app.utils.RedirectHelper
-import android.content.Intent
 import com.livetvpro.app.utils.NativeListenerManager
-import android.content.Intent
 import com.livetvpro.app.utils.RedirectCooldownManager
-import android.content.Intent
 import com.livetvpro.app.utils.RetryHandler
-import android.content.Intent
 import com.livetvpro.app.utils.Refreshable
-import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
-import android.content.Intent
 import javax.inject.Inject
-import android.content.Intent
 
 @AndroidEntryPoint
 class HomeFragment : Fragment(), SearchableFragment, Refreshable {
@@ -60,8 +40,8 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
         ,
-            pendingActionProvider = { pendingChannelAction },
-            clearPendingAction = { pendingChannelAction = null }
+            pendingActionProvider = { null },
+            clearPendingAction = {}
         )
     }
     private var lastPageType: String? = null

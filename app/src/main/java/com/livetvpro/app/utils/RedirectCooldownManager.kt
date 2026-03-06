@@ -16,15 +16,14 @@ class RedirectCooldownManager @Inject constructor(
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    private val pageClickCounts = mutableMapOf<String, Int>()
-    private var totalClickCount = 0
-
     companion object {
         private const val PREFS_NAME             = "redirect_cooldown_prefs"
         private const val REMOTE_CONFIG_COOLDOWN = "redirect_cooldown_minutes"
         const val REMOTE_CONFIG_MAX_PER_PAGE     = "ad_max_clicks_per_page"
         const val REMOTE_CONFIG_MAX_TOTAL        = "ad_max_total_clicks"
         private const val NO_LIMIT               = 0L
+        private const val KEY_TOTAL_CLICKS       = "total_click_count"
+        private const val KEY_PAGE_CLICKS_PREFIX = "page_clicks_"
     }
 
     private val cooldownMs: Long
@@ -38,6 +37,8 @@ class RedirectCooldownManager @Inject constructor(
 
     private fun cooldownKey(pageType: String): String = pageType
 
+    private fun pageClickKey(pageType: String): String = KEY_PAGE_CLICKS_PREFIX + pageType
+
     private fun isCooldownExpired(pageType: String): Boolean {
         val lastFired = prefs.getLong(cooldownKey(pageType), 0L)
         val cooldown = cooldownMs
@@ -48,16 +49,22 @@ class RedirectCooldownManager @Inject constructor(
         prefs.edit().putLong(cooldownKey(pageType), System.currentTimeMillis()).apply()
     }
 
+    private fun getPageClickCount(pageType: String): Int =
+        prefs.getInt(pageClickKey(pageType), 0)
+
+    private fun getTotalClickCount(): Int =
+        prefs.getInt(KEY_TOTAL_CLICKS, 0)
+
     private fun isPageLimitReached(pageType: String): Boolean {
         val max = maxClicksPerPage
         if (max <= NO_LIMIT) return false
-        return (pageClickCounts[pageType] ?: 0) >= max
+        return getPageClickCount(pageType) >= max
     }
 
     private fun isTotalLimitReached(): Boolean {
         val max = maxTotalClicks
         if (max <= NO_LIMIT) return false
-        return totalClickCount >= max
+        return getTotalClickCount() >= max
     }
 
     fun canFire(pageType: String, uniqueId: String? = null): Boolean {
@@ -68,19 +75,31 @@ class RedirectCooldownManager @Inject constructor(
 
     fun recordFired(pageType: String, uniqueId: String? = null) {
         recordCooldown(pageType)
-        pageClickCounts[pageType] = (pageClickCounts[pageType] ?: 0) + 1
-        totalClickCount++
+        val newPage = getPageClickCount(pageType) + 1
+        val newTotal = getTotalClickCount() + 1
+        prefs.edit()
+            .putInt(pageClickKey(pageType), newPage)
+            .putInt(KEY_TOTAL_CLICKS, newTotal)
+            .apply()
     }
 
     fun undoLastFire(pageType: String, uniqueId: String? = null) {
-        val current = pageClickCounts[pageType] ?: 0
-        if (current > 0) pageClickCounts[pageType] = current - 1
-        if (totalClickCount > 0) totalClickCount--
-        prefs.edit().remove(cooldownKey(pageType)).apply()
+        val currentPage = getPageClickCount(pageType)
+        val currentTotal = getTotalClickCount()
+        prefs.edit()
+            .putInt(pageClickKey(pageType), if (currentPage > 0) currentPage - 1 else 0)
+            .putInt(KEY_TOTAL_CLICKS, if (currentTotal > 0) currentTotal - 1 else 0)
+            .remove(cooldownKey(pageType))
+            .apply()
     }
 
     fun resetSessionCounts() {
-        pageClickCounts.clear()
-        totalClickCount = 0
+        prefs.edit()
+            .putInt(KEY_TOTAL_CLICKS, 0)
+            .apply()
+        val allKeys = prefs.all.keys.filter { it.startsWith(KEY_PAGE_CLICKS_PREFIX) }
+        val editor = prefs.edit()
+        allKeys.forEach { editor.remove(it) }
+        editor.apply()
     }
 }

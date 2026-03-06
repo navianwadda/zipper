@@ -35,14 +35,13 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
     private var pendingNavAction: (() -> Unit)? = null
     private var pendingExternalRedirect: Boolean = false
 
-    private val redirectLauncher by lazy {
+    private val redirectLauncher =
         RedirectHelper.registerLauncher(
             fragment = this,
             cooldownMgr = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
         )
-    }
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
 

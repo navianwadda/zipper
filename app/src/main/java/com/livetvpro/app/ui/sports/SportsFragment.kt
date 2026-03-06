@@ -228,17 +228,19 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                     pageType    = ListenerConfig.PAGE_SPORTS,
                     uniqueId    = channel.id,
                     cooldownMgr = cooldownManager,
-                    listenerMgr = listenerManager
-                ,
-                        launcher     = redirectLauncher)
+                    listenerMgr = listenerManager,
+                    launcher     = redirectLauncher
+                )
                 if (!redirected) {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null
                 }
+                MainScope().launch {
                     delay(50)
                     if (_binding != null) channelAdapter.refreshItem(channel.id)
                 }
             },
+            onFavoriteToggle = { channel -> viewModel.toggleFavorite(channel) },
             isFavorite = { channelId -> viewModel.isFavorite(channelId) }
         )
         val spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)

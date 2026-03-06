@@ -83,14 +83,16 @@ class FavoritesFragment : Fragment() {
                     pageType    = ListenerConfig.PAGE_FAVORITES,
                     uniqueId    = favorite.id,
                     cooldownMgr = cooldownManager,
-                    listenerMgr = listenerManager
-                ,
-                        launcher     = redirectLauncher)
+                    listenerMgr = listenerManager,
+                    launcher     = redirectLauncher
+                )
                 if (!redirected) {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null
                 }
+                redirected
             },
+            onFavoriteToggle = { favorite -> viewModel.removeFavorite(favorite.id) },
             getLiveChannel = { channelId ->
                 viewModel.getLiveChannel(channelId)
             }

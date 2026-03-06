@@ -34,9 +34,6 @@ class FavoritesFragment : Fragment() {
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
-
-    }
-
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         val columnCount = resources.getInteger(R.integer.grid_column_count)

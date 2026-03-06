@@ -9,7 +9,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.DialogFragment
-import com.livetvpro.app.ui.player.dialogs.WebViewActivity
+import com.livetvpro.app.ui.webview.WebViewActivity
 
 class SupportDialog : DialogFragment() {
 

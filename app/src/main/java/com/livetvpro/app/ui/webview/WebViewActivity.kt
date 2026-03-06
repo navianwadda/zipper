@@ -54,7 +54,6 @@ class WebViewActivity : AppCompatActivity() {
         val durationSeconds = intent.getLongExtra(EXTRA_DURATION, 10L)
         val dp = resources.displayMetrics.density
 
-        // --- VPN / Proxy check ---
         if (isVpnOrProxyActive()) {
             Toast.makeText(this, "Please disable VPN/Proxy to continue", Toast.LENGTH_LONG).show()
             setResult(RESULT_CANCELED)
@@ -62,7 +61,6 @@ class WebViewActivity : AppCompatActivity() {
             return
         }
 
-        // --- No internet check ---
         if (!hasInternet()) {
             Toast.makeText(this, "No internet connection", Toast.LENGTH_LONG).show()
             setResult(RESULT_CANCELED)
@@ -72,7 +70,6 @@ class WebViewActivity : AppCompatActivity() {
 
         val root = FrameLayout(this)
 
-        // WebView
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -122,7 +119,6 @@ class WebViewActivity : AppCompatActivity() {
             loadUrl(url.ifEmpty { "about:blank" })
         }
 
-        // Progress bar
         val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false
             max = 100
@@ -131,7 +127,6 @@ class WebViewActivity : AppCompatActivity() {
             ).also { it.topMargin = (40 * dp).toInt() }
         }
 
-        // Timer label
         val timerLabel = TextView(this).apply {
             textSize = 12f
             setTextColor(android.graphics.Color.WHITE)
@@ -149,7 +144,6 @@ class WebViewActivity : AppCompatActivity() {
             }
         }
 
-        // Top bar background
         val topBar = View(this).apply {
             setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
             layoutParams = FrameLayout.LayoutParams(
@@ -157,7 +151,6 @@ class WebViewActivity : AppCompatActivity() {
             )
         }
 
-        // Close (X) button — top right
         val closeBtn = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
@@ -166,7 +159,6 @@ class WebViewActivity : AppCompatActivity() {
                 (40 * dp).toInt(), (40 * dp).toInt()
             ).also { it.gravity = Gravity.TOP or Gravity.END }
             setOnClickListener {
-                
                 setResult(RESULT_CANCELED)
                 finish()
             }
@@ -179,12 +171,10 @@ class WebViewActivity : AppCompatActivity() {
         root.addView(closeBtn)
         setContentView(root)
 
-        // Store references for timer access
         this.progressBarRef = progressBar
         this.timerLabelRef = timerLabel
     }
 
-    // Held as fields so timer lambda can access them
     private lateinit var progressBarRef: ProgressBar
     private lateinit var timerLabelRef: TextView
 
@@ -204,17 +194,14 @@ class WebViewActivity : AppCompatActivity() {
     }
 
     private fun isVpnOrProxyActive(): Boolean {
-        // Check VPN transport
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val network = cm?.activeNetwork
         val caps = cm?.getNetworkCapabilities(network)
         if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true
 
-        // Check system-level proxy
         val proxyHost = Proxy.getDefaultHost()
         if (!proxyHost.isNullOrEmpty()) return true
 
-        // Check JVM proxy properties
         val httpProxy = System.getProperty("http.proxyHost")
         val httpsProxy = System.getProperty("https.proxyHost")
         if (!httpProxy.isNullOrEmpty() || !httpsProxy.isNullOrEmpty()) return true

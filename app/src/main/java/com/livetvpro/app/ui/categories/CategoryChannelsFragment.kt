@@ -2,6 +2,7 @@ package com.livetvpro.app.ui.categories
 
 import android.content.DialogInterface
 import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -56,13 +57,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
-    private val redirectLauncher =
-        RedirectHelper.registerLauncher(
-            fragment = this,
-            cooldownMgr = cooldownManager,
-            pageTypeProvider = { lastPageType },
-            uniqueIdProvider = { lastUniqueId }
-        )
+    private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
     @Inject lateinit var preferencesManager: PreferencesManager
@@ -83,6 +78,16 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         super.onConfigurationChanged(newConfig)
         val columnCount = resources.getInteger(R.integer.grid_column_count)
         (binding.recyclerViewChannels.layoutManager as? GridLayoutManager)?.spanCount = columnCount
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        redirectLauncher = RedirectHelper.registerLauncher(
+            fragment = this,
+            cooldownMgr = cooldownManager,
+            pageTypeProvider = { lastPageType },
+            uniqueIdProvider = { lastUniqueId }
+        )
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

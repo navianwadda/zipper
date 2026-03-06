@@ -1,9 +1,6 @@
 package com.livetvpro.app.ui.dialogs
 
-import android.app.UiModeManager
 import android.content.Context
-import android.content.Intent
-import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,37 +9,18 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.DialogFragment
-import com.livetvpro.app.ui.webview.WebActivity
 
 class SupportDialog : DialogFragment() {
 
     var url: String = ""
     var durationSeconds: Long = 10L
-    var onTimerCompleted: (() -> Unit)? = null
-    var onDismissedEarly: (() -> Unit)? = null
+    var onClickHere: (() -> Unit)? = null
+    var onCancel: (() -> Unit)? = null
 
     companion object {
         const val TAG = "SupportDialog"
         fun newInstance() = SupportDialog()
-    }
-
-    private val webViewLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == WebActivity.RESULT_VALIDATED) {
-            onTimerCompleted?.invoke()
-        }
-    }
-
-    private fun isTv(): Boolean {
-        val uiModeManager = requireContext().getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
-        return uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
-    }
-
-    private fun isLargeScreen(): Boolean {
-        return resources.configuration.smallestScreenWidthDp >= 600
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -133,7 +111,7 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).also { it.marginEnd = (8 * dp).toInt() }
                 setOnClickListener {
-                    onDismissedEarly?.invoke()
+                    onCancel?.invoke()
                     dismiss()
                 }
             })
@@ -148,12 +126,8 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setOnClickListener {
-                    val intent = Intent(requireContext(), WebActivity::class.java).apply {
-                        putExtra("extra_url", url)
-                        putExtra("extra_duration", durationSeconds)
-                    }
-                    webViewLauncher.launch(intent)
                     dismiss()
+                    onClickHere?.invoke()
                 }
             })
 
@@ -180,5 +154,14 @@ class SupportDialog : DialogFragment() {
             )
             setBackgroundDrawableResource(android.R.color.transparent)
         }
+    }
+
+    private fun isTv(): Boolean {
+        val uiModeManager = requireContext().getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        return uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+    }
+
+    private fun isLargeScreen(): Boolean {
+        return resources.configuration.smallestScreenWidthDp >= 600
     }
 }

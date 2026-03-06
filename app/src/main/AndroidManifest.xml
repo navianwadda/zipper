@@ -111,6 +111,13 @@
         </activity>
 
         <activity
+            android:name=".ui.player.dialogs.SupportWebViewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LiveTVPro.Fullscreen"
+            android:screenOrientation="user"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize" />
+
+        <activity
             android:name=".ui.player.FloatingPlayerActivity"
             android:exported="false"
             android:theme="@style/Theme.LiveTVPro.Fullscreen"

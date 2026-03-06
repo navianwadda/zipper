@@ -2,6 +2,7 @@ package com.livetvpro.app.ui.live
 
 import android.content.DialogInterface
 import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -44,13 +45,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
-    private val redirectLauncher =
-        RedirectHelper.registerLauncher(
-            fragment = this,
-            cooldownMgr = cooldownManager,
-            pageTypeProvider = { lastPageType },
-            uniqueIdProvider = { lastUniqueId }
-        )
+    private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
     @Inject lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
@@ -80,6 +75,16 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         super.onConfigurationChanged(newConfig)
         val spanCount = getEventSpanCount()
         (binding.recyclerViewEvents.layoutManager as? GridLayoutManager)?.spanCount = spanCount
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        redirectLauncher = RedirectHelper.registerLauncher(
+            fragment = this,
+            cooldownMgr = cooldownManager,
+            pageTypeProvider = { lastPageType },
+            uniqueIdProvider = { lastUniqueId }
+        )
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

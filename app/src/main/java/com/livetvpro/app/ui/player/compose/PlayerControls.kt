@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.ripple
 import androidx.compose.foundation.focusable
@@ -191,8 +192,9 @@ fun PlayerControls(
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    if (event.type == PointerEventType.Move ||
-                                        event.type == PointerEventType.Enter
+                                    val isMouse = event.changes.any { it.type == PointerType.Mouse }
+                                    if (isMouse && (event.type == PointerEventType.Move ||
+                                        event.type == PointerEventType.Enter)
                                     ) {
                                         state.show(scope)
                                     }
@@ -404,11 +406,14 @@ private fun PlayerControlsContent(
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
-                        when (event.type) {
-                            PointerEventType.Enter,
-                            PointerEventType.Move -> onMouseHoverWithinControls(true)
-                            PointerEventType.Exit -> onMouseHoverWithinControls(false)
-                            else -> {}
+                        val isMouse = event.changes.any { it.type == PointerType.Mouse }
+                        if (isMouse) {
+                            when (event.type) {
+                                PointerEventType.Enter,
+                                PointerEventType.Move -> onMouseHoverWithinControls(true)
+                                PointerEventType.Exit -> onMouseHoverWithinControls(false)
+                                else -> {}
+                            }
                         }
                     }
                 }

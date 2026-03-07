@@ -14,11 +14,10 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
+import android.app.Dialog
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toDrawable
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 object SupportDialog {
 
@@ -32,7 +31,7 @@ object SupportDialog {
     ) {
         val dp = context.resources.displayMetrics.density
         val bergenSans = ResourcesCompat.getFont(context, com.livetvpro.app.R.font.bergen_sans)
-        var dialog: AlertDialog? = null
+        var dialog: Dialog? = null
         val radius = 24 * dp
 
         val glassCard = object : LinearLayout(context) {
@@ -269,40 +268,33 @@ object SupportDialog {
             })
         })
 
-        dialog = MaterialAlertDialogBuilder(context)
-            .setView(glassCard)
-            .setCancelable(true)
-            .setOnCancelListener { onCancel() }
-            .create()
-
-        dialog.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
-                dialog?.dismiss()
-                onCancel()
-                true
-            } else false
-        }
-
-        dialog.window?.apply {
-            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
-            setDimAmount(0.5f)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                attributes = attributes.also { it.blurBehindRadius = 60 }
+        dialog = Dialog(context, com.livetvpro.app.R.style.Theme_LiveTVPro_TransparentDialog).apply {
+            setContentView(glassCard)
+            setCanceledOnTouchOutside(true)
+            setOnCancelListener { onCancel() }
+            setOnKeyListener { _, keyCode, event ->
+                if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
+                    dismiss()
+                    onCancel()
+                    true
+                } else false
+            }
+            window?.apply {
+                setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+                setDimAmount(0.5f)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                    attributes = attributes.also { it.blurBehindRadius = 60 }
+                }
             }
         }
 
-        dialog.show()
+        dialog?.show()
 
-        dialog.window?.apply {
-            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+        dialog?.window?.apply {
             val displayWidth = context.resources.displayMetrics.widthPixels
             val horizontalMargin = (24 * dp).toInt()
             setLayout(displayWidth - horizontalMargin * 2, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
-            decorView.background = Color.TRANSPARENT.toDrawable()
-            (decorView as? android.view.ViewGroup)?.let { dv ->
-                for (i in 0 until dv.childCount) dv.getChildAt(i).background = Color.TRANSPARENT.toDrawable()
-            }
         }
     }
 }

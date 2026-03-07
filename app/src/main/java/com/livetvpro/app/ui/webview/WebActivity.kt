@@ -131,6 +131,18 @@ class WebActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // When using Custom Tabs, WebActivity has a blank content view and sits
+        // invisibly behind Chrome. If the user presses back from Chrome and
+        // lands here, finish immediately so they go straight back to the app.
+        if (usingCustomTabs && !validated) {
+            handler.removeCallbacks(customTabTickRunnable)
+            setResult(RESULT_CANCELED)
+            finish()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(customTabTickRunnable)

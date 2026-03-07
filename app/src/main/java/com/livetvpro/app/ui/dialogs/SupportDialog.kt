@@ -48,7 +48,6 @@ object SupportDialog {
             override fun onDraw(canvas: Canvas) {
                 rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
-                // Layer 1: frosted translucent base
                 basePaint.shader = LinearGradient(
                     0f, 0f, 0f, height.toFloat(),
                     intArrayOf(
@@ -62,7 +61,6 @@ object SupportDialog {
                 )
                 canvas.drawRoundRect(rect, radius, radius, basePaint)
 
-                // Layer 2: radial inner glow top-left (refraction illusion)
                 innerGlowPaint.shader = RadialGradient(
                     width * 0.25f, height * 0.1f,
                     width * 0.75f,
@@ -75,7 +73,6 @@ object SupportDialog {
                 )
                 canvas.drawRoundRect(rect, radius, radius, innerGlowPaint)
 
-                // Layer 3: specular glint on top portion
                 val specRect = RectF(width * 0.1f, 0f, width * 0.9f, height * 0.38f)
                 specularPaint.shader = LinearGradient(
                     0f, 0f, 0f, height * 0.38f,
@@ -88,7 +85,6 @@ object SupportDialog {
                 )
                 canvas.drawRoundRect(specRect, radius * 0.8f, radius * 0.8f, specularPaint)
 
-                // Layer 4: border — white on top fading to red tint at bottom
                 strokePaint.shader = LinearGradient(
                     0f, 0f, 0f, height.toFloat(),
                     intArrayOf(
@@ -120,7 +116,6 @@ object SupportDialog {
             addView(glassCard)
         }
 
-        // Top shimmer line
         glassCard.addView(object : View(context) {
             override fun onDraw(canvas: Canvas) {
                 super.onDraw(canvas)
@@ -148,7 +143,6 @@ object SupportDialog {
             )
         })
 
-        // Header
         glassCard.addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding((22 * dp).toInt(), (20 * dp).toInt(), (22 * dp).toInt(), (16 * dp).toInt())
@@ -181,7 +175,6 @@ object SupportDialog {
             })
         })
 
-        // Divider
         glassCard.addView(View(context).apply {
             setBackgroundColor(Color.argb(60, 255, 255, 255))
             layoutParams = LinearLayout.LayoutParams(
@@ -192,7 +185,6 @@ object SupportDialog {
             }
         })
 
-        // Body steps
         val body = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding((22 * dp).toInt(), (14 * dp).toInt(), (22 * dp).toInt(), (14 * dp).toInt())
@@ -217,7 +209,6 @@ object SupportDialog {
         }
         glassCard.addView(body)
 
-        // Divider
         glassCard.addView(View(context).apply {
             setBackgroundColor(Color.argb(60, 255, 255, 255))
             layoutParams = LinearLayout.LayoutParams(
@@ -228,7 +219,6 @@ object SupportDialog {
             }
         })
 
-        // Buttons
         glassCard.addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER

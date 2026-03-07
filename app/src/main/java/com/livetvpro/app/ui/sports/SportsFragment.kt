@@ -231,7 +231,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                 }
                 lastPageType = ListenerConfig.PAGE_SPORTS
                 lastUniqueId = channel.id
-                val redirected = RedirectHelper.tryRedirect(
+                val result = RedirectHelper.tryRedirect(
                     fragment    = this@SportsFragment,
                     pageType    = ListenerConfig.PAGE_SPORTS,
                     uniqueId    = channel.id,
@@ -239,14 +239,16 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                     listenerMgr = listenerManager,
                     launcher    = redirectLauncher
                 )
-                if (redirected) {
+                if (result == RedirectHelper.RedirectResult.REDIRECTED) {
                     if (!listenerManager.isInAppRedirectEnabled()) {
                         pendingExternalRedirect = true
                     } else {
                         pendingChannelAction = null
                     }
-                } else {
+                } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
                     pendingChannelAction?.invoke()
+                    pendingChannelAction = null
+                } else {
                     pendingChannelAction = null
                 }
                 MainScope().launch {

@@ -11,8 +11,6 @@ import com.livetvpro.app.ui.webview.WebActivity
 
 object RedirectHelper {
 
-    private var activeDialog: SupportDialog? = null
-
     fun registerLauncher(
         fragment: Fragment,
         cooldownMgr: RedirectCooldownManager,
@@ -41,6 +39,7 @@ object RedirectHelper {
     ): Boolean {
         if (!cooldownMgr.canFire(pageType, uniqueId)) return false
 
+        listenerMgr.resetSessions()
         val redirected = listenerMgr.onPageInteraction(pageType, uniqueId)
         if (!redirected) return false
 
@@ -74,28 +73,27 @@ object RedirectHelper {
         cooldownMgr: RedirectCooldownManager,
         launcher: ActivityResultLauncher<Intent>
     ) {
-        if (activeDialog?.isShowing == true) return
+        try {
+            val fm = fragment.parentFragmentManager
+            if (fm.findFragmentByTag(SupportDialog.TAG) != null) return
 
-        val url = listenerMgr.getDirectLinkUrl()
-        if (url.isEmpty()) return
+            val url = listenerMgr.getDirectLinkUrl()
+            if (url.isEmpty()) return
 
-        val dialog = SupportDialog(
-            context = fragment.requireContext(),
-            durationSeconds = listenerMgr.getAdDurationSeconds(),
-            onClickHere = {
-                activeDialog = null
-                val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
-                    putExtra("extra_url", url)
-                    putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
+            SupportDialog.newInstance().apply {
+                this.url = url
+                this.durationSeconds = listenerMgr.getAdDurationSeconds()
+                onClickHere = {
+                    val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
+                        putExtra("extra_url", url)
+                        putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
+                    }
+                    launcher.launch(intent)
                 }
-                launcher.launch(intent)
-            },
-            onCancel = {
-                activeDialog = null
-                cooldownMgr.undoLastFire(pageType, uniqueId)
-            }
-        )
-        activeDialog = dialog
-        dialog.show()
+                onCancel = {
+                    cooldownMgr.undoLastFire(pageType, uniqueId)
+                }
+            }.show(fm, SupportDialog.TAG)
+        } catch (e: Exception) {}
     }
 }

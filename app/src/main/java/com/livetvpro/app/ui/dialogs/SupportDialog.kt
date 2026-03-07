@@ -172,7 +172,6 @@ object SupportDialog {
                     0, (52 * dp).toInt(), 1f
                 ).also { it.marginEnd = (6 * dp).toInt() }
                 setOnClickListener {
-                    dialog?.setOnCancelListener(null)
                     dialog?.dismiss()
                     onCancel()
                 }
@@ -204,13 +203,24 @@ object SupportDialog {
 
         dialog = MaterialAlertDialogBuilder(context)
             .setView(wrapper)
-            .setCancelable(true)
-            .setOnCancelListener { onCancel() }
+            .setCancelable(false)
             .create()
+
+        dialog.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
+                dialog?.dismiss()
+                onCancel()
+                true
+            } else false
+        }
 
         dialog.window?.apply {
             setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
-            setDimAmount(0.5f)
+            setDimAmount(0.3f)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                attributes = attributes.also { it.blurBehindRadius = 8 }
+            }
         }
 
         dialog.show()

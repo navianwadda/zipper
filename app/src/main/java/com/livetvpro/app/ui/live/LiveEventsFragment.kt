@@ -217,7 +217,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                 onEventInteraction = { event, playerAction ->
                     lastPageType = ListenerConfig.PAGE_LIVE_EVENTS
                     lastUniqueId = event.id
-                    val redirected = RedirectHelper.tryRedirect(
+                    val result = RedirectHelper.tryRedirect(
                         fragment    = this@LiveEventsFragment,
                         pageType    = ListenerConfig.PAGE_LIVE_EVENTS,
                         uniqueId    = event.id,
@@ -225,15 +225,15 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                         listenerMgr = listenerManager,
                         launcher    = redirectLauncher
                     )
-                    if (redirected) {
+                    if (result == RedirectHelper.RedirectResult.REDIRECTED) {
                         if (!listenerManager.isInAppRedirectEnabled()) {
                             pendingEventAction = playerAction
                             pendingExternalRedirect = true
                         }
-                    } else {
+                    } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
                         pendingEventAction = null
                     }
-                    redirected
+                    result != RedirectHelper.RedirectResult.NOT_REDIRECTED
                 }
             )
         }

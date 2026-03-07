@@ -49,6 +49,7 @@ class WebActivity : AppCompatActivity() {
     private var usingCustomTabs = false
     private var validated = false
     private var customTabLaunched = false
+    private var customTabPaused = false
 
     // WebView path only
     private lateinit var timerLabel: TextView
@@ -134,17 +135,20 @@ class WebActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // When using Custom Tabs, WebActivity sits behind Chrome with an empty
-        // content view. If the user returns early (before the timer fires), we
-        // land back here with a blank screen. Cancel gracefully so the caller
-        // receives RESULT_CANCELED and finishes instead of showing a blank page.
-        if (usingCustomTabs && customTabLaunched && !validated) {
+        if (usingCustomTabs && customTabLaunched && customTabPaused && !validated) {
             handler.removeCallbacks(customTabTickRunnable)
             setResult(RESULT_CANCELED)
             startActivity(Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             })
             finish()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (usingCustomTabs && customTabLaunched) {
+            customTabPaused = true
         }
     }
 

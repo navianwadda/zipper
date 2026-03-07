@@ -115,9 +115,10 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).also { it.marginEnd = (8 * dp).toInt() }
                 setOnClickListener {
+                    if (cancelInvoked) return@setOnClickListener
                     cancelInvoked = true
                     onCancel?.invoke()
-                    dismiss()
+                    dismissAllowingStateLoss()
                 }
             })
 
@@ -131,9 +132,10 @@ class SupportDialog : DialogFragment() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setOnClickListener {
+                    if (clickHereInvoked) return@setOnClickListener
                     clickHereInvoked = true
                     onClickHere?.invoke()
-                    dismiss()
+                    dismissAllowingStateLoss()
                 }
             })
 

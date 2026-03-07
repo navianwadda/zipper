@@ -172,37 +172,33 @@ fun PlayerControls(
     Box(modifier = modifier.fillMaxSize()) {
 
         if (!isTvMode) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                GestureOverlay(
-                    gestureState        = GestureState(
-                        volumePercent     = gestureVolume,
-                        brightnessPercent = gestureBrightness,
-                    ),
-                    isLocked            = state.isLocked,
-                    onVolumeChange      = { v -> gestureVolume = v; onVolumeSwipe(v) },
-                    onBrightnessChange  = { b -> gestureBrightness = b; onBrightnessSwipe(b) },
-                    onTap               = { state.toggle(scope) },
-                    onShowVolumeOsd     = { show -> showVolumeOsd = show },
-                    onShowBrightnessOsd = { show -> showBrightnessOsd = show },
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput("mouse-reveal") {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val isMouse = event.changes.any { it.type == PointerType.Mouse }
-                                    if (isMouse && (event.type == PointerEventType.Move ||
-                                        event.type == PointerEventType.Enter)
-                                    ) {
-                                        state.show(scope)
-                                    }
+            GestureOverlay(
+                modifier            = Modifier
+                    .fillMaxSize()
+                    .pointerInput("mouse-reveal") {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val isMouse = event.changes.any { it.type == PointerType.Mouse }
+                                if (isMouse && (event.type == PointerEventType.Move ||
+                                    event.type == PointerEventType.Enter)
+                                ) {
+                                    state.show(scope)
                                 }
                             }
                         }
-                )
-            }
+                    },
+                gestureState        = GestureState(
+                    volumePercent     = gestureVolume,
+                    brightnessPercent = gestureBrightness,
+                ),
+                isLocked            = state.isLocked,
+                onVolumeChange      = { v -> gestureVolume = v; onVolumeSwipe(v) },
+                onBrightnessChange  = { b -> gestureBrightness = b; onBrightnessSwipe(b) },
+                onTap               = { state.toggle(scope) },
+                onShowVolumeOsd     = { show -> showVolumeOsd = show },
+                onShowBrightnessOsd = { show -> showBrightnessOsd = show },
+            )
         } else {
             Box(
                 modifier = Modifier

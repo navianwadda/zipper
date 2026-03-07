@@ -1,22 +1,17 @@
 package com.livetvpro.app.ui.dialogs
 
 import android.content.Context
-import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RenderEffect
-import android.graphics.RenderNode
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.view.Window
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
@@ -35,23 +30,16 @@ object SupportDialog {
     ) {
         val dp = context.resources.displayMetrics.density
 
-        // ── Glass card background ─────────────────────────────────────────────
-        val glassBackground = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = (20 * dp)
-            // Semi-transparent white tint — the "frost" layer
-            setColor(Color.argb(40, 255, 255, 255))
-            // Subtle red-tinted border to catch the light
-            setStroke((1 * dp).toInt(), Color.argb(80, 239, 68, 68))
-        }
-
-        // ── Root card ─────────────────────────────────────────────────────────
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = glassBackground
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = (20 * dp)
+                setColor(Color.argb(40, 255, 255, 255))
+                setStroke((1 * dp).toInt(), Color.argb(80, 239, 68, 68))
+            }
             clipToOutline = true
             elevation = (24 * dp)
-            // Blur the content beneath on API 31+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 setRenderEffect(
                     RenderEffect.createBlurEffect(18f, 18f, Shader.TileMode.CLAMP)
@@ -59,7 +47,6 @@ object SupportDialog {
             }
         }
 
-        // ── Shimmer highlight strip at top ────────────────────────────────────
         card.addView(object : View(context) {
             override fun onDraw(canvas: Canvas) {
                 super.onDraw(canvas)
@@ -87,7 +74,6 @@ object SupportDialog {
             )
         })
 
-        // ── Header ────────────────────────────────────────────────────────────
         card.addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding((22 * dp).toInt(), (20 * dp).toInt(), (22 * dp).toInt(), (16 * dp).toInt())
@@ -100,7 +86,6 @@ object SupportDialog {
                 setShadowLayer(6f, 0f, 2f, Color.argb(120, 0, 0, 0))
             })
 
-            // Red accent line
             addView(View(context).apply {
                 background = GradientDrawable(
                     GradientDrawable.Orientation.LEFT_RIGHT,
@@ -112,7 +97,6 @@ object SupportDialog {
             })
         })
 
-        // ── Divider ───────────────────────────────────────────────────────────
         card.addView(View(context).apply {
             setBackgroundColor(Color.argb(50, 255, 255, 255))
             layoutParams = LinearLayout.LayoutParams(
@@ -123,7 +107,6 @@ object SupportDialog {
             }
         })
 
-        // ── Steps ─────────────────────────────────────────────────────────────
         val body = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding((22 * dp).toInt(), (14 * dp).toInt(), (22 * dp).toInt(), (14 * dp).toInt())
@@ -147,7 +130,6 @@ object SupportDialog {
         }
         card.addView(body)
 
-        // ── Divider ───────────────────────────────────────────────────────────
         card.addView(View(context).apply {
             setBackgroundColor(Color.argb(50, 255, 255, 255))
             layoutParams = LinearLayout.LayoutParams(
@@ -158,13 +140,11 @@ object SupportDialog {
             }
         })
 
-        // ── Button row ────────────────────────────────────────────────────────
         card.addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END
             setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (10 * dp).toInt())
 
-            // Cancel — ghost button
             addView(MaterialButton(
                 context, null, com.google.android.material.R.attr.borderlessButtonStyle
             ).apply {
@@ -177,7 +157,6 @@ object SupportDialog {
                 setOnClickListener { onCancel() }
             })
 
-            // Click Here — frosted red pill button
             addView(MaterialButton(
                 context, null, com.google.android.material.R.attr.materialButtonStyle
             ).apply {
@@ -197,7 +176,6 @@ object SupportDialog {
             })
         })
 
-        // ── Show dialog ───────────────────────────────────────────────────────
         val dialog = MaterialAlertDialogBuilder(context)
             .setView(card)
             .setOnCancelListener { onCancel() }
@@ -210,7 +188,6 @@ object SupportDialog {
 
         dialog.show()
 
-        // Ensure the window background stays transparent after show()
         dialog.window?.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
     }
 }

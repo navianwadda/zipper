@@ -104,7 +104,6 @@ object SupportDialog {
             orientation = LinearLayout.VERTICAL
             setWillNotDraw(false)
             clipToOutline = true
-            elevation = (28 * dp)
             layoutParams = android.widget.FrameLayout.LayoutParams(
                 android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT

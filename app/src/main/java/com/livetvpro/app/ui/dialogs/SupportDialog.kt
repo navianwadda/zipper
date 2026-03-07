@@ -37,7 +37,6 @@ object SupportDialog {
 
         val glassCard = object : LinearLayout(context) {
             private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            private val specularPaint = Paint(Paint.ANTI_ALIAS_FLAG)
             private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE
                 strokeWidth = (1f * dp)
@@ -59,18 +58,6 @@ object SupportDialog {
                     Shader.TileMode.CLAMP
                 )
                 canvas.drawRoundRect(rect, radius, radius, basePaint)
-
-                val specRect = RectF(0f, 0f, width.toFloat(), height * 0.38f)
-                specularPaint.shader = LinearGradient(
-                    0f, 0f, 0f, height * 0.38f,
-                    intArrayOf(
-                        Color.argb(120, 255, 255, 255),
-                        Color.argb(0, 255, 255, 255)
-                    ),
-                    floatArrayOf(0f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRoundRect(specRect, radius, radius, specularPaint)
 
                 strokePaint.shader = LinearGradient(
                     0f, 0f, 0f, height.toFloat(),

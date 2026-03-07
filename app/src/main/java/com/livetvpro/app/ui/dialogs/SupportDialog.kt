@@ -5,11 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -34,32 +31,24 @@ object SupportDialog {
         val bergenSans = ResourcesCompat.getFont(context, com.livetvpro.app.R.font.bergen_sans)
         var dialog: AlertDialog? = null
 
-        val blurBg = View(context).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = (20 * dp)
-                setColor(Color.argb(40, 255, 255, 255))
-                setStroke((1 * dp).toInt(), Color.argb(80, 239, 68, 68))
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                setRenderEffect(
-                    RenderEffect.createBlurEffect(18f, 18f, Shader.TileMode.CLAMP)
-                )
-            }
-            layoutParams = android.widget.FrameLayout.LayoutParams(
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        }
-
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             clipToOutline = true
             elevation = (24 * dp)
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+            )
         }
 
         val wrapper = android.widget.FrameLayout(context).apply {
-            addView(blurBg)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = (20 * dp)
+                setColor(Color.argb(60, 20, 20, 20))
+                setStroke((1 * dp).toInt(), Color.argb(80, 239, 68, 68))
+            }
+            clipToOutline = true
             addView(card)
         }
 

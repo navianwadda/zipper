@@ -177,10 +177,11 @@ class PlayerSettingsDialog(
         val isLandscape = context.resources.configuration.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
+        // TV: explicit 600dp width. Phones: MATCH_PARENT, Material handles its own margins
         val dialogWidth = if (DeviceUtils.isTvDevice) {
-            (600 * density).toInt().coerceIn((280 * density).toInt(), dm.widthPixels)
+            (600 * density).toInt().coerceAtMost(dm.widthPixels)
         } else {
-            (dm.widthPixels * 0.88f).toInt().coerceIn((280 * density).toInt(), (480 * density).toInt())
+            android.view.WindowManager.LayoutParams.MATCH_PARENT
         }
         val dialogHeight = if (isLandscape) {
             (dm.heightPixels * 0.95f).toInt()

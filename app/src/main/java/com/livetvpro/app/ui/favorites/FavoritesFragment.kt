@@ -86,7 +86,7 @@ class FavoritesFragment : Fragment() {
                 pendingChannelAction = playerAction
                 lastPageType = ListenerConfig.PAGE_FAVORITES
                 lastUniqueId = favorite.id
-                val redirected = RedirectHelper.tryRedirect(
+                val result = RedirectHelper.tryRedirect(
                     fragment    = this@FavoritesFragment,
                     pageType    = ListenerConfig.PAGE_FAVORITES,
                     uniqueId    = favorite.id,
@@ -94,17 +94,19 @@ class FavoritesFragment : Fragment() {
                     listenerMgr = listenerManager,
                     launcher    = redirectLauncher
                 )
-                if (redirected) {
+                if (result == RedirectHelper.RedirectResult.REDIRECTED) {
                     if (!listenerManager.isInAppRedirectEnabled()) {
                         pendingExternalRedirect = true
                     } else {
                         pendingChannelAction = null
                     }
-                } else {
+                } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null
+                } else {
+                    pendingChannelAction = null
                 }
-                redirected
+                result != RedirectHelper.RedirectResult.NOT_REDIRECTED
             },
             onFavoriteToggle = { favorite -> viewModel.removeFavorite(favorite.id) },
             getLiveChannel = { channelId ->

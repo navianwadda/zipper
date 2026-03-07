@@ -256,6 +256,8 @@ object SupportDialog {
                     Color.argb(210, 239, 68, 68)
                 )
                 cornerRadius = (50 * dp).toInt()
+                insetTop = 0
+                insetBottom = 0
                 elevation = (6 * dp)
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f

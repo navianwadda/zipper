@@ -65,24 +65,24 @@ class PlayerSettingsDialog(
 
         setContentView(R.layout.dialog_player_settings)
 
-        recyclerView = findViewById(R.id.recyclerView)
-        tabLayout    = findViewById(R.id.tabLayout)
-        btnCancel    = findViewById(R.id.btnCancel)
-        btnApply     = findViewById(R.id.btnApply)
+        recyclerView = findViewById<RecyclerView>(R.id.recyclerView)!!
+        tabLayout    = findViewById<TabLayout>(R.id.tabLayout)!!
+        btnCancel    = findViewById<MaterialButton>(R.id.btnCancel)!!
+        btnApply     = findViewById<MaterialButton>(R.id.btnApply)!!
 
         val btnClose = findViewById<ImageButton>(R.id.btnClose)
-        btnClose.setOnClickListener { dismiss() }
+        btnClose?.setOnClickListener { dismiss() }
         btnCancel.setOnClickListener { dismiss() }
         btnApply.setOnClickListener { applySelections(); dismiss() }
 
         if (DeviceUtils.isTvDevice) {
-            btnClose.isFocusable = true
+            btnClose?.isFocusable = true
             btnCancel.isFocusable = true
             btnApply.isFocusable = true
             recyclerView.isFocusable = true
             recyclerView.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 
-            btnClose.setOnKeyListener { _, keyCode, event ->
+            btnClose?.setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
                     recyclerView.requestFocus()
                     true
@@ -124,7 +124,7 @@ class PlayerSettingsDialog(
                     recyclerView.requestFocus()
                     true
                 } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    btnClose.requestFocus()
+                    btnClose?.requestFocus()
                     true
                 } else if (event.action == KeyEvent.ACTION_UP &&
                     (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_LEFT)

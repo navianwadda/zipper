@@ -309,6 +309,19 @@ object SupportDialog {
             val displayWidth = context.resources.displayMetrics.widthPixels
             val horizontalMargin = (24 * dp).toInt()
             setLayout(displayWidth - horizontalMargin * 2, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+            (decorView as? android.view.ViewGroup)?.let { dv ->
+                for (i in 0 until dv.childCount) {
+                    val child = dv.getChildAt(i)
+                    child.background = null
+                    child.elevation = 0f
+                    if (child is android.view.ViewGroup) {
+                        for (j in 0 until child.childCount) {
+                            child.getChildAt(j).background = null
+                            child.getChildAt(j).elevation = 0f
+                        }
+                    }
+                }
+            }
         }
     }
 }

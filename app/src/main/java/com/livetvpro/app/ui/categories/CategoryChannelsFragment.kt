@@ -349,6 +349,11 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
 
         closeButton.setOnClickListener { dialog.dismiss() }
         dialog.show()
+        dialog.window?.apply {
+            val dm = requireContext().resources.displayMetrics
+            val dialogHeight = (dm.heightPixels * 0.80f).toInt()
+            setLayout(android.view.WindowManager.LayoutParams.MATCH_PARENT, dialogHeight)
+        }
     }
 
     private fun observeViewModel() {

@@ -74,26 +74,23 @@ object RedirectHelper {
         launcher: ActivityResultLauncher<Intent>
     ) {
         try {
-            val fm = fragment.parentFragmentManager
-            if (fm.findFragmentByTag(SupportDialog.TAG) != null) return
-
             val url = listenerMgr.getDirectLinkUrl()
             if (url.isEmpty()) return
 
-            SupportDialog.newInstance().apply {
-                this.url = url
-                this.durationSeconds = listenerMgr.getAdDurationSeconds()
+            SupportDialog.show(
+                context = fragment.requireContext(),
+                durationSeconds = listenerMgr.getAdDurationSeconds(),
                 onClickHere = {
                     val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
                         putExtra("extra_url", url)
                         putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
                     }
                     launcher.launch(intent)
-                }
+                },
                 onCancel = {
                     cooldownMgr.undoLastFire(pageType, uniqueId)
                 }
-            }.show(fm, SupportDialog.TAG)
+            )
         } catch (e: Exception) {}
     }
 }

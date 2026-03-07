@@ -61,7 +61,7 @@ fun GestureOverlay(
                     if (zone == GestureZone.BRIGHTNESS) brightnessAccum = 0f
 
                     while (true) {
-                        val event  = awaitPointerEvent()
+                        val event  = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
 
                         if (!change.pressed) {

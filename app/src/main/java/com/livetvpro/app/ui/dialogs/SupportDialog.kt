@@ -14,6 +14,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.graphics.drawable.toDrawable
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -29,6 +30,7 @@ object SupportDialog {
         onCancel: () -> Unit
     ) {
         val dp = context.resources.displayMetrics.density
+        var dialog: AlertDialog? = null
 
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -120,7 +122,7 @@ object SupportDialog {
             body.addView(TextView(context).apply {
                 text = step
                 textSize = 13.5f
-                setTextColor(Color.argb(210, 255, 255, 255))
+                setTextColor(Color.WHITE)
                 setShadowLayer(4f, 0f, 1f, Color.argb(80, 0, 0, 0))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -150,11 +152,14 @@ object SupportDialog {
             ).apply {
                 text = "Cancel"
                 textSize = 13f
-                setTextColor(Color.argb(160, 255, 255, 255))
+                setTextColor(Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, (40 * dp).toInt()
                 ).also { it.marginEnd = (4 * dp).toInt() }
-                setOnClickListener { onCancel() }
+                setOnClickListener {
+                    dialog?.dismiss()
+                    onCancel()
+                }
             })
 
             addView(MaterialButton(
@@ -172,13 +177,16 @@ object SupportDialog {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, (40 * dp).toInt()
                 )
-                setOnClickListener { onClickHere() }
+                setOnClickListener {
+                    dialog?.dismiss()
+                    onClickHere()
+                }
             })
         })
 
-        val dialog = MaterialAlertDialogBuilder(context)
+        dialog = MaterialAlertDialogBuilder(context)
             .setView(card)
-            .setOnCancelListener { onCancel() }
+            .setCancelable(false)
             .create()
 
         dialog.window?.apply {

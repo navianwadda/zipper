@@ -146,7 +146,7 @@ object SupportDialog {
             setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (10 * dp).toInt())
 
             addView(MaterialButton(
-                context, null, com.google.android.material.R.attr.borderlessButtonStyle
+                context, null, android.R.attr.borderlessButtonStyle
             ).apply {
                 text = "Cancel"
                 textSize = 13f

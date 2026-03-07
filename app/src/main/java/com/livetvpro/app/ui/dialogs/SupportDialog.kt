@@ -49,10 +49,10 @@ object SupportDialog {
                 basePaint.shader = LinearGradient(
                     0f, 0f, 0f, height.toFloat(),
                     intArrayOf(
-                        Color.argb(80, 255, 255, 255),
-                        Color.argb(40, 220, 220, 235),
-                        Color.argb(55, 200, 210, 255),
-                        Color.argb(45, 255, 255, 255)
+                        Color.argb(160, 255, 255, 255),
+                        Color.argb(130, 220, 220, 235),
+                        Color.argb(140, 200, 210, 255),
+                        Color.argb(135, 255, 255, 255)
                     ),
                     floatArrayOf(0f, 0.3f, 0.7f, 1f),
                     Shader.TileMode.CLAMP

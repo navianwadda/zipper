@@ -79,7 +79,10 @@ object RedirectHelper {
     ) {
         try {
             val url = listenerMgr.getDirectLinkUrl()
-            if (url.isEmpty()) return
+            if (url.isEmpty()) {
+                dialogShowing = false
+                return
+            }
 
             SupportDialog.show(
                 context = fragment.requireContext(),
@@ -94,9 +97,10 @@ object RedirectHelper {
                 },
                 onCancel = {
                     dialogShowing = false
-                    cooldownMgr.undoLastFire(pageType, uniqueId)
                 }
             )
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            dialogShowing = false
+        }
     }
 }

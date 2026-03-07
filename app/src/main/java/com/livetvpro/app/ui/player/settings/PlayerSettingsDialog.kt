@@ -4,9 +4,8 @@ import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.ViewGroup
-import android.view.Window
 import android.widget.ImageButton
-import androidx.activity.ComponentDialog
+import androidx.appcompat.app.AppCompatDialog
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
@@ -22,7 +21,7 @@ import timber.log.Timber
 class PlayerSettingsDialog(
     context: Context,
     private val player: ExoPlayer
-) : ComponentDialog(context) {
+) : AppCompatDialog(context, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog) {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var tabLayout: TabLayout
@@ -64,29 +63,7 @@ class PlayerSettingsDialog(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.dialog_player_settings)
-
-        val displayMetrics = context.resources.displayMetrics
-        val density = displayMetrics.density
-
-        val dialogWidth = if (DeviceUtils.isTvDevice) {
-            (600 * density).toInt().coerceAtMost(displayMetrics.widthPixels)
-        } else {
-            (displayMetrics.widthPixels * 0.85).toInt()
-        }
-
-        val isLandscape = context.resources.configuration.orientation ==
-            android.content.res.Configuration.ORIENTATION_LANDSCAPE
-
-        val dialogHeight = if (isLandscape) {
-            (displayMetrics.heightPixels * 0.95).toInt()
-        } else {
-            (displayMetrics.heightPixels * 0.75).toInt()
-        }
-
-        window?.setLayout(dialogWidth, dialogHeight)
-        window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         recyclerView = findViewById(R.id.recyclerView)
         tabLayout    = findViewById(R.id.tabLayout)
@@ -191,6 +168,26 @@ class PlayerSettingsDialog(
         }
 
         rebuildTabs()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val dm = context.resources.displayMetrics
+        val density = dm.density
+        val isLandscape = context.resources.configuration.orientation ==
+            android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+        val dialogWidth = if (DeviceUtils.isTvDevice) {
+            (600 * density).toInt().coerceIn((280 * density).toInt(), dm.widthPixels)
+        } else {
+            (dm.widthPixels * 0.88f).toInt().coerceIn((280 * density).toInt(), (480 * density).toInt())
+        }
+        val dialogHeight = if (isLandscape) {
+            (dm.heightPixels * 0.95f).toInt()
+        } else {
+            (dm.heightPixels * 0.75f).toInt()
+        }
+        window?.setLayout(dialogWidth, dialogHeight)
     }
 
     override fun onStop() {

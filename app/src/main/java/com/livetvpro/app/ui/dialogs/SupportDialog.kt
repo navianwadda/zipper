@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -194,6 +195,7 @@ object SupportDialog {
                     0, (52 * dp).toInt(), 1f
                 )
                 setOnClickListener {
+                    dialog?.setOnCancelListener(null)
                     dialog?.dismiss()
                     onClickHere()
                 }

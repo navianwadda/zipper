@@ -272,7 +272,8 @@ object SupportDialog {
 
         dialog = MaterialAlertDialogBuilder(context)
             .setView(wrapper)
-            .setCancelable(false)
+            .setCancelable(true)
+            .setOnCancelListener { onCancel() }
             .create()
 
         dialog.setOnKeyListener { _, keyCode, event ->

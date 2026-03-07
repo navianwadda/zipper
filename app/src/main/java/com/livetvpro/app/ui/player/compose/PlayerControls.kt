@@ -195,7 +195,7 @@ fun PlayerControls(
                 isLocked            = state.isLocked,
                 onVolumeChange      = { v -> gestureVolume = v; onVolumeSwipe(v) },
                 onBrightnessChange  = { b -> gestureBrightness = b; onBrightnessSwipe(b) },
-                onTap               = { state.toggle(scope) },
+                onTap               = { state.show(scope) },
                 onShowVolumeOsd     = { show -> showVolumeOsd = show },
                 onShowBrightnessOsd = { show -> showBrightnessOsd = show },
             )
@@ -204,7 +204,7 @@ fun PlayerControls(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput("tap") {
-                        detectTapGestures(onTap = { state.toggle(scope) })
+                        detectTapGestures(onTap = { state.show(scope) })
                     }
                     .pointerInput("mouse-reveal") {
                         awaitPointerEventScope {
@@ -274,6 +274,7 @@ fun PlayerControls(
                 onChannelListClick     = onChannelListClick,
                 isChannelListAvailable = isChannelListAvailable,
                 onInteraction          = { state.show(scope) },
+                onToggle               = { state.toggle(scope) },
                 onTvFocusWithinControls    = { isTvFocusWithinControls = it },
                 onMouseHoverWithinControls = { if (!isTvMode) isMouseHoverWithinControls = it },
             )
@@ -382,6 +383,7 @@ private fun PlayerControlsContent(
     onChannelListClick: () -> Unit,
     isChannelListAvailable: Boolean,
     onInteraction: () -> Unit,
+    onToggle: () -> Unit = {},
     onTvFocusWithinControls: (Boolean) -> Unit = {},
     onMouseHoverWithinControls: (Boolean) -> Unit = {},
 ) {
@@ -398,6 +400,9 @@ private fun PlayerControlsContent(
         modifier = Modifier
             .fillMaxSize()
             .onFocusChanged { onTvFocusWithinControls(it.hasFocus) }
+            .pointerInput("controls-tap-toggle") {
+                detectTapGestures(onTap = { onToggle() })
+            }
             .pointerInput("controls-hover") {
                 awaitPointerEventScope {
                     while (true) {

@@ -14,10 +14,11 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.app.Dialog
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toDrawable
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 object SupportDialog {
 
@@ -31,13 +32,13 @@ object SupportDialog {
     ) {
         val dp = context.resources.displayMetrics.density
         val bergenSans = ResourcesCompat.getFont(context, com.livetvpro.app.R.font.bergen_sans)
-        var dialog: Dialog? = null
+        var dialog: AlertDialog? = null
         val radius = 24 * dp
 
         val glassCard = object : LinearLayout(context) {
             private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            private val specularPaint = Paint(Paint.ANTI_ALIAS_FLAG)
             private val innerGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+            private val specularPaint = Paint(Paint.ANTI_ALIAS_FLAG)
             private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE
                 strokeWidth = (1f * dp)
@@ -72,7 +73,7 @@ object SupportDialog {
                 )
                 canvas.drawRoundRect(rect, radius, radius, innerGlowPaint)
 
-                val specRect = RectF(width * 0.1f, 0f, width * 0.9f, height * 0.38f)
+                val specRect = RectF(0f, 0f, width.toFloat(), height * 0.38f)
                 specularPaint.shader = LinearGradient(
                     0f, 0f, 0f, height * 0.38f,
                     intArrayOf(
@@ -82,7 +83,7 @@ object SupportDialog {
                     floatArrayOf(0f, 1f),
                     Shader.TileMode.CLAMP
                 )
-                canvas.drawRoundRect(specRect, radius * 0.8f, radius * 0.8f, specularPaint)
+                canvas.drawRoundRect(specRect, radius, radius, specularPaint)
 
                 strokePaint.shader = LinearGradient(
                     0f, 0f, 0f, height.toFloat(),
@@ -235,6 +236,10 @@ object SupportDialog {
                 cornerRadius = (50 * dp).toInt()
                 insetTop = 0
                 insetBottom = 0
+                minHeight = 0
+                minimumHeight = 0
+                minWidth = 0
+                minimumWidth = 0
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f
                 ).also { it.marginEnd = (6 * dp).toInt() }
@@ -258,6 +263,10 @@ object SupportDialog {
                 cornerRadius = (50 * dp).toInt()
                 insetTop = 0
                 insetBottom = 0
+                minHeight = 0
+                minimumHeight = 0
+                minWidth = 0
+                minimumWidth = 0
                 elevation = (6 * dp)
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f
@@ -270,30 +279,33 @@ object SupportDialog {
             })
         })
 
-        dialog = Dialog(context, com.livetvpro.app.R.style.Theme_LiveTVPro_TransparentDialog).apply {
-            setContentView(glassCard)
-            setCanceledOnTouchOutside(true)
-            setOnCancelListener { onCancel() }
-            setOnKeyListener { _, keyCode, event ->
-                if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
-                    dismiss()
-                    onCancel()
-                    true
-                } else false
-            }
-            window?.apply {
-                setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
-                setDimAmount(0.5f)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                    addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                    attributes = attributes.also { it.blurBehindRadius = 60 }
-                }
+        dialog = MaterialAlertDialogBuilder(context)
+            .setView(glassCard)
+            .setCancelable(true)
+            .setOnCancelListener { onCancel() }
+            .create()
+
+        dialog.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
+                dialog?.dismiss()
+                onCancel()
+                true
+            } else false
+        }
+
+        dialog.window?.apply {
+            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+            setDimAmount(0.5f)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                attributes = attributes.also { it.blurBehindRadius = 60 }
             }
         }
 
-        dialog?.show()
+        dialog.show()
 
-        dialog?.window?.apply {
+        dialog.window?.apply {
+            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
             val displayWidth = context.resources.displayMetrics.widthPixels
             val horizontalMargin = (24 * dp).toInt()
             setLayout(displayWidth - horizontalMargin * 2, android.view.WindowManager.LayoutParams.WRAP_CONTENT)

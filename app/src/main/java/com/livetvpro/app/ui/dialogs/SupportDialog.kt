@@ -37,7 +37,6 @@ object SupportDialog {
 
         val glassCard = object : LinearLayout(context) {
             private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            private val innerGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
             private val specularPaint = Paint(Paint.ANTI_ALIAS_FLAG)
             private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE
@@ -60,18 +59,6 @@ object SupportDialog {
                     Shader.TileMode.CLAMP
                 )
                 canvas.drawRoundRect(rect, radius, radius, basePaint)
-
-                innerGlowPaint.shader = RadialGradient(
-                    width * 0.25f, height * 0.1f,
-                    width * 0.75f,
-                    intArrayOf(
-                        Color.argb(60, 255, 255, 255),
-                        Color.argb(0, 255, 255, 255)
-                    ),
-                    floatArrayOf(0f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRoundRect(rect, radius, radius, innerGlowPaint)
 
                 val specRect = RectF(0f, 0f, width.toFloat(), height * 0.38f)
                 specularPaint.shader = LinearGradient(
@@ -290,6 +277,22 @@ object SupportDialog {
 
             cancelBtn.nextFocusRightId = clickHereBtn.id
             clickHereBtn.nextFocusLeftId = cancelBtn.id
+
+            cancelBtn.setOnKeyListener { _, keyCode, event ->
+                if (event.action == android.view.KeyEvent.ACTION_UP && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    clickHereBtn.requestFocus()
+                    true
+                } else false
+            }
+
+            clickHereBtn.setOnKeyListener { _, keyCode, event ->
+                if (event.action == android.view.KeyEvent.ACTION_UP && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                    cancelBtn.requestFocus()
+                    true
+                } else false
+            }
+
+            post { cancelBtn.requestFocus() }
         })
 
         dialog = MaterialAlertDialogBuilder(context)
@@ -300,6 +303,7 @@ object SupportDialog {
 
         dialog.setOnKeyListener { _, keyCode, event ->
             if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
+                dialog?.setOnCancelListener(null)
                 dialog?.dismiss()
                 onCancel()
                 true

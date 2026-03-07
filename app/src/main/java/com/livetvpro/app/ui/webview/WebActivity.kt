@@ -131,6 +131,17 @@ class WebActivity : AppCompatActivity() {
         }
     }
 
+    private var customTabLaunched = false
+
+    override fun onResume() {
+        super.onResume()
+        if (usingCustomTabs && customTabLaunched && !validated) {
+            handler.removeCallbacks(customTabTickRunnable)
+            setResult(RESULT_CANCELED)
+            finish()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(customTabTickRunnable)
@@ -176,6 +187,7 @@ class WebActivity : AppCompatActivity() {
 
         // Launch Chrome
         launchCustomTab(url)
+        customTabLaunched = true
 
         // Start lifecycle-independent timer immediately
         Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()

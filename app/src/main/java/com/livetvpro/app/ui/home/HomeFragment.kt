@@ -107,7 +107,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
             lastUniqueId = category.id
             pendingNavAction = { findNavController().navigate(R.id.action_home_to_category, bundle) }
 
-            val redirected = RedirectHelper.tryRedirect(
+            val result = RedirectHelper.tryRedirect(
                 fragment    = this@HomeFragment,
                 pageType    = ListenerConfig.PAGE_HOME,
                 uniqueId    = category.id,
@@ -115,14 +115,16 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
                 listenerMgr = listenerManager,
                 launcher    = redirectLauncher
             )
-            if (redirected) {
+            if (result == RedirectHelper.RedirectResult.REDIRECTED) {
                 if (!listenerManager.isInAppRedirectEnabled()) {
                     pendingExternalRedirect = true
                 } else {
                     pendingNavAction = null
                 }
-            } else {
+            } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
                 pendingNavAction?.invoke()
+                pendingNavAction = null
+            } else {
                 pendingNavAction = null
             }
         }

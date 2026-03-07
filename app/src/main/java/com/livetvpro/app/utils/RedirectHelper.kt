@@ -13,12 +13,11 @@ object RedirectHelper {
 
     enum class RedirectResult {
         REDIRECTED,
-        BLOCKED,
         NOT_REDIRECTED
     }
 
     private var dialogShowing = false
-    private var awaitingValidation = false
+    private var validated = false
 
     fun registerLauncher(
         fragment: Fragment,
@@ -30,8 +29,8 @@ object RedirectHelper {
             ActivityResultContracts.StartActivityForResult()
         ) { result: ActivityResult ->
             dialogShowing = false
-            awaitingValidation = false
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
+                validated = true
                 cooldownMgr.recordFired(pageTypeProvider() ?: return@registerForActivityResult, uniqueIdProvider())
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
             }
@@ -46,19 +45,16 @@ object RedirectHelper {
         listenerMgr: NativeListenerManager,
         launcher: ActivityResultLauncher<Intent>
     ): RedirectResult {
-        if (awaitingValidation) return RedirectResult.BLOCKED
-        if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.BLOCKED
-        if (dialogShowing) return RedirectResult.BLOCKED
+        if (listenerMgr.isInAppRedirectEnabled()) {
+            if (validated) return RedirectResult.NOT_REDIRECTED
+            if (dialogShowing) return RedirectResult.REDIRECTED
+            showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher)
+            return RedirectResult.REDIRECTED
+        }
 
         val redirected = listenerMgr.onPageInteraction(pageType, uniqueId)
         if (!redirected) return RedirectResult.NOT_REDIRECTED
-
-        if (listenerMgr.isInAppRedirectEnabled()) {
-            dialogShowing = true
-            showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher)
-        } else {
-            cooldownMgr.recordFired(pageType, uniqueId)
-        }
+        cooldownMgr.recordFired(pageType, uniqueId)
         return RedirectResult.REDIRECTED
     }
 
@@ -85,16 +81,13 @@ object RedirectHelper {
     ) {
         try {
             val url = listenerMgr.getDirectLinkUrl()
-            if (url.isEmpty()) {
-                dialogShowing = false
-                return
-            }
+            if (url.isEmpty()) return
 
+            dialogShowing = true
             SupportDialog.show(
                 context = fragment.requireContext(),
                 durationSeconds = listenerMgr.getAdDurationSeconds(),
                 onClickHere = {
-                    awaitingValidation = true
                     dialogShowing = false
                     val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
                         putExtra("extra_url", url)

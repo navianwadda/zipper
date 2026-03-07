@@ -199,10 +199,8 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                     } else {
                         pendingChannelAction = null
                     }
-                } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
-                    pendingChannelAction?.invoke()
-                    pendingChannelAction = null
                 } else {
+                    pendingChannelAction?.invoke()
                     pendingChannelAction = null
                 }
             },

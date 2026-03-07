@@ -100,13 +100,11 @@ class FavoritesFragment : Fragment() {
                     } else {
                         pendingChannelAction = null
                     }
-                } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
+                } else {
                     pendingChannelAction?.invoke()
                     pendingChannelAction = null
-                } else {
-                    pendingChannelAction = null
                 }
-                result != RedirectHelper.RedirectResult.NOT_REDIRECTED
+                result == RedirectHelper.RedirectResult.REDIRECTED
             },
             onFavoriteToggle = { favorite -> viewModel.removeFavorite(favorite.id) },
             getLiveChannel = { channelId ->

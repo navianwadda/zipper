@@ -219,7 +219,7 @@ object SupportDialog {
             setDimAmount(0.3f)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                attributes = attributes.also { it.blurBehindRadius = 8 }
+                attributes = attributes.also { it.blurBehindRadius = 20 }
             }
         }
 

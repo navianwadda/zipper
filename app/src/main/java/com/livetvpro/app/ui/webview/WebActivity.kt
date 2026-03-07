@@ -51,10 +51,8 @@ class WebActivity : AppCompatActivity() {
     private var customTabLaunched = false
     private var customTabPaused = false
 
-    // WebView path only
     private lateinit var timerLabel: TextView
 
-    // Custom Tabs path: handler-based timer running independently of lifecycle
     private val handler = Handler(Looper.getMainLooper())
     private var customTabDurationSeconds = 0L
     private var customTabSecondsElapsed = 0L
@@ -75,7 +73,6 @@ class WebActivity : AppCompatActivity() {
         private const val EXTRA_DURATION = "extra_duration"
         const val RESULT_VALIDATED       = 100
 
-        // Broadcast sent from the handler timer to the activity (same process)
         private const val ACTION_TIMER_DONE = "com.livetvpro.app.CUSTOM_TAB_TIMER_DONE"
 
         private val CUSTOM_TABS_BROWSERS = listOf(
@@ -106,8 +103,6 @@ class WebActivity : AppCompatActivity() {
             }
         }
     }
-
-    // ─── Lifecycle ────────────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -165,41 +160,20 @@ class WebActivity : AppCompatActivity() {
         if (!usingCustomTabs && webView?.canGoBack() == true) {
             webView?.goBack()
         } else {
-            // User manually backed out — cancel
             handler.removeCallbacks(customTabTickRunnable)
             setResult(RESULT_CANCELED)
             finish()
         }
     }
-
-    // ─── Custom Tabs flow ─────────────────────────────────────────────────────
-
-    /**
-     * Strategy:
-     * 1. Launch Custom Tab (Chrome opens as separate task, WebActivity pauses).
-     * 2. Start a Handler-based ticker immediately — it runs on the main thread
-     *    looper and keeps ticking regardless of WebActivity's pause/resume state.
-     * 3. When ticker finishes → bring our app task to front via
-     *    FLAG_ACTIVITY_REORDER_TO_FRONT on MainActivity → finish WebActivity.
-     *    Chrome goes to background automatically. Result is delivered to launcher.
-     *
-     * Why Handler and not CountDownTimer here:
-     * CountDownTimer posts to the looper too, but Handler.postDelayed is simpler
-     * to cancel and restart, and crucially it does NOT stop when the activity
-     * is paused — it keeps running as long as the process is alive.
-     */
     private fun startCustomTabFlow(url: String, durationSeconds: Long) {
         customTabDurationSeconds = durationSeconds
         customTabSecondsElapsed  = 0L
 
-        // Show empty content — this activity is invisible behind Chrome
         setContentView(View(this))
 
-        // Launch Chrome
         launchCustomTab(url)
         customTabLaunched = true
 
-        // Start lifecycle-independent timer immediately
         Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
         handler.postDelayed(customTabTickRunnable, 1000L)
     }
@@ -224,14 +198,11 @@ class WebActivity : AppCompatActivity() {
         validated = true
         Toast.makeText(this, "Thank you for your support!", Toast.LENGTH_SHORT).show()
         setResult(RESULT_VALIDATED)
-        // Bring our app task to front — Chrome goes to background
         startActivity(Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         })
         finish()
     }
-
-    // ─── WebView flow (fallback) ──────────────────────────────────────────────
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun launchWebView(url: String, durationSeconds: Long) {
@@ -379,8 +350,6 @@ class WebActivity : AppCompatActivity() {
             }
         }.start()
     }
-
-    // ─── Utilities ────────────────────────────────────────────────────────────
 
     private fun buildUserAgent(): String {
         val androidVersion = android.os.Build.VERSION.RELEASE

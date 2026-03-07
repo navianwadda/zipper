@@ -230,10 +230,10 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                             pendingEventAction = playerAction
                             pendingExternalRedirect = true
                         }
-                    } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
+                    } else {
                         pendingEventAction = null
                     }
-                    result != RedirectHelper.RedirectResult.NOT_REDIRECTED
+                    result == RedirectHelper.RedirectResult.REDIRECTED
                 }
             )
         }

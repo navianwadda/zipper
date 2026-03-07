@@ -310,9 +310,16 @@ object SupportDialog {
 
         dialog.window?.apply {
             setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
-            val displayWidth = context.resources.displayMetrics.widthPixels
-            val horizontalMargin = (24 * dp).toInt()
-            setLayout(displayWidth - horizontalMargin * 2, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+            val windowWidthPx = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                (context as? android.app.Activity)?.windowManager?.currentWindowMetrics?.bounds?.width()
+                    ?: context.resources.displayMetrics.widthPixels
+            } else {
+                context.resources.displayMetrics.widthPixels
+            }
+            val dialogWidth = (windowWidthPx * 0.88f).toInt()
+                .coerceIn((280 * dp).toInt(), (480 * dp).toInt())
+            setLayout(dialogWidth, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+            setLayout(dialogWidth, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
             (decorView as? android.view.ViewGroup)?.let { dv ->
                 for (i in 0 until dv.childCount) {
                     val child = dv.getChildAt(i)

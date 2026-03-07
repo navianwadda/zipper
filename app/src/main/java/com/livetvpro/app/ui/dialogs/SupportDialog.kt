@@ -220,7 +220,7 @@ object SupportDialog {
             gravity = Gravity.CENTER
             setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt())
 
-            addView(MaterialButton(
+            val cancelBtn = MaterialButton(
                 context, null, com.google.android.material.R.attr.materialButtonStyle
             ).apply {
                 text = "Cancel"
@@ -239,6 +239,8 @@ object SupportDialog {
                 minimumHeight = 0
                 minWidth = 0
                 minimumWidth = 0
+                isFocusable = true
+                isFocusableInTouchMode = true
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f
                 ).also { it.marginEnd = (6 * dp).toInt() }
@@ -246,9 +248,9 @@ object SupportDialog {
                     dialog?.dismiss()
                     onCancel()
                 }
-            })
+            }
 
-            addView(MaterialButton(
+            val clickHereBtn = MaterialButton(
                 context, null, com.google.android.material.R.attr.materialButtonStyle
             ).apply {
                 text = "Click Here"
@@ -266,6 +268,8 @@ object SupportDialog {
                 minimumHeight = 0
                 minWidth = 0
                 minimumWidth = 0
+                isFocusable = true
+                isFocusableInTouchMode = true
                 elevation = (6 * dp)
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f
@@ -275,7 +279,18 @@ object SupportDialog {
                     dialog?.dismiss()
                     onClickHere()
                 }
-            })
+            }
+
+            cancelBtn.id = android.view.View.generateViewId()
+            clickHereBtn.id = android.view.View.generateViewId()
+
+            addView(cancelBtn)
+            addView(clickHereBtn)
+
+            cancelBtn.nextFocusRightId = clickHereBtn.id
+            clickHereBtn.nextFocusLeftId = cancelBtn.id
+
+            clickHereBtn.post { clickHereBtn.requestFocus() }
         })
 
         dialog = MaterialAlertDialogBuilder(context)

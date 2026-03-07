@@ -55,11 +55,11 @@ class WebActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var customTabDurationSeconds = 0L
-    private var customTabSecondsElapsed = 0L
+    private var customTabStartTimeMs = 0L
     private val customTabTickRunnable = object : Runnable {
         override fun run() {
-            customTabSecondsElapsed++
-            val remaining = customTabDurationSeconds - customTabSecondsElapsed
+            val elapsedSeconds = (System.currentTimeMillis() - customTabStartTimeMs) / 1000L
+            val remaining = customTabDurationSeconds - elapsedSeconds
             if (remaining <= 0) {
                 onCustomTabTimerFinished()
             } else {
@@ -131,12 +131,21 @@ class WebActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (usingCustomTabs && customTabLaunched && customTabPaused && !validated) {
-            handler.removeCallbacks(customTabTickRunnable)
-            setResult(RESULT_CANCELED)
-            startActivity(Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            })
-            finish()
+            // Check if timer has actually elapsed by now (handler may have been throttled)
+            val elapsedSeconds = (System.currentTimeMillis() - customTabStartTimeMs) / 1000L
+            if (elapsedSeconds >= customTabDurationSeconds) {
+                // Time is up — treat as success
+                handler.removeCallbacks(customTabTickRunnable)
+                onCustomTabTimerFinished()
+            } else {
+                // User returned early — cancel
+                handler.removeCallbacks(customTabTickRunnable)
+                setResult(RESULT_CANCELED)
+                startActivity(Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                })
+                finish()
+            }
         }
     }
 
@@ -167,7 +176,7 @@ class WebActivity : AppCompatActivity() {
     }
     private fun startCustomTabFlow(url: String, durationSeconds: Long) {
         customTabDurationSeconds = durationSeconds
-        customTabSecondsElapsed  = 0L
+        customTabStartTimeMs     = System.currentTimeMillis()
 
         setContentView(View(this))
 

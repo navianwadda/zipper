@@ -48,6 +48,7 @@ object RedirectHelper {
         if (listenerMgr.isInAppRedirectEnabled()) {
             if (validated) return RedirectResult.NOT_REDIRECTED
             if (dialogShowing) return RedirectResult.REDIRECTED
+            if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
             showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher)
             return RedirectResult.REDIRECTED
         }

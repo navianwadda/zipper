@@ -111,10 +111,7 @@ object SupportDialog {
             )
         }
 
-        val wrapper = android.widget.FrameLayout(context).apply {
-            clipToOutline = true
-            addView(glassCard)
-        }
+
 
         glassCard.addView(object : View(context) {
             override fun onDraw(canvas: Canvas) {
@@ -237,6 +234,11 @@ object SupportDialog {
                     setColor(Color.argb(40, 255, 255, 255))
                     setStroke((1 * dp).toInt(), Color.argb(80, 255, 255, 255))
                 }
+                insetTop = 0
+                insetBottom = 0
+                setPadding(0, 0, 0, 0)
+                minHeight = 0
+                minimumHeight = 0
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f
                 ).also { it.marginEnd = (6 * dp).toInt() }
@@ -271,7 +273,7 @@ object SupportDialog {
         })
 
         dialog = MaterialAlertDialogBuilder(context)
-            .setView(wrapper)
+            .setView(glassCard)
             .setCancelable(true)
             .setOnCancelListener { onCancel() }
             .create()

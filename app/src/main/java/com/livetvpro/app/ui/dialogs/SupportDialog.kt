@@ -15,6 +15,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toDrawable
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -30,6 +31,7 @@ object SupportDialog {
         onCancel: () -> Unit
     ) {
         val dp = context.resources.displayMetrics.density
+        val bergenSans = ResourcesCompat.getFont(context, com.livetvpro.app.R.font.bergen_sans)
         var dialog: AlertDialog? = null
 
         val blurBg = View(context).apply {
@@ -95,9 +97,15 @@ object SupportDialog {
             addView(TextView(context).apply {
                 text = "We Need Your Support"
                 textSize = 17f
+                typeface = bergenSans
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 setShadowLayer(6f, 0f, 2f, Color.argb(120, 0, 0, 0))
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
             })
 
             addView(View(context).apply {
@@ -107,7 +115,10 @@ object SupportDialog {
                 ).apply { cornerRadius = (2 * dp) }
                 layoutParams = LinearLayout.LayoutParams(
                     (56 * dp).toInt(), (2.5f * dp).toInt()
-                ).also { it.topMargin = (8 * dp).toInt() }
+                ).also {
+                    it.topMargin = (8 * dp).toInt()
+                    it.gravity = Gravity.CENTER_HORIZONTAL
+                }
             })
         })
 
@@ -134,6 +145,7 @@ object SupportDialog {
             body.addView(TextView(context).apply {
                 text = step
                 textSize = 13.5f
+                typeface = bergenSans
                 setTextColor(Color.WHITE)
                 setShadowLayer(4f, 0f, 1f, Color.argb(80, 0, 0, 0))
                 layoutParams = LinearLayout.LayoutParams(
@@ -164,6 +176,7 @@ object SupportDialog {
             ).apply {
                 text = "Cancel"
                 textSize = 13f
+                typeface = bergenSans
                 setTextColor(Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, (40 * dp).toInt()
@@ -179,6 +192,7 @@ object SupportDialog {
             ).apply {
                 text = "Click Here"
                 textSize = 13f
+                typeface = bergenSans
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 backgroundTintList = android.content.res.ColorStateList.valueOf(
@@ -209,6 +223,11 @@ object SupportDialog {
 
         dialog.show()
 
-        dialog.window?.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+        dialog.window?.apply {
+            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+            val displayWidth = context.resources.displayMetrics.widthPixels
+            val horizontalMargin = (24 * dp).toInt()
+            setLayout(displayWidth - horizontalMargin * 2, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+        }
     }
 }

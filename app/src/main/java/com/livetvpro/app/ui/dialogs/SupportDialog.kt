@@ -32,21 +32,33 @@ object SupportDialog {
         val dp = context.resources.displayMetrics.density
         var dialog: AlertDialog? = null
 
-        val card = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
+        val blurBg = View(context).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = (20 * dp)
                 setColor(Color.argb(40, 255, 255, 255))
                 setStroke((1 * dp).toInt(), Color.argb(80, 239, 68, 68))
             }
-            clipToOutline = true
-            elevation = (24 * dp)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 setRenderEffect(
                     RenderEffect.createBlurEffect(18f, 18f, Shader.TileMode.CLAMP)
                 )
             }
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        val card = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            clipToOutline = true
+            elevation = (24 * dp)
+        }
+
+        val wrapper = android.widget.FrameLayout(context).apply {
+            addView(blurBg)
+            addView(card)
         }
 
         card.addView(object : View(context) {
@@ -185,7 +197,7 @@ object SupportDialog {
         })
 
         dialog = MaterialAlertDialogBuilder(context)
-            .setView(card)
+            .setView(wrapper)
             .setCancelable(true)
             .setOnCancelListener { onCancel() }
             .create()

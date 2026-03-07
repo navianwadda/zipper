@@ -168,20 +168,21 @@ object SupportDialog {
 
         card.addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END
-            setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (10 * dp).toInt())
+            gravity = Gravity.CENTER
+            setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt())
 
             addView(MaterialButton(
                 context, null, android.R.attr.borderlessButtonStyle
             ).apply {
                 text = "Cancel"
-                textSize = 13f
+                textSize = 15f
                 typeface = bergenSans
                 setTextColor(Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, (40 * dp).toInt()
-                ).also { it.marginEnd = (4 * dp).toInt() }
+                    0, (52 * dp).toInt(), 1f
+                ).also { it.marginEnd = (6 * dp).toInt() }
                 setOnClickListener {
+                    dialog?.setOnCancelListener(null)
                     dialog?.dismiss()
                     onCancel()
                 }
@@ -191,7 +192,7 @@ object SupportDialog {
                 context, null, com.google.android.material.R.attr.materialButtonStyle
             ).apply {
                 text = "Click Here"
-                textSize = 13f
+                textSize = 15f
                 typeface = bergenSans
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.WHITE)
@@ -201,7 +202,7 @@ object SupportDialog {
                 cornerRadius = (50 * dp).toInt()
                 elevation = (4 * dp)
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, (40 * dp).toInt()
+                    0, (52 * dp).toInt(), 1f
                 )
                 setOnClickListener {
                     dialog?.dismiss()

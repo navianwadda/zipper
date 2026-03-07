@@ -250,6 +250,7 @@ class WebActivity : AppCompatActivity() {
                 (40 * dp).toInt(), (40 * dp).toInt()
             ).also { it.gravity = Gravity.TOP or Gravity.END }
             setOnClickListener { setResult(RESULT_CANCELED); finish() }
+            post { requestFocus() }
         }
 
         val cookieManager = CookieManager.getInstance()
@@ -373,6 +374,10 @@ class WebActivity : AppCompatActivity() {
         val cm   = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
         if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true
+        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as? android.app.UiModeManager
+        val isTv = uiModeManager?.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+                || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+        if (isTv) return false
         if (!Proxy.getDefaultHost().isNullOrEmpty()) return true
         if (!System.getProperty("http.proxyHost").isNullOrEmpty()) return true
         if (!System.getProperty("https.proxyHost").isNullOrEmpty()) return true

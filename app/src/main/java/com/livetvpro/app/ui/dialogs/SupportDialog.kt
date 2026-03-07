@@ -222,23 +222,20 @@ object SupportDialog {
             setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt())
 
             addView(MaterialButton(
-                context, null, android.R.attr.borderlessButtonStyle
+                context, null, com.google.android.material.R.attr.materialButtonStyle
             ).apply {
                 text = "Cancel"
                 textSize = 15f
                 typeface = bergenSans
                 setTextColor(Color.argb(220, 255, 255, 255))
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = (50 * dp)
-                    setColor(Color.argb(40, 255, 255, 255))
-                    setStroke((1 * dp).toInt(), Color.argb(80, 255, 255, 255))
-                }
+                backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    Color.argb(50, 255, 255, 255)
+                )
+                strokeColor = android.content.res.ColorStateList.valueOf(Color.argb(80, 255, 255, 255))
+                strokeWidth = (1 * dp).toInt()
+                cornerRadius = (50 * dp).toInt()
                 insetTop = 0
                 insetBottom = 0
-                setPadding(0, 0, 0, 0)
-                minHeight = 0
-                minimumHeight = 0
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f
                 ).also { it.marginEnd = (6 * dp).toInt() }
@@ -302,6 +299,10 @@ object SupportDialog {
             val displayWidth = context.resources.displayMetrics.widthPixels
             val horizontalMargin = (24 * dp).toInt()
             setLayout(displayWidth - horizontalMargin * 2, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+            decorView.background = Color.TRANSPARENT.toDrawable()
+            (decorView as? android.view.ViewGroup)?.let { dv ->
+                for (i in 0 until dv.childCount) dv.getChildAt(i).background = Color.TRANSPARENT.toDrawable()
+            }
         }
     }
 }

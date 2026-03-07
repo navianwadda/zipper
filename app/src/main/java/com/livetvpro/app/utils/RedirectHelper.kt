@@ -11,6 +11,12 @@ import com.livetvpro.app.ui.webview.WebActivity
 
 object RedirectHelper {
 
+    enum class RedirectResult {
+        REDIRECTED,
+        BLOCKED,
+        NOT_REDIRECTED
+    }
+
     private var dialogShowing = false
 
     fun registerLauncher(
@@ -39,13 +45,12 @@ object RedirectHelper {
         cooldownMgr: RedirectCooldownManager,
         listenerMgr: NativeListenerManager,
         launcher: ActivityResultLauncher<Intent>
-    ): Boolean {
-        if (!cooldownMgr.canFire(pageType, uniqueId)) return false
-        if (dialogShowing) return false
+    ): RedirectResult {
+        if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.BLOCKED
+        if (dialogShowing) return RedirectResult.BLOCKED
 
-        listenerMgr.resetSessions()
         val redirected = listenerMgr.onPageInteraction(pageType, uniqueId)
-        if (!redirected) return false
+        if (!redirected) return RedirectResult.NOT_REDIRECTED
 
         if (listenerMgr.isInAppRedirectEnabled()) {
             dialogShowing = true
@@ -53,7 +58,7 @@ object RedirectHelper {
         } else {
             cooldownMgr.recordFired(pageType, uniqueId)
         }
-        return true
+        return RedirectResult.REDIRECTED
     }
 
     fun executePendingActionOnResume(

@@ -5,11 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -36,17 +34,11 @@ object SupportDialog {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = (20 * dp)
-                setColor(Color.argb(40, 255, 255, 255))
-                setStroke((1 * dp).toInt(), Color.argb(80, 239, 68, 68))
+                cornerRadius = (16 * dp)
+                setColor(Color.parseColor("#E6111111"))
+                setStroke((1 * dp).toInt(), Color.parseColor("#EF4444"))
             }
             clipToOutline = true
-            elevation = (24 * dp)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                setRenderEffect(
-                    RenderEffect.createBlurEffect(18f, 18f, Shader.TileMode.CLAMP)
-                )
-            }
         }
 
         card.addView(object : View(context) {
@@ -56,13 +48,12 @@ object SupportDialog {
                     shader = LinearGradient(
                         0f, 0f, width.toFloat(), 0f,
                         intArrayOf(
-                            Color.argb(0, 255, 255, 255),
-                            Color.argb(60, 255, 255, 255),
-                            Color.argb(100, 255, 255, 255),
-                            Color.argb(60, 255, 255, 255),
-                            Color.argb(0, 255, 255, 255)
+                            Color.argb(0, 239, 68, 68),
+                            Color.argb(60, 239, 68, 68),
+                            Color.argb(40, 239, 68, 68),
+                            Color.argb(0, 239, 68, 68)
                         ),
-                        floatArrayOf(0f, 0.2f, 0.5f, 0.8f, 1f),
+                        floatArrayOf(0f, 0.3f, 0.7f, 1f),
                         Shader.TileMode.CLAMP
                     )
                 }
@@ -72,20 +63,19 @@ object SupportDialog {
             setWillNotDraw(false)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (1.5f * dp).toInt()
+                (2 * dp).toInt()
             )
         })
 
         card.addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding((22 * dp).toInt(), (20 * dp).toInt(), (22 * dp).toInt(), (16 * dp).toInt())
+            setPadding((22 * dp).toInt(), (18 * dp).toInt(), (22 * dp).toInt(), (14 * dp).toInt())
 
             addView(TextView(context).apply {
                 text = "We Need Your Support"
                 textSize = 17f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.WHITE)
-                setShadowLayer(6f, 0f, 2f, Color.argb(120, 0, 0, 0))
             })
 
             addView(View(context).apply {
@@ -94,19 +84,16 @@ object SupportDialog {
                     intArrayOf(Color.parseColor("#EF4444"), Color.argb(0, 239, 68, 68))
                 ).apply { cornerRadius = (2 * dp) }
                 layoutParams = LinearLayout.LayoutParams(
-                    (56 * dp).toInt(), (2.5f * dp).toInt()
+                    (48 * dp).toInt(), (2 * dp).toInt()
                 ).also { it.topMargin = (8 * dp).toInt() }
             })
         })
 
         card.addView(View(context).apply {
-            setBackgroundColor(Color.argb(50, 255, 255, 255))
+            setBackgroundColor(Color.parseColor("#2A2A2A"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
-            ).also {
-                it.marginStart = (16 * dp).toInt()
-                it.marginEnd = (16 * dp).toInt()
-            }
+            )
         })
 
         val body = LinearLayout(context).apply {
@@ -122,8 +109,7 @@ object SupportDialog {
             body.addView(TextView(context).apply {
                 text = step
                 textSize = 13.5f
-                setTextColor(Color.WHITE)
-                setShadowLayer(4f, 0f, 1f, Color.argb(80, 0, 0, 0))
+                setTextColor(Color.parseColor("#CCCCCC"))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -133,13 +119,10 @@ object SupportDialog {
         card.addView(body)
 
         card.addView(View(context).apply {
-            setBackgroundColor(Color.argb(50, 255, 255, 255))
+            setBackgroundColor(Color.parseColor("#2A2A2A"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
-            ).also {
-                it.marginStart = (16 * dp).toInt()
-                it.marginEnd = (16 * dp).toInt()
-            }
+            )
         })
 
         card.addView(LinearLayout(context).apply {
@@ -152,7 +135,7 @@ object SupportDialog {
             ).apply {
                 text = "Cancel"
                 textSize = 13f
-                setTextColor(Color.WHITE)
+                setTextColor(Color.parseColor("#999999"))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, (40 * dp).toInt()
                 ).also { it.marginEnd = (4 * dp).toInt() }
@@ -170,10 +153,9 @@ object SupportDialog {
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(Color.WHITE)
                 backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    Color.argb(200, 239, 68, 68)
+                    Color.parseColor("#EF4444")
                 )
                 cornerRadius = (50 * dp).toInt()
-                elevation = (4 * dp)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, (40 * dp).toInt()
                 )
@@ -186,12 +168,13 @@ object SupportDialog {
 
         dialog = MaterialAlertDialogBuilder(context)
             .setView(card)
-            .setCancelable(false)
+            .setCancelable(true)
+            .setOnCancelListener { onCancel() }
             .create()
 
         dialog.window?.apply {
             setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
-            setDimAmount(0.5f)
+            setDimAmount(0.6f)
         }
 
         dialog.show()

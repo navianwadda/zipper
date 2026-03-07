@@ -5,11 +5,14 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -30,18 +33,32 @@ object SupportDialog {
         val dp = context.resources.displayMetrics.density
         var dialog: AlertDialog? = null
 
-        val card = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
+        val blurLayer = View(context).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = (16 * dp)
-                setColor(Color.parseColor("#E6111111"))
-                setStroke((1 * dp).toInt(), Color.parseColor("#EF4444"))
+                setColor(Color.parseColor("#CC1A1A1A"))
             }
-            clipToOutline = true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                setRenderEffect(
+                    RenderEffect.createBlurEffect(20f, 20f, Shader.TileMode.CLAMP)
+                )
+            }
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
         }
 
-        card.addView(object : View(context) {
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        content.addView(object : View(context) {
             override fun onDraw(canvas: Canvas) {
                 super.onDraw(canvas)
                 val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -67,7 +84,7 @@ object SupportDialog {
             )
         })
 
-        card.addView(LinearLayout(context).apply {
+        content.addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding((22 * dp).toInt(), (18 * dp).toInt(), (22 * dp).toInt(), (14 * dp).toInt())
 
@@ -89,7 +106,7 @@ object SupportDialog {
             })
         })
 
-        card.addView(View(context).apply {
+        content.addView(View(context).apply {
             setBackgroundColor(Color.parseColor("#2A2A2A"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
@@ -116,16 +133,16 @@ object SupportDialog {
                 ).also { if (i < 3) it.bottomMargin = (8 * dp).toInt() }
             })
         }
-        card.addView(body)
+        content.addView(body)
 
-        card.addView(View(context).apply {
+        content.addView(View(context).apply {
             setBackgroundColor(Color.parseColor("#2A2A2A"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
             )
         })
 
-        card.addView(LinearLayout(context).apply {
+        content.addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END
             setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (10 * dp).toInt())
@@ -166,8 +183,19 @@ object SupportDialog {
             })
         })
 
+        val container = FrameLayout(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = (16 * dp)
+                setStroke((1 * dp).toInt(), Color.parseColor("#EF4444"))
+            }
+            clipToOutline = true
+            addView(blurLayer)
+            addView(content)
+        }
+
         dialog = MaterialAlertDialogBuilder(context)
-            .setView(card)
+            .setView(container)
             .setCancelable(true)
             .setOnCancelListener { onCancel() }
             .create()

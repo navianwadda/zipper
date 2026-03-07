@@ -11,6 +11,8 @@ import com.livetvpro.app.ui.webview.WebActivity
 
 object RedirectHelper {
 
+    private var dialogShowing = false
+
     fun registerLauncher(
         fragment: Fragment,
         cooldownMgr: RedirectCooldownManager,
@@ -20,6 +22,7 @@ object RedirectHelper {
         return fragment.registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result: ActivityResult ->
+            dialogShowing = false
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
             } else {
@@ -38,13 +41,14 @@ object RedirectHelper {
         launcher: ActivityResultLauncher<Intent>
     ): Boolean {
         if (!cooldownMgr.canFire(pageType, uniqueId)) return false
+        if (dialogShowing) return false
 
         listenerMgr.resetSessions()
         val redirected = listenerMgr.onPageInteraction(pageType, uniqueId)
         if (!redirected) return false
 
         if (listenerMgr.isInAppRedirectEnabled()) {
-            cooldownMgr.recordFired(pageType, uniqueId)
+            dialogShowing = true
             showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher)
         } else {
             cooldownMgr.recordFired(pageType, uniqueId)
@@ -81,6 +85,7 @@ object RedirectHelper {
                 context = fragment.requireContext(),
                 durationSeconds = listenerMgr.getAdDurationSeconds(),
                 onClickHere = {
+                    cooldownMgr.recordFired(pageType, uniqueId)
                     val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
                         putExtra("extra_url", url)
                         putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
@@ -88,6 +93,7 @@ object RedirectHelper {
                     launcher.launch(intent)
                 },
                 onCancel = {
+                    dialogShowing = false
                     cooldownMgr.undoLastFire(pageType, uniqueId)
                 }
             )

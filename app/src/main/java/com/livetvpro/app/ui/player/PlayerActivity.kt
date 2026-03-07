@@ -629,7 +629,7 @@ class PlayerActivity : AppCompatActivity() {
         }
         binding.playerView.onResume()
         binding.playerView.player = player
-        binding.playerView.requestFocus()
+        binding.playerControlsCompose.requestFocus()
     }
 
     override fun onPictureInPictureModeChanged(

@@ -143,6 +143,14 @@
         <item name="materialThemeOverlay">@style/Dialog.ButtonText.ColorOverlay</item>
     </style>
 
+    <style name="Theme.LiveTVPro.TransparentDialog" parent="android:style/Theme.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
+
     <!-- Forces colorPrimary to red so Material3's internal ColorStateList resolves correctly -->
     <style name="Dialog.ButtonText.ColorOverlay" parent="">
         <item name="colorPrimary">#EF4444</item>

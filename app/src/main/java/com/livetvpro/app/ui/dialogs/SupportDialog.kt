@@ -43,6 +43,19 @@ object SupportDialog {
             }
             private val rect = RectF()
 
+            private val windowHeightPx = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                (context as? android.app.Activity)?.windowManager?.currentWindowMetrics?.bounds?.height()
+                    ?: context.resources.displayMetrics.heightPixels
+            } else {
+                context.resources.displayMetrics.heightPixels
+            }
+            private val maxHeightPx = (windowHeightPx * 0.90f).toInt()
+
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                val maxSpec = MeasureSpec.makeMeasureSpec(maxHeightPx, MeasureSpec.AT_MOST)
+                super.onMeasure(widthMeasureSpec, maxSpec)
+            }
+
             override fun onDraw(canvas: Canvas) {
                 rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
@@ -318,7 +331,6 @@ object SupportDialog {
             }
             val dialogWidth = (windowWidthPx * 0.88f).toInt()
                 .coerceIn((280 * dp).toInt(), (480 * dp).toInt())
-            setLayout(dialogWidth, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
             setLayout(dialogWidth, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
             (decorView as? android.view.ViewGroup)?.let { dv ->
                 for (i in 0 until dv.childCount) {

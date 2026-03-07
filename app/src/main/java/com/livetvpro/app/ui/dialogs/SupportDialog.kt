@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
@@ -43,15 +42,9 @@ object SupportDialog {
             }
             private val rect = RectF()
 
-            private val windowHeightPx = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                (context as? android.app.Activity)?.windowManager?.currentWindowMetrics?.bounds?.height()
-                    ?: context.resources.displayMetrics.heightPixels
-            } else {
-                context.resources.displayMetrics.heightPixels
-            }
-            private val maxHeightPx = (windowHeightPx * 0.90f).toInt()
-
             override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                val screenHeight = context.resources.displayMetrics.heightPixels
+                val maxHeightPx = (screenHeight * 0.90f).toInt()
                 val maxSpec = MeasureSpec.makeMeasureSpec(maxHeightPx, MeasureSpec.AT_MOST)
                 super.onMeasure(widthMeasureSpec, maxSpec)
             }
@@ -323,13 +316,8 @@ object SupportDialog {
 
         dialog.window?.apply {
             setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
-            val windowWidthPx = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                (context as? android.app.Activity)?.windowManager?.currentWindowMetrics?.bounds?.width()
-                    ?: context.resources.displayMetrics.widthPixels
-            } else {
-                context.resources.displayMetrics.widthPixels
-            }
-            val dialogWidth = (windowWidthPx * 0.88f).toInt()
+            val screenWidthPx = context.resources.displayMetrics.widthPixels
+            val dialogWidth = (screenWidthPx * 0.88f).toInt()
                 .coerceIn((280 * dp).toInt(), (480 * dp).toInt())
             setLayout(dialogWidth, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
             (decorView as? android.view.ViewGroup)?.let { dv ->

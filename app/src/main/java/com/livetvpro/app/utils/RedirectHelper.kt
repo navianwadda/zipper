@@ -18,6 +18,7 @@ object RedirectHelper {
     }
 
     private var dialogShowing = false
+    private var awaitingValidation = false
 
     fun registerLauncher(
         fragment: Fragment,
@@ -29,11 +30,10 @@ object RedirectHelper {
             ActivityResultContracts.StartActivityForResult()
         ) { result: ActivityResult ->
             dialogShowing = false
+            awaitingValidation = false
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
+                cooldownMgr.recordFired(pageTypeProvider() ?: return@registerForActivityResult, uniqueIdProvider())
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
-            } else {
-                val pageType = pageTypeProvider() ?: return@registerForActivityResult
-                cooldownMgr.undoLastFire(pageType, uniqueIdProvider())
             }
         }
     }
@@ -46,6 +46,7 @@ object RedirectHelper {
         listenerMgr: NativeListenerManager,
         launcher: ActivityResultLauncher<Intent>
     ): RedirectResult {
+        if (awaitingValidation) return RedirectResult.BLOCKED
         if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.BLOCKED
         if (dialogShowing) return RedirectResult.BLOCKED
 
@@ -93,7 +94,8 @@ object RedirectHelper {
                 context = fragment.requireContext(),
                 durationSeconds = listenerMgr.getAdDurationSeconds(),
                 onClickHere = {
-                    cooldownMgr.recordFired(pageType, uniqueId)
+                    awaitingValidation = true
+                    dialogShowing = false
                     val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
                         putExtra("extra_url", url)
                         putExtra("extra_duration", listenerMgr.getAdDurationSeconds())

@@ -185,7 +185,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 }
                 lastPageType = ListenerConfig.PAGE_CHANNELS
                 lastUniqueId = channel.id
-                val redirected = RedirectHelper.tryRedirect(
+                val result = RedirectHelper.tryRedirect(
                     fragment    = this@CategoryChannelsFragment,
                     pageType    = ListenerConfig.PAGE_CHANNELS,
                     uniqueId    = channel.id,
@@ -193,14 +193,16 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                     listenerMgr = listenerManager,
                     launcher    = redirectLauncher
                 )
-                if (redirected) {
+                if (result == RedirectHelper.RedirectResult.REDIRECTED) {
                     if (!listenerManager.isInAppRedirectEnabled()) {
                         pendingExternalRedirect = true
                     } else {
                         pendingChannelAction = null
                     }
-                } else {
+                } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
                     pendingChannelAction?.invoke()
+                    pendingChannelAction = null
+                } else {
                     pendingChannelAction = null
                 }
             },

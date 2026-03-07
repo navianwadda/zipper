@@ -240,11 +240,12 @@ object SupportDialog {
                 minWidth = 0
                 minimumWidth = 0
                 isFocusable = true
-                isFocusableInTouchMode = true
+                isFocusableInTouchMode = false
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f
                 ).also { it.marginEnd = (6 * dp).toInt() }
                 setOnClickListener {
+                    dialog?.setOnCancelListener(null)
                     dialog?.dismiss()
                     onCancel()
                 }
@@ -269,7 +270,7 @@ object SupportDialog {
                 minWidth = 0
                 minimumWidth = 0
                 isFocusable = true
-                isFocusableInTouchMode = true
+                isFocusableInTouchMode = false
                 elevation = (6 * dp)
                 layoutParams = LinearLayout.LayoutParams(
                     0, (52 * dp).toInt(), 1f
@@ -289,8 +290,6 @@ object SupportDialog {
 
             cancelBtn.nextFocusRightId = clickHereBtn.id
             clickHereBtn.nextFocusLeftId = cancelBtn.id
-
-            clickHereBtn.post { clickHereBtn.requestFocus() }
         })
 
         dialog = MaterialAlertDialogBuilder(context)

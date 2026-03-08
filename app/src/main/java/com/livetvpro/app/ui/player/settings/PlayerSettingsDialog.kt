@@ -291,24 +291,21 @@ class PlayerSettingsDialog(
 
 
         val swDp = context.resources.configuration.smallestScreenWidthDp
-
-
-        val shortPx = minOf(dm.widthPixels, dm.heightPixels)
-        val longPx  = maxOf(dm.widthPixels, dm.heightPixels)
+        val maxH = (dm.heightPixels * 0.93f).toInt()
 
         val dialogWidth = when {
-            DeviceUtils.isTvDevice -> (longPx * 0.55f).toInt()
-            swDp >= 720 ->           (shortPx * 0.70f).toInt()
-            swDp >= 600 ->           (shortPx * 0.80f).toInt()
-            isLandscape ->           (shortPx * 0.85f).toInt()
-            else        ->           (shortPx * 0.88f).toInt()
+            DeviceUtils.isTvDevice -> (dm.widthPixels * 0.55f).toInt()
+            swDp >= 720 ->           (dm.widthPixels * 0.55f).toInt()
+            swDp >= 600 ->           (dm.widthPixels * 0.65f).toInt()
+            isLandscape ->           (dm.widthPixels * 0.60f).toInt()
+            else        ->           (dm.widthPixels * 0.88f).toInt()
         }
         val dialogHeight = when {
-            DeviceUtils.isTvDevice -> (longPx  * 0.70f).toInt()
-            swDp >= 720 ->           (longPx  * 0.60f).toInt()
-            swDp >= 600 ->           (longPx  * 0.65f).toInt()
-            isLandscape ->           (shortPx * 0.92f).toInt()
-            else        ->           (longPx  * 0.75f).toInt()
+            DeviceUtils.isTvDevice -> minOf((dm.heightPixels * 0.80f).toInt(), maxH)
+            swDp >= 720 ->           minOf((dm.heightPixels * 0.75f).toInt(), maxH)
+            swDp >= 600 ->           minOf((dm.heightPixels * 0.80f).toInt(), maxH)
+            isLandscape ->           minOf((dm.heightPixels * 0.90f).toInt(), maxH)
+            else        ->           minOf((dm.heightPixels * 0.75f).toInt(), maxH)
         }
         window?.setLayout(dialogWidth, dialogHeight)
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))

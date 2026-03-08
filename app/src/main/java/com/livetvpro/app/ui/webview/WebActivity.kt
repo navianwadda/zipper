@@ -38,7 +38,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
-import com.livetvpro.app.MainActivity
 
 class WebActivity : AppCompatActivity() {
 
@@ -138,12 +137,8 @@ class WebActivity : AppCompatActivity() {
                 handler.removeCallbacks(customTabTickRunnable)
                 onCustomTabTimerFinished()
             } else {
-                // User returned early — cancel
                 handler.removeCallbacks(customTabTickRunnable)
                 setResult(RESULT_CANCELED)
-                startActivity(Intent(this, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-                })
                 finish()
             }
         }
@@ -207,8 +202,8 @@ class WebActivity : AppCompatActivity() {
         validated = true
         Toast.makeText(this, "Thank you for your support!", Toast.LENGTH_SHORT).show()
         setResult(RESULT_VALIDATED)
-        startActivity(Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        startActivity(Intent(this, WebActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         })
         finish()
     }

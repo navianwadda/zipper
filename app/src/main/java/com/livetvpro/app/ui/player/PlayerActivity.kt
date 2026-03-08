@@ -582,8 +582,10 @@ class PlayerActivity : AppCompatActivity() {
         outState.putString("SAVE_SELECTED_GROUP", intentSelectedGroup)
         outState.putBoolean("SAVE_IS_SPORTS", intentIsSports)
         outState.putLong("SAVE_PLAYBACK_POSITION", player?.currentPosition ?: 0L)
-        outState.putInt("SAVE_RESIZE_LANDSCAPE", networkLandscapeResizeMode)
-        outState.putInt("SAVE_RESIZE_PORTRAIT", networkPortraitResizeMode)
+        if (preferencesManager.isRememberAspectRatioEnabled()) {
+            outState.putInt("SAVE_RESIZE_LANDSCAPE", networkLandscapeResizeMode)
+            outState.putInt("SAVE_RESIZE_PORTRAIT", networkPortraitResizeMode)
+        }
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {

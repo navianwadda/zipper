@@ -131,6 +131,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private var resizeModesRestoredFromState = false
 
     private var savedPlaybackPosition: Long = -1L
+    private var settingsDialog: com.livetvpro.app.ui.player.settings.PlayerSettingsDialog? = null
+    private var isShowingSettingsDialog = false
 
     enum class ContentType {
         CHANNEL, EVENT, NETWORK_STREAM
@@ -1877,10 +1879,15 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private fun showSettingsDialog() {
         val exoPlayer = player ?: return
         if (isFinishing || isDestroyed) return
+        if (isShowingSettingsDialog) return
+        isShowingSettingsDialog = true
         try {
             val dialog = com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(this, exoPlayer)
+            settingsDialog = dialog
+            dialog.setOnDismissListener { isShowingSettingsDialog = false }
             dialog.show()
         } catch (e: Exception) {
+            isShowingSettingsDialog = false
             android.util.Log.e("FloatingPlayerActivity", "Error showing settings dialog", e)
         }
     }

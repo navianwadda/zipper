@@ -296,8 +296,10 @@ class PlayerSettingsDialog(
 
         val dialogWidth = if (DeviceUtils.isTvDevice) {
             (600 * density).toInt().coerceAtMost(dm.widthPixels)
+        } else if (isLandscape) {
+            (dm.widthPixels * 0.60f).toInt().coerceIn((400 * density).toInt(), (600 * density).toInt())
         } else {
-            (dm.widthPixels * 0.92f).toInt().coerceIn((280 * density).toInt(), (560 * density).toInt())
+            (dm.widthPixels * 0.88f).toInt().coerceIn((280 * density).toInt(), (560 * density).toInt())
         }
         val dialogHeight = if (isLandscape) {
             (dm.heightPixels * 0.95f).toInt()

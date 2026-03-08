@@ -37,7 +37,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import com.livetvpro.app.MainActivity
@@ -58,6 +62,7 @@ class WebActivity : AppCompatActivity() {
     private var customTabDurationSeconds = 0L
     private var customTabStartTimeMs = 0L
     private var alarmPendingIntent: PendingIntent? = null
+    private var lastCustomTabUrl: String = ""
     private val timerDoneReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == ACTION_TIMER_DONE) onCustomTabTimerFinished()
@@ -69,7 +74,9 @@ class WebActivity : AppCompatActivity() {
         private const val EXTRA_DURATION = "extra_duration"
         const val RESULT_VALIDATED       = 100
 
-        private const val ACTION_TIMER_DONE = "com.livetvpro.app.CUSTOM_TAB_TIMER_DONE"
+        private const val ACTION_TIMER_DONE  = "com.livetvpro.app.CUSTOM_TAB_TIMER_DONE"
+        private const val CHANNEL_ID          = "ad_timer_channel"
+        private const val NOTIFICATION_ID     = 9001
 
         private val CUSTOM_TABS_BROWSERS = listOf(
             "com.android.chrome", "com.chrome.beta", "com.chrome.dev",
@@ -138,12 +145,8 @@ class WebActivity : AppCompatActivity() {
                 cancelAlarm()
                 onCustomTabTimerFinished()
             } else if (customTabPaused) {
-                cancelAlarm()
-                startActivity(Intent(this, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-                })
-                setResult(RESULT_CANCELED)
-                finish()
+                // User returned early — relaunch the Custom Tab so they can't escape
+                launchCustomTab(lastCustomTabUrl)
             }
         }
     }
@@ -166,17 +169,25 @@ class WebActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        if (!usingCustomTabs && webView?.canGoBack() == true) {
-            webView?.goBack()
-        } else {
-            cancelAlarm()
-            setResult(RESULT_CANCELED)
-            finish()
+        when {
+            usingCustomTabs && !validated -> {
+                // Don't allow back while Custom Tab timer is running — relaunch the tab
+                launchCustomTab(lastCustomTabUrl)
+            }
+            !usingCustomTabs && webView?.canGoBack() == true -> {
+                webView?.goBack()
+            }
+            else -> {
+                cancelAlarm()
+                setResult(RESULT_CANCELED)
+                finish()
+            }
         }
     }
     private fun startCustomTabFlow(url: String, durationSeconds: Long) {
         customTabDurationSeconds = durationSeconds
         customTabStartTimeMs     = System.currentTimeMillis()
+        lastCustomTabUrl         = url
 
         setContentView(View(this))
 
@@ -189,19 +200,12 @@ class WebActivity : AppCompatActivity() {
 
     private fun scheduleAlarm(durationSeconds: Long) {
         val intent = Intent(ACTION_TIMER_DONE).setPackage(packageName)
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        else
-            PendingIntent.FLAG_UPDATE_CURRENT
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val pi = PendingIntent.getBroadcast(this, 0, intent, flags)
         alarmPendingIntent = pi
         val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val triggerAt = System.currentTimeMillis() + durationSeconds * 1000L
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-        } else {
-            am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-        }
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
     }
 
     private fun cancelAlarm() {
@@ -230,13 +234,45 @@ class WebActivity : AppCompatActivity() {
         if (validated) return
         validated = true
         cancelAlarm()
-        // Start MainActivity BEFORE finish() so we still have a valid window token
-        // (Android 10+ blocks startActivity from background; finishing activity is exempt briefly)
+        showTimerNotification()
+        Toast.makeText(applicationContext, "Timer completed! You can go back now.", Toast.LENGTH_LONG).show()
         startActivity(Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         })
         setResult(RESULT_VALIDATED)
         finish()
+    }
+
+    private fun showTimerNotification() {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (nm.getNotificationChannel(CHANNEL_ID) == null) {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    "Ad Timer",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply { description = "Notifies when the ad timer completes" }
+                nm.createNotificationChannel(channel)
+            }
+        }
+        val tapIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Thank you for your support!")
+            .setContentText("Timer completed. Tap to return to the app.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(tapIntent)
+            .build()
+        try {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification)
+        } catch (_: SecurityException) {}
     }
 
     @SuppressLint("SetJavaScriptEnabled")

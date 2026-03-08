@@ -38,6 +38,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
+import com.livetvpro.app.MainActivity
 
 class WebActivity : AppCompatActivity() {
 
@@ -137,9 +138,13 @@ class WebActivity : AppCompatActivity() {
                 handler.removeCallbacks(customTabTickRunnable)
                 onCustomTabTimerFinished()
             } else {
+                // User returned early — cancel
                 handler.removeCallbacks(customTabTickRunnable)
                 setResult(RESULT_CANCELED)
                 finish()
+                startActivity(Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                })
             }
         }
     }
@@ -200,14 +205,12 @@ class WebActivity : AppCompatActivity() {
     private fun onCustomTabTimerFinished() {
         if (validated) return
         validated = true
-        setResult(RESULT_VALIDATED)
-        val pm = packageManager
-        val launchIntent = pm.getLaunchIntentForPackage(packageName)?.apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
-        if (launchIntent != null) startActivity(launchIntent)
         Toast.makeText(this, "Thank you for your support!", Toast.LENGTH_SHORT).show()
+        setResult(RESULT_VALIDATED)
         finish()
+        startActivity(Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        })
     }
 
     @SuppressLint("SetJavaScriptEnabled")

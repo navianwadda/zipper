@@ -6,12 +6,13 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <!-- Title bar -->
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="60dp"
         android:paddingStart="20dp"
-        android:paddingEnd="16dp"
-        android:background="?attr/colorSurface">
+        android:paddingEnd="12dp"
+        android:background="#1A1A1A">
 
         <TextView
             android:id="@+id/tvTitle"
@@ -19,8 +20,9 @@
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:text="Video Settings"
-            android:textColor="?attr/colorOnSurface"
+            android:textColor="#FFFFFF"
             android:textSize="18sp"
+            android:letterSpacing="0.01"
             android:textStyle="bold" />
 
         <ImageButton
@@ -31,32 +33,37 @@
             android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_close"
-            android:tint="?attr/colorOnSurface"
+            android:tint="#B0B0B0"
             android:contentDescription="Close"
             android:focusable="true"
             android:nextFocusDown="@id/tabLayout" />
     </RelativeLayout>
 
+    <!-- Tabs -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
+        android:background="#242424"
         android:focusable="true"
         android:nextFocusUp="@id/btnClose"
         android:nextFocusDown="@id/recyclerView"
-        app:tabIndicatorColor="?attr/colorPrimary"
-        app:tabIndicatorHeight="2dp"
-        app:tabSelectedTextColor="?attr/colorOnSurface"
-        app:tabTextColor="?attr/colorOnSurfaceVariant"
+        app:tabIndicatorColor="#EF4444"
+        app:tabIndicatorHeight="3dp"
+        app:tabSelectedTextColor="#FFFFFF"
+        app:tabTextColor="#808080"
+        app:tabRippleColor="#22FFFFFF"
         app:tabMode="fixed"
         app:tabGravity="fill"
-        app:tabTextAppearance="@style/TabTextStyle" />
+        app:tabTextAppearance="@style/TabTextStyleLarge" />
 
+    <!-- Track list -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:background="#1E1E1E"
         android:paddingTop="4dp"
         android:paddingBottom="4dp"
         android:clipToPadding="false"
@@ -68,40 +75,54 @@
         android:nextFocusUp="@id/tabLayout"
         android:nextFocusDown="@id/btnCancel" />
 
+    <!-- Divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="?attr/colorOutline" />
+        android:background="#2C2C2C" />
 
+    <!-- Action buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="end"
-        android:padding="12dp">
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="#1A1A1A">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancel"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="44dp"
             android:text="CANCEL"
-            android:textSize="14sp"
-            android:layout_marginEnd="8dp"
+            android:textColor="#808080"
+            android:textSize="13sp"
+            android:letterSpacing="0.08"
+            android:layout_marginEnd="4dp"
             android:focusable="true"
             android:nextFocusUp="@id/recyclerView"
-            android:nextFocusRight="@id/btnApply" />
+            android:nextFocusRight="@id/btnApply"
+            app:rippleColor="#22FFFFFF"
+            app:cornerRadius="0dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnApply"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="44dp"
             android:text="APPLY"
-            android:textSize="14sp"
+            android:textColor="#EF4444"
+            android:textSize="13sp"
+            android:letterSpacing="0.08"
             android:focusable="true"
             android:nextFocusUp="@id/recyclerView"
-            android:nextFocusLeft="@id/btnCancel" />
+            android:nextFocusLeft="@id/btnCancel"
+            app:rippleColor="#22EF4444"
+            app:cornerRadius="0dp" />
     </LinearLayout>
 
 </LinearLayout>

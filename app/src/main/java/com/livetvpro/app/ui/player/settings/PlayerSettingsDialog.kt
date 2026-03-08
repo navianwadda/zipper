@@ -36,13 +36,11 @@ class PlayerSettingsDialog(
     private var selectedAudio: TrackUiModel.Audio? = null
     private var selectedText: TrackUiModel.Text? = null
     private var selectedSpeed: Float = 1.0f
-
     private var selectedVideoQualities = mutableSetOf<TrackUiModel.Video>()
 
     private var isVideoNone = false
     private var isAudioNone = false
     private var isTextNone  = false
-
     private var isVideoAuto = true
     private var isAudioAuto = true
     private var isTextAuto  = true
@@ -53,37 +51,16 @@ class PlayerSettingsDialog(
 
     private var tracksListener: Player.Listener? = null
 
+    private var videoAdapter: TrackAdapter<TrackUiModel.Video>? = null
+    private var audioAdapter: TrackAdapter<TrackUiModel.Audio>? = null
+    private var textAdapter:  TrackAdapter<TrackUiModel.Text>?  = null
+    private var speedAdapter: TrackAdapter<TrackUiModel.Speed>? = null
 
-    private data class PageEntry(val label: String, val buildList: () -> List<TrackUiModel>)
+    private data class PageEntry(val label: String)
     private val pages = mutableListOf<PageEntry>()
-
+    private val pageRecyclerViews = mutableMapOf<Int, RecyclerView>()
 
     private inner class TrackPagerAdapter : RecyclerView.Adapter<TrackPagerAdapter.PageVH>() {
-
-        private val pageAdapters = mutableMapOf<Int, TrackAdapter<*>>()
-
-        fun notifyPageChanged(position: Int) {
-            pageAdapters.remove(position)
-            notifyItemChanged(position)
-        }
-
-        fun notifyAllChanged() {
-            pageAdapters.clear()
-            notifyDataSetChanged()
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun adapterForPage(position: Int): TrackAdapter<*> {
-            return pageAdapters.getOrPut(position) {
-                val page = pages[position]
-                when (position) {
-                    pages.indexOfFirst { it.label == "Video" } -> buildVideoAdapter()
-                    pages.indexOfFirst { it.label == "Audio" } -> buildAudioAdapter()
-                    pages.indexOfFirst { it.label == "Text"  } -> buildTextAdapter()
-                    else                                        -> buildSpeedAdapter()
-                }
-            }
-        }
 
         override fun getItemCount() = pages.size
         override fun getItemViewType(position: Int) = position
@@ -126,7 +103,12 @@ class PlayerSettingsDialog(
         }
 
         override fun onBindViewHolder(holder: PageVH, position: Int) {
-            holder.recyclerView.adapter = adapterForPage(position)
+            holder.recyclerView.adapter = when (pages[position].label) {
+                "Video" -> videoAdapter
+                "Audio" -> audioAdapter
+                "Text"  -> textAdapter
+                else    -> speedAdapter
+            }
             pageRecyclerViews[position] = holder.recyclerView
         }
 
@@ -134,101 +116,105 @@ class PlayerSettingsDialog(
     }
 
     private var pagerAdapter: TrackPagerAdapter? = null
-    private val pageRecyclerViews = mutableMapOf<Int, RecyclerView>()
-
 
     private fun buildVideoAdapter(): TrackAdapter<TrackUiModel.Video> {
-        var adapter_self_ref: TrackAdapter<TrackUiModel.Video>? = null
-        adapter_self_ref = TrackAdapter { selected ->
+        val adapter = TrackAdapter<TrackUiModel.Video> { selected ->
             when (selected.groupIndex) {
                 -1   -> { selectedVideoQualities.clear(); isVideoAuto = true;  isVideoNone = false }
                 -2   -> { selectedVideoQualities.clear(); isVideoAuto = false; isVideoNone = true  }
                 else -> {
                     isVideoAuto = false; isVideoNone = false
-                    val key = selectedVideoQualities.find {
+                    val existing = selectedVideoQualities.find {
                         it.groupIndex == selected.groupIndex && it.trackIndex == selected.trackIndex
                     }
-                    if (key != null) selectedVideoQualities.remove(key)
+                    if (existing != null) selectedVideoQualities.remove(existing)
                     else selectedVideoQualities.add(selected)
                     if (selectedVideoQualities.isEmpty()) isVideoAuto = true
                 }
             }
-            adapter_self_ref?.submit(buildVideoList())
+            videoAdapter?.submit(buildVideoList())
         }
-        adapter_self_ref.submit(buildVideoList())
-        return adapter_self_ref
+        adapter.submit(buildVideoList())
+        return adapter
     }
 
     private fun buildAudioAdapter(): TrackAdapter<TrackUiModel.Audio> {
-        var ref: TrackAdapter<TrackUiModel.Audio>? = null
-        ref = TrackAdapter { selected ->
+        val adapter = TrackAdapter<TrackUiModel.Audio> { selected ->
             when (selected.groupIndex) {
                 -1   -> { selectedAudio = null; isAudioNone = false; isAudioAuto = true  }
                 -2   -> { selectedAudio = null; isAudioNone = true;  isAudioAuto = false }
                 else -> { selectedAudio = selected; isAudioNone = false; isAudioAuto = false }
             }
-            ref?.updateSelection(selected)
+            audioAdapter?.submit(buildAudioList())
         }
-        ref.submit(buildAudioList())
-        return ref
+        adapter.submit(buildAudioList())
+        return adapter
     }
 
     private fun buildTextAdapter(): TrackAdapter<TrackUiModel.Text> {
-        var ref: TrackAdapter<TrackUiModel.Text>? = null
-        ref = TrackAdapter { selected ->
+        val adapter = TrackAdapter<TrackUiModel.Text> { selected ->
             when (selected.groupIndex) {
                 -1   -> { selectedText = null; isTextNone = false; isTextAuto = true  }
                 -2   -> { selectedText = null; isTextNone = true;  isTextAuto = false }
                 else -> { selectedText = selected; isTextNone = false; isTextAuto = false }
             }
-            ref?.updateSelection(selected)
+            textAdapter?.submit(buildTextList())
         }
-        ref.submit(buildTextList())
-        return ref
+        adapter.submit(buildTextList())
+        return adapter
     }
 
     private fun buildSpeedAdapter(): TrackAdapter<TrackUiModel.Speed> {
-        var ref: TrackAdapter<TrackUiModel.Speed>? = null
-        ref = TrackAdapter { selected ->
+        val adapter = TrackAdapter<TrackUiModel.Speed> { selected ->
             selectedSpeed = selected.speed
-            ref?.updateSelection(selected)
+            speedAdapter?.submit(buildSpeedList())
         }
-        ref.submit(listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
-            .map { TrackUiModel.Speed(it, isSelected = it == selectedSpeed) })
-        return ref
+        adapter.submit(buildSpeedList())
+        return adapter
     }
 
-
     private fun buildVideoList(): List<TrackUiModel.Video> {
-        val list = mutableListOf<TrackUiModel.Video>()
-        list.add(TrackUiModel.Video(-1, -1, 0, 0, 0, isSelected = isVideoAuto,  isRadio = true))
-        list.add(TrackUiModel.Video(-2, -2, 0, 0, 0, isSelected = isVideoNone,  isRadio = true))
         val useRadio = videoTracks.size == 1
-        list.addAll(videoTracks.map { t ->
-            val checked = selectedVideoQualities.any {
-                it.groupIndex == t.groupIndex && it.trackIndex == t.trackIndex
-            }
-            t.copy(isSelected = !isVideoAuto && !isVideoNone && checked, isRadio = useRadio)
-        })
-        return list
+        return buildList {
+            add(TrackUiModel.Video(-1, -1, 0, 0, 0, isSelected = isVideoAuto, isRadio = true))
+            add(TrackUiModel.Video(-2, -2, 0, 0, 0, isSelected = isVideoNone, isRadio = true))
+            addAll(videoTracks.map { t ->
+                val checked = selectedVideoQualities.any {
+                    it.groupIndex == t.groupIndex && it.trackIndex == t.trackIndex
+                }
+                t.copy(isSelected = !isVideoAuto && !isVideoNone && checked, isRadio = useRadio)
+            })
+        }
     }
 
     private fun buildAudioList(): List<TrackUiModel.Audio> {
-        val list = mutableListOf<TrackUiModel.Audio>()
-        list.add(TrackUiModel.Audio(-1, -1, "Auto", 0, 0, isSelected = isAudioAuto))
-        list.add(TrackUiModel.Audio(-2, -2, "None", 0, 0, isSelected = isAudioNone))
-        list.addAll(audioTracks.map { t -> t.copy(isSelected = !isAudioAuto && !isAudioNone && selectedAudio?.groupIndex == t.groupIndex && selectedAudio?.trackIndex == t.trackIndex) })
-        return list
+        return buildList {
+            add(TrackUiModel.Audio(-1, -1, "Auto", 0, 0, isSelected = isAudioAuto))
+            add(TrackUiModel.Audio(-2, -2, "None", 0, 0, isSelected = isAudioNone))
+            addAll(audioTracks.map { t ->
+                t.copy(isSelected = !isAudioAuto && !isAudioNone &&
+                    selectedAudio?.groupIndex == t.groupIndex &&
+                    selectedAudio?.trackIndex == t.trackIndex)
+            })
+        }
     }
 
     private fun buildTextList(): List<TrackUiModel.Text> {
-        val list = mutableListOf<TrackUiModel.Text>()
-        list.add(TrackUiModel.Text(-1, -1, "Auto", isSelected = isTextAuto))
-        list.add(TrackUiModel.Text(-2, -2, "None", isSelected = isTextNone))
-        list.addAll(textTracks.map { t -> t.copy(isSelected = !isTextAuto && !isTextNone && selectedText?.groupIndex == t.groupIndex && selectedText?.trackIndex == t.trackIndex) })
-        return list
+        return buildList {
+            add(TrackUiModel.Text(-1, -1, "Auto", isSelected = isTextAuto))
+            add(TrackUiModel.Text(-2, -2, "None", isSelected = isTextNone))
+            addAll(textTracks.map { t ->
+                t.copy(isSelected = !isTextAuto && !isTextNone &&
+                    selectedText?.groupIndex == t.groupIndex &&
+                    selectedText?.trackIndex == t.trackIndex)
+            })
+        }
     }
 
+    private fun buildSpeedList(): List<TrackUiModel.Speed> {
+        return listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+            .map { TrackUiModel.Speed(it, isSelected = it == selectedSpeed) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -305,6 +291,7 @@ class PlayerSettingsDialog(
         }
 
         loadTracks()
+        buildAdapters()
 
         val allEmpty = videoTracks.isEmpty() && audioTracks.isEmpty() && textTracks.isEmpty()
         if (allEmpty) {
@@ -313,7 +300,11 @@ class PlayerSettingsDialog(
                     if (tracks.groups.isNotEmpty()) {
                         player.removeListener(this)
                         tracksListener = null
-                        viewPager.post { loadTracks(); rebuildPages() }
+                        viewPager.post {
+                            loadTracks()
+                            buildAdapters()
+                            rebuildPages()
+                        }
                     }
                 }
             }
@@ -357,13 +348,19 @@ class PlayerSettingsDialog(
         tracksListener = null
     }
 
+    private fun buildAdapters() {
+        videoAdapter = if (videoTracks.isNotEmpty()) buildVideoAdapter() else null
+        audioAdapter = if (audioTracks.isNotEmpty()) buildAudioAdapter() else null
+        textAdapter  = if (textTracks.isNotEmpty())  buildTextAdapter()  else null
+        speedAdapter = buildSpeedAdapter()
+    }
 
     private fun rebuildPages() {
         pages.clear()
-        if (videoTracks.isNotEmpty()) pages.add(PageEntry("Video") { buildVideoList() })
-        if (audioTracks.isNotEmpty()) pages.add(PageEntry("Audio") { buildAudioList() })
-        if (textTracks.isNotEmpty())  pages.add(PageEntry("Text")  { buildTextList()  })
-        pages.add(PageEntry("Speed") { emptyList() })
+        if (videoTracks.isNotEmpty()) pages.add(PageEntry("Video"))
+        if (audioTracks.isNotEmpty()) pages.add(PageEntry("Audio"))
+        if (textTracks.isNotEmpty())  pages.add(PageEntry("Text"))
+        pages.add(PageEntry("Speed"))
 
         pageRecyclerViews.clear()
         val adapter = TrackPagerAdapter()
@@ -379,7 +376,6 @@ class PlayerSettingsDialog(
             tabLayout.post { tabLayout.getTabAt(0)?.view?.requestFocus() ?: tabLayout.requestFocus() }
         }
     }
-
 
     private fun loadTracks() {
         try {
@@ -423,7 +419,6 @@ class PlayerSettingsDialog(
             Timber.e(e, "Error loading tracks")
         }
     }
-
 
     private fun applySelections() {
         try {

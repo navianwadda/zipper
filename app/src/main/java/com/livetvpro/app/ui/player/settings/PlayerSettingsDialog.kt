@@ -298,7 +298,7 @@ class PlayerSettingsDialog(
             swDp >= 720 ->           (dm.widthPixels * 0.55f).toInt()
             swDp >= 600 ->           (dm.widthPixels * 0.65f).toInt()
             isLandscape ->           (dm.widthPixels * 0.60f).toInt()
-            else        ->           (dm.widthPixels * 0.88f).toInt()
+            else        ->           (dm.widthPixels * 0.82f).toInt()
         }
         val dialogHeight = when {
             DeviceUtils.isTvDevice -> minOf((dm.heightPixels * 0.80f).toInt(), maxH)

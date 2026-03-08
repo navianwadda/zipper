@@ -54,16 +54,13 @@ class PlayerSettingsDialog(
 
     private var tracksListener: Player.Listener? = null
 
-    // ── Page data ─────────────────────────────────────────────────────────────
 
     private data class PageEntry(val label: String, val buildList: () -> List<TrackUiModel>)
     private val pages = mutableListOf<PageEntry>()
 
-    // ── ViewPager2 adapter ────────────────────────────────────────────────────
 
     private inner class TrackPagerAdapter : RecyclerView.Adapter<TrackPagerAdapter.PageVH>() {
 
-        // Hold one adapter per page so selections persist while swiping
         private val pageAdapters = mutableMapOf<Int, TrackAdapter<*>>()
 
         fun notifyPageChanged(position: Int) {
@@ -90,7 +87,7 @@ class PlayerSettingsDialog(
         }
 
         override fun getItemCount() = pages.size
-        override fun getItemViewType(position: Int) = position  // force new VH per page
+        override fun getItemViewType(position: Int) = position
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageVH {
             val rv = RecyclerView(parent.context).apply {
@@ -113,7 +110,6 @@ class PlayerSettingsDialog(
 
     private var pagerAdapter: TrackPagerAdapter? = null
 
-    // ── Track adapter builders ────────────────────────────────────────────────
 
     private fun buildVideoAdapter(): TrackAdapter<TrackUiModel.Video> {
         var adapter_self_ref: TrackAdapter<TrackUiModel.Video>? = null
@@ -176,7 +172,6 @@ class PlayerSettingsDialog(
         return ref
     }
 
-    // ── List builders ─────────────────────────────────────────────────────────
 
     private fun buildVideoList(): List<TrackUiModel.Video> {
         val list = mutableListOf<TrackUiModel.Video>()
@@ -208,7 +203,6 @@ class PlayerSettingsDialog(
         return list
     }
 
-    // ── Dialog lifecycle ──────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -294,27 +288,27 @@ class PlayerSettingsDialog(
         val isLandscape = context.resources.configuration.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-        // smallestScreenWidthDp = narrow side in dp, rotation-invariant
-        // Used to distinguish phone / large-phone / tablet / TV form factors
+
+
         val swDp = context.resources.configuration.smallestScreenWidthDp
 
-        // The short and long sides in pixels, regardless of current rotation
+
         val shortPx = minOf(dm.widthPixels, dm.heightPixels)
         val longPx  = maxOf(dm.widthPixels, dm.heightPixels)
 
         val dialogWidth = when {
-            DeviceUtils.isTvDevice -> (longPx * 0.55f).toInt()   // TV: 55% of long side
-            swDp >= 720 ->           (shortPx * 0.70f).toInt()   // large tablet: 70% of short side
-            swDp >= 600 ->           (shortPx * 0.80f).toInt()   // tablet: 80% of short side
-            isLandscape ->           (shortPx * 0.85f).toInt()   // phone landscape: 85% of short side
-            else        ->           (shortPx * 0.88f).toInt()   // phone portrait: 88% of width
+            DeviceUtils.isTvDevice -> (longPx * 0.55f).toInt()
+            swDp >= 720 ->           (shortPx * 0.70f).toInt()
+            swDp >= 600 ->           (shortPx * 0.80f).toInt()
+            isLandscape ->           (shortPx * 0.85f).toInt()
+            else        ->           (shortPx * 0.88f).toInt()
         }
         val dialogHeight = when {
-            DeviceUtils.isTvDevice -> (longPx  * 0.70f).toInt()  // TV: 70% of long side
-            swDp >= 720 ->           (longPx  * 0.60f).toInt()   // large tablet: 60% of long side
-            swDp >= 600 ->           (longPx  * 0.65f).toInt()   // tablet: 65% of long side
-            isLandscape ->           (shortPx * 0.92f).toInt()   // phone landscape: 92% of short side
-            else        ->           (longPx  * 0.75f).toInt()   // phone portrait: 75% of long side
+            DeviceUtils.isTvDevice -> (longPx  * 0.70f).toInt()
+            swDp >= 720 ->           (longPx  * 0.60f).toInt()
+            swDp >= 600 ->           (longPx  * 0.65f).toInt()
+            isLandscape ->           (shortPx * 0.92f).toInt()
+            else        ->           (longPx  * 0.75f).toInt()
         }
         window?.setLayout(dialogWidth, dialogHeight)
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -327,7 +321,6 @@ class PlayerSettingsDialog(
         tracksListener = null
     }
 
-    // ── Page management ───────────────────────────────────────────────────────
 
     private fun rebuildPages() {
         pages.clear()
@@ -339,7 +332,7 @@ class PlayerSettingsDialog(
         val adapter = TrackPagerAdapter()
         pagerAdapter = adapter
         viewPager.adapter = adapter
-        viewPager.offscreenPageLimit = pages.size  // keep all pages alive
+        viewPager.offscreenPageLimit = pages.size
 
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = pages[position].label
@@ -350,7 +343,6 @@ class PlayerSettingsDialog(
         }
     }
 
-    // ── Track loading ─────────────────────────────────────────────────────────
 
     private fun loadTracks() {
         try {
@@ -395,7 +387,6 @@ class PlayerSettingsDialog(
         }
     }
 
-    // ── Apply ─────────────────────────────────────────────────────────────────
 
     private fun applySelections() {
         try {

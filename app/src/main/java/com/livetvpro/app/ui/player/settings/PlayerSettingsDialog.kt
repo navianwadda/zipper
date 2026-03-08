@@ -5,7 +5,6 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.KeyEvent
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
@@ -90,25 +89,52 @@ class PlayerSettingsDialog(
         override fun getItemViewType(position: Int) = position
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageVH {
-            val rv = RecyclerView(parent.context).apply {
+            val rv = object : RecyclerView(parent.context) {
+                override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+                    if (DeviceUtils.isTvDevice && event.action == android.view.KeyEvent.ACTION_UP) {
+                        val lm = layoutManager as? LinearLayoutManager
+                        when (event.keyCode) {
+                            android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                if (lm?.findFirstCompletelyVisibleItemPosition() == 0) {
+                                    tabLayout.requestFocus()
+                                    return true
+                                }
+                            }
+                            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                if (lm?.findLastCompletelyVisibleItemPosition() == (adapter?.itemCount ?: 0) - 1) {
+                                    btnCancel.requestFocus()
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                    return super.dispatchKeyEvent(event)
+                }
+            }.apply {
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 layoutManager = LinearLayoutManager(parent.context)
                 overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+                if (DeviceUtils.isTvDevice) {
+                    isFocusable = true
+                    descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+                }
             }
             return PageVH(rv)
         }
 
         override fun onBindViewHolder(holder: PageVH, position: Int) {
             holder.recyclerView.adapter = adapterForPage(position)
+            pageRecyclerViews[position] = holder.recyclerView
         }
 
         inner class PageVH(val recyclerView: RecyclerView) : RecyclerView.ViewHolder(recyclerView)
     }
 
     private var pagerAdapter: TrackPagerAdapter? = null
+    private val pageRecyclerViews = mutableMapOf<Int, RecyclerView>()
 
 
     private fun buildVideoAdapter(): TrackAdapter<TrackUiModel.Video> {
@@ -223,38 +249,55 @@ class PlayerSettingsDialog(
             btnCancel.isFocusable = true
             btnApply.isFocusable  = true
 
+            val focusCurrentPage: () -> Boolean = {
+                viewPager.post {
+                    val rv = pageRecyclerViews[viewPager.currentItem]
+                    if (rv != null) {
+                        val lm = rv.layoutManager as? LinearLayoutManager
+                        val firstVisible = lm?.findFirstVisibleItemPosition() ?: 0
+                        rv.findViewHolderForAdapterPosition(firstVisible)?.itemView?.requestFocus()
+                            ?: rv.requestFocus()
+                    } else {
+                        viewPager.requestFocus()
+                    }
+                }
+                true
+            }
+
+            tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab?) {
+                    val pos = tab?.position ?: return
+                    if (viewPager.currentItem != pos) viewPager.currentItem = pos
+                }
+                override fun onTabUnselected(tab: TabLayout.Tab?) {}
+                override fun onTabReselected(tab: TabLayout.Tab?) {}
+            })
+
             btnClose?.setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    viewPager.requestFocus(); true
+                    tabLayout.getTabAt(viewPager.currentItem)?.view?.requestFocus()
+                        ?: tabLayout.requestFocus()
+                    true
                 } else false
             }
+
             tabLayout.setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    viewPager.requestFocus(); true
+                    focusCurrentPage()
                 } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
                     btnClose?.requestFocus(); true
-                } else if (event.action == KeyEvent.ACTION_UP &&
-                    (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_LEFT)) {
-                    val count = tabLayout.tabCount
-                    if (count == 0) return@setOnKeyListener false
-                    val next = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
-                        (viewPager.currentItem + 1).coerceAtMost(count - 1)
-                    else
-                        (viewPager.currentItem - 1).coerceAtLeast(0)
-                    viewPager.currentItem = next
-                    true
                 } else false
             }
             btnCancel.setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    viewPager.requestFocus(); true
+                    focusCurrentPage()
                 } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                     btnApply.requestFocus(); true
                 } else false
             }
             btnApply.setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    viewPager.requestFocus(); true
+                    focusCurrentPage()
                 } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
                     btnCancel.requestFocus(); true
                 } else false
@@ -284,12 +327,8 @@ class PlayerSettingsDialog(
     override fun onStart() {
         super.onStart()
         val dm = context.resources.displayMetrics
-        val density = dm.density
         val isLandscape = context.resources.configuration.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
-
-
-
         val swDp = context.resources.configuration.smallestScreenWidthDp
         val maxH = (dm.heightPixels * 0.93f).toInt()
 
@@ -326,6 +365,7 @@ class PlayerSettingsDialog(
         if (textTracks.isNotEmpty())  pages.add(PageEntry("Text")  { buildTextList()  })
         pages.add(PageEntry("Speed") { emptyList() })
 
+        pageRecyclerViews.clear()
         val adapter = TrackPagerAdapter()
         pagerAdapter = adapter
         viewPager.adapter = adapter
@@ -336,7 +376,7 @@ class PlayerSettingsDialog(
         }.attach()
 
         if (DeviceUtils.isTvDevice) {
-            tabLayout.post { tabLayout.requestFocus() }
+            tabLayout.post { tabLayout.getTabAt(0)?.view?.requestFocus() ?: tabLayout.requestFocus() }
         }
     }
 

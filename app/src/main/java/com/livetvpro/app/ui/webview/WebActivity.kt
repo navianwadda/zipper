@@ -134,8 +134,10 @@ class WebActivity : AppCompatActivity() {
                 TimerService.stop(this)
                 onCustomTabTimerFinished()
             } else if (customTabPaused) {
-                // User returned early — relaunch the Custom Tab so they can't escape
-                launchCustomTab(lastCustomTabUrl)
+                // User closed/backed the tab — cancel gracefully
+                TimerService.stop(this)
+                setResult(RESULT_CANCELED)
+                finish()
             }
         }
     }
@@ -160,8 +162,10 @@ class WebActivity : AppCompatActivity() {
     override fun onBackPressed() {
         when {
             usingCustomTabs && !validated -> {
-                // Don't allow back while Custom Tab timer is running — relaunch the tab
-                launchCustomTab(lastCustomTabUrl)
+                // Back on WebActivity while timer running — cancel gracefully
+                TimerService.stop(this)
+                setResult(RESULT_CANCELED)
+                finish()
             }
             !usingCustomTabs && webView?.canGoBack() == true -> {
                 webView?.goBack()

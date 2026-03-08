@@ -466,9 +466,9 @@ class FloatingPlayerActivity : AppCompatActivity() {
             binding.playerView.resizeMode = networkLandscapeResizeMode
         } else if (contentType == ContentType.NETWORK_STREAM) {
             binding.playerView.resizeMode = networkPortraitResizeMode
+        } else {
+            binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
-    }
-
     }
 
     private fun adjustLayoutForOrientation(isLandscape: Boolean) {
@@ -1324,10 +1324,11 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
                             if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
                         }
-                        applyResizeModeForOrientation(
-                            DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                        )
                     }
+
+                    applyResizeModeForOrientation(
+                        DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    )
 
                     binding.playerView.hideController()
 
@@ -1803,6 +1804,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 }
                             },
                             onAspectRatioClick = {
+
                                 if (isLandscape || contentType == ContentType.NETWORK_STREAM) {
                                     cycleAspectRatio()
                                 }

@@ -52,12 +52,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// M3 spec colours
-private val ColorPrimary   = Color(0xFFE53935) // our red as colorPrimary
-private val ColorOnSurface = Color(0xFFFFFFFF) // white on dark background
-private val ColorGray      = Color(0xFF8A8A8A) // unselected border
+private val ColorPrimary   = Color(0xFFE53935)
+private val ColorOnSurface = Color(0xFFFFFFFF)
+private val ColorGray      = Color(0xFF8A8A8A)
 
-// M3 spec state-layer opacities (from m3_checkbox_button_tint.xml / M3 motion spec)
 private const val ALPHA_PRESSED  = 0.12f
 private const val ALPHA_FOCUSED  = 0.12f
 private const val ALPHA_HOVERED  = 0.08f
@@ -70,9 +68,22 @@ class TrackAdapter<T : TrackUiModel>(
     private val items = mutableListOf<T>()
 
     fun submit(list: List<T>) {
+        if (items.isEmpty()) {
+            items.addAll(list)
+            notifyDataSetChanged()
+            return
+        }
+        val oldList = items.toList()
         items.clear()
         items.addAll(list)
-        notifyDataSetChanged()
+        val maxSize = maxOf(oldList.size, list.size)
+        for (i in 0 until maxSize) {
+            when {
+                i >= oldList.size -> notifyItemInserted(i)
+                i >= list.size    -> notifyItemRemoved(i)
+                oldList[i] != list[i] -> notifyItemChanged(i)
+            }
+        }
     }
 
     fun updateSelection(selectedItem: T) {
@@ -101,11 +112,9 @@ class TrackAdapter<T : TrackUiModel>(
         private val isRadioState  = mutableStateOf(true)
         private var currentItem: T? = null
 
-        // Shared InteractionSource — bridged from Android View touch events below
         private val interactionSource = MutableInteractionSource()
         private val scope = CoroutineScope(Dispatchers.Main.immediate)
 
-        // Track the active press interaction so we can emit Release correctly
         private var activePress: PressInteraction.Press? = null
         private var activeHover: HoverInteraction.Enter? = null
 
@@ -138,9 +147,6 @@ class TrackAdapter<T : TrackUiModel>(
                 }
             }
 
-            // ── Bridge Android View touch → Compose InteractionSource ──────────
-            // The ComposeView is clickable=false so the ROW handles the click,
-            // but we still need to forward touch DOWN/UP to drive the state layer.
             binding.root.setOnTouchListener { _, event ->
                 when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
@@ -160,7 +166,7 @@ class TrackAdapter<T : TrackUiModel>(
                             activePress = null
                         }
                     }
-                    // Hover events — fired by mouse/stylus (tablets, foldables)
+                   
                     MotionEvent.ACTION_HOVER_ENTER -> {
                         val hover = HoverInteraction.Enter()
                         activeHover = hover
@@ -173,18 +179,17 @@ class TrackAdapter<T : TrackUiModel>(
                         }
                     }
                 }
-                // Return false so the click listener still fires
+               
                 false
             }
 
-            // Focus changes — when the row gains/loses focus (keyboard navigation)
             binding.root.setOnFocusChangeListener { _, hasFocus ->
                 scope.launch {
                     if (hasFocus) {
                         interactionSource.emit(FocusInteraction.Focus())
                     } else {
-                        // FocusInteraction.Unfocus requires the original Focus ref;
-                        // emitting a new Focus then Unfocus resets state cleanly
+                       
+                       
                         val f = FocusInteraction.Focus()
                         interactionSource.emit(FocusInteraction.Unfocus(f))
                     }
@@ -285,24 +290,20 @@ class TrackAdapter<T : TrackUiModel>(
     override fun getItemCount() = items.size
 }
 
-// ── M3 Radio Button ──────────────────────────────────────────────────────────
 
 @Composable
 private fun M3RadioButton(
     selected: Boolean,
     interactionSource: MutableInteractionSource
 ) {
-    // Collect all interaction states
     val interactions = rememberInteractionState(interactionSource)
 
-    // M3 spec: colorPrimary when selected, colorOnSurface (gray) when not
     val ringColor by animateColorAsState(
         targetValue   = if (selected) ColorPrimary else ColorGray,
         animationSpec = tween(180),
         label         = "radio_ring_color"
     )
 
-    // M3 state layer: circle behind, colour = primary if selected, onSurface if not
     val stateLayerColor = if (selected) ColorPrimary else ColorOnSurface
     val stateLayerAlpha by animateFloatAsState(
         targetValue   = interactions.stateLayerAlpha,
@@ -310,7 +311,6 @@ private fun M3RadioButton(
         label         = "radio_state_alpha"
     )
 
-    // M3 spec: slight scale spring on selection change
     val scale by animateFloatAsState(
         targetValue   = if (selected) 1f else 0.9f,
         animationSpec = spring(dampingRatio = 0.45f, stiffness = 650f),
@@ -319,7 +319,7 @@ private fun M3RadioButton(
 
     RadioButton(
         selected          = selected,
-        onClick           = null,         // row handles click
+        onClick           = null,        
         interactionSource = interactionSource,
         colors            = RadioButtonDefaults.colors(
             selectedColor   = ringColor,
@@ -329,7 +329,7 @@ private fun M3RadioButton(
             .scale(scale)
             .drawBehind {
                 if (stateLayerAlpha > 0f) {
-                    // State layer circle — 20dp radius per M3 spec (40dp touch target / 2)
+                   
                     drawCircle(
                         color  = stateLayerColor.copy(alpha = stateLayerAlpha),
                         radius = 20.dp.toPx(),
@@ -340,7 +340,6 @@ private fun M3RadioButton(
     )
 }
 
-// ── M3 Checkbox ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun M3Checkbox(
@@ -349,8 +348,6 @@ private fun M3Checkbox(
 ) {
     val interactions = rememberInteractionState(interactionSource)
 
-    // ── Container (buttonTint) ───────────────────────────────────────────────
-    // MD button_tint.xml: disabled=onSurface@38%, checked=colorPrimary, else=colorOnSurface
     val containerFill by animateColorAsState(
         targetValue   = if (checked) ColorPrimary else Color.Transparent,
         animationSpec = tween(90),
@@ -362,22 +359,16 @@ private fun M3Checkbox(
         label         = "cb_border"
     )
 
-    // ── Icon (buttonIconTint) ────────────────────────────────────────────────
-    // MD button_icon_tint.xml: disabled=colorSurface, checked=colorOnPrimary (white)
-    // Animatable for path-trim draw animation
     val checkProgress = remember { Animatable(if (checked) 1f else 0f) }
 
     LaunchedEffect(checked) {
         if (checked) {
-            // Fill comes from animateColorAsState (instant via tween 90ms)
-            // Then draw checkmark via path trim
             checkProgress.snapTo(0f)
             checkProgress.animateTo(
                 targetValue    = 1f,
                 animationSpec  = tween(durationMillis = 150)
             )
         } else {
-            // Erase checkmark first, then fill drains via animateColorAsState
             checkProgress.animateTo(
                 targetValue   = 0f,
                 animationSpec = tween(durationMillis = 80)
@@ -385,9 +376,6 @@ private fun M3Checkbox(
         }
     }
 
-    // ── State layer ──────────────────────────────────────────────────────────
-    // M3 spec: circle behind container, 20dp radius
-    // Colour = colorPrimary if checked, colorOnSurface if unchecked
     val stateLayerColor = if (checked) ColorPrimary else ColorOnSurface
     val stateLayerAlpha by animateFloatAsState(
         targetValue   = interactions.stateLayerAlpha,
@@ -399,7 +387,7 @@ private fun M3Checkbox(
         modifier = Modifier
             .size(20.dp)
             .drawBehind {
-                // Layer 1 — state layer (drawn first, behind everything)
+               
                 if (stateLayerAlpha > 0f) {
                     drawCircle(
                         color  = stateLayerColor.copy(alpha = stateLayerAlpha),
@@ -408,7 +396,7 @@ private fun M3Checkbox(
                     )
                 }
 
-                // Layer 2 — container (buttonCompat)
+               
                 drawContainer(
                     fillColor    = containerFill,
                     borderColor  = borderColor,
@@ -416,7 +404,7 @@ private fun M3Checkbox(
                     cornerRadius = 2.dp.toPx()
                 )
 
-                // Layer 3 — icon (buttonIcon), drawn on top
+               
                 if (checkProgress.value > 0f) {
                     drawIcon(progress = checkProgress.value)
                 }
@@ -424,14 +412,12 @@ private fun M3Checkbox(
     )
 }
 
-// ── Interaction state helper ──────────────────────────────────────────────────
 
 private data class InteractionState(
     val isPressed: Boolean,
     val isHovered: Boolean,
     val isFocused: Boolean
 ) {
-    // M3 spec priority: pressed=12%, focused=12%, hovered=8%, else=0%
     val stateLayerAlpha: Float get() = when {
         isPressed -> ALPHA_PRESSED
         isFocused -> ALPHA_FOCUSED
@@ -450,7 +436,6 @@ private fun rememberInteractionState(
     return InteractionState(isPressed, isHovered, isFocused)
 }
 
-// ── Canvas draw helpers ───────────────────────────────────────────────────────
 
 private fun DrawScope.drawContainer(
     fillColor: Color,
@@ -479,21 +464,19 @@ private fun DrawScope.drawIcon(progress: Float) {
     val w = size.width
     val h = size.height
 
-    // M3 checkmark path: left-bottom knee then up-right
     val path = Path().apply {
         moveTo(w * 0.20f, h * 0.50f)
         lineTo(w * 0.42f, h * 0.72f)
         lineTo(w * 0.80f, h * 0.28f)
     }
 
-    // PathMeasure trim: draws 0→progress of the total path length
     val measure = PathMeasure().also { it.setPath(path, false) }
     val trimmed = Path()
     measure.getSegment(0f, measure.length * progress, trimmed, true)
 
     drawPath(
         path  = trimmed,
-        color = Color.White,   // colorOnPrimary per MD button_icon_tint.xml
+        color = Color.White,  
         style = Stroke(
             width = 2.dp.toPx(),
             cap   = StrokeCap.Round,

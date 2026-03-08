@@ -1069,7 +1069,7 @@ class PlayerActivity : AppCompatActivity() {
                             delay(500L)
                         }
                     }
-                    val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    val isLandscape = DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
                     var showChannelList by this@PlayerActivity.showChannelList
                     val channelListItems by viewModel.channelListItems.observeAsState(emptyList())
@@ -1213,13 +1213,12 @@ class PlayerActivity : AppCompatActivity() {
             else                                     -> AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
 
-        if (contentType == ContentType.NETWORK_STREAM) {
-            if (isLandscape) networkLandscapeResizeMode = next
-            else networkPortraitResizeMode = next
-        }
+        if (isLandscape) networkLandscapeResizeMode = next
+        else networkPortraitResizeMode = next
 
-        if (preferencesManager.isRememberAspectRatioEnabled() && isLandscape) {
-            preferencesManager.setSavedAspectRatio(next)
+        if (preferencesManager.isRememberAspectRatioEnabled()) {
+            if (isLandscape) preferencesManager.setSavedAspectRatio(next)
+            else if (contentType == ContentType.NETWORK_STREAM) preferencesManager.setSavedAspectRatioPortrait(next)
         }
 
         binding.playerView.resizeMode = next
@@ -1818,9 +1817,11 @@ class PlayerActivity : AppCompatActivity() {
                     binding.playerView.player = exo
 
                     if (preferencesManager.isRememberAspectRatioEnabled()) {
-                        val saved = preferencesManager.getSavedAspectRatio()
-                        if (saved != -1) {
-                            networkLandscapeResizeMode = saved
+                        val savedLandscape = preferencesManager.getSavedAspectRatio()
+                        if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
+                        if (contentType == ContentType.NETWORK_STREAM) {
+                            val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
+                            if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
                         }
                     }
 

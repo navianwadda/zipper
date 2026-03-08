@@ -765,14 +765,38 @@ class MainActivity : AppCompatActivity() {
         val btnCancel = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_states_cancel)
         val btnApply = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_states_apply)
 
+        switchAspectRatio.isChecked = preferencesManager.isRememberAspectRatioEnabled()
+        switchLowestQuality.isChecked = preferencesManager.isForceLowestQualityEnabled()
+
         val dialog = MaterialAlertDialogBuilder(this)
             .setView(view)
             .create()
 
         btnCancel.setOnClickListener { dialog.dismiss() }
-        btnApply.setOnClickListener { dialog.dismiss() }
+        btnApply.setOnClickListener {
+            preferencesManager.setRememberAspectRatioEnabled(switchAspectRatio.isChecked)
+            preferencesManager.setForceLowestQualityEnabled(switchLowestQuality.isChecked)
+            dialog.dismiss()
+        }
 
         dialog.show()
+
+        val dm = resources.displayMetrics
+        val swDp = resources.configuration.smallestScreenWidthDp
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val dialogWidth = when {
+            DeviceUtils.isTvDevice -> (dm.widthPixels * 0.45f).toInt()
+            swDp >= 720            -> (dm.widthPixels * 0.45f).toInt()
+            swDp >= 600            -> (dm.widthPixels * 0.55f).toInt()
+            isLandscape            -> (dm.widthPixels * 0.55f).toInt()
+            else                   -> (dm.widthPixels * 0.88f).toInt()
+        }
+        val maxHeight = (dm.heightPixels * 0.85f).toInt()
+        dialog.window?.setLayout(dialogWidth, maxHeight.coerceAtMost(android.view.ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        if (DeviceUtils.isTvDevice) {
+            btnApply.requestFocus()
+        }
     }
 
     private fun showFloatingPlayerDialog() {

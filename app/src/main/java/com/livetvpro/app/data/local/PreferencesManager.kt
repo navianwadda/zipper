@@ -26,6 +26,7 @@ class PreferencesManager @Inject constructor(
         private const val KEY_FLOATING_PLAYER_Y = "floating_player_y"
         private const val KEY_REMEMBER_ASPECT_RATIO = "remember_aspect_ratio"
         private const val KEY_SAVED_ASPECT_RATIO = "saved_aspect_ratio"
+        private const val KEY_SAVED_ASPECT_RATIO_PORTRAIT = "saved_aspect_ratio_portrait"
         private const val KEY_FORCE_LOWEST_QUALITY = "force_lowest_quality"
     }
 
@@ -63,6 +64,9 @@ class PreferencesManager @Inject constructor(
 
     fun getSavedAspectRatio(): Int = prefs.getInt(KEY_SAVED_ASPECT_RATIO, -1)
     fun setSavedAspectRatio(resizeMode: Int) = prefs.edit().putInt(KEY_SAVED_ASPECT_RATIO, resizeMode).apply()
+
+    fun getSavedAspectRatioPortrait(): Int = prefs.getInt(KEY_SAVED_ASPECT_RATIO_PORTRAIT, -1)
+    fun setSavedAspectRatioPortrait(resizeMode: Int) = prefs.edit().putInt(KEY_SAVED_ASPECT_RATIO_PORTRAIT, resizeMode).apply()
 
     fun isForceLowestQualityEnabled(): Boolean = prefs.getBoolean(KEY_FORCE_LOWEST_QUALITY, false)
     fun setForceLowestQualityEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_FORCE_LOWEST_QUALITY, enabled).apply()

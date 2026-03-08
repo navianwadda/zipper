@@ -616,11 +616,13 @@ class PlayerActivity : AppCompatActivity() {
         intentCategoryId = savedInstanceState.getString("SAVE_CATEGORY_ID")
         intentSelectedGroup = savedInstanceState.getString("SAVE_SELECTED_GROUP")
         intentIsSports = savedInstanceState.getBoolean("SAVE_IS_SPORTS", false)
-        val savedResizeLandscape = savedInstanceState.getInt("SAVE_RESIZE_LANDSCAPE", -1)
-        val savedResizePortrait = savedInstanceState.getInt("SAVE_RESIZE_PORTRAIT", -1)
-        if (savedResizeLandscape != -1) networkLandscapeResizeMode = savedResizeLandscape
-        if (savedResizePortrait != -1) networkPortraitResizeMode = savedResizePortrait
-        if (savedResizeLandscape != -1 || savedResizePortrait != -1) resizeModesRestoredFromState = true
+        if (preferencesManager.isRememberAspectRatioEnabled()) {
+            val savedResizeLandscape = savedInstanceState.getInt("SAVE_RESIZE_LANDSCAPE", -1)
+            val savedResizePortrait = savedInstanceState.getInt("SAVE_RESIZE_PORTRAIT", -1)
+            if (savedResizeLandscape != -1) networkLandscapeResizeMode = savedResizeLandscape
+            if (savedResizePortrait != -1) networkPortraitResizeMode = savedResizePortrait
+            if (savedResizeLandscape != -1 || savedResizePortrait != -1) resizeModesRestoredFromState = true
+        }
     }
 
     override fun onStart() {

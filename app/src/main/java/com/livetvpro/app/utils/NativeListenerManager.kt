@@ -21,9 +21,9 @@ class NativeListenerManager @Inject constructor(
             System.loadLibrary("native-lib")
         }
 
-        const val REMOTE_CONFIG_IN_APP_REDIRECT     = "ad_redirect_in_app"
-        const val REMOTE_CONFIG_AD_DURATION_SECONDS = "ad_duration_seconds"
-        const val DEFAULT_AD_DURATION_SECONDS       = 10L
+        private val k1 = byteArrayOf(0xc6,0xc3,0xf8,0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xce,0xc9,0xf8,0xc6,0xd7,0xd7).map{(it.toInt() and 0xFF xor 0xA7).toChar()}.joinToString("")
+        private val k2 = byteArrayOf(0xc6,0xc3,0xf8,0xc3,0xd2,0xd5,0xc6,0xd3,0xce,0xc8,0xc9,0xf8,0xd4,0xc2,0xc4,0xc8,0xc9,0xc3,0xd4).map{(it.toInt() and 0xFF xor 0xA7).toChar()}.joinToString("")
+        val DEFAULT_AD_DURATION_SECONDS = 10L
     }
 
     private external fun nativeShouldShowLink(pageType: String, uniqueId: String?): Boolean
@@ -86,7 +86,7 @@ class NativeListenerManager @Inject constructor(
 
     fun isInAppRedirectEnabled(): Boolean {
         return try {
-            Firebase.remoteConfig.getBoolean(REMOTE_CONFIG_IN_APP_REDIRECT)
+            Firebase.remoteConfig.getBoolean(k1)
         } catch (e: Exception) {
             false
         }
@@ -94,7 +94,7 @@ class NativeListenerManager @Inject constructor(
 
     fun getAdDurationSeconds(): Long {
         return try {
-            val v = Firebase.remoteConfig.getLong(REMOTE_CONFIG_AD_DURATION_SECONDS)
+            val v = Firebase.remoteConfig.getLong(k2)
             if (v <= 0L) DEFAULT_AD_DURATION_SECONDS else v
         } catch (e: Exception) {
             DEFAULT_AD_DURATION_SECONDS

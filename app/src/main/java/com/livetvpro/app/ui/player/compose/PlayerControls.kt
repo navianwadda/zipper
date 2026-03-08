@@ -460,6 +460,7 @@ private fun PlayerControlsContent(
                     iconRes            = R.drawable.ic_arrow_back,
                     contentDescription = "Back",
                     size               = 40,
+                isTvMode           = isTvMode,
                 )
                 Text(
                     text       = channelName,
@@ -479,6 +480,7 @@ private fun PlayerControlsContent(
                         iconRes            = R.drawable.ic_pip,
                         contentDescription = "Picture in Picture",
                         size               = 40,
+                    isTvMode           = isTvMode,
                     )
                 }
                 PlayerIconButton(
@@ -486,12 +488,14 @@ private fun PlayerControlsContent(
                     iconRes            = R.drawable.ic_settings,
                     contentDescription = "Settings",
                     size               = 40,
+                isTvMode           = isTvMode,
                 )
                 PlayerIconButton(
                     onClick            = { onMuteClick(); onInteraction() },
                     iconRes            = if (isMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_up,
                     contentDescription = if (isMuted) "Unmute" else "Mute",
                     size               = 40,
+                isTvMode           = isTvMode,
                 )
                 if (!isTvMode) {
                     PlayerIconButton(
@@ -500,6 +504,7 @@ private fun PlayerControlsContent(
                         contentDescription = "Lock controls",
                         size               = 40,
                         modifier           = Modifier.padding(start = 4.dp),
+                    isTvMode           = isTvMode,
                     )
                 }
             }
@@ -536,6 +541,7 @@ private fun PlayerControlsContent(
                             contentDescription = "Aspect ratio",
                             size               = 40,
                             modifier           = Modifier.padding(end = 12.dp),
+                        isTvMode           = isTvMode,
                         )
                     } else {
                         Spacer(modifier = Modifier.width(52.dp))
@@ -547,6 +553,7 @@ private fun PlayerControlsContent(
                         contentDescription = "Rewind 10 seconds",
                         size               = 48,
                         modifier           = Modifier.padding(end = 16.dp),
+                    isTvMode           = isTvMode,
                     )
 
                     PlayerIconButton(
@@ -557,6 +564,7 @@ private fun PlayerControlsContent(
                         modifier           = Modifier
                             .padding(end = 16.dp)
                             .focusRequester(playPauseFocusRequester),
+                    isTvMode           = isTvMode,
                     )
 
                     PlayerIconButton(
@@ -565,6 +573,7 @@ private fun PlayerControlsContent(
                         contentDescription = "Forward 10 seconds",
                         size               = 48,
                         modifier           = Modifier.padding(end = 12.dp),
+                    isTvMode           = isTvMode,
                     )
 
                     if (isTvMode) {
@@ -574,6 +583,7 @@ private fun PlayerControlsContent(
                                 iconRes            = R.drawable.ic_list,
                                 contentDescription = "Channel list",
                                 size               = 40,
+                            isTvMode           = isTvMode,
                             )
                         } else {
                             Spacer(modifier = Modifier.width(40.dp))
@@ -586,6 +596,7 @@ private fun PlayerControlsContent(
                                 contentDescription = "Channel list",
                                 size               = 48,
                                 modifier           = Modifier.padding(end = 4.dp),
+                            isTvMode           = isTvMode,
                             )
                         }
                         PlayerIconButton(
@@ -594,6 +605,7 @@ private fun PlayerControlsContent(
                                                  else R.drawable.ic_fullscreen,
                             contentDescription = "Toggle fullscreen",
                             size               = 40,
+                        isTvMode           = isTvMode,
                         )
                     }
                 }
@@ -635,6 +647,7 @@ internal fun PlayerIconButton(
     modifier: Modifier = Modifier,
     size: Int = 40,
     tint: Color = Color.White,
+    isTvMode: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var isFocused by remember { mutableStateOf(false) }
@@ -648,11 +661,13 @@ internal fun PlayerIconButton(
             .hoverable(interactionSource = interactionSource)
             .focusable(interactionSource = interactionSource)
             .onFocusChanged { isFocused = it.isFocused }
-            .onKeyEvent { event ->
-                if (event.type == KeyEventType.KeyUp && event.key == Key.DirectionCenter) {
-                    onClick(); true
-                } else false
-            }
+            .then(
+                if (isTvMode) Modifier.onKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyUp && event.key == Key.DirectionCenter) {
+                        onClick(); true
+                    } else false
+                } else Modifier
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication        = ripple(bounded = true, color = Color.White.copy(alpha = 0.25f)),

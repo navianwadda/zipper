@@ -1310,7 +1310,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     if (preferencesManager.isRememberAspectRatioEnabled()) {
                         val saved = preferencesManager.getSavedAspectRatio()
                         if (saved != -1) {
-                            networkPortraitResizeMode = saved
                             networkLandscapeResizeMode = saved
                         }
                     }
@@ -1837,7 +1836,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     }
 
     private fun cycleAspectRatio() {
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val isLandscape = DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val current = binding.playerView.resizeMode
         val next = when (current) {
             AspectRatioFrameLayout.RESIZE_MODE_FIT   -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
@@ -1851,7 +1850,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             else networkPortraitResizeMode = next
         }
 
-        if (preferencesManager.isRememberAspectRatioEnabled()) {
+        if (preferencesManager.isRememberAspectRatioEnabled() && isLandscape) {
             preferencesManager.setSavedAspectRatio(next)
         }
 

@@ -130,21 +130,18 @@ class WebActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (usingCustomTabs && customTabLaunched && customTabPaused && !validated) {
-            // Check if timer has actually elapsed by now (handler may have been throttled)
+        if (usingCustomTabs && customTabLaunched && !validated) {
             val elapsedSeconds = (System.currentTimeMillis() - customTabStartTimeMs) / 1000L
             if (elapsedSeconds >= customTabDurationSeconds) {
-                // Time is up — treat as success
                 handler.removeCallbacks(customTabTickRunnable)
                 onCustomTabTimerFinished()
-            } else {
-                // User returned early — cancel
+            } else if (customTabPaused) {
                 handler.removeCallbacks(customTabTickRunnable)
-                setResult(RESULT_CANCELED)
-                finish()
                 startActivity(Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                 })
+                setResult(RESULT_CANCELED)
+                finish()
             }
         }
     }
@@ -205,12 +202,14 @@ class WebActivity : AppCompatActivity() {
     private fun onCustomTabTimerFinished() {
         if (validated) return
         validated = true
-        Toast.makeText(this, "Thank you for your support!", Toast.LENGTH_SHORT).show()
-        setResult(RESULT_VALIDATED)
-        finish()
+        handler.removeCallbacks(customTabTickRunnable)
+        // Start MainActivity BEFORE finish() so we still have a valid window token
+        // (Android 10+ blocks startActivity from background; finishing activity is exempt briefly)
         startActivity(Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         })
+        setResult(RESULT_VALIDATED)
+        finish()
     }
 
     @SuppressLint("SetJavaScriptEnabled")

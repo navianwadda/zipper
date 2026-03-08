@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatDialog
@@ -14,8 +16,10 @@ import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import com.livetvpro.app.R
 import com.livetvpro.app.utils.DeviceUtils
 import timber.log.Timber
@@ -25,7 +29,7 @@ class PlayerSettingsDialog(
     private val player: ExoPlayer
 ) : AppCompatDialog(context, com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog) {
 
-    private lateinit var recyclerView: RecyclerView
+    private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var btnCancel: MaterialButton
     private lateinit var btnApply: MaterialButton
@@ -48,142 +52,220 @@ class PlayerSettingsDialog(
     private var audioTracks = listOf<TrackUiModel.Audio>()
     private var textTracks  = listOf<TrackUiModel.Text>()
 
-    private var currentAdapter: TrackAdapter<*>? = null
     private var tracksListener: Player.Listener? = null
 
-    private val tabs = mutableListOf<TabEntry>()
-    private data class TabEntry(val label: String, val show: () -> Unit)
+    // ── Page data ─────────────────────────────────────────────────────────────
 
-    private val tabSelectedListener = object : TabLayout.OnTabSelectedListener {
-        override fun onTabSelected(tab: TabLayout.Tab?) {
-            tabs.getOrNull(tab?.position ?: return)?.show?.invoke()
+    private data class PageEntry(val label: String, val buildList: () -> List<TrackUiModel>)
+    private val pages = mutableListOf<PageEntry>()
+
+    // ── ViewPager2 adapter ────────────────────────────────────────────────────
+
+    private inner class TrackPagerAdapter : RecyclerView.Adapter<TrackPagerAdapter.PageVH>() {
+
+        // Hold one adapter per page so selections persist while swiping
+        private val pageAdapters = mutableMapOf<Int, TrackAdapter<*>>()
+
+        fun notifyPageChanged(position: Int) {
+            pageAdapters.remove(position)
+            notifyItemChanged(position)
         }
-        override fun onTabUnselected(tab: TabLayout.Tab?) {}
-        override fun onTabReselected(tab: TabLayout.Tab?) {}
+
+        fun notifyAllChanged() {
+            pageAdapters.clear()
+            notifyDataSetChanged()
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        private fun adapterForPage(position: Int): TrackAdapter<*> {
+            return pageAdapters.getOrPut(position) {
+                val page = pages[position]
+                when (position) {
+                    pages.indexOfFirst { it.label == "Video" } -> buildVideoAdapter()
+                    pages.indexOfFirst { it.label == "Audio" } -> buildAudioAdapter()
+                    pages.indexOfFirst { it.label == "Text"  } -> buildTextAdapter()
+                    else                                        -> buildSpeedAdapter()
+                }
+            }
+        }
+
+        override fun getItemCount() = pages.size
+        override fun getItemViewType(position: Int) = position  // force new VH per page
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageVH {
+            val rv = RecyclerView(parent.context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                layoutManager = LinearLayoutManager(parent.context)
+                overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            }
+            return PageVH(rv)
+        }
+
+        override fun onBindViewHolder(holder: PageVH, position: Int) {
+            holder.recyclerView.adapter = adapterForPage(position)
+        }
+
+        inner class PageVH(val recyclerView: RecyclerView) : RecyclerView.ViewHolder(recyclerView)
     }
+
+    private var pagerAdapter: TrackPagerAdapter? = null
+
+    // ── Track adapter builders ────────────────────────────────────────────────
+
+    private fun buildVideoAdapter(): TrackAdapter<TrackUiModel.Video> {
+        var adapter_self_ref: TrackAdapter<TrackUiModel.Video>? = null
+        adapter_self_ref = TrackAdapter { selected ->
+            when (selected.groupIndex) {
+                -1   -> { selectedVideoQualities.clear(); isVideoAuto = true;  isVideoNone = false }
+                -2   -> { selectedVideoQualities.clear(); isVideoAuto = false; isVideoNone = true  }
+                else -> {
+                    isVideoAuto = false; isVideoNone = false
+                    val key = selectedVideoQualities.find {
+                        it.groupIndex == selected.groupIndex && it.trackIndex == selected.trackIndex
+                    }
+                    if (key != null) selectedVideoQualities.remove(key)
+                    else selectedVideoQualities.add(selected)
+                    if (selectedVideoQualities.isEmpty()) isVideoAuto = true
+                }
+            }
+            adapter_self_ref?.submit(buildVideoList())
+        }
+        adapter_self_ref.submit(buildVideoList())
+        return adapter_self_ref
+    }
+
+    private fun buildAudioAdapter(): TrackAdapter<TrackUiModel.Audio> {
+        var ref: TrackAdapter<TrackUiModel.Audio>? = null
+        ref = TrackAdapter { selected ->
+            when (selected.groupIndex) {
+                -1   -> { selectedAudio = null; isAudioNone = false; isAudioAuto = true  }
+                -2   -> { selectedAudio = null; isAudioNone = true;  isAudioAuto = false }
+                else -> { selectedAudio = selected; isAudioNone = false; isAudioAuto = false }
+            }
+            ref?.updateSelection(selected)
+        }
+        ref.submit(buildAudioList())
+        return ref
+    }
+
+    private fun buildTextAdapter(): TrackAdapter<TrackUiModel.Text> {
+        var ref: TrackAdapter<TrackUiModel.Text>? = null
+        ref = TrackAdapter { selected ->
+            when (selected.groupIndex) {
+                -1   -> { selectedText = null; isTextNone = false; isTextAuto = true  }
+                -2   -> { selectedText = null; isTextNone = true;  isTextAuto = false }
+                else -> { selectedText = selected; isTextNone = false; isTextAuto = false }
+            }
+            ref?.updateSelection(selected)
+        }
+        ref.submit(buildTextList())
+        return ref
+    }
+
+    private fun buildSpeedAdapter(): TrackAdapter<TrackUiModel.Speed> {
+        var ref: TrackAdapter<TrackUiModel.Speed>? = null
+        ref = TrackAdapter { selected ->
+            selectedSpeed = selected.speed
+            ref?.updateSelection(selected)
+        }
+        ref.submit(listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+            .map { TrackUiModel.Speed(it, isSelected = it == selectedSpeed) })
+        return ref
+    }
+
+    // ── List builders ─────────────────────────────────────────────────────────
+
+    private fun buildVideoList(): List<TrackUiModel.Video> {
+        val list = mutableListOf<TrackUiModel.Video>()
+        list.add(TrackUiModel.Video(-1, -1, 0, 0, 0, isSelected = isVideoAuto,  isRadio = true))
+        list.add(TrackUiModel.Video(-2, -2, 0, 0, 0, isSelected = isVideoNone,  isRadio = true))
+        val useRadio = videoTracks.size == 1
+        list.addAll(videoTracks.map { t ->
+            val checked = selectedVideoQualities.any {
+                it.groupIndex == t.groupIndex && it.trackIndex == t.trackIndex
+            }
+            t.copy(isSelected = !isVideoAuto && !isVideoNone && checked, isRadio = useRadio)
+        })
+        return list
+    }
+
+    private fun buildAudioList(): List<TrackUiModel.Audio> {
+        val list = mutableListOf<TrackUiModel.Audio>()
+        list.add(TrackUiModel.Audio(-1, -1, "Auto", 0, 0, isSelected = isAudioAuto))
+        list.add(TrackUiModel.Audio(-2, -2, "None", 0, 0, isSelected = isAudioNone))
+        list.addAll(audioTracks.map { t -> t.copy(isSelected = !isAudioAuto && !isAudioNone && t.isSelected) })
+        return list
+    }
+
+    private fun buildTextList(): List<TrackUiModel.Text> {
+        val list = mutableListOf<TrackUiModel.Text>()
+        list.add(TrackUiModel.Text(-1, -1, "Auto", isSelected = isTextAuto))
+        list.add(TrackUiModel.Text(-2, -2, "None", isSelected = isTextNone))
+        list.addAll(textTracks.map { t -> t.copy(isSelected = !isTextAuto && !isTextNone && t.isSelected) })
+        return list
+    }
+
+    // ── Dialog lifecycle ──────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.dialog_player_settings)
 
-        recyclerView = findViewById<RecyclerView>(R.id.recyclerView)!!
-        tabLayout    = findViewById<TabLayout>(R.id.tabLayout)!!
-        btnCancel    = findViewById<MaterialButton>(R.id.btnCancel)!!
-        btnApply     = findViewById<MaterialButton>(R.id.btnApply)!!
+        viewPager = findViewById<ViewPager2>(R.id.viewPager)!!
+        tabLayout = findViewById<TabLayout>(R.id.tabLayout)!!
+        btnCancel = findViewById<MaterialButton>(R.id.btnCancel)!!
+        btnApply  = findViewById<MaterialButton>(R.id.btnApply)!!
 
         val btnClose = findViewById<ImageButton>(R.id.btnClose)
         btnClose?.setOnClickListener { dismiss() }
         btnCancel.setOnClickListener { dismiss() }
-        btnApply.setOnClickListener { applySelections(); dismiss() }
+        btnApply.setOnClickListener  { applySelections(); dismiss() }
 
         if (DeviceUtils.isTvDevice) {
             btnClose?.isFocusable = true
             btnCancel.isFocusable = true
-            btnApply.isFocusable = true
-            recyclerView.isFocusable = true
-            recyclerView.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+            btnApply.isFocusable  = true
 
             btnClose?.setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    recyclerView.requestFocus()
-                    true
+                    viewPager.requestFocus(); true
                 } else false
             }
-
-            recyclerView.setOnKeyListener { _, keyCode, event ->
-                if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    btnCancel.requestFocus()
-                    true
-                } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    tabLayout.getTabAt(tabLayout.selectedTabPosition)?.view?.requestFocus()
-                    true
-                } else false
-            }
-
-            btnCancel.setOnKeyListener { _, keyCode, event ->
-                if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    recyclerView.requestFocus()
-                    true
-                } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    btnApply.requestFocus()
-                    true
-                } else false
-            }
-
-            btnApply.setOnKeyListener { _, keyCode, event ->
-                if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    recyclerView.requestFocus()
-                    true
-                } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                    btnCancel.requestFocus()
-                    true
-                } else false
-            }
-
             tabLayout.setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    recyclerView.requestFocus()
-                    true
+                    viewPager.requestFocus(); true
                 } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    btnClose?.requestFocus()
-                    true
+                    btnClose?.requestFocus(); true
                 } else if (event.action == KeyEvent.ACTION_UP &&
-                    (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_LEFT)
-                ) {
+                    (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_LEFT)) {
                     val count = tabLayout.tabCount
                     if (count == 0) return@setOnKeyListener false
-                    val current = tabLayout.selectedTabPosition
-                    val next = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                        (current + 1).coerceAtMost(count - 1)
-                    } else {
-                        (current - 1).coerceAtLeast(0)
-                    }
-                    tabLayout.selectTab(tabLayout.getTabAt(next))
+                    val next = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+                        (viewPager.currentItem + 1).coerceAtMost(count - 1)
+                    else
+                        (viewPager.currentItem - 1).coerceAtLeast(0)
+                    viewPager.currentItem = next
                     true
+                } else false
+            }
+            btnCancel.setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                    viewPager.requestFocus(); true
+                } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    btnApply.requestFocus(); true
+                } else false
+            }
+            btnApply.setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                    viewPager.requestFocus(); true
+                } else if (event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    btnCancel.requestFocus(); true
                 } else false
             }
         }
-
-        recyclerView.layoutManager = LinearLayoutManager(context)
-        // Gesture detector on the root view — horizontal fling switches tabs,
-        // vertical scroll passes through to RecyclerView naturally
-        val gestureDetector = android.view.GestureDetector(context,
-            object : android.view.GestureDetector.SimpleOnGestureListener() {
-                private val SWIPE_MIN_DISTANCE = (60 * context.resources.displayMetrics.density).toInt()
-                private val SWIPE_MIN_VELOCITY = (100 * context.resources.displayMetrics.density).toInt()
-
-                override fun onFling(
-                    e1: android.view.MotionEvent?,
-                    e2: android.view.MotionEvent,
-                    velocityX: Float,
-                    velocityY: Float
-                ): Boolean {
-                    val dx = (e2.x - (e1?.x ?: e2.x))
-                    val dy = (e2.y - (e1?.y ?: e2.y))
-                    if (Math.abs(dx) > Math.abs(dy) &&
-                        Math.abs(dx) > SWIPE_MIN_DISTANCE &&
-                        Math.abs(velocityX) > SWIPE_MIN_VELOCITY) {
-                        val count = tabLayout.tabCount
-                        if (count == 0) return false
-                        val current = tabLayout.selectedTabPosition
-                        val next = if (dx < 0) (current + 1).coerceAtMost(count - 1)
-                                   else        (current - 1).coerceAtLeast(0)
-                        if (next != current) tabLayout.selectTab(tabLayout.getTabAt(next))
-                        return true
-                    }
-                    return false
-                }
-            })
-
-        recyclerView.addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
-            override fun onInterceptTouchEvent(rv: RecyclerView, e: android.view.MotionEvent): Boolean {
-                gestureDetector.onTouchEvent(e)
-                return false  // never consume — RecyclerView scrolls normally
-            }
-            override fun onTouchEvent(rv: RecyclerView, e: android.view.MotionEvent) {}
-            override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
-        })
 
         loadTracks()
 
@@ -194,10 +276,7 @@ class PlayerSettingsDialog(
                     if (tracks.groups.isNotEmpty()) {
                         player.removeListener(this)
                         tracksListener = null
-                        recyclerView.post {
-                            loadTracks()
-                            rebuildTabs()
-                        }
+                        viewPager.post { loadTracks(); rebuildPages() }
                     }
                 }
             }
@@ -205,28 +284,7 @@ class PlayerSettingsDialog(
             player.addListener(listener)
         }
 
-        rebuildTabs()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        val dm = context.resources.displayMetrics
-        val density = dm.density
-        val isLandscape = context.resources.configuration.orientation ==
-            android.content.res.Configuration.ORIENTATION_LANDSCAPE
-
-        // TV: explicit 600dp width. Phones: 92% with min/max guards
-        val dialogWidth = if (DeviceUtils.isTvDevice) {
-            (600 * density).toInt().coerceAtMost(dm.widthPixels)
-        } else {
-            (dm.widthPixels * 0.92f).toInt().coerceIn((280 * density).toInt(), (560 * density).toInt())
-        }
-        val dialogHeight = if (isLandscape) {
-            (dm.heightPixels * 0.95f).toInt()
-        } else {
-            (dm.heightPixels * 0.75f).toInt()
-        }
-        window?.setLayout(dialogWidth, dialogHeight)
+        rebuildPages()
     }
 
     override fun onStart() {
@@ -256,6 +314,31 @@ class PlayerSettingsDialog(
         tracksListener?.let { player.removeListener(it) }
         tracksListener = null
     }
+
+    // ── Page management ───────────────────────────────────────────────────────
+
+    private fun rebuildPages() {
+        pages.clear()
+        if (videoTracks.isNotEmpty()) pages.add(PageEntry("Video") { buildVideoList() })
+        if (audioTracks.isNotEmpty()) pages.add(PageEntry("Audio") { buildAudioList() })
+        if (textTracks.isNotEmpty())  pages.add(PageEntry("Text")  { buildTextList()  })
+        pages.add(PageEntry("Speed") { emptyList() })
+
+        val adapter = TrackPagerAdapter()
+        pagerAdapter = adapter
+        viewPager.adapter = adapter
+        viewPager.offscreenPageLimit = pages.size  // keep all pages alive
+
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = pages[position].label
+        }.attach()
+
+        if (DeviceUtils.isTvDevice) {
+            tabLayout.post { tabLayout.requestFocus() }
+        }
+    }
+
+    // ── Track loading ─────────────────────────────────────────────────────────
 
     private fun loadTracks() {
         try {
@@ -300,120 +383,7 @@ class PlayerSettingsDialog(
         }
     }
 
-    private fun rebuildTabs() {
-        tabs.clear()
-        tabLayout.removeAllTabs()
-        tabLayout.clearOnTabSelectedListeners()
-        tabLayout.addOnTabSelectedListener(tabSelectedListener)
-
-        if (videoTracks.isNotEmpty()) tabs.add(TabEntry("Video") { showVideoTracks() })
-        if (audioTracks.isNotEmpty()) tabs.add(TabEntry("Audio") { showAudioTracks() })
-        if (textTracks.isNotEmpty())  tabs.add(TabEntry("Text")  { showTextTracks()  })
-        tabs.add(TabEntry("Speed") { showSpeedOptions() })
-
-        tabs.forEach { tabLayout.addTab(tabLayout.newTab().setText(it.label)) }
-
-        tabs.firstOrNull()?.show?.invoke()
-
-        if (DeviceUtils.isTvDevice) {
-            tabLayout.post { tabLayout.requestFocus() }
-        }
-    }
-
-    private fun showVideoTracks() {
-        val adapter = TrackAdapter<TrackUiModel.Video> { selected ->
-            when (selected.groupIndex) {
-                -1   -> { selectedVideoQualities.clear(); isVideoAuto = true;  isVideoNone = false }
-                -2   -> { selectedVideoQualities.clear(); isVideoAuto = false; isVideoNone = true  }
-                else -> {
-                    isVideoAuto = false; isVideoNone = false
-                    val key = selectedVideoQualities.find {
-                        it.groupIndex == selected.groupIndex && it.trackIndex == selected.trackIndex
-                    }
-                    if (key != null) selectedVideoQualities.remove(key)
-                    else selectedVideoQualities.add(selected)
-                    if (selectedVideoQualities.isEmpty()) isVideoAuto = true
-                }
-            }
-            (currentAdapter as? TrackAdapter<TrackUiModel.Video>)?.submit(buildVideoList())
-        }
-        adapter.submit(buildVideoList())
-        recyclerView.adapter = adapter
-        currentAdapter = adapter
-    }
-
-    private fun buildVideoList(): List<TrackUiModel.Video> {
-        val list = mutableListOf<TrackUiModel.Video>()
-        list.add(TrackUiModel.Video(-1, -1, 0, 0, 0, isSelected = isVideoAuto,  isRadio = true))
-        list.add(TrackUiModel.Video(-2, -2, 0, 0, 0, isSelected = isVideoNone, isRadio = true))
-        val useRadio = videoTracks.size == 1
-        list.addAll(videoTracks.map { t ->
-            val checked = selectedVideoQualities.any {
-                it.groupIndex == t.groupIndex && it.trackIndex == t.trackIndex
-            }
-            t.copy(isSelected = !isVideoAuto && !isVideoNone && checked, isRadio = useRadio)
-        })
-        return list
-    }
-
-    private fun showAudioTracks() {
-        val adapter = TrackAdapter<TrackUiModel.Audio> { selected ->
-            when (selected.groupIndex) {
-                -1   -> { selectedAudio = null; isAudioNone = false; isAudioAuto = true  }
-                -2   -> { selectedAudio = null; isAudioNone = true;  isAudioAuto = false }
-                else -> { selectedAudio = selected; isAudioNone = false; isAudioAuto = false }
-            }
-            (currentAdapter as? TrackAdapter<TrackUiModel.Audio>)?.updateSelection(selected)
-        }
-        adapter.submit(buildAudioList())
-        recyclerView.adapter = adapter
-        currentAdapter = adapter
-    }
-
-    private fun buildAudioList(): List<TrackUiModel.Audio> {
-        val list = mutableListOf<TrackUiModel.Audio>()
-        list.add(TrackUiModel.Audio(-1, -1, "Auto", 0, 0, isSelected = isAudioAuto))
-        list.add(TrackUiModel.Audio(-2, -2, "None", 0, 0, isSelected = isAudioNone))
-        list.addAll(audioTracks.map { t ->
-            t.copy(isSelected = !isAudioAuto && !isAudioNone && t.isSelected)
-        })
-        return list
-    }
-
-    private fun showTextTracks() {
-        val adapter = TrackAdapter<TrackUiModel.Text> { selected ->
-            when (selected.groupIndex) {
-                -1   -> { selectedText = null; isTextNone = false; isTextAuto = true  }
-                -2   -> { selectedText = null; isTextNone = true;  isTextAuto = false }
-                else -> { selectedText = selected; isTextNone = false; isTextAuto = false }
-            }
-            (currentAdapter as? TrackAdapter<TrackUiModel.Text>)?.updateSelection(selected)
-        }
-        adapter.submit(buildTextList())
-        recyclerView.adapter = adapter
-        currentAdapter = adapter
-    }
-
-    private fun buildTextList(): List<TrackUiModel.Text> {
-        val list = mutableListOf<TrackUiModel.Text>()
-        list.add(TrackUiModel.Text(-1, -1, "Auto", isSelected = isTextAuto))
-        list.add(TrackUiModel.Text(-2, -2, "None", isSelected = isTextNone))
-        list.addAll(textTracks.map { t ->
-            t.copy(isSelected = !isTextAuto && !isTextNone && t.isSelected)
-        })
-        return list
-    }
-
-    private fun showSpeedOptions() {
-        val speeds  = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
-        val adapter = TrackAdapter<TrackUiModel.Speed> { selected ->
-            selectedSpeed = selected.speed
-            (currentAdapter as? TrackAdapter<TrackUiModel.Speed>)?.updateSelection(selected)
-        }
-        adapter.submit(speeds.map { TrackUiModel.Speed(it, isSelected = it == selectedSpeed) })
-        recyclerView.adapter = adapter
-        currentAdapter = adapter
-    }
+    // ── Apply ─────────────────────────────────────────────────────────────────
 
     private fun applySelections() {
         try {

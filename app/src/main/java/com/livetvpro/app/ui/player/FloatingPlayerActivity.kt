@@ -128,6 +128,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
     private var networkPortraitResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     private var networkLandscapeResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+    private var resizeModesRestoredFromState = false
 
     private var savedPlaybackPosition: Long = -1L
 
@@ -461,10 +462,12 @@ class FloatingPlayerActivity : AppCompatActivity() {
     }
 
     private fun applyResizeModeForOrientation(isLandscape: Boolean) {
-        if (contentType == ContentType.NETWORK_STREAM) {
-            binding.playerView.resizeMode =
-                if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
+        if (isLandscape) {
+            binding.playerView.resizeMode = networkLandscapeResizeMode
+        } else if (contentType == ContentType.NETWORK_STREAM) {
+            binding.playerView.resizeMode = networkPortraitResizeMode
         }
+    }
 
     }
 
@@ -1006,6 +1009,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
         outState.putString("SAVE_CATEGORY_ID", intentCategoryId)
         outState.putString("SAVE_SELECTED_GROUP", intentSelectedGroup)
         outState.putLong("SAVE_PLAYBACK_POSITION", player?.currentPosition ?: 0L)
+        outState.putInt("SAVE_RESIZE_LANDSCAPE", networkLandscapeResizeMode)
+        outState.putInt("SAVE_RESIZE_PORTRAIT", networkPortraitResizeMode)
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
@@ -1037,6 +1042,11 @@ class FloatingPlayerActivity : AppCompatActivity() {
         streamUrl = bundle.getString("SAVE_STREAM_URL", "")
         intentCategoryId = bundle.getString("SAVE_CATEGORY_ID")
         intentSelectedGroup = bundle.getString("SAVE_SELECTED_GROUP")
+        val savedResizeLandscape = bundle.getInt("SAVE_RESIZE_LANDSCAPE", -1)
+        val savedResizePortrait = bundle.getInt("SAVE_RESIZE_PORTRAIT", -1)
+        if (savedResizeLandscape != -1) networkLandscapeResizeMode = savedResizeLandscape
+        if (savedResizePortrait != -1) networkPortraitResizeMode = savedResizePortrait
+        if (savedResizeLandscape != -1 || savedResizePortrait != -1) resizeModesRestoredFromState = true
     }
 
     override fun onDestroy() {
@@ -1307,13 +1317,16 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 .build().also { exo ->
                     binding.playerView.player = exo
 
-                    if (preferencesManager.isRememberAspectRatioEnabled()) {
+                    if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
                         val savedLandscape = preferencesManager.getSavedAspectRatio()
                         if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
                         if (contentType == ContentType.NETWORK_STREAM) {
                             val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
                             if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
                         }
+                        applyResizeModeForOrientation(
+                            DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                        )
                     }
 
                     binding.playerView.hideController()
@@ -1790,7 +1803,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 }
                             },
                             onAspectRatioClick = {
-
                                 if (isLandscape || contentType == ContentType.NETWORK_STREAM) {
                                     cycleAspectRatio()
                                 }

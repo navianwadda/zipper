@@ -111,7 +111,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private var isInPipMode = false
     private var isEnteringPip = false
-    private var isMuted = false
+    private var isMuted by mutableStateOf(false)
     private val skipMs = 10_000L
 
     private var networkPortraitResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT

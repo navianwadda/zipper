@@ -142,6 +142,7 @@ dependencies {
     // Navigation Components
     val navVersion = "2.9.0"
     implementation("androidx.navigation:navigation-fragment-ktx:$navVersion")
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
     implementation("androidx.navigation:navigation-ui-ktx:$navVersion")
 
     // Room Database

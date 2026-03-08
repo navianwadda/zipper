@@ -18,17 +18,20 @@ class TimerService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var durationSeconds = 0L
     private var startTimeMs = 0L
+    private var remainingSeconds = 0L
+    private var isPaused = false
 
     private val tickRunnable = object : Runnable {
         override fun run() {
+            if (isPaused) return
             val elapsed = (System.currentTimeMillis() - startTimeMs) / 1000L
-            val remaining = durationSeconds - elapsed
-            if (remaining <= 0) {
+            remainingSeconds = durationSeconds - elapsed
+            if (remainingSeconds <= 0) {
                 updateNotification(0)
                 sendBroadcast(Intent(ACTION_TIMER_DONE).setPackage(packageName))
                 stopSelf()
             } else {
-                updateNotification(remaining)
+                updateNotification(remainingSeconds)
                 handler.postDelayed(this, 1000L)
             }
         }
@@ -37,6 +40,8 @@ class TimerService : Service() {
     companion object {
         const val ACTION_TIMER_DONE   = "com.livetvpro.app.AD_TIMER_DONE"
         const val EXTRA_DURATION      = "extra_duration"
+        private const val ACTION_PAUSE  = "com.livetvpro.app.AD_TIMER_PAUSE"
+        private const val ACTION_RESUME = "com.livetvpro.app.AD_TIMER_RESUME"
         private const val CHANNEL_ID  = "ad_timer_channel"
         private const val NOTIF_ID    = 9001
 
@@ -44,6 +49,14 @@ class TimerService : Service() {
             val intent = Intent(context, TimerService::class.java)
                 .putExtra(EXTRA_DURATION, durationSeconds)
             context.startForegroundService(intent)
+        }
+
+        fun pause(context: Context) {
+            context.startService(Intent(context, TimerService::class.java).setAction(ACTION_PAUSE))
+        }
+
+        fun resume(context: Context) {
+            context.startService(Intent(context, TimerService::class.java).setAction(ACTION_RESUME))
         }
 
         fun stop(context: Context) {
@@ -60,10 +73,34 @@ class TimerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        durationSeconds = intent?.getLongExtra(EXTRA_DURATION, 30L) ?: 30L
-        startTimeMs = System.currentTimeMillis()
-        handler.removeCallbacks(tickRunnable)
-        handler.post(tickRunnable)
+        when (intent?.action) {
+            ACTION_PAUSE -> {
+                if (!isPaused) {
+                    isPaused = true
+                    handler.removeCallbacks(tickRunnable)
+                    val elapsed = (System.currentTimeMillis() - startTimeMs) / 1000L
+                    remainingSeconds = maxOf(0L, durationSeconds - elapsed)
+                    updateNotification(remainingSeconds, paused = true)
+                }
+            }
+            ACTION_RESUME -> {
+                if (isPaused) {
+                    isPaused = false
+                    durationSeconds = remainingSeconds
+                    startTimeMs = System.currentTimeMillis()
+                    handler.post(tickRunnable)
+                }
+            }
+            else -> {
+                // Fresh start
+                durationSeconds = intent?.getLongExtra(EXTRA_DURATION, 30L) ?: 30L
+                remainingSeconds = durationSeconds
+                startTimeMs = System.currentTimeMillis()
+                isPaused = false
+                handler.removeCallbacks(tickRunnable)
+                handler.post(tickRunnable)
+            }
+        }
         return START_NOT_STICKY
     }
 
@@ -72,9 +109,12 @@ class TimerService : Service() {
         handler.removeCallbacks(tickRunnable)
     }
 
-    private fun updateNotification(remainingSeconds: Long) {
-        val text = if (remainingSeconds > 0) "Please wait ${remainingSeconds}s…"
-                   else "Thank you for your support!"
+    private fun updateNotification(remaining: Long, paused: Boolean = false) {
+        val text = when {
+            paused          -> "Timer paused (${remaining}s remaining)"
+            remaining > 0   -> "Please wait ${remaining}s…"
+            else            -> "Thank you for your support!"
+        }
         val nm = getSystemService(NotificationManager::class.java)
         nm.notify(NOTIF_ID, buildNotification(text))
     }

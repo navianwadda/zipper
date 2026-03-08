@@ -300,6 +300,11 @@ class MainActivity : AppCompatActivity() {
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
+                R.id.nav_save_states -> {
+                    showSaveStatesDialog()
+                    drawerLayout?.closeDrawer(GravityCompat.START)
+                    false
+                }
                 R.id.nav_copyright -> {
                     showCopyrightDialog()
                     drawerLayout?.closeDrawer(GravityCompat.START)
@@ -561,6 +566,11 @@ class MainActivity : AppCompatActivity() {
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
+                R.id.nav_save_states -> {
+                    showSaveStatesDialog()
+                    drawerLayout?.closeDrawer(GravityCompat.START)
+                    false
+                }
                 R.id.nav_copyright -> {
                     showCopyrightDialog()
                     drawerLayout?.closeDrawer(GravityCompat.START)
@@ -746,6 +756,23 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Unable to share APK", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showSaveStatesDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_save_states, null)
+        val switchAspectRatio = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_remember_aspect_ratio)
+        val switchLowestQuality = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_force_lowest_quality)
+        val btnCancel = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_states_cancel)
+        val btnApply = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_states_apply)
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(view)
+            .create()
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnApply.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
     }
 
     private fun showFloatingPlayerDialog() {

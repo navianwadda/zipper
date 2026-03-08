@@ -120,6 +120,8 @@ class PlayerActivity : AppCompatActivity() {
 
     private var pipReceiver: BroadcastReceiver? = null
     private var wasLockedBeforePip = false
+    private var settingsDialog: com.livetvpro.app.ui.player.settings.PlayerSettingsDialog? = null
+    private var isShowingSettingsDialog = false
     private var pipRect: Rect? = null
     val isPipSupported by lazy {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
@@ -1237,10 +1239,15 @@ class PlayerActivity : AppCompatActivity() {
     private fun showSettingsDialog() {
         val exoPlayer = player ?: return
         if (isFinishing || isDestroyed) return
+        if (isShowingSettingsDialog) return
+        isShowingSettingsDialog = true
         try {
             val dialog = com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(this, exoPlayer)
+            settingsDialog = dialog
+            dialog.setOnDismissListener { isShowingSettingsDialog = false }
             dialog.show()
         } catch (e: Exception) {
+            isShowingSettingsDialog = false
             android.util.Log.e("PlayerActivity", "Error showing settings dialog", e)
         }
     }

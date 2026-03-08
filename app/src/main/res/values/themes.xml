@@ -58,9 +58,10 @@
     </style>
 
     <style name="TabTextStyle" parent="TextAppearance.Design.Tab">
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">13sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
     <style name="NetworkStreamEditText" parent="Widget.Material3.TextInputEditText.OutlinedBox">

@@ -270,7 +270,6 @@ class PlayerActivity : AppCompatActivity() {
             viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
         }
 
-        applyResizeModeForOrientation(isLandscape)
         applyOrientationSettings(isLandscape)
 
         val am = getSystemService(AUDIO_SERVICE) as AudioManager
@@ -482,7 +481,6 @@ class PlayerActivity : AppCompatActivity() {
 
         setupWindowFlags(isLandscape)
         setupSystemUI(isLandscape)
-        applyResizeModeForOrientation(isLandscape)
         applyOrientationSettings(isLandscape)
         setSubtitleTextSize()
         updateMessageBannerForOrientation(isLandscape)
@@ -504,11 +502,14 @@ class PlayerActivity : AppCompatActivity() {
             binding.playerView.resizeMode = networkLandscapeResizeMode
         } else if (contentType == ContentType.NETWORK_STREAM) {
             binding.playerView.resizeMode = networkPortraitResizeMode
+        } else {
+            binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
     }
 
     private fun applyOrientationSettings(isLandscape: Boolean) {
         adjustLayoutForOrientation(isLandscape)
+        applyResizeModeForOrientation(isLandscape)
     }
 
     private fun adjustLayoutForOrientation(isLandscape: Boolean) {

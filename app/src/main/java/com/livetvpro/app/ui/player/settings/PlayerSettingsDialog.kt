@@ -305,7 +305,7 @@ class PlayerSettingsDialog(
             swDp >= 720 ->           minOf((dm.heightPixels * 0.75f).toInt(), maxH)
             swDp >= 600 ->           minOf((dm.heightPixels * 0.80f).toInt(), maxH)
             isLandscape ->           minOf((dm.heightPixels * 0.90f).toInt(), maxH)
-            else        ->           minOf((dm.heightPixels * 0.75f).toInt(), maxH)
+            else        ->           minOf((dm.heightPixels * 0.65f).toInt(), maxH)
         }
         window?.setLayout(dialogWidth, dialogHeight)
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))

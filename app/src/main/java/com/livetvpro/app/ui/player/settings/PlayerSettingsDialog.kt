@@ -144,6 +144,38 @@ class PlayerSettingsDialog(
         }
 
         recyclerView.layoutManager = LinearLayoutManager(context)
+        recyclerView.addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
+            private var startX = 0f
+            private var startY = 0f
+            private val swipeThreshold = 80 * context.resources.displayMetrics.density
+
+            override fun onInterceptTouchEvent(rv: RecyclerView, e: android.view.MotionEvent): Boolean {
+                when (e.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        startX = e.x; startY = e.y
+                    }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        val dx = e.x - startX
+                        val dy = e.y - startY
+                        if (Math.abs(dx) > swipeThreshold && Math.abs(dx) > Math.abs(dy) * 1.5f) {
+                            val count = tabLayout.tabCount
+                            if (count == 0) return false
+                            val current = tabLayout.selectedTabPosition
+                            val next = if (dx < 0) {
+                                (current + 1).coerceAtMost(count - 1)
+                            } else {
+                                (current - 1).coerceAtLeast(0)
+                            }
+                            if (next != current) tabLayout.selectTab(tabLayout.getTabAt(next))
+                            return false
+                        }
+                    }
+                }
+                return false
+            }
+            override fun onTouchEvent(rv: RecyclerView, e: android.view.MotionEvent) {}
+            override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
+        })
 
         loadTracks()
 

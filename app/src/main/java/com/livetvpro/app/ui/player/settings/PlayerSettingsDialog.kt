@@ -90,8 +90,8 @@ class PlayerSettingsDialog(
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageVH {
             val rv = object : RecyclerView(parent.context) {
-                override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
-                    if (DeviceUtils.isTvDevice && event.action == android.view.KeyEvent.ACTION_UP) {
+                override fun dispatchKeyEvent(event: android.view.KeyEvent?): Boolean {
+                    if (event != null && DeviceUtils.isTvDevice && event.action == android.view.KeyEvent.ACTION_UP) {
                         val lm = layoutManager as? LinearLayoutManager
                         when (event.keyCode) {
                             android.view.KeyEvent.KEYCODE_DPAD_UP -> {
@@ -217,7 +217,7 @@ class PlayerSettingsDialog(
         val list = mutableListOf<TrackUiModel.Audio>()
         list.add(TrackUiModel.Audio(-1, -1, "Auto", 0, 0, isSelected = isAudioAuto))
         list.add(TrackUiModel.Audio(-2, -2, "None", 0, 0, isSelected = isAudioNone))
-        list.addAll(audioTracks.map { t -> t.copy(isSelected = !isAudioAuto && !isAudioNone && t.isSelected) })
+        list.addAll(audioTracks.map { t -> t.copy(isSelected = !isAudioAuto && !isAudioNone && selectedAudio?.groupIndex == t.groupIndex && selectedAudio?.trackIndex == t.trackIndex) })
         return list
     }
 
@@ -225,7 +225,7 @@ class PlayerSettingsDialog(
         val list = mutableListOf<TrackUiModel.Text>()
         list.add(TrackUiModel.Text(-1, -1, "Auto", isSelected = isTextAuto))
         list.add(TrackUiModel.Text(-2, -2, "None", isSelected = isTextNone))
-        list.addAll(textTracks.map { t -> t.copy(isSelected = !isTextAuto && !isTextNone && t.isSelected) })
+        list.addAll(textTracks.map { t -> t.copy(isSelected = !isTextAuto && !isTextNone && selectedText?.groupIndex == t.groupIndex && selectedText?.trackIndex == t.trackIndex) })
         return list
     }
 

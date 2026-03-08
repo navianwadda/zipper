@@ -294,17 +294,27 @@ class PlayerSettingsDialog(
         val isLandscape = context.resources.configuration.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-        val dialogWidth = if (DeviceUtils.isTvDevice) {
-            (600 * density).toInt().coerceAtMost(dm.widthPixels)
-        } else if (isLandscape) {
-            (dm.widthPixels * 0.60f).toInt().coerceIn((400 * density).toInt(), (600 * density).toInt())
-        } else {
-            (dm.widthPixels * 0.88f).toInt().coerceIn((280 * density).toInt(), (560 * density).toInt())
+        // smallestScreenWidthDp = narrow side in dp, rotation-invariant
+        // Used to distinguish phone / large-phone / tablet / TV form factors
+        val swDp = context.resources.configuration.smallestScreenWidthDp
+
+        // The short and long sides in pixels, regardless of current rotation
+        val shortPx = minOf(dm.widthPixels, dm.heightPixels)
+        val longPx  = maxOf(dm.widthPixels, dm.heightPixels)
+
+        val dialogWidth = when {
+            DeviceUtils.isTvDevice -> (longPx * 0.55f).toInt()   // TV: 55% of long side
+            swDp >= 720 ->           (shortPx * 0.70f).toInt()   // large tablet: 70% of short side
+            swDp >= 600 ->           (shortPx * 0.80f).toInt()   // tablet: 80% of short side
+            isLandscape ->           (shortPx * 0.85f).toInt()   // phone landscape: 85% of short side
+            else        ->           (shortPx * 0.88f).toInt()   // phone portrait: 88% of width
         }
-        val dialogHeight = if (isLandscape) {
-            (dm.heightPixels * 0.95f).toInt()
-        } else {
-            (dm.heightPixels * 0.75f).toInt()
+        val dialogHeight = when {
+            DeviceUtils.isTvDevice -> (longPx  * 0.70f).toInt()  // TV: 70% of long side
+            swDp >= 720 ->           (longPx  * 0.60f).toInt()   // large tablet: 60% of long side
+            swDp >= 600 ->           (longPx  * 0.65f).toInt()   // tablet: 65% of long side
+            isLandscape ->           (shortPx * 0.92f).toInt()   // phone landscape: 92% of short side
+            else        ->           (longPx  * 0.75f).toInt()   // phone portrait: 75% of long side
         }
         window?.setLayout(dialogWidth, dialogHeight)
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))

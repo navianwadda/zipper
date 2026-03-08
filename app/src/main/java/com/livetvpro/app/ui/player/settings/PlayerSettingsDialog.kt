@@ -145,8 +145,6 @@ class PlayerSettingsDialog(
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 
-        tabLayout.addOnTabSelectedListener(tabSelectedListener)
-
         loadTracks()
 
         val allEmpty = videoTracks.isEmpty() && audioTracks.isEmpty() && textTracks.isEmpty()
@@ -177,11 +175,11 @@ class PlayerSettingsDialog(
         val isLandscape = context.resources.configuration.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-        // TV: explicit 600dp width. Phones: MATCH_PARENT, Material handles its own margins
+        // TV: explicit 600dp width. Phones: 92% with min/max guards
         val dialogWidth = if (DeviceUtils.isTvDevice) {
             (600 * density).toInt().coerceAtMost(dm.widthPixels)
         } else {
-            android.view.WindowManager.LayoutParams.MATCH_PARENT
+            (dm.widthPixels * 0.92f).toInt().coerceIn((280 * density).toInt(), (560 * density).toInt())
         }
         val dialogHeight = if (isLandscape) {
             (dm.heightPixels * 0.95f).toInt()
@@ -243,6 +241,8 @@ class PlayerSettingsDialog(
     private fun rebuildTabs() {
         tabs.clear()
         tabLayout.removeAllTabs()
+        tabLayout.clearOnTabSelectedListeners()
+        tabLayout.addOnTabSelectedListener(tabSelectedListener)
 
         if (videoTracks.isNotEmpty()) tabs.add(TabEntry("Video") { showVideoTracks() })
         if (audioTracks.isNotEmpty()) tabs.add(TabEntry("Audio") { showAudioTracks() })

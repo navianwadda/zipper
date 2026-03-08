@@ -116,6 +116,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private var networkPortraitResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     private var networkLandscapeResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+    private var resizeModesRestoredFromState = false
 
     private var pipReceiver: BroadcastReceiver? = null
     private var wasLockedBeforePip = false
@@ -499,9 +500,10 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun applyResizeModeForOrientation(isLandscape: Boolean) {
-        if (contentType == ContentType.NETWORK_STREAM) {
-            binding.playerView.resizeMode =
-                if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
+        if (isLandscape) {
+            binding.playerView.resizeMode = networkLandscapeResizeMode
+        } else if (contentType == ContentType.NETWORK_STREAM) {
+            binding.playerView.resizeMode = networkPortraitResizeMode
         }
     }
 
@@ -579,6 +581,8 @@ class PlayerActivity : AppCompatActivity() {
         outState.putString("SAVE_SELECTED_GROUP", intentSelectedGroup)
         outState.putBoolean("SAVE_IS_SPORTS", intentIsSports)
         outState.putLong("SAVE_PLAYBACK_POSITION", player?.currentPosition ?: 0L)
+        outState.putInt("SAVE_RESIZE_LANDSCAPE", networkLandscapeResizeMode)
+        outState.putInt("SAVE_RESIZE_PORTRAIT", networkPortraitResizeMode)
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
@@ -607,6 +611,11 @@ class PlayerActivity : AppCompatActivity() {
         intentCategoryId = savedInstanceState.getString("SAVE_CATEGORY_ID")
         intentSelectedGroup = savedInstanceState.getString("SAVE_SELECTED_GROUP")
         intentIsSports = savedInstanceState.getBoolean("SAVE_IS_SPORTS", false)
+        val savedResizeLandscape = savedInstanceState.getInt("SAVE_RESIZE_LANDSCAPE", -1)
+        val savedResizePortrait = savedInstanceState.getInt("SAVE_RESIZE_PORTRAIT", -1)
+        if (savedResizeLandscape != -1) networkLandscapeResizeMode = savedResizeLandscape
+        if (savedResizePortrait != -1) networkPortraitResizeMode = savedResizePortrait
+        if (savedResizeLandscape != -1 || savedResizePortrait != -1) resizeModesRestoredFromState = true
     }
 
     override fun onStart() {
@@ -1816,7 +1825,7 @@ class PlayerActivity : AppCompatActivity() {
                 .build().also { exo ->
                     binding.playerView.player = exo
 
-                    if (preferencesManager.isRememberAspectRatioEnabled()) {
+                    if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
                         val savedLandscape = preferencesManager.getSavedAspectRatio()
                         if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
                         if (contentType == ContentType.NETWORK_STREAM) {
@@ -1826,7 +1835,7 @@ class PlayerActivity : AppCompatActivity() {
                     }
 
                     applyResizeModeForOrientation(
-                        resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                        DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                     )
 
                     binding.playerView.hideController()

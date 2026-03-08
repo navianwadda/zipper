@@ -27,6 +27,11 @@
             android:title="@string/nav_football_score" />
 
         <item
+            android:id="@+id/nav_save_states"
+            android:icon="@drawable/ic_save_states"
+            android:title="Save States" />
+
+        <item
             android:id="@+id/nav_notice"
             android:icon="@drawable/ic_error_outline"
             android:title="Notice" />

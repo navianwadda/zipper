@@ -1,6 +1,8 @@
 package com.livetvpro.app.ui.player.settings
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.ViewGroup
@@ -144,34 +146,40 @@ class PlayerSettingsDialog(
         }
 
         recyclerView.layoutManager = LinearLayoutManager(context)
-        recyclerView.addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
-            private var startX = 0f
-            private var startY = 0f
-            private val swipeThreshold = 80 * context.resources.displayMetrics.density
+        // Gesture detector on the root view — horizontal fling switches tabs,
+        // vertical scroll passes through to RecyclerView naturally
+        val gestureDetector = android.view.GestureDetector(context,
+            object : android.view.GestureDetector.SimpleOnGestureListener() {
+                private val SWIPE_MIN_DISTANCE = (60 * context.resources.displayMetrics.density).toInt()
+                private val SWIPE_MIN_VELOCITY = (100 * context.resources.displayMetrics.density).toInt()
 
-            override fun onInterceptTouchEvent(rv: RecyclerView, e: android.view.MotionEvent): Boolean {
-                when (e.actionMasked) {
-                    android.view.MotionEvent.ACTION_DOWN -> {
-                        startX = e.x; startY = e.y
+                override fun onFling(
+                    e1: android.view.MotionEvent?,
+                    e2: android.view.MotionEvent,
+                    velocityX: Float,
+                    velocityY: Float
+                ): Boolean {
+                    val dx = (e2.x - (e1?.x ?: e2.x))
+                    val dy = (e2.y - (e1?.y ?: e2.y))
+                    if (Math.abs(dx) > Math.abs(dy) &&
+                        Math.abs(dx) > SWIPE_MIN_DISTANCE &&
+                        Math.abs(velocityX) > SWIPE_MIN_VELOCITY) {
+                        val count = tabLayout.tabCount
+                        if (count == 0) return false
+                        val current = tabLayout.selectedTabPosition
+                        val next = if (dx < 0) (current + 1).coerceAtMost(count - 1)
+                                   else        (current - 1).coerceAtLeast(0)
+                        if (next != current) tabLayout.selectTab(tabLayout.getTabAt(next))
+                        return true
                     }
-                    android.view.MotionEvent.ACTION_UP -> {
-                        val dx = e.x - startX
-                        val dy = e.y - startY
-                        if (Math.abs(dx) > swipeThreshold && Math.abs(dx) > Math.abs(dy) * 1.5f) {
-                            val count = tabLayout.tabCount
-                            if (count == 0) return false
-                            val current = tabLayout.selectedTabPosition
-                            val next = if (dx < 0) {
-                                (current + 1).coerceAtMost(count - 1)
-                            } else {
-                                (current - 1).coerceAtLeast(0)
-                            }
-                            if (next != current) tabLayout.selectTab(tabLayout.getTabAt(next))
-                            return false
-                        }
-                    }
+                    return false
                 }
-                return false
+            })
+
+        recyclerView.addOnItemTouchListener(object : RecyclerView.OnItemTouchListener {
+            override fun onInterceptTouchEvent(rv: RecyclerView, e: android.view.MotionEvent): Boolean {
+                gestureDetector.onTouchEvent(e)
+                return false  // never consume — RecyclerView scrolls normally
             }
             override fun onTouchEvent(rv: RecyclerView, e: android.view.MotionEvent) {}
             override fun onRequestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {}
@@ -219,6 +227,28 @@ class PlayerSettingsDialog(
             (dm.heightPixels * 0.75f).toInt()
         }
         window?.setLayout(dialogWidth, dialogHeight)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val dm = context.resources.displayMetrics
+        val density = dm.density
+        val isLandscape = context.resources.configuration.orientation ==
+            android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+        val dialogWidth = if (DeviceUtils.isTvDevice) {
+            (600 * density).toInt().coerceAtMost(dm.widthPixels)
+        } else {
+            (dm.widthPixels * 0.92f).toInt().coerceIn((280 * density).toInt(), (560 * density).toInt())
+        }
+        val dialogHeight = if (isLandscape) {
+            (dm.heightPixels * 0.95f).toInt()
+        } else {
+            (dm.heightPixels * 0.75f).toInt()
+        }
+        window?.setLayout(dialogWidth, dialogHeight)
+        window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        window?.setDimAmount(0.6f)
     }
 
     override fun onStop() {

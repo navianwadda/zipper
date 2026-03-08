@@ -149,6 +149,22 @@ class WebActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Only pause if no Custom Tab is open — if tab is open, timer keeps running
+        if (usingCustomTabs && customTabLaunched && !validated && !customTabPaused) {
+            TimerService.pause(this)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Resume only if we paused due to backgrounding (not a Custom Tab return)
+        if (usingCustomTabs && customTabLaunched && !validated && !customTabPaused) {
+            TimerService.resume(this)
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         TimerService.stop(this)

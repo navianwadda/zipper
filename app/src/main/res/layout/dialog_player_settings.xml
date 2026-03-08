@@ -47,7 +47,7 @@
         android:background="#242424"
         android:focusable="true"
         android:nextFocusUp="@id/btnClose"
-        android:nextFocusDown="@id/recyclerView"
+        android:nextFocusDown="@id/viewPager"
         app:tabIndicatorColor="#EF4444"
         app:tabIndicatorHeight="3dp"
         app:tabSelectedTextColor="#FFFFFF"
@@ -57,21 +57,14 @@
         app:tabGravity="fill"
         app:tabTextAppearance="@style/TabTextStyle" />
 
-    <!-- Track list -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerView"
+    <!-- Sliding pages -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:background="#1E1E1E"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
-        android:clipToPadding="false"
-        android:scrollbars="vertical"
-        android:scrollbarStyle="outsideOverlay"
-        android:overScrollMode="ifContentScrolls"
         android:focusable="true"
-        android:descendantFocusability="afterDescendants"
         android:nextFocusUp="@id/tabLayout"
         android:nextFocusDown="@id/btnCancel" />
 
@@ -104,7 +97,7 @@
             android:letterSpacing="0.08"
             android:layout_marginEnd="4dp"
             android:focusable="true"
-            android:nextFocusUp="@id/recyclerView"
+            android:nextFocusUp="@id/viewPager"
             android:nextFocusRight="@id/btnApply"
             app:rippleColor="#22FFFFFF"
             app:cornerRadius="0dp" />
@@ -119,7 +112,7 @@
             android:textSize="13sp"
             android:letterSpacing="0.08"
             android:focusable="true"
-            android:nextFocusUp="@id/recyclerView"
+            android:nextFocusUp="@id/viewPager"
             android:nextFocusLeft="@id/btnCancel"
             app:rippleColor="#22EF4444"
             app:cornerRadius="0dp" />

@@ -1009,8 +1009,10 @@ class FloatingPlayerActivity : AppCompatActivity() {
         outState.putString("SAVE_CATEGORY_ID", intentCategoryId)
         outState.putString("SAVE_SELECTED_GROUP", intentSelectedGroup)
         outState.putLong("SAVE_PLAYBACK_POSITION", player?.currentPosition ?: 0L)
-        outState.putInt("SAVE_RESIZE_LANDSCAPE", networkLandscapeResizeMode)
-        outState.putInt("SAVE_RESIZE_PORTRAIT", networkPortraitResizeMode)
+        if (preferencesManager.isRememberAspectRatioEnabled()) {
+            outState.putInt("SAVE_RESIZE_LANDSCAPE", networkLandscapeResizeMode)
+            outState.putInt("SAVE_RESIZE_PORTRAIT", networkPortraitResizeMode)
+        }
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {

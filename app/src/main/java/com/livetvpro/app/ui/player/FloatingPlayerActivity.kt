@@ -1046,11 +1046,13 @@ class FloatingPlayerActivity : AppCompatActivity() {
         streamUrl = bundle.getString("SAVE_STREAM_URL", "")
         intentCategoryId = bundle.getString("SAVE_CATEGORY_ID")
         intentSelectedGroup = bundle.getString("SAVE_SELECTED_GROUP")
-        val savedResizeLandscape = bundle.getInt("SAVE_RESIZE_LANDSCAPE", -1)
-        val savedResizePortrait = bundle.getInt("SAVE_RESIZE_PORTRAIT", -1)
-        if (savedResizeLandscape != -1) networkLandscapeResizeMode = savedResizeLandscape
-        if (savedResizePortrait != -1) networkPortraitResizeMode = savedResizePortrait
-        if (savedResizeLandscape != -1 || savedResizePortrait != -1) resizeModesRestoredFromState = true
+        if (preferencesManager.isRememberAspectRatioEnabled()) {
+            val savedResizeLandscape = bundle.getInt("SAVE_RESIZE_LANDSCAPE", -1)
+            val savedResizePortrait = bundle.getInt("SAVE_RESIZE_PORTRAIT", -1)
+            if (savedResizeLandscape != -1) networkLandscapeResizeMode = savedResizeLandscape
+            if (savedResizePortrait != -1) networkPortraitResizeMode = savedResizePortrait
+            if (savedResizeLandscape != -1 || savedResizePortrait != -1) resizeModesRestoredFromState = true
+        }
     }
 
     override fun onDestroy() {

@@ -725,8 +725,6 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
 
-        setupComposeControls()
-
         if (wasLockedBeforePip) {
             controlsState.isLocked = true
             wasLockedBeforePip = false

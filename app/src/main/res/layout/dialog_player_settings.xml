@@ -55,7 +55,7 @@
         app:tabRippleColor="#22FFFFFF"
         app:tabMode="fixed"
         app:tabGravity="fill"
-        app:tabTextAppearance="@style/TabTextStyleLarge" />
+        app:tabTextAppearance="@style/TabTextStyle" />
 
     <!-- Track list -->
     <androidx.recyclerview.widget.RecyclerView

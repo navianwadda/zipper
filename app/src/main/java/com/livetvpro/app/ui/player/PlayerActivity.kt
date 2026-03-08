@@ -1218,6 +1218,10 @@ class PlayerActivity : AppCompatActivity() {
             else networkPortraitResizeMode = next
         }
 
+        if (preferencesManager.isRememberAspectRatioEnabled()) {
+            preferencesManager.setSavedAspectRatio(next)
+        }
+
         binding.playerView.resizeMode = next
     }
 
@@ -1812,6 +1816,15 @@ class PlayerActivity : AppCompatActivity() {
                 .setSeekForwardIncrementMs(skipMs)
                 .build().also { exo ->
                     binding.playerView.player = exo
+
+                    if (preferencesManager.isRememberAspectRatioEnabled()) {
+                        val saved = preferencesManager.getSavedAspectRatio()
+                        if (saved != -1) {
+                            networkPortraitResizeMode = saved
+                            networkLandscapeResizeMode = saved
+                        }
+                    }
+
                     applyResizeModeForOrientation(
                         resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                     )
@@ -1866,6 +1879,36 @@ class PlayerActivity : AppCompatActivity() {
                                     binding.playerView.showController()
                                 }
                                 Player.STATE_IDLE -> {}
+                            }
+                        }
+
+                        override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                            if (!preferencesManager.isForceLowestQualityEnabled()) return
+                            val ts = trackSelector ?: return
+                            var lowestHeight = Int.MAX_VALUE
+                            var lowestGroupIndex = -1
+                            var lowestTrackIndex = -1
+                            tracks.groups.forEachIndexed { gi, group ->
+                                if (group.type != androidx.media3.common.C.TRACK_TYPE_VIDEO) return@forEachIndexed
+                                for (ti in 0 until group.length) {
+                                    val fmt = group.getTrackFormat(ti)
+                                    if (fmt.height > 0 && fmt.height < lowestHeight) {
+                                        lowestHeight = fmt.height
+                                        lowestGroupIndex = gi
+                                        lowestTrackIndex = ti
+                                    }
+                                }
+                            }
+                            if (lowestGroupIndex != -1) {
+                                val group = tracks.groups[lowestGroupIndex]
+                                ts.parameters = ts.parameters.buildUpon()
+                                    .setOverrideForType(
+                                        androidx.media3.common.TrackSelectionOverride(
+                                            group.mediaTrackGroup,
+                                            listOf(lowestTrackIndex)
+                                        )
+                                    )
+                                    .build()
                             }
                         }
 

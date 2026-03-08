@@ -36,6 +36,8 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import android.app.AlarmManager
+import android.app.PendingIntent
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import com.livetvpro.app.MainActivity
@@ -53,18 +55,12 @@ class WebActivity : AppCompatActivity() {
 
     private lateinit var timerLabel: TextView
 
-    private val handler = Handler(Looper.getMainLooper())
     private var customTabDurationSeconds = 0L
     private var customTabStartTimeMs = 0L
-    private val customTabTickRunnable = object : Runnable {
-        override fun run() {
-            val elapsedSeconds = (System.currentTimeMillis() - customTabStartTimeMs) / 1000L
-            val remaining = customTabDurationSeconds - elapsedSeconds
-            if (remaining <= 0) {
-                onCustomTabTimerFinished()
-            } else {
-                handler.postDelayed(this, 1000L)
-            }
+    private var alarmPendingIntent: PendingIntent? = null
+    private val timerDoneReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == ACTION_TIMER_DONE) onCustomTabTimerFinished()
         }
     }
 
@@ -119,6 +115,12 @@ class WebActivity : AppCompatActivity() {
             setResult(RESULT_CANCELED); finish(); return
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(timerDoneReceiver, IntentFilter(ACTION_TIMER_DONE), RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(timerDoneReceiver, IntentFilter(ACTION_TIMER_DONE))
+        }
+
         if (isCustomTabsSupported(this)) {
             usingCustomTabs = true
             startCustomTabFlow(url, durationSeconds)
@@ -133,10 +135,10 @@ class WebActivity : AppCompatActivity() {
         if (usingCustomTabs && customTabLaunched && !validated) {
             val elapsedSeconds = (System.currentTimeMillis() - customTabStartTimeMs) / 1000L
             if (elapsedSeconds >= customTabDurationSeconds) {
-                handler.removeCallbacks(customTabTickRunnable)
+                cancelAlarm()
                 onCustomTabTimerFinished()
             } else if (customTabPaused) {
-                handler.removeCallbacks(customTabTickRunnable)
+                cancelAlarm()
                 startActivity(Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                 })
@@ -155,7 +157,8 @@ class WebActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        handler.removeCallbacks(customTabTickRunnable)
+        cancelAlarm()
+        try { unregisterReceiver(timerDoneReceiver) } catch (_: Exception) {}
         countDownTimer?.cancel()
         webView?.stopLoading()
         webView?.destroy()
@@ -166,7 +169,7 @@ class WebActivity : AppCompatActivity() {
         if (!usingCustomTabs && webView?.canGoBack() == true) {
             webView?.goBack()
         } else {
-            handler.removeCallbacks(customTabTickRunnable)
+            cancelAlarm()
             setResult(RESULT_CANCELED)
             finish()
         }
@@ -181,7 +184,31 @@ class WebActivity : AppCompatActivity() {
         customTabLaunched = true
 
         Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
-        handler.postDelayed(customTabTickRunnable, 1000L)
+        scheduleAlarm(durationSeconds)
+    }
+
+    private fun scheduleAlarm(durationSeconds: Long) {
+        val intent = Intent(ACTION_TIMER_DONE).setPackage(packageName)
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        else
+            PendingIntent.FLAG_UPDATE_CURRENT
+        val pi = PendingIntent.getBroadcast(this, 0, intent, flags)
+        alarmPendingIntent = pi
+        val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val triggerAt = System.currentTimeMillis() + durationSeconds * 1000L
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+        } else {
+            am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+        }
+    }
+
+    private fun cancelAlarm() {
+        alarmPendingIntent?.let {
+            (getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(it)
+            alarmPendingIntent = null
+        }
     }
 
     private fun launchCustomTab(url: String) {
@@ -202,7 +229,7 @@ class WebActivity : AppCompatActivity() {
     private fun onCustomTabTimerFinished() {
         if (validated) return
         validated = true
-        handler.removeCallbacks(customTabTickRunnable)
+        cancelAlarm()
         // Start MainActivity BEFORE finish() so we still have a valid window token
         // (Android 10+ blocks startActivity from background; finishing activity is exempt briefly)
         startActivity(Intent(this, MainActivity::class.java).apply {

@@ -503,7 +503,7 @@ class PlayerActivity : AppCompatActivity() {
         } else if (contentType == ContentType.NETWORK_STREAM) {
             binding.playerView.resizeMode = networkPortraitResizeMode
         } else {
-            binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
         }
     }
 

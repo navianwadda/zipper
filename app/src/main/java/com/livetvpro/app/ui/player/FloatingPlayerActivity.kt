@@ -107,7 +107,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private var gestureBrightness: Int = 0
 
     private var isInPipMode = false
-    private var isMuted = false
+    private var isMuted by mutableStateOf(false)
     private val skipMs = 10_000L
     private var userRequestedPip = false
 

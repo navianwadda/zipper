@@ -122,8 +122,6 @@ static inline std::string rs2(const uint8_t* in, size_t mx) {
     return o;
 }
 
-static uint32_t im32(uint32_t a, uint32_t b) { return (uint32_t)((uint64_t)a*b); }
-
 static uint32_t fnv32(const std::string& s) {
     uint32_t h = 0x811c9dc5u;
     for (unsigned char c : s) h = im32(h ^ c, 0x1000193u);
@@ -131,7 +129,9 @@ static uint32_t fnv32(const std::string& s) {
 }
 
 static const char* KC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+!@#$%&=";
-static const size_t KL = 68;
+static const size_t KL = 70;
+
+static uint32_t im32(uint32_t a, uint32_t b) { return (uint32_t)((uint64_t)a*b); }
 
 static void dkiv(const std::string& pw, uint8_t key[16], uint8_t iv[16]) {
     const uint8_t* d = (const uint8_t*)pw.c_str(); size_t n = pw.size();

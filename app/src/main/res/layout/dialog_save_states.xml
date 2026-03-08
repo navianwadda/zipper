@@ -15,6 +15,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/bergen_sans"
             android:text="Save States"
             android:textColor="?attr/colorOnSurface"
             android:textSize="20sp"
@@ -25,6 +26,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:alpha="0.7"
+            android:fontFamily="@font/bergen_sans"
             android:text="Configure persistent player behaviour across sessions."
             android:textColor="?attr/colorOnSurface"
             android:textSize="14sp"
@@ -57,6 +59,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/bergen_sans"
                     android:text="Remember Aspect Ratio"
                     android:textColor="?attr/colorOnSurface"
                     android:textSize="15sp"
@@ -67,6 +70,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:alpha="0.6"
+                    android:fontFamily="@font/bergen_sans"
                     android:text="Restore your last used aspect ratio on next play"
                     android:textColor="?attr/colorOnSurface"
                     android:textSize="12sp"
@@ -110,6 +114,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/bergen_sans"
                     android:text="Force Lowest Quality"
                     android:textColor="?attr/colorOnSurface"
                     android:textSize="15sp"
@@ -120,6 +125,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:alpha="0.6"
+                    android:fontFamily="@font/bergen_sans"
                     android:text="Always start streams at the lowest available quality"
                     android:textColor="?attr/colorOnSurface"
                     android:textSize="12sp"
@@ -158,6 +164,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:focusable="true"
+                android:fontFamily="@font/bergen_sans"
                 android:text="Cancel"
                 android:textColor="?attr/colorOnSurface"
                 app:strokeColor="?attr/colorOnSurface"
@@ -170,6 +177,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:focusable="true"
+                android:fontFamily="@font/bergen_sans"
                 android:text="Apply"
                 android:textColor="@android:color/white"
                 app:backgroundTint="@color/accent" />

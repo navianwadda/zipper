@@ -200,11 +200,13 @@ class WebActivity : AppCompatActivity() {
     private fun onCustomTabTimerFinished() {
         if (validated) return
         validated = true
-        Toast.makeText(this, "Thank you for your support!", Toast.LENGTH_SHORT).show()
         setResult(RESULT_VALIDATED)
-        startActivity(Intent(this, WebActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        })
+        val pm = packageManager
+        val launchIntent = pm.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        if (launchIntent != null) startActivity(launchIntent)
+        Toast.makeText(this, "Thank you for your support!", Toast.LENGTH_SHORT).show()
         finish()
     }
 

@@ -13,7 +13,8 @@ object RedirectHelper {
 
     enum class RedirectResult {
         REDIRECTED,
-        NOT_REDIRECTED
+        NOT_REDIRECTED,
+        BLOCKED
     }
 
     private var dialogShowing = false
@@ -32,8 +33,9 @@ object RedirectHelper {
             val action = pendingPostDialogAction
             pendingPostDialogAction = null
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
-                cooldownMgr.recordFired(pageTypeProvider() ?: return@registerForActivityResult, uniqueIdProvider())
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
+            } else {
+                cooldownMgr.undoLastFire(pageTypeProvider() ?: return@registerForActivityResult, uniqueIdProvider())
             }
             action?.invoke()
         }
@@ -48,12 +50,13 @@ object RedirectHelper {
         launcher: ActivityResultLauncher<Intent>,
         onAfterDialog: (() -> Unit)? = null
     ): RedirectResult {
-        if (!listenerMgr.isConfigValid()) return RedirectResult.NOT_REDIRECTED
-        if (!listenerMgr.onPageInteraction(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
+        if (!listenerMgr.isConfigValid()) return RedirectResult.BLOCKED
+        if (!listenerMgr.onPageInteraction(pageType, uniqueId)) return RedirectResult.BLOCKED
 
         if (listenerMgr.isInAppRedirectEnabled()) {
             if (dialogShowing) return RedirectResult.REDIRECTED
             if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
+            cooldownMgr.recordFired(pageType, uniqueId)
             showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher, onAfterDialog)
             return RedirectResult.REDIRECTED
         }
@@ -106,11 +109,13 @@ object RedirectHelper {
                 },
                 onCancel = {
                     dialogShowing = false
+                    cooldownMgr.undoLastFire(pageType, uniqueId)
                     onAfterDialog?.invoke()
                 }
             )
         } catch (e: Exception) {
             dialogShowing = false
+            cooldownMgr.undoLastFire(pageType, uniqueId)
             onAfterDialog?.invoke()
         }
     }

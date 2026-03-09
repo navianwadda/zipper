@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 #include <mutex>
 #include <cstdio>
 #include <cstring>
@@ -73,20 +74,20 @@ static bool walkElf(const uint8_t* base, uint32_t* out_crc) {
     if (!base || base[0]!=0x7f||base[1]!='E'||base[2]!='L'||base[3]!='F') return false;
 #if defined(__LP64__)
     const Elf64_Ehdr* ehdr = (const Elf64_Ehdr*)base;
-    if (!ehdr->e_shoff || !ehdr->e_shnum) return false;
+    if (!ehdr->e_shoff || !ehdr->e_shnum || ehdr->e_shentsize < sizeof(Elf64_Shdr)) return false;
     const Elf64_Shdr* shdr = (const Elf64_Shdr*)(base + ehdr->e_shoff);
     for (int i = 0; i < ehdr->e_shnum; i++) {
-        if (shdr[i].sh_type == SHT_PROGBITS && (shdr[i].sh_flags & SHF_EXECINSTR) && shdr[i].sh_size > 0) {
+        if (shdr[i].sh_type == SHT_PROGBITS && (shdr[i].sh_flags & SHF_EXECINSTR) && shdr[i].sh_size > 0 && shdr[i].sh_offset > 0) {
             *out_crc = crc32_buf(base + shdr[i].sh_offset, (size_t)shdr[i].sh_size);
             return true;
         }
     }
 #else
     const Elf32_Ehdr* ehdr = (const Elf32_Ehdr*)base;
-    if (!ehdr->e_shoff || !ehdr->e_shnum) return false;
+    if (!ehdr->e_shoff || !ehdr->e_shnum || ehdr->e_shentsize < sizeof(Elf32_Shdr)) return false;
     const Elf32_Shdr* shdr = (const Elf32_Shdr*)(base + ehdr->e_shoff);
     for (int i = 0; i < ehdr->e_shnum; i++) {
-        if (shdr[i].sh_type == SHT_PROGBITS && (shdr[i].sh_flags & SHF_EXECINSTR) && shdr[i].sh_size > 0) {
+        if (shdr[i].sh_type == SHT_PROGBITS && (shdr[i].sh_flags & SHF_EXECINSTR) && shdr[i].sh_size > 0 && shdr[i].sh_offset > 0) {
             *out_crc = crc32_buf(base + shdr[i].sh_offset, (size_t)shdr[i].sh_size);
             return true;
         }
@@ -146,7 +147,7 @@ static bool isFridaPipePresent() {
     std::string fr=xd(_s_frida,sizeof(_s_frida)), li=xd(_s_linjector,sizeof(_s_linjector));
     for (const char* p : {p1.c_str(), p2.c_str(), p3.c_str()}) {
         if (access(p, F_OK) == 0) {
-            if (p == p3.c_str()) {
+            if (strcmp(p, p3.c_str()) == 0) {
                 FILE* f = fopen(p, "r"); if (!f) continue;
                 char line[256]; bool found = false;
                 while (fgets(line,sizeof(line),f))
@@ -191,31 +192,35 @@ static const size_t kP2Size = 256;
 static const size_t kP4Size = 65;
 
 struct z9 {
-    bool p1; uint8_t p2[kP2Size]; uint8_t p2s[kP2Size]; uint8_t p4[kP4Size];
+    bool p1; uint8_t p2[kP2Size]; uint8_t p2s[kP2Size]; size_t p2_len; uint8_t p4[kP4Size];
     bool p5; bool p1s; bool locked;
     std::string p6,p7,p8,p9,p10,p11,p12,p13,p14;
-} static g1 = {false,{},{},{},false,false,false,"","","","","","","","",""};
+} static g1 = {false,{},{},0,{},false,false,false,"","","","","","","","",""};
 
-static std::set<std::string> g2;
+static std::map<std::string,long> g2;
+static long g2_total=0;
 static std::set<std::string> g_allowed;
 struct q7 { std::string d; bool ok; } static g3 = {"",false};
 static std::string g4=""; static bool g5=false;
-static uint8_t g6[32]={0}; static bool g7=false,g8=false;
+static uint8_t g6[32]={0}; static size_t g6_len=0; static bool g7=false,g8=false;
 static uint32_t g9=0;
 
-static inline void ws(const std::string& s,uint8_t* out,size_t mx){
+static inline void ws(const std::string& s,uint8_t* out,size_t mx,size_t* lenout=nullptr){
     if(!mx)return; size_t n=s.size()<(mx-1)?s.size():(mx-1);
     for(size_t i=0;i<n;i++) out[i]=(uint8_t)s[i]^kX; out[n]=0;
+    if(lenout)*lenout=n;
 }
-static inline std::string rs(const uint8_t* in,size_t mx){
-    std::string o; for(size_t i=0;i<mx&&in[i];i++) o+=(char)(in[i]^kX); return o;
+static inline std::string rs(const uint8_t* in,size_t len){
+    std::string o; o.reserve(len);
+    for(size_t i=0;i<len;i++) o+=(char)(in[i]^kX); return o;
 }
 static inline void ws2(const std::string& s,uint8_t* out,size_t mx){
     if(!mx)return; size_t n=s.size()<(mx-1)?s.size():(mx-1);
     for(size_t i=0;i<n;i++) out[i]=(uint8_t)s[i]^kX2; out[n]=0;
 }
-static inline std::string rs2(const uint8_t* in,size_t mx){
-    std::string o; for(size_t i=0;i<mx&&in[i];i++) o+=(char)(in[i]^kX2); return o;
+static inline std::string rs2(const uint8_t* in,size_t len){
+    std::string o; o.reserve(len);
+    for(size_t i=0;i<len;i++) o+=(char)(in[i]^kX2); return o;
 }
 
 static uint32_t im32(uint32_t a,uint32_t b){return(uint32_t)((uint64_t)a*b);}
@@ -326,8 +331,8 @@ static std::string adec(const std::string& b64ct,const std::string& pw){
 }
 static std::string xenc(const std::string& b64ct){
     if(!g7)return"";
-    std::string pw;pw.reserve(32);
-    for(int i=0;i<32&&g6[i];i++)pw+=(char)(g6[i]^0x3F);
+    std::string pw;pw.reserve(g6_len);
+    for(size_t i=0;i<g6_len;i++)pw+=(char)(g6[i]^0x3F);
     return adec(b64ct,pw);
 }
 
@@ -369,21 +374,40 @@ static void elc(const std::string& json){
         static const uint8_t f4[]={0xc6,0xcb,0xcb,0xc8,0xd0,0xc2,0xc3,0xf8,0xd7,0xc6,0xc0,0xc2,0xd4};
         std::string lc=xd(f1,sizeof(f1));
         size_t cp=json.find("\""+lc+"\"");if(cp==std::string::npos)return;
+        size_t ob=json.find('{',cp);if(ob==std::string::npos)return;
+        size_t obj_end=ob+1;int depth=1;bool ins=false;
+        while(obj_end<json.size()&&depth>0){
+            char c=json[obj_end];
+            if(ins){if(c=='\\'){ obj_end+=2;continue;}if(c=='"')ins=false;}
+            else{if(c=='"')ins=true;else if(c=='{')depth++;else if(c=='}')depth--;}
+            obj_end++;
+        }
+        if(depth!=0)return;
+        std::string obj=json.substr(ob,obj_end-ob);
         std::string edl=xd(f2,sizeof(f2));
-        size_t ep2=json.find("\""+edl+"\"",cp);
-        if(ep2!=std::string::npos){size_t tp=json.find("true",ep2);size_t fp2=json.find("false",ep2);g1.p1=(tp!=std::string::npos&&(fp2==std::string::npos||tp<fp2));}
+        size_t ep2=obj.find("\""+edl+"\"");
+        if(ep2!=std::string::npos){
+            size_t col=obj.find(':',ep2+edl.size()+2);
+            if(col!=std::string::npos){
+                size_t vs=col+1;
+                while(vs<obj.size()&&(obj[vs]==' '||obj[vs]=='\t'||obj[vs]=='\n'))vs++;
+                if(vs+4<=obj.size()&&obj.substr(vs,4)=="true")g1.p1=true;
+                else if(vs+5<=obj.size()&&obj.substr(vs,5)=="false")g1.p1=false;
+            }
+        }
         std::string dlu=xd(f3,sizeof(f3));
-        std::string urlval=exs(json,cp,dlu);
-        ws(urlval,g1.p2,kP2Size); ws2(urlval,g1.p2s,kP2Size);
+        std::string urlval=exs(obj,0,dlu);
+        ws(urlval,g1.p2,kP2Size,&g1.p2_len); ws2(urlval,g1.p2s,kP2Size);
         g1.p4[0]=0;
         std::string apf=xd(f4,sizeof(f4));
-        size_t pp=json.find("\""+apf+"\"",cp);
+        size_t pp=obj.find("\""+apf+"\"");
         if(pp!=std::string::npos){
-            size_t as=json.find('[',pp);
+            size_t as=obj.find('[',pp);
             if(as!=std::string::npos){
-                size_t ae=json.find(']',as);
-                if(ae!=std::string::npos){
-                    std::string pa=json.substr(as+1,ae-as-1);
+                size_t ae=as+1;int adepth=1;bool ains=false;
+                while(ae<obj.size()&&adepth>0){char ac=obj[ae];if(ains){if(ac=='\\'){ae+=2;continue;}if(ac=='"')ains=false;}else{if(ac=='"')ains=true;else if(ac=='[')adepth++;else if(ac==']')adepth--;}ae++;}
+                if(adepth==0&&ae>as+1){
+                    std::string pa=obj.substr(as+1,ae-as-2);
                     size_t pos=0,pi=0;
                     const size_t kMaxP4=kP4Size-1;
                     while(pos<pa.length()&&pi<kMaxP4){
@@ -398,16 +422,16 @@ static void elc(const std::string& json){
                 }
             }
         }
-        g1.p5=true;g1.p1s=g1.p1;g1.locked=false;
-        g1.p6 =exs(json,cp,xd(_s_contact,   sizeof(_s_contact)));
-        g1.p7 =exs(json,cp,xd(_s_cric,       sizeof(_s_cric)));
-        g1.p8 =exs(json,cp,xd(_s_foot,       sizeof(_s_foot)));
-        g1.p9 =exs(json,cp,xd(_s_email,      sizeof(_s_email)));
-        g1.p10=exs(json,cp,xd(_s_web,        sizeof(_s_web)));
-        g1.p11=exs(json,cp,xd(_s_message,    sizeof(_s_message)));
-        g1.p12=exs(json,cp,xd(_s_messageurl, sizeof(_s_messageurl)));
-        g1.p13=exs(json,cp,xd(_s_appver,     sizeof(_s_appver)));
-        g1.p14=exs(json,cp,xd(_s_dlurl,      sizeof(_s_dlurl)));
+        g1.p5=true;g1.p1s=g1.p1;
+        g1.p6 =exs(obj,0,xd(_s_contact,   sizeof(_s_contact)));
+        g1.p7 =exs(obj,0,xd(_s_cric,       sizeof(_s_cric)));
+        g1.p8 =exs(obj,0,xd(_s_foot,       sizeof(_s_foot)));
+        g1.p9 =exs(obj,0,xd(_s_email,      sizeof(_s_email)));
+        g1.p10=exs(obj,0,xd(_s_web,        sizeof(_s_web)));
+        g1.p11=exs(obj,0,xd(_s_message,    sizeof(_s_message)));
+        g1.p12=exs(obj,0,xd(_s_messageurl, sizeof(_s_messageurl)));
+        g1.p13=exs(obj,0,xd(_s_appver,     sizeof(_s_appver)));
+        g1.p14=exs(obj,0,xd(_s_dlurl,      sizeof(_s_dlurl)));
     }catch(...){}
 }
 
@@ -429,12 +453,21 @@ static void impl_updateConfig(JNIEnv* env,jobject obj,jstring key){
     std::string expected=xd(cn,sizeof(cn));
     jclass cls=env->GetObjectClass(obj);
     jclass clsCls=env->FindClass("java/lang/Class");
+    if(!clsCls){env->ExceptionClear();env->DeleteLocalRef(cls);return;}
     jmethodID gsn=env->GetMethodID(clsCls,"getSimpleName","()Ljava/lang/String;");
+    if(!gsn){env->ExceptionClear();env->DeleteLocalRef(clsCls);env->DeleteLocalRef(cls);return;}
     jstring jname=(jstring)env->CallObjectMethod(cls,gsn);
-    const char* cname=env->GetStringUTFChars(jname,nullptr);
-    bool valid=(cname&&std::string(cname)==expected);
-    if(cname)env->ReleaseStringUTFChars(jname,cname);
-    if(!valid){std::lock_guard<std::mutex> lk(g_mutex);g7=false;g8=false;memset(g6,0,sizeof(g6));return;}
+    if(env->ExceptionCheck()){env->ExceptionClear();env->DeleteLocalRef(clsCls);env->DeleteLocalRef(cls);return;}
+    bool valid=false;
+    if(jname){
+        const char* cname=env->GetStringUTFChars(jname,nullptr);
+        valid=(cname&&std::string(cname)==expected);
+        if(cname)env->ReleaseStringUTFChars(jname,cname);
+        env->DeleteLocalRef(jname);
+    }
+    env->DeleteLocalRef(clsCls);
+    env->DeleteLocalRef(cls);
+    if(!valid){std::lock_guard<std::mutex> lk(g_mutex);g7=false;g8=false;g6_len=0;memset(g6,0,sizeof(g6));return;}
     if(!key)return;
     const char* ks=env->GetStringUTFChars(key,nullptr);
     if(ks){
@@ -444,12 +477,13 @@ static void impl_updateConfig(JNIEnv* env,jobject obj,jstring key){
         uint32_t hash=(uint32_t)(n*0x9e3779b9^0x6c62272e);
         env->ReleaseStringUTFChars(key,ks);
         std::lock_guard<std::mutex> lk(g_mutex);
-        memset(g6,0,sizeof(g6));memcpy(g6,tmp,n);
+        memset(g6,0,sizeof(g6));memcpy(g6,tmp,n);g6_len=n;
         g7=true;g8=true;g9=hash;
     }
 }
 
 static jboolean impl_storeData(JNIEnv* env,jobject,jstring jsonData){
+    if(!jsonData)return JNI_FALSE;
     std::lock_guard<std::mutex> lk(g_mutex);
     const char* js=env->GetStringUTFChars(jsonData,nullptr);if(!js)return JNI_FALSE;
     std::string raw(js);env->ReleaseStringUTFChars(jsonData,js);
@@ -458,7 +492,7 @@ static jboolean impl_storeData(JNIEnv* env,jobject,jstring jsonData){
         
         
         if(!ep.empty()&&g7&&g8){std::string dec=xenc(ep);if(!dec.empty())json=dec;}
-        g3.d=json;g3.ok=true;elc(g3.d);if(!g1.p5)elc(raw);return JNI_TRUE;
+        g3.d=json;g3.ok=true;if(!g1.locked){elc(g3.d);if(!g1.p5)elc(raw);}return JNI_TRUE;
     }catch(...){return JNI_FALSE;}
 }
 
@@ -505,6 +539,7 @@ static jboolean impl_isDataLoaded(JNIEnv* env,jobject){
     return g3.ok?JNI_TRUE:JNI_FALSE;
 }
 static void impl_storeConfigUrl(JNIEnv* env,jobject,jstring url){
+    if(!url)return;
     const char* us=env->GetStringUTFChars(url,nullptr);
     if(us){std::lock_guard<std::mutex> lk(g_mutex);g4=std::string(us);g5=true;env->ReleaseStringUTFChars(url,us);}
 }
@@ -512,15 +547,20 @@ static jstring impl_getConfigUrl(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g5?g4.c_str():"");
 }
 
-static jboolean impl_shouldShowLink(JNIEnv* env,jobject,jstring pageType,jstring){
+static jboolean impl_shouldShowLink(JNIEnv* env,jobject,jstring pageType,jstring,jlong maxPerPage,jlong maxTotal){
+    if(isTampered()){
+        std::lock_guard<std::mutex> lk(g_mutex);
+        g1.locked=true;g1.p1=false;g1.p1s=false;g1.p5=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));g1.p2_len=0;
+        return JNI_FALSE;
+    }
     std::lock_guard<std::mutex> lk(g_mutex);
     if(g1.locked)return JNI_FALSE;
-    if(isTampered()){g1.locked=true;g1.p1=false;g1.p1s=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return JNI_FALSE;}
     if(!g8||!g7){return JNI_FALSE;}
-    if(g1.p1!=g1.p1s){g1.locked=true;g1.p1=false;g1.p1s=false;return JNI_FALSE;}
-    std::string u1=rs(g1.p2,kP2Size),u2=rs2(g1.p2s,kP2Size);
-    if(u1!=u2){g1.locked=true;g1.p1=false;g1.p1s=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return JNI_FALSE;}
+    if(g1.p1!=g1.p1s){g1.locked=true;g1.p1=false;g1.p1s=false;g1.p5=false;return JNI_FALSE;}
+    std::string u1=rs(g1.p2,g1.p2_len),u2=rs2(g1.p2s,g1.p2_len);
+    if(u1!=u2){g1.locked=true;g1.p1=false;g1.p1s=false;g1.p5=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));g1.p2_len=0;return JNI_FALSE;}
     if(!g1.p5)return JNI_FALSE;
+    if(!pageType)return JNI_FALSE;
     const char* pts=env->GetStringUTFChars(pageType,nullptr);if(!pts)return JNI_FALSE;
     std::string pt(pts);env->ReleaseStringUTFChars(pageType,pts);
     size_t i=0;bool found=false;std::string cur;
@@ -529,26 +569,31 @@ static jboolean impl_shouldShowLink(JNIEnv* env,jobject,jstring pageType,jstring
         else cur+=(char)(g1.p4[i]^kX);
         i++;
     }
+    if(!found&&!cur.empty()&&cur==pt)found=true;
     if(!found)return JNI_FALSE;
     g_allowed.insert(pt);
     if(!g1.p1)return JNI_FALSE;
-    if(g2.size()>1000)g2.clear();
-    if(g2.find(pt)!=g2.end())return JNI_FALSE;
-    g2.insert(pt);return JNI_TRUE;
+    if(maxTotal>0&&(jlong)g2_total>=maxTotal)return JNI_FALSE;
+    long pageCount=g2.count(pt)?g2[pt]:0;
+    if(maxPerPage>0&&(jlong)pageCount>=maxPerPage)return JNI_FALSE;
+    g2[pt]=pageCount+1;g2_total++;return JNI_TRUE;
 }
 static jstring impl_getDirectLinkUrl(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     if(g1.locked)return env->NewStringUTF("");
-    std::string u1=rs(g1.p2,kP2Size),u2=rs2(g1.p2s,kP2Size);
-    if(u1!=u2){g1.locked=true;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return env->NewStringUTF("");}
+    std::string u1=rs(g1.p2,g1.p2_len),u2=rs2(g1.p2s,g1.p2_len);
+    if(u1!=u2){g1.locked=true;g1.p1=false;g1.p1s=false;g1.p5=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));g1.p2_len=0;return env->NewStringUTF("");}
     return env->NewStringUTF(u1.c_str());
 }
 static void impl_resetSessions(JNIEnv*,jobject){
-    std::lock_guard<std::mutex> lk(g_mutex);g2.clear();g_allowed.clear();
+    std::lock_guard<std::mutex> lk(g_mutex);g2.clear();g2_total=0;g_allowed.clear();
 }
 static jboolean impl_isConfigValid(JNIEnv*,jobject){
+    if(isTampered()){
+        std::lock_guard<std::mutex> lk(g_mutex);
+        g1.locked=true;g1.p1=false;g1.p1s=false;g1.p5=false;return JNI_FALSE;
+    }
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(isTampered()){g1.locked=true;g1.p1=false;g1.p5=false;return JNI_FALSE;}
     return g1.p5?JNI_TRUE:JNI_FALSE;
 }
 static jstring impl_getContactUrl (JNIEnv* e,jobject){std::lock_guard<std::mutex> lk(g_mutex);return e->NewStringUTF(g1.p6.c_str());}
@@ -585,7 +630,7 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     static const uint8_t mn_gsp[] ={0xc9,0xc6,0xd3,0xce,0xd1,0xc2,0xe0,0xc2,0xd3,0xf4,0xd7,0xc8,0xd5,0xd3,0xd4};
     static const uint8_t mn_gele[]={0xc9,0xc6,0xd3,0xce,0xd1,0xc2,0xe0,0xc2,0xd3,0xe2,0xdf,0xd3,0xc2,0xd5,0xc9,0xc6,0xcb,0xeb,0xce,0xd1,0xc2,0xe2,0xd1,0xc2,0xc9,0xd3,0xd4};
     static const uint8_t mn_ssl[] ={0xc9,0xc6,0xd3,0xce,0xd1,0xc2,0xf4,0xcf,0xc8,0xd2,0xcb,0xc3,0xf4,0xcf,0xc8,0xd0,0xeb,0xce,0xc9,0xcc};
-    static const uint8_t ms_ssl[] ={0x8f,0xeb,0xcd,0xc6,0xd1,0xc6,0x88,0xcb,0xc6,0xc9,0xc0,0x88,0xf4,0xd3,0xd5,0xce,0xc9,0xc0,0x9c,0xeb,0xcd,0xc6,0xd1,0xc6,0x88,0xcb,0xc6,0xc9,0xc0,0x88,0xf4,0xd3,0xd5,0xce,0xc9,0xc0,0x9c,0x8e,0xfd};
+    static const uint8_t ms_ssl[] ={0x8f,0xeb,0xcd,0xc6,0xd1,0xc6,0x88,0xcb,0xc6,0xc9,0xc0,0x88,0xf4,0xd3,0xd5,0xce,0xc9,0xc0,0x9c,0xeb,0xcd,0xc6,0xd1,0xc6,0x88,0xcb,0xc6,0xc9,0xc0,0x88,0xf4,0xd3,0xd5,0xce,0xc9,0xc0,0x9c,0xed,0xed,0x8e,0xfd};
     static const uint8_t mn_gdlu[]={0xc9,0xc6,0xd3,0xce,0xd1,0xc2,0xe0,0xc2,0xd3,0xe3,0xce,0xd5,0xc2,0xc4,0xd3,0xeb,0xce,0xc9,0xcc,0xf2,0xd5,0xcb};
     static const uint8_t mn_rs[]  ={0xc9,0xc6,0xd3,0xce,0xd1,0xc2,0xf5,0xc2,0xd4,0xc2,0xd3,0xf4,0xc2,0xd4,0xd4,0xce,0xc8,0xc9,0xd4};
     static const uint8_t ms_v[]   ={0x8f,0x8e,0xf1};
@@ -602,7 +647,7 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
 
     jclass clsRepo=env->FindClass("com/livetvpro/app/data/repository/NativeDataRepository");
     jclass clsMgr =env->FindClass("com/livetvpro/app/utils/NativeListenerManager");
-    if(!clsRepo||!clsMgr)return JNI_ERR;
+    if(!clsRepo||!clsMgr){if(clsRepo)env->DeleteLocalRef(clsRepo);return JNI_ERR;}
 
     
     std::string n_vi=ds(mn_vi,sizeof(mn_vi)),   s_z=ds(ms_z,sizeof(ms_z));
@@ -647,7 +692,7 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
         {n_gsp.c_str(),  s_str.c_str(), (void*)impl_getSports},
         {n_gele.c_str(), s_str.c_str(), (void*)impl_getExternalLiveEvents},
     };
-    if(env->RegisterNatives(clsRepo,repoMethods,13)!=0)return JNI_ERR;
+    if(env->RegisterNatives(clsRepo,repoMethods,13)!=0){env->DeleteLocalRef(clsRepo);env->DeleteLocalRef(clsMgr);return JNI_ERR;}
 
     JNINativeMethod mgrMethods[]={
         {n_ssl.c_str(),  s_ssl.c_str(), (void*)impl_shouldShowLink},
@@ -664,7 +709,9 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
         {n_gav.c_str(),  s_str.c_str(), (void*)impl_getAppVersion},
         {n_gdu.c_str(),  s_str.c_str(), (void*)impl_getDownloadUrl},
     };
-    if(env->RegisterNatives(clsMgr,mgrMethods,13)!=0)return JNI_ERR;
+    if(env->RegisterNatives(clsMgr,mgrMethods,13)!=0){env->DeleteLocalRef(clsRepo);env->DeleteLocalRef(clsMgr);return JNI_ERR;}
 
+    env->DeleteLocalRef(clsRepo);
+    env->DeleteLocalRef(clsMgr);
     return JNI_VERSION_1_6;
 }

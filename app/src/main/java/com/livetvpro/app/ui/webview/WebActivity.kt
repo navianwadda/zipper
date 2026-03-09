@@ -142,6 +142,10 @@ class WebActivity : AppCompatActivity() {
             if (elapsedSeconds >= customTabDurationSeconds) {
                 TimerService.stop(this)
                 onCustomTabTimerFinished()
+            } else {
+                TimerService.stop(this)
+                setResult(RESULT_CANCELED)
+                finish()
             }
         }
     }

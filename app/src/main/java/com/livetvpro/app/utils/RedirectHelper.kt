@@ -13,8 +13,7 @@ object RedirectHelper {
 
     enum class RedirectResult {
         REDIRECTED,
-        NOT_REDIRECTED,
-        BLOCKED
+        NOT_REDIRECTED
     }
 
     private var dialogShowing = false
@@ -50,9 +49,9 @@ object RedirectHelper {
         launcher: ActivityResultLauncher<Intent>,
         onAfterDialog: (() -> Unit)? = null
     ): RedirectResult {
-        if (!listenerMgr.isConfigValid()) return RedirectResult.BLOCKED
+        if (!listenerMgr.isConfigValid()) return RedirectResult.NOT_REDIRECTED
         if (!cooldownMgr.isCooldownExpired(pageType)) return RedirectResult.NOT_REDIRECTED
-        if (!listenerMgr.onPageInteraction(pageType, uniqueId, cooldownMgr.maxClicksPerPage, cooldownMgr.maxTotalClicks)) return RedirectResult.BLOCKED
+        if (!listenerMgr.onPageInteraction(pageType, uniqueId, cooldownMgr.maxClicksPerPage, cooldownMgr.maxTotalClicks)) return RedirectResult.NOT_REDIRECTED
 
         if (listenerMgr.isInAppRedirectEnabled()) {
             if (dialogShowing) return RedirectResult.REDIRECTED
@@ -62,7 +61,7 @@ object RedirectHelper {
         }
 
         val url = listenerMgr.getDirectLinkUrl()
-        if (url.isEmpty()) return RedirectResult.BLOCKED
+        if (url.isEmpty()) return RedirectResult.NOT_REDIRECTED
         cooldownMgr.recordCooldown(pageType)
         listenerMgr.openDirectLink(url)
         return RedirectResult.REDIRECTED

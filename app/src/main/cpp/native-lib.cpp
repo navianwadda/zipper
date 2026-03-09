@@ -370,6 +370,7 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIE
             json=dec;
         }
         g3.d=json; g3.ok=true; elc(g3.d);
+        if(!g1.p5) elc(raw);
         return JNI_TRUE;
     }catch(...){env->ReleaseStringUTFChars(jsonData,js);return JNI_FALSE;}
 }

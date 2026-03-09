@@ -38,6 +38,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.livetvpro.app.MainActivity
 
 class WebActivity : AppCompatActivity() {
@@ -59,6 +62,15 @@ class WebActivity : AppCompatActivity() {
     private val timerDoneReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == TimerService.ACTION_TIMER_DONE) onCustomTabTimerFinished()
+        }
+    }
+
+    private val appLifecycleObserver = object : DefaultLifecycleObserver {
+        override fun onStop(owner: LifecycleOwner) {
+            if (customTabLaunched && !validated) TimerService.pause(this@WebActivity)
+        }
+        override fun onStart(owner: LifecycleOwner) {
+            if (customTabLaunched && !validated) TimerService.resume(this@WebActivity)
         }
     }
 
@@ -119,6 +131,7 @@ class WebActivity : AppCompatActivity() {
 
         if (isCustomTabsSupported(this)) {
             usingCustomTabs = true
+            ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
             startCustomTabFlow(url, durationSeconds)
         } else {
             usingCustomTabs = false
@@ -134,7 +147,6 @@ class WebActivity : AppCompatActivity() {
                 TimerService.stop(this)
                 onCustomTabTimerFinished()
             } else if (customTabPaused) {
-                // User closed/backed the tab — cancel gracefully
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
                 finish()
@@ -151,22 +163,15 @@ class WebActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Only pause if no Custom Tab is open — if tab is open, timer keeps running
-        if (usingCustomTabs && customTabLaunched && !validated && !customTabPaused) {
-            TimerService.pause(this)
-        }
     }
 
     override fun onStart() {
         super.onStart()
-        // Resume only if we paused due to backgrounding (not a Custom Tab return)
-        if (usingCustomTabs && customTabLaunched && !validated && !customTabPaused) {
-            TimerService.resume(this)
-        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
         TimerService.stop(this)
         try { unregisterReceiver(timerDoneReceiver) } catch (_: Exception) {}
         countDownTimer?.cancel()

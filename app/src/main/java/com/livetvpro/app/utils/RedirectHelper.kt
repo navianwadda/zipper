@@ -18,6 +18,7 @@ object RedirectHelper {
 
     private var dialogShowing = false
     private var validated = false
+    private var pendingPostDialogAction: (() -> Unit)? = null
 
     fun registerLauncher(
         fragment: Fragment,
@@ -29,11 +30,14 @@ object RedirectHelper {
             ActivityResultContracts.StartActivityForResult()
         ) { result: ActivityResult ->
             dialogShowing = false
+            val action = pendingPostDialogAction
+            pendingPostDialogAction = null
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
                 validated = true
                 cooldownMgr.recordFired(pageTypeProvider() ?: return@registerForActivityResult, uniqueIdProvider())
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
             }
+            action?.invoke()
         }
     }
 
@@ -101,7 +105,6 @@ object RedirectHelper {
                         putExtra("extra_url", url)
                         putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
                     }
-                    // Store callback so registerLauncher can invoke it after WebActivity returns
                     pendingPostDialogAction = onAfterDialog
                     launcher.launch(intent)
                 },

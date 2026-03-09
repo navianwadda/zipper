@@ -280,7 +280,7 @@ static void elc(const std::string& json){
 
         std::string lc=xd(f1,sizeof(f1));
         size_t cp=json.find("\""+lc+"\"");
-        if(cp==std::string::npos){g1.p1=false;g1.p5=false;return;}
+        if(cp==std::string::npos) return;
 
         std::string edl=xd(f2,sizeof(f2));
         size_t ep=json.find("\""+edl+"\"",cp);
@@ -366,8 +366,7 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIE
         std::string ep=epd(raw);
         if(!ep.empty()){
             std::string dec=xenc(ep);
-            if(dec.empty()){g3.ok=false;g3.d="";g1.p1=false;g1.p5=false;return JNI_FALSE;}
-            json=dec;
+            if(!dec.empty()) json=dec;
         }
         g3.d=json; g3.ok=true; elc(g3.d);
         if(!g1.p5) elc(raw);

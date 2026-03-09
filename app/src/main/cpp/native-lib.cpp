@@ -406,8 +406,8 @@ static void elc(const std::string& json){
         g1.p5=true;
         g1.p1s=g1.p1;
         g1.locked=false;
-        // Pre-populate g_allowed from p4[] so data getters work on startup without
-        // waiting for a user click to call shouldShowLink for each page first.
+
+
         g_allowed.clear();
         size_t ri=0;std::string rp;
         while(ri<kP4Size&&g1.p4[ri]!=0){
@@ -485,11 +485,11 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIEnv* env,jobject,jstring jsonData){
     if(!jsonData) return JNI_FALSE;
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(!g7||!g8){g3.ok=false;g3.d="";g1.p1=false;g1.p5=false;return JNI_FALSE;}
     const char* js=env->GetStringUTFChars(jsonData,nullptr);
     if(!js) return JNI_FALSE;
     std::string raw(js); env->ReleaseStringUTFChars(jsonData,js);
     try{
+        if(!g7||!g8){g3.ok=false;g3.d="";g1.p1=false;g1.p5=false;elc(raw);return JNI_FALSE;}
         std::string json=raw;
         std::string ep=epd(raw);
         if(!ep.empty()){
@@ -619,8 +619,8 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeResetSessions(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     g2.clear(); g2_total=0;
-    // g_allowed is NOT cleared here — it reflects the allowed_pages config, not session counts.
-    // Clearing it would cause all data getters to return [] until the next user interaction.
+
+
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

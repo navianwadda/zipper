@@ -52,6 +52,7 @@ class WebActivity : AppCompatActivity() {
     private var usingCustomTabs = false
     private var validated = false
     private var customTabLaunched = false
+    private var customTabResumeIgnore = false
 
     private lateinit var timerLabel: TextView
     private var customTabDurationSeconds = 0L
@@ -138,6 +139,10 @@ class WebActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (usingCustomTabs && customTabLaunched && !validated) {
+            if (customTabResumeIgnore) {
+                customTabResumeIgnore = false
+                return
+            }
             val elapsedSeconds = (System.currentTimeMillis() - customTabStartTimeMs) / 1000L
             if (elapsedSeconds >= customTabDurationSeconds) {
                 TimerService.stop(this)
@@ -184,11 +189,11 @@ class WebActivity : AppCompatActivity() {
         customTabStartTimeMs     = System.currentTimeMillis()
         setContentView(View(this))
 
-        launchCustomTab(url)
-        customTabLaunched = true
-
-        Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
         TimerService.start(this, durationSeconds)
+        Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
+        customTabResumeIgnore = true
+        customTabLaunched = true
+        launchCustomTab(url)
     }
 
     private fun launchCustomTab(url: String) {

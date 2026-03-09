@@ -71,6 +71,8 @@ class RedirectCooldownManager @Inject constructor(
         if (isCooldownExpired(pageType)) {
             resetSessionCounts()
             listenerManager.resetSessions()
+        } else {
+            return false
         }
         if (isTotalLimitReached()) return false
         if (isPageLimitReached(pageType)) return false

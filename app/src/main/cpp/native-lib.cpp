@@ -518,8 +518,6 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetCategories(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
-    static const uint8_t pt[]={0xcf,0xc8,0xca,0xc2};
-    if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"categories");
     if(r=="[]") r=exa(g_raw,"categories");
     return env->NewStringUTF(r.c_str());
@@ -529,8 +527,6 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetChannels(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
-    static const uint8_t pt[]={0xc4,0xcf,0xc6,0xc9,0xc9,0xc2,0xcb,0xd4};
-    if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"channels");
     if(r=="[]") r=exa(g_raw,"channels");
     return env->NewStringUTF(r.c_str());
@@ -540,8 +536,6 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetLiveEvents(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
-    static const uint8_t pt[]={0xcb,0xce,0xd1,0xc2,0xf8,0xc2,0xd1,0xc2,0xc9,0xd3,0xd4};
-    if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"live_events");
     if(r=="[]") r=exa(g3.d,"liveEvents");
     if(r=="[]") r=exa(g_raw,"live_events");
@@ -562,8 +556,6 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetEventCategories(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
-    static const uint8_t pt[]={0xcb,0xce,0xd1,0xc2,0xf8,0xc2,0xd1,0xc2,0xc9,0xd3,0xd4};
-    if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"event_categories");
     if(r=="[]") r=exa(g3.d,"eventCategories");
     if(r=="[]") r=exa(g_raw,"event_categories");
@@ -575,8 +567,6 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetSports(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
-    static const uint8_t pt[]={0xd4,0xd7,0xc8,0xd5,0xd3,0xd4};
-    if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"sports_slug");
     if(r=="[]") r=exa(g3.d,"sports");
     if(r=="[]") r=exa(g_raw,"sports_slug");

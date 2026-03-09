@@ -108,6 +108,7 @@ static std::set<std::string> g_allowed;
 static inline bool isPageAllowed(const std::string& pt);
 
 struct q7 { std::string d; bool ok; } static g3 = {"", false};
+static std::string g_raw = "";
 
 static std::string g4 = "";
 static bool g5 = false;
@@ -416,15 +417,21 @@ static void elc(const std::string& json){
             ri++;
         }
         if(!rp.empty())g_allowed.insert(rp);
-        g1.p6 =exs(json,0,xd(_s_contact,   sizeof(_s_contact)));
-        g1.p7 =exs(json,0,xd(_s_cric,       sizeof(_s_cric)));
-        g1.p8 =exs(json,0,xd(_s_foot,       sizeof(_s_foot)));
-        g1.p9 =exs(json,0,xd(_s_email,      sizeof(_s_email)));
-        g1.p10=exs(json,0,xd(_s_web,        sizeof(_s_web)));
-        g1.p11=exs(json,0,xd(_s_message,    sizeof(_s_message)));
-        g1.p12=exs(json,0,xd(_s_messageurl, sizeof(_s_messageurl)));
-        g1.p13=exs(json,0,xd(_s_appver,     sizeof(_s_appver)));
-        g1.p14=exs(json,0,xd(_s_dlurl,      sizeof(_s_dlurl)));
+        auto exs2=[&](const std::string& field)->std::string{
+            std::string v=exs(json,0,field);
+            if(v.empty()&&!obj.empty()) v=exs(obj,0,field);
+            if(v.empty()&&!g3.d.empty()) v=exs(g3.d,0,field);
+            return v;
+        };
+        g1.p6 =exs2(xd(_s_contact,   sizeof(_s_contact)));
+        g1.p7 =exs2(xd(_s_cric,       sizeof(_s_cric)));
+        g1.p8 =exs2(xd(_s_foot,       sizeof(_s_foot)));
+        g1.p9 =exs2(xd(_s_email,      sizeof(_s_email)));
+        g1.p10=exs2(xd(_s_web,        sizeof(_s_web)));
+        g1.p11=exs2(xd(_s_message,    sizeof(_s_message)));
+        g1.p12=exs2(xd(_s_messageurl, sizeof(_s_messageurl)));
+        g1.p13=exs2(xd(_s_appver,     sizeof(_s_appver)));
+        g1.p14=exs2(xd(_s_dlurl,      sizeof(_s_dlurl)));
     }catch(...){}
 }
 
@@ -489,6 +496,7 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIE
     if(!js) return JNI_FALSE;
     std::string raw(js); env->ReleaseStringUTFChars(jsonData,js);
     try{
+        g_raw=raw;
         elc(raw);
         if(!g7||!g8){
             if(!g1.p1){g3.d=raw;g3.ok=true;return JNI_TRUE;}
@@ -512,7 +520,9 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetCategories(
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
     static const uint8_t pt[]={0xcf,0xc8,0xca,0xc2};
     if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
-    return env->NewStringUTF(exa(g3.d,"categories").c_str());
+    std::string r=exa(g3.d,"categories");
+    if(r=="[]") r=exa(g_raw,"categories");
+    return env->NewStringUTF(r.c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -521,7 +531,9 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetChannels(JN
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
     static const uint8_t pt[]={0xc4,0xcf,0xc6,0xc9,0xc9,0xc2,0xcb,0xd4};
     if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
-    return env->NewStringUTF(exa(g3.d,"channels").c_str());
+    std::string r=exa(g3.d,"channels");
+    if(r=="[]") r=exa(g_raw,"channels");
+    return env->NewStringUTF(r.c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -532,6 +544,8 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetLiveEvents(
     if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"live_events");
     if(r=="[]") r=exa(g3.d,"liveEvents");
+    if(r=="[]") r=exa(g_raw,"live_events");
+    if(r=="[]") r=exa(g_raw,"liveEvents");
     return env->NewStringUTF(r.c_str());
 }
 
@@ -539,7 +553,9 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetExternalLiveEvents(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok) return env->NewStringUTF("[]");
-    return env->NewStringUTF(exa(g3.d,"external_live_events").c_str());
+    std::string r=exa(g3.d,"external_live_events");
+    if(r=="[]") r=exa(g_raw,"external_live_events");
+    return env->NewStringUTF(r.c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -550,6 +566,8 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetEventCatego
     if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"event_categories");
     if(r=="[]") r=exa(g3.d,"eventCategories");
+    if(r=="[]") r=exa(g_raw,"event_categories");
+    if(r=="[]") r=exa(g_raw,"eventCategories");
     return env->NewStringUTF(r.c_str());
 }
 
@@ -561,6 +579,8 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetSports(JNIE
     if(!isPageAllowed(xd(pt,sizeof(pt)))) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"sports_slug");
     if(r=="[]") r=exa(g3.d,"sports");
+    if(r=="[]") r=exa(g_raw,"sports_slug");
+    if(r=="[]") r=exa(g_raw,"sports");
     return env->NewStringUTF(r.c_str());
 }
 

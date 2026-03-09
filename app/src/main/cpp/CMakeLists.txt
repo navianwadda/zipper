@@ -21,4 +21,5 @@ target_link_libraries(
         native-lib
         ${log-lib}
         android
+        dl
 )

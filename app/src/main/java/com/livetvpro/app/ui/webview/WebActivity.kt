@@ -175,11 +175,14 @@ class WebActivity : AppCompatActivity() {
         customTabStartTimeMs     = System.currentTimeMillis()
         setContentView(View(this))
 
-        TimerService.start(this, durationSeconds)
-        Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
         customTabLaunched = true
         customTabLaunchTimeMs = System.currentTimeMillis()
         launchCustomTab(url)
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            TimerService.start(this, durationSeconds)
+            Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
+        }, 3000L)
     }
 
     private fun launchCustomTab(url: String) {

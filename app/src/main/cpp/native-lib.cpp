@@ -544,6 +544,8 @@ Java_com_livetvpro_app_utils_NativeListenerManager_nativeResetSessions(JNIEnv* e
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeIsConfigValid(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
+    if(isTampered()){g1.locked=true;g1.p1=false;g1.p5=false;return JNI_FALSE;}
+    if(!g8||!g7){g1.locked=true;return JNI_FALSE;}
     return g1.p5?JNI_TRUE:JNI_FALSE;
 }
 

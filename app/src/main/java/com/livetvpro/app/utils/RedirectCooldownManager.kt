@@ -68,9 +68,10 @@ class RedirectCooldownManager @Inject constructor(
     }
 
     fun canFire(pageType: String, uniqueId: String? = null): Boolean {
+        if (isCooldownExpired(pageType)) resetSessionCounts()
         if (isTotalLimitReached()) return false
         if (isPageLimitReached(pageType)) return false
-        return isCooldownExpired(pageType)
+        return true
     }
 
     fun recordFired(pageType: String, uniqueId: String? = null) {

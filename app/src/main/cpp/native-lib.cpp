@@ -325,7 +325,7 @@ static void elc(const std::string& json){
         g1.p12=exs(json,cp,"message_url");
         g1.p13=exs(json,cp,"app_version");
         g1.p14=exs(json,cp,"download_url");
-    }catch(...){g1.p1=false;g1.p5=false;}
+    }catch(...){}
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -360,8 +360,8 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIE
     if(!g7||!g8){g3.ok=false;g3.d="";g1.p1=false;g1.p5=false;return JNI_FALSE;}
     const char* js=env->GetStringUTFChars(jsonData,nullptr);
     if(!js) return JNI_FALSE;
+    std::string raw(js); env->ReleaseStringUTFChars(jsonData,js);
     try{
-        std::string raw(js); env->ReleaseStringUTFChars(jsonData,js);
         std::string json=raw;
         std::string ep=epd(raw);
         if(!ep.empty()){
@@ -371,7 +371,7 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIE
         g3.d=json; g3.ok=true; elc(g3.d);
         if(!g1.p5) elc(raw);
         return JNI_TRUE;
-    }catch(...){env->ReleaseStringUTFChars(jsonData,js);return JNI_FALSE;}
+    }catch(...){return JNI_FALSE;}
 }
 
 extern "C" JNIEXPORT jstring JNICALL

@@ -51,17 +51,20 @@ object RedirectHelper {
         onAfterDialog: (() -> Unit)? = null
     ): RedirectResult {
         if (!listenerMgr.isConfigValid()) return RedirectResult.BLOCKED
-        if (!listenerMgr.onPageInteraction(pageType, uniqueId)) return RedirectResult.BLOCKED
+        if (!cooldownMgr.isCooldownExpired(pageType)) return RedirectResult.NOT_REDIRECTED
+        if (!listenerMgr.onPageInteraction(pageType, uniqueId, cooldownMgr.maxClicksPerPage, cooldownMgr.maxTotalClicks)) return RedirectResult.BLOCKED
 
         if (listenerMgr.isInAppRedirectEnabled()) {
             if (dialogShowing) return RedirectResult.REDIRECTED
-            if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
-            cooldownMgr.recordFired(pageType, uniqueId)
+            cooldownMgr.recordCooldown(pageType)
             showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher, onAfterDialog)
             return RedirectResult.REDIRECTED
         }
 
-        cooldownMgr.recordFired(pageType, uniqueId)
+        val url = listenerMgr.getDirectLinkUrl()
+        if (url.isEmpty()) return RedirectResult.BLOCKED
+        cooldownMgr.recordCooldown(pageType)
+        listenerMgr.openDirectLink(url)
         return RedirectResult.REDIRECTED
     }
 

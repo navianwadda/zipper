@@ -26,7 +26,7 @@ class NativeListenerManager @Inject constructor(
         val DEFAULT_AD_DURATION_SECONDS = 10L
     }
 
-    private external fun nativeShouldShowLink(pageType: String, uniqueId: String?): Boolean
+    private external fun nativeShouldShowLink(pageType: String, uniqueId: String?, maxPerPage: Long, maxTotal: Long): Boolean
     private external fun nativeGetDirectLinkUrl(): String
     private external fun nativeResetSessions()
     private external fun nativeIsConfigValid(): Boolean
@@ -105,18 +105,13 @@ class NativeListenerManager @Inject constructor(
         return try { nativeGetDirectLinkUrl() } catch (e: Exception) { "" }
     }
 
-    fun onPageInteraction(pageType: String, uniqueId: String? = null): Boolean {
+    fun onPageInteraction(pageType: String, uniqueId: String? = null, maxPerPage: Long = 0L, maxTotal: Long = 0L): Boolean {
         return try {
             if (isDirectLinkDisabled()) return false
-            val shouldShow = nativeShouldShowLink(pageType, uniqueId)
+            val shouldShow = nativeShouldShowLink(pageType, uniqueId, maxPerPage, maxTotal)
             if (shouldShow) {
                 val url = nativeGetDirectLinkUrl()
-                if (url.isNotEmpty()) {
-                    if (!isInAppRedirectEnabled()) {
-                        openDirectLink(url)
-                    }
-                    return true
-                }
+                return url.isNotEmpty()
             }
             false
         } catch (e: Exception) {
@@ -124,7 +119,7 @@ class NativeListenerManager @Inject constructor(
         }
     }
 
-    private fun openDirectLink(url: String) {
+    fun openDirectLink(url: String) {
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

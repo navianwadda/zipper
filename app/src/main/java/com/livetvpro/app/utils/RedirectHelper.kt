@@ -43,13 +43,16 @@ object RedirectHelper {
         uniqueId: String? = null,
         cooldownMgr: RedirectCooldownManager,
         listenerMgr: NativeListenerManager,
-        launcher: ActivityResultLauncher<Intent>
+        launcher: ActivityResultLauncher<Intent>,
+        onAfterDialog: (() -> Unit)? = null
     ): RedirectResult {
+        if (!listenerMgr.isConfigValid()) return RedirectResult.NOT_REDIRECTED
+
         if (listenerMgr.isInAppRedirectEnabled()) {
             if (validated) return RedirectResult.NOT_REDIRECTED
             if (dialogShowing) return RedirectResult.REDIRECTED
             if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
-            showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher)
+            showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher, onAfterDialog)
             return RedirectResult.REDIRECTED
         }
 
@@ -78,11 +81,15 @@ object RedirectHelper {
         uniqueId: String?,
         listenerMgr: NativeListenerManager,
         cooldownMgr: RedirectCooldownManager,
-        launcher: ActivityResultLauncher<Intent>
+        launcher: ActivityResultLauncher<Intent>,
+        onAfterDialog: (() -> Unit)? = null
     ) {
         try {
             val url = listenerMgr.getDirectLinkUrl()
-            if (url.isEmpty()) return
+            if (url.isEmpty()) {
+                onAfterDialog?.invoke()
+                return
+            }
 
             dialogShowing = true
             SupportDialog.show(
@@ -94,14 +101,18 @@ object RedirectHelper {
                         putExtra("extra_url", url)
                         putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
                     }
+                    // Store callback so registerLauncher can invoke it after WebActivity returns
+                    pendingPostDialogAction = onAfterDialog
                     launcher.launch(intent)
                 },
                 onCancel = {
                     dialogShowing = false
+                    onAfterDialog?.invoke()
                 }
             )
         } catch (e: Exception) {
             dialogShowing = false
+            onAfterDialog?.invoke()
         }
     }
 }

@@ -39,13 +39,13 @@ class RedirectCooldownManager @Inject constructor(
 
     private fun pageClickKey(pageType: String): String = KEY_PAGE_CLICKS_PREFIX + pageType
 
-    private fun isCooldownExpired(pageType: String): Boolean {
+    internal fun isCooldownExpired(pageType: String): Boolean {
         val lastFired = prefs.getLong(cooldownKey(pageType), 0L)
         val cooldown = cooldownMs
         return cooldown <= 0L || System.currentTimeMillis() - lastFired >= cooldown
     }
 
-    private fun recordCooldown(pageType: String) {
+    internal fun recordCooldown(pageType: String) {
         prefs.edit().putLong(cooldownKey(pageType), System.currentTimeMillis()).apply()
     }
 
@@ -68,7 +68,10 @@ class RedirectCooldownManager @Inject constructor(
     }
 
     fun canFire(pageType: String, uniqueId: String? = null): Boolean {
-        if (isCooldownExpired(pageType)) resetSessionCounts()
+        if (isCooldownExpired(pageType)) {
+            resetSessionCounts()
+            listenerManager.resetSessions()
+        }
         if (isTotalLimitReached()) return false
         if (isPageLimitReached(pageType)) return false
         return true

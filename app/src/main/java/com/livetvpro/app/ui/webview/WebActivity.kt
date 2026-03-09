@@ -52,11 +52,8 @@ class WebActivity : AppCompatActivity() {
     private var usingCustomTabs = false
     private var validated = false
     private var customTabLaunched = false
-    private var customTabPaused = false
 
     private lateinit var timerLabel: TextView
-    private var lastCustomTabUrl: String = ""
-
     private var customTabDurationSeconds = 0L
     private var customTabStartTimeMs = 0L
     private val timerDoneReceiver = object : BroadcastReceiver() {
@@ -134,7 +131,6 @@ class WebActivity : AppCompatActivity() {
             ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
             startCustomTabFlow(url, durationSeconds)
         } else {
-            usingCustomTabs = false
             launchWebView(url, durationSeconds)
         }
     }
@@ -146,27 +142,8 @@ class WebActivity : AppCompatActivity() {
             if (elapsedSeconds >= customTabDurationSeconds) {
                 TimerService.stop(this)
                 onCustomTabTimerFinished()
-            } else if (customTabPaused) {
-                TimerService.stop(this)
-                setResult(RESULT_CANCELED)
-                finish()
             }
         }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        if (usingCustomTabs && customTabLaunched) {
-            customTabPaused = true
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-    }
-
-    override fun onStart() {
-        super.onStart()
     }
 
     override fun onDestroy() {
@@ -201,8 +178,6 @@ class WebActivity : AppCompatActivity() {
     private fun startCustomTabFlow(url: String, durationSeconds: Long) {
         customTabDurationSeconds = durationSeconds
         customTabStartTimeMs     = System.currentTimeMillis()
-        lastCustomTabUrl         = url
-
         setContentView(View(this))
 
         launchCustomTab(url)

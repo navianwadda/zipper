@@ -20,16 +20,20 @@ class TimerService : Service() {
     private var startTimeMs = 0L
     private var remainingSeconds = 0L
     private var isPaused = false
+    private var stopped = false
 
     private val tickRunnable = object : Runnable {
         override fun run() {
-            if (isPaused) return
+            if (isPaused || stopped) return
             val elapsed = (System.currentTimeMillis() - startTimeMs) / 1000L
             remainingSeconds = durationSeconds - elapsed
             if (remainingSeconds <= 0) {
-                updateNotification(0)
-                sendBroadcast(Intent(ACTION_TIMER_DONE).setPackage(packageName))
-                stopSelf()
+                if (!stopped) {
+                    stopped = true
+                    updateNotification(0)
+                    sendBroadcast(Intent(ACTION_TIMER_DONE).setPackage(packageName))
+                    stopSelf()
+                }
             } else {
                 updateNotification(remainingSeconds)
                 handler.postDelayed(this, 1000L)
@@ -92,11 +96,11 @@ class TimerService : Service() {
                 }
             }
             else -> {
-                // Fresh start
                 durationSeconds = intent?.getLongExtra(EXTRA_DURATION, 30L) ?: 30L
                 remainingSeconds = durationSeconds
                 startTimeMs = System.currentTimeMillis()
                 isPaused = false
+                stopped = false
                 handler.removeCallbacks(tickRunnable)
                 handler.post(tickRunnable)
             }
@@ -105,8 +109,10 @@ class TimerService : Service() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
+        stopped = true
         handler.removeCallbacks(tickRunnable)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        super.onDestroy()
     }
 
     private fun updateNotification(remaining: Long, paused: Boolean = false) {

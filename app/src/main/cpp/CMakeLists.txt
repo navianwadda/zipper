@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project("livetvpro")
 
 add_library(
-        native-QQ
+        native-lib
         SHARED
         native-lib.cpp
 )

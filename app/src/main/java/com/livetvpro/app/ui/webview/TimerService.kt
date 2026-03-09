@@ -92,12 +92,12 @@ class TimerService : Service() {
                 }
             }
             else -> {
-                // Fresh start
                 durationSeconds = intent?.getLongExtra(EXTRA_DURATION, 30L) ?: 30L
                 remainingSeconds = durationSeconds
                 startTimeMs = System.currentTimeMillis()
                 isPaused = false
                 handler.removeCallbacks(tickRunnable)
+                updateNotification(remainingSeconds)
                 handler.post(tickRunnable)
             }
         }

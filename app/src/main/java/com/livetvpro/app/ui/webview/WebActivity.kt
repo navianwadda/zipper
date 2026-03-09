@@ -63,12 +63,14 @@ class WebActivity : AppCompatActivity() {
         }
     }
 
+    private var customTabInFront = false
+
     private val appLifecycleObserver = object : DefaultLifecycleObserver {
         override fun onStop(owner: LifecycleOwner) {
-            if (customTabLaunched && !validated) TimerService.pause(this@WebActivity)
+            if (customTabLaunched && !validated && !customTabInFront) TimerService.pause(this@WebActivity)
         }
         override fun onStart(owner: LifecycleOwner) {
-            if (customTabLaunched && !validated) TimerService.resume(this@WebActivity)
+            if (customTabLaunched && !validated && !customTabInFront) TimerService.resume(this@WebActivity)
         }
     }
 
@@ -139,6 +141,7 @@ class WebActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (usingCustomTabs && customTabLaunched && !validated) {
+            customTabInFront = false
             if (customTabResumeIgnore) {
                 customTabResumeIgnore = false
                 return
@@ -193,6 +196,7 @@ class WebActivity : AppCompatActivity() {
         Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
         customTabResumeIgnore = true
         customTabLaunched = true
+        customTabInFront = true
         launchCustomTab(url)
     }
 

@@ -489,7 +489,11 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIE
     if(!js) return JNI_FALSE;
     std::string raw(js); env->ReleaseStringUTFChars(jsonData,js);
     try{
-        if(!g7||!g8){g3.ok=false;g3.d="";g1.p1=false;g1.p5=false;elc(raw);return JNI_FALSE;}
+        elc(raw);
+        if(!g7||!g8){
+            if(!g1.p1){g3.d=raw;g3.ok=true;return JNI_TRUE;}
+            g3.ok=false;g3.d="";return JNI_FALSE;
+        }
         std::string json=raw;
         std::string ep=epd(raw);
         if(!ep.empty()){

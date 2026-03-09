@@ -24,6 +24,7 @@ class RedirectCooldownManager @Inject constructor(
         private const val NO_LIMIT               = 0L
         private const val KEY_TOTAL_CLICKS       = "total_click_count"
         private const val KEY_PAGE_CLICKS_PREFIX = "page_clicks_"
+        private const val KEY_GLOBAL_COOLDOWN    = "global_cooldown"
     }
 
     private val cooldownMs: Long
@@ -35,18 +36,16 @@ class RedirectCooldownManager @Inject constructor(
     val maxTotalClicks: Long
         get() = try { Firebase.remoteConfig.getLong(REMOTE_CONFIG_MAX_TOTAL) } catch (e: Exception) { NO_LIMIT }
 
-    private fun cooldownKey(pageType: String): String = pageType
-
     private fun pageClickKey(pageType: String): String = KEY_PAGE_CLICKS_PREFIX + pageType
 
-    internal fun isCooldownExpired(pageType: String): Boolean {
-        val lastFired = prefs.getLong(cooldownKey(pageType), 0L)
+    private fun isCooldownExpired(): Boolean {
+        val lastFired = prefs.getLong(KEY_GLOBAL_COOLDOWN, 0L)
         val cooldown = cooldownMs
         return cooldown <= 0L || System.currentTimeMillis() - lastFired >= cooldown
     }
 
-    internal fun recordCooldown(pageType: String) {
-        prefs.edit().putLong(cooldownKey(pageType), System.currentTimeMillis()).apply()
+    private fun recordCooldown() {
+        prefs.edit().putLong(KEY_GLOBAL_COOLDOWN, System.currentTimeMillis()).apply()
     }
 
     private fun getPageClickCount(pageType: String): Int =
@@ -68,7 +67,7 @@ class RedirectCooldownManager @Inject constructor(
     }
 
     fun canFire(pageType: String, uniqueId: String? = null): Boolean {
-        if (isCooldownExpired(pageType)) {
+        if (isCooldownExpired()) {
             resetSessionCounts()
             listenerManager.resetSessions()
         } else {
@@ -80,13 +79,15 @@ class RedirectCooldownManager @Inject constructor(
     }
 
     fun recordFired(pageType: String, uniqueId: String? = null) {
-        recordCooldown(pageType)
         val newPage = getPageClickCount(pageType) + 1
         val newTotal = getTotalClickCount() + 1
         prefs.edit()
             .putInt(pageClickKey(pageType), newPage)
             .putInt(KEY_TOTAL_CLICKS, newTotal)
             .apply()
+        if (isTotalLimitReached()) {
+            recordCooldown()
+        }
     }
 
     fun undoLastFire(pageType: String, uniqueId: String? = null) {
@@ -95,7 +96,7 @@ class RedirectCooldownManager @Inject constructor(
         prefs.edit()
             .putInt(pageClickKey(pageType), if (currentPage > 0) currentPage - 1 else 0)
             .putInt(KEY_TOTAL_CLICKS, if (currentTotal > 0) currentTotal - 1 else 0)
-            .remove(cooldownKey(pageType))
+            .remove(KEY_GLOBAL_COOLDOWN)
             .apply()
     }
 

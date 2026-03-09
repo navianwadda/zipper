@@ -2,14 +2,18 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <mutex>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/stat.h>
+
+static std::mutex g_mutex;
 
 static bool isFridaPortOpen() {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -30,7 +34,8 @@ static bool isFridaInMaps() {
     FILE* f = fopen("/proc/self/maps", "r");
     if (!f) return false;
     char line[512]; bool found = false;
-    const char* m[] = {"frida","gum-js-loop","gmain","linjector","frida-agent","frida-gadget",nullptr};
+    const char* m[] = {"frida","gum-js-loop","gmain","linjector","frida-agent","frida-gadget",
+                       "re.frida","frida-helper","frida-node",nullptr};
     while (fgets(line, sizeof(line), f)) {
         for (int i = 0; m[i]; i++) if (strstr(line, m[i])) { found = true; break; }
         if (found) break;
@@ -57,8 +62,14 @@ static bool isFridaPipePresent() {
 static bool isTracerPidNonZero() {
     FILE* f = fopen("/proc/self/status", "r"); if (!f) return false;
     char line[128]; bool t = false;
-    while (fgets(line, sizeof(line), f))
-        if (strncmp(line, "TracerPid:", 10) == 0) { t = atoi(line+10) != 0; break; }
+    while (fgets(line, sizeof(line), f)) {
+        if (strncmp(line, "TracerPid:", 10) == 0) {
+            char* end = nullptr;
+            long val = strtol(line + 10, &end, 10);
+            t = (end != line + 10 && val != 0);
+            break;
+        }
+    }
     fclose(f); return t;
 }
 
@@ -74,11 +85,14 @@ static inline std::string xd(const uint8_t* b, size_t n) {
     return s;
 }
 
+static const size_t kP2Size = 256;
+static const size_t kP4Size = 65;
+
 struct z9 {
     bool p1;
-    uint8_t p2[256];
-    uint8_t p2s[256];
-    uint8_t p4[64];
+    uint8_t p2[kP2Size];
+    uint8_t p2s[kP2Size];
+    uint8_t p4[kP4Size];
     bool p5;
     bool p1s;
     bool locked;
@@ -97,9 +111,10 @@ static bool g8 = false;
 static uint32_t g9 = 0;
 
 static inline void ws(const std::string& s, uint8_t* out, size_t mx) {
-    size_t n = s.size() < mx ? s.size() : mx;
+    if(mx == 0) return;
+    size_t n = s.size() < (mx - 1) ? s.size() : (mx - 1);
     for (size_t i = 0; i < n; i++) out[i] = (uint8_t)s[i] ^ kX;
-    if (n < mx) out[n] = 0;
+    out[n] = 0;
 }
 
 static inline std::string rs(const uint8_t* in, size_t mx) {
@@ -111,9 +126,10 @@ static inline std::string rs(const uint8_t* in, size_t mx) {
 static const uint8_t kX2 = 0x5C;
 
 static inline void ws2(const std::string& s, uint8_t* out, size_t mx) {
-    size_t n = s.size() < mx ? s.size() : mx;
+    if(mx == 0) return;
+    size_t n = s.size() < (mx - 1) ? s.size() : (mx - 1);
     for (size_t i = 0; i < n; i++) out[i] = (uint8_t)s[i] ^ kX2;
-    if (n < mx) out[n] = 0;
+    out[n] = 0;
 }
 
 static inline std::string rs2(const uint8_t* in, size_t mx) {
@@ -146,8 +162,15 @@ static void dkiv(const std::string& pw, uint8_t key[16], uint8_t iv[16]) {
 
 static std::vector<uint8_t> b64d(const std::string& in) {
     static const char* ch="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    std::vector<uint8_t> o; int val=0,valb=-8;
-    for (unsigned char c:in) { if(c=='=') break; const char* p=strchr(ch,(char)c); if(!p) continue; val=(val<<6)+(int)(p-ch); valb+=6; if(valb>=0){o.push_back((uint8_t)((val>>valb)&0xFF));valb-=8;} }
+    std::vector<uint8_t> o; int val=0,valb=-8; bool valid=true;
+    for (unsigned char c:in) {
+        if(c=='=') break;
+        const char* p=strchr(ch,(char)c);
+        if(!p) { valid=false; break; }
+        val=(val<<6)+(int)(p-ch); valb+=6;
+        if(valb>=0){o.push_back((uint8_t)((val>>valb)&0xFF));valb-=8;}
+    }
+    if(!valid) return {};
     return o;
 }
 
@@ -230,7 +253,9 @@ static std::string adec(const std::string& b64ct,const std::string& pw){
         for(size_t blk=0;blk<ct.size()/16;blk++){uint8_t dec[16];adb(ct.data()+blk*16,dec,rk);for(int i=0;i<16;i++)pt[blk*16+i]=dec[i]^prev[i];memcpy(prev,ct.data()+blk*16,16);}
         if(pt.empty()) return "";
         uint8_t pad=pt.back();
-        if(pad<1||pad>16||pad>pt.size()) return "";
+        if(pad<1||pad>16||(size_t)pad>pt.size()) return "";
+        uint8_t expected_pad=pad;
+        for(size_t i=pt.size()-pad;i<pt.size();i++) if(pt[i]!=expected_pad) return "";
         pt.resize(pt.size()-pad);
         return std::string(pt.begin(),pt.end());
     }catch(...){return "";}
@@ -248,7 +273,14 @@ static std::string epd(const std::string& json){
     size_t cp=json.find(':',dp); if(cp==std::string::npos) return "";
     size_t vs=cp+1; while(vs<json.size()&&(json[vs]==' '||json[vs]=='\t'||json[vs]=='\n')) vs++;
     if(vs>=json.size()||json[vs]!='"') return "";
-    size_t es=vs+1,ee=json.find('"',es); if(ee==std::string::npos) return "";
+    size_t es=vs+1;
+    size_t ee=es;
+    while(ee<json.size()) {
+        if(json[ee]=='\\') { ee+=2; continue; }
+        if(json[ee]=='"') break;
+        ee++;
+    }
+    if(ee>=json.size()) return "";
     return json.substr(es,ee-es);
 }
 
@@ -257,7 +289,19 @@ static std::string exa(const std::string& json,const std::string& key){
         std::string sk="\""+key+"\""; size_t kp=json.find(sk); if(kp==std::string::npos) return "[]";
         size_t sp=json.find('[',kp); if(sp==std::string::npos) return "[]";
         int bc=1; size_t ep=sp+1;
-        while(ep<json.length()&&bc>0){if(json[ep]=='[')bc++;else if(json[ep]==']')bc--;ep++;}
+        bool in_str=false;
+        while(ep<json.length()&&bc>0){
+            char c=json[ep];
+            if(in_str) {
+                if(c=='\\') { ep+=2; continue; }
+                if(c=='"') in_str=false;
+            } else {
+                if(c=='"') in_str=true;
+                else if(c=='[') bc++;
+                else if(c==']') bc--;
+            }
+            ep++;
+        }
         if(bc!=0) return "[]";
         return json.substr(sp,ep-sp);
     }catch(...){return "[]";}
@@ -267,7 +311,14 @@ static std::string exs(const std::string& json,size_t from,const std::string& fi
     size_t fp=json.find("\""+field+"\"",from); if(fp==std::string::npos) return "";
     size_t cp=json.find(':',fp); if(cp==std::string::npos) return "";
     size_t qs=json.find('"',cp); if(qs==std::string::npos) return "";
-    qs++; size_t qe=json.find('"',qs); if(qe==std::string::npos) return "";
+    qs++;
+    size_t qe=qs;
+    while(qe<json.size()) {
+        if(json[qe]=='\\') { qe+=2; continue; }
+        if(json[qe]=='"') break;
+        qe++;
+    }
+    if(qe>=json.size()) return "";
     return json.substr(qs,qe-qs);
 }
 
@@ -288,8 +339,8 @@ static void elc(const std::string& json){
 
         std::string dlu=xd(f3,sizeof(f3));
         std::string urlval=exs(json,cp,dlu);
-        ws(urlval,g1.p2,256);
-        ws2(urlval,g1.p2s,256);
+        ws(urlval,g1.p2,kP2Size);
+        ws2(urlval,g1.p2s,kP2Size);
 
         g1.p4[0]=0;
         std::string apf=xd(f4,sizeof(f4));
@@ -301,14 +352,16 @@ static void elc(const std::string& json){
                 if(ae!=std::string::npos){
                     std::string pa=json.substr(as+1,ae-as-1);
                     size_t pos=0,pi=0;
-                    while(pos<pa.length()&&pi<63){
+                    const size_t kMaxP4 = kP4Size - 1;
+                    while(pos<pa.length()&&pi<kMaxP4){
                         size_t qs=pa.find('"',pos); if(qs==std::string::npos) break;
                         size_t qe=pa.find('"',qs+1); if(qe==std::string::npos) break;
                         std::string pn=pa.substr(qs+1,qe-qs-1);
-                        for(size_t ci=0;ci<pn.size()&&pi<63;ci++) g1.p4[pi++]=(uint8_t)pn[ci]^kX;
-                        g1.p4[pi++]=0xFF; pos=qe+1;
+                        for(size_t ci=0;ci<pn.size()&&pi<kMaxP4-1;ci++) g1.p4[pi++]=(uint8_t)pn[ci]^kX;
+                        if(pi < kMaxP4) g1.p4[pi++]=0xFF;
+                        pos=qe+1;
                     }
-                    if(pi<64) g1.p4[pi]=0;
+                    if(pi<kP4Size) g1.p4[pi]=0;
                 }
             }
         }
@@ -349,14 +402,31 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeUpdateConfig(J
     jstring jname=(jstring)env->CallObjectMethod(cls,getSimpleName);
     const char* cname=env->GetStringUTFChars(jname,nullptr);
     bool valid=(cname&&std::string(cname)==expected);
-    env->ReleaseStringUTFChars(jname,cname);
-    if(!valid){g7=false;g8=false;memset(g6,0,sizeof(g6));return;}
+    if(cname) env->ReleaseStringUTFChars(jname,cname);
+    if(!valid){
+        std::lock_guard<std::mutex> lk(g_mutex);
+        g7=false;g8=false;memset(g6,0,sizeof(g6));return;
+    }
+    if(!key) return;
     const char* ks=env->GetStringUTFChars(key,nullptr);
-    if(ks){memset(g6,0,sizeof(g6));size_t n=strlen(ks);if(n>31)n=31;for(size_t i=0;i<n;i++)g6[i]=(uint8_t)ks[i]^0x3F;g7=true;g8=true;g9=(uint32_t)(n*0x9e3779b9^0x6c62272e);env->ReleaseStringUTFChars(key,ks);}
+    if(ks){
+        size_t n=strlen(ks);
+        if(n>31) n=31;
+        uint8_t tmp[32]={0};
+        for(size_t i=0;i<n;i++) tmp[i]=(uint8_t)ks[i]^0x3F;
+        uint32_t hash=(uint32_t)(n*0x9e3779b9^0x6c62272e);
+        env->ReleaseStringUTFChars(key,ks);
+        std::lock_guard<std::mutex> lk(g_mutex);
+        memset(g6,0,sizeof(g6));
+        memcpy(g6,tmp,n);
+        g7=true;g8=true;
+        g9=hash;
+    }
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIEnv* env,jobject,jstring jsonData){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(!g7||!g8){g3.ok=false;g3.d="";g1.p1=false;g1.p5=false;return JNI_FALSE;}
     const char* js=env->GetStringUTFChars(jsonData,nullptr);
     if(!js) return JNI_FALSE;
@@ -376,18 +446,21 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIE
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetCategories(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
     return env->NewStringUTF(exa(g3.d,"categories").c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetChannels(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
     return env->NewStringUTF(exa(g3.d,"channels").c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetLiveEvents(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"live_events");
     if(r=="[]") r=exa(g3.d,"liveEvents");
@@ -396,12 +469,14 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetLiveEvents(
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetExternalLiveEvents(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok) return env->NewStringUTF("[]");
     return env->NewStringUTF(exa(g3.d,"external_live_events").c_str());
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetEventCategories(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"event_categories");
     if(r=="[]") r=exa(g3.d,"eventCategories");
@@ -410,6 +485,7 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetEventCatego
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetSports(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(!g3.ok||!g8) return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"sports_slug");
     if(r=="[]") r=exa(g3.d,"sports");
@@ -418,87 +494,98 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetSports(JNIE
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeIsDataLoaded(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(!g8) return JNI_FALSE;
     return g3.ok?JNI_TRUE:JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeShouldShowLink(JNIEnv* env,jobject,jstring pageType,jstring){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(g1.locked) return JNI_FALSE;
     if(isTampered()){g1.locked=true;g1.p1=false;g1.p1s=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return JNI_FALSE;}
     if(!g8||!g7){g1.locked=true;return JNI_FALSE;}
     if(g1.p1!=g1.p1s){g1.locked=true;g1.p1=false;g1.p1s=false;return JNI_FALSE;}
-    std::string u1=rs(g1.p2,256);
-    std::string u2=rs2(g1.p2s,256);
+    std::string u1=rs(g1.p2,kP2Size);
+    std::string u2=rs2(g1.p2s,kP2Size);
     if(u1!=u2){g1.locked=true;g1.p1=false;g1.p1s=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return JNI_FALSE;}
     if(!g1.p5||!g1.p1) return JNI_FALSE;
     const char* pts=env->GetStringUTFChars(pageType,nullptr);
     if(!pts) return JNI_FALSE;
     std::string pt(pts); env->ReleaseStringUTFChars(pageType,pts);
     size_t i=0; bool found=false; std::string cur;
-    while(i<64&&g1.p4[i]!=0){
+    while(i<kP4Size&&g1.p4[i]!=0){
         if(g1.p4[i]==0xFF){if(cur==pt){found=true;break;}cur.clear();}
         else cur+=(char)(g1.p4[i]^kX);
         i++;
     }
     if(!found) return JNI_FALSE;
+    if(g2.size()>1000) g2.clear();
     if(g2.find(pt)!=g2.end()) return JNI_FALSE;
     g2.insert(pt); return JNI_TRUE;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetDirectLinkUrl(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     if(g1.locked||!g8) return env->NewStringUTF("");
-    std::string u1=rs(g1.p2,256);
-    std::string u2=rs2(g1.p2s,256);
+    std::string u1=rs(g1.p2,kP2Size);
+    std::string u2=rs2(g1.p2s,kP2Size);
     if(u1!=u2){g1.locked=true;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return env->NewStringUTF("");}
     return env->NewStringUTF(u1.c_str());
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeResetSessions(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     g2.clear();
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeIsConfigValid(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     return g1.p5?JNI_TRUE:JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreConfigUrl(JNIEnv* env,jobject,jstring url){
     const char* us=env->GetStringUTFChars(url,nullptr);
-    if(us){g4=std::string(us);g5=true;env->ReleaseStringUTFChars(url,us);}
+    if(us){
+        std::lock_guard<std::mutex> lk(g_mutex);
+        g4=std::string(us);g5=true;
+        env->ReleaseStringUTFChars(url,us);
+    }
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetConfigUrl(JNIEnv* env,jobject){
+    std::lock_guard<std::mutex> lk(g_mutex);
     return env->NewStringUTF(g5?g4.c_str():"");
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetContactUrl(JNIEnv* env,jobject){return env->NewStringUTF(g1.p6.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetContactUrl(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p6.c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetCricLiveUrl(JNIEnv* env,jobject){return env->NewStringUTF(g1.p7.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetCricLiveUrl(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p7.c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetFootLiveUrl(JNIEnv* env,jobject){return env->NewStringUTF(g1.p8.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetFootLiveUrl(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p8.c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetEmailUs(JNIEnv* env,jobject){return env->NewStringUTF(g1.p9.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetEmailUs(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p9.c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetWebUrl(JNIEnv* env,jobject){return env->NewStringUTF(g1.p10.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetWebUrl(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p10.c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetMessage(JNIEnv* env,jobject){return env->NewStringUTF(g1.p11.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetMessage(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p11.c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetMessageUrl(JNIEnv* env,jobject){return env->NewStringUTF(g1.p12.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetMessageUrl(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p12.c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetAppVersion(JNIEnv* env,jobject){return env->NewStringUTF(g1.p13.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetAppVersion(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p13.c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetDownloadUrl(JNIEnv* env,jobject){return env->NewStringUTF(g1.p14.c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetDownloadUrl(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p14.c_str());}

@@ -121,8 +121,10 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
                 } else {
                     pendingNavAction = null
                 }
-            } else {
+            } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
                 pendingNavAction?.invoke()
+                pendingNavAction = null
+            } else {
                 pendingNavAction = null
             }
         }

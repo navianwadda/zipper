@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project("livetvpro")
 
 add_library(
-        native-lib
+        native-QQ
         SHARED
         native-lib.cpp
 )
@@ -19,3 +19,5 @@ target_link_libraries(
         android
         dl
 )
+
+target_compile_options(native-lib PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)

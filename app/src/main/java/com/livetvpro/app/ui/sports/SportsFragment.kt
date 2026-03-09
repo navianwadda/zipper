@@ -35,8 +35,6 @@ import com.livetvpro.app.utils.FloatingPlayerHelper
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
@@ -69,18 +67,17 @@ class SportsViewModel @Inject constructor(
 
     override fun loadData() {
         viewModelScope.launch {
-            repository.getSports()
-                .onStart { startLoading() }
-                .catch { e ->
-                    _channels.value = emptyList()
-                    applyFilter()
-                    finishLoading(dataIsEmpty = true, error = e)
-                }
-                .collect { sports ->
-                    _channels.value = sports
-                    applyFilter()
-                    finishLoading(dataIsEmpty = sports.isEmpty())
-                }
+            try {
+                startLoading()
+                val sports = repository.getSports()
+                _channels.value = sports
+                applyFilter()
+                finishLoading(dataIsEmpty = sports.isEmpty())
+            } catch (e: Exception) {
+                _channels.value = emptyList()
+                applyFilter()
+                finishLoading(dataIsEmpty = true, error = e)
+            }
         }
     }
 

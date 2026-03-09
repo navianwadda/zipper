@@ -406,6 +406,16 @@ static void elc(const std::string& json){
         g1.p5=true;
         g1.p1s=g1.p1;
         g1.locked=false;
+        // Pre-populate g_allowed from p4[] so data getters work on startup without
+        // waiting for a user click to call shouldShowLink for each page first.
+        g_allowed.clear();
+        size_t ri=0;std::string rp;
+        while(ri<kP4Size&&g1.p4[ri]!=0){
+            if(g1.p4[ri]==0xFF){if(!rp.empty())g_allowed.insert(rp);rp.clear();}
+            else rp+=(char)(g1.p4[ri]^kX);
+            ri++;
+        }
+        if(!rp.empty())g_allowed.insert(rp);
         g1.p6 =exs(obj,0,xd(_s_contact,   sizeof(_s_contact)));
         g1.p7 =exs(obj,0,xd(_s_cric,       sizeof(_s_cric)));
         g1.p8 =exs(obj,0,xd(_s_foot,       sizeof(_s_foot)));
@@ -435,11 +445,20 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeUpdateConfig(J
     std::string expected=xd(cn,sizeof(cn));
     jclass cls=env->GetObjectClass(obj);
     jclass clsCls=env->FindClass("java/lang/Class");
-    jmethodID getSimpleName=env->GetMethodID(clsCls,"getSimpleName","()Ljava/lang/String;");
-    jstring jname=(jstring)env->CallObjectMethod(cls,getSimpleName);
-    const char* cname=env->GetStringUTFChars(jname,nullptr);
-    bool valid=(cname&&std::string(cname)==expected);
-    if(cname) env->ReleaseStringUTFChars(jname,cname);
+    if(!clsCls){env->ExceptionClear();env->DeleteLocalRef(cls);return;}
+    jmethodID gsn=env->GetMethodID(clsCls,"getSimpleName","()Ljava/lang/String;");
+    if(!gsn){env->ExceptionClear();env->DeleteLocalRef(clsCls);env->DeleteLocalRef(cls);return;}
+    jstring jname=(jstring)env->CallObjectMethod(cls,gsn);
+    if(env->ExceptionCheck()){env->ExceptionClear();env->DeleteLocalRef(clsCls);env->DeleteLocalRef(cls);return;}
+    bool valid=false;
+    if(jname){
+        const char* cname=env->GetStringUTFChars(jname,nullptr);
+        valid=(cname&&std::string(cname)==expected);
+        if(cname) env->ReleaseStringUTFChars(jname,cname);
+        env->DeleteLocalRef(jname);
+    }
+    env->DeleteLocalRef(clsCls);
+    env->DeleteLocalRef(cls);
     if(!valid){
         std::lock_guard<std::mutex> lk(g_mutex);
         g7=false;g8=false;g6_len=0;memset(g6,0,sizeof(g6));return;
@@ -464,6 +483,7 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeUpdateConfig(J
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreData(JNIEnv* env,jobject,jstring jsonData){
+    if(!jsonData) return JNI_FALSE;
     std::lock_guard<std::mutex> lk(g_mutex);
     if(!g7||!g8){g3.ok=false;g3.d="";g1.p1=false;g1.p5=false;return JNI_FALSE;}
     const char* js=env->GetStringUTFChars(jsonData,nullptr);
@@ -598,19 +618,26 @@ Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetDirectLinkUrl(JNIEnv
 extern "C" JNIEXPORT void JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeResetSessions(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
-    g2.clear(); g2_total=0; g_allowed.clear();
+    g2.clear(); g2_total=0;
+    // g_allowed is NOT cleared here — it reflects the allowed_pages config, not session counts.
+    // Clearing it would cause all data getters to return [] until the next user interaction.
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeIsConfigValid(JNIEnv* env,jobject){
+    if(isTampered()){
+        std::lock_guard<std::mutex> lk(g_mutex);
+        g1.locked=true;g1.p1=false;g1.p1s=false;g1.p5=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));g1.p2_len=0;
+        return JNI_FALSE;
+    }
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(isTampered()){g1.locked=true;g1.p1=false;g1.p5=false;return JNI_FALSE;}
     if(!g8||!g7){g1.locked=true;return JNI_FALSE;}
     return g1.p5?JNI_TRUE:JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeStoreConfigUrl(JNIEnv* env,jobject,jstring url){
+    if(!url) return;
     const char* us=env->GetStringUTFChars(url,nullptr);
     if(us){
         std::lock_guard<std::mutex> lk(g_mutex);

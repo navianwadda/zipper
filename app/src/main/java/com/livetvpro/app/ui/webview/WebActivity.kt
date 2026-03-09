@@ -49,11 +49,9 @@ class WebActivity : AppCompatActivity() {
     private var usingCustomTabs = false
     private var validated = false
     private var customTabLaunched = false
-    private var customTabPaused = false
+    private var customTabLaunchTimeMs = 0L
 
     private lateinit var timerLabel: TextView
-    private var lastCustomTabUrl: String = ""
-
     private var customTabDurationSeconds = 0L
     private var customTabStartTimeMs = 0L
     private val timerDoneReceiver = object : BroadcastReceiver() {
@@ -61,6 +59,8 @@ class WebActivity : AppCompatActivity() {
             if (intent.action == TimerService.ACTION_TIMER_DONE) onCustomTabTimerFinished()
         }
     }
+
+
 
     companion object {
         private const val EXTRA_URL      = "extra_url"
@@ -121,7 +121,6 @@ class WebActivity : AppCompatActivity() {
             usingCustomTabs = true
             startCustomTabFlow(url, durationSeconds)
         } else {
-            usingCustomTabs = false
             launchWebView(url, durationSeconds)
         }
     }
@@ -129,36 +128,17 @@ class WebActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (usingCustomTabs && customTabLaunched && !validated) {
+            if (System.currentTimeMillis() - customTabLaunchTimeMs < 2000L) return
             val elapsedSeconds = (System.currentTimeMillis() - customTabStartTimeMs) / 1000L
             if (elapsedSeconds >= customTabDurationSeconds) {
                 TimerService.stop(this)
                 onCustomTabTimerFinished()
-            } else if (customTabPaused) {
+            } else {
+                // user came back early — cancel
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
                 finish()
             }
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        if (usingCustomTabs && customTabLaunched) {
-            customTabPaused = true
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        if (usingCustomTabs && customTabLaunched && !validated && !customTabPaused) {
-            TimerService.pause(this)
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        if (usingCustomTabs && customTabLaunched && !validated && !customTabPaused) {
-            TimerService.resume(this)
         }
     }
 
@@ -175,6 +155,7 @@ class WebActivity : AppCompatActivity() {
     override fun onBackPressed() {
         when {
             usingCustomTabs && !validated -> {
+                // Back on WebActivity while timer running — cancel gracefully
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
                 finish()
@@ -192,15 +173,13 @@ class WebActivity : AppCompatActivity() {
     private fun startCustomTabFlow(url: String, durationSeconds: Long) {
         customTabDurationSeconds = durationSeconds
         customTabStartTimeMs     = System.currentTimeMillis()
-        lastCustomTabUrl         = url
-
         setContentView(View(this))
 
-        launchCustomTab(url)
-        customTabLaunched = true
-
-        Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
         TimerService.start(this, durationSeconds)
+        Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
+        customTabLaunched = true
+        customTabLaunchTimeMs = System.currentTimeMillis()
+        launchCustomTab(url)
     }
 
     private fun launchCustomTab(url: String) {

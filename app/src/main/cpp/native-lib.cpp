@@ -416,15 +416,15 @@ static void elc(const std::string& json){
             ri++;
         }
         if(!rp.empty())g_allowed.insert(rp);
-        g1.p6 =exs(obj,0,xd(_s_contact,   sizeof(_s_contact)));
-        g1.p7 =exs(obj,0,xd(_s_cric,       sizeof(_s_cric)));
-        g1.p8 =exs(obj,0,xd(_s_foot,       sizeof(_s_foot)));
-        g1.p9 =exs(obj,0,xd(_s_email,      sizeof(_s_email)));
-        g1.p10=exs(obj,0,xd(_s_web,        sizeof(_s_web)));
-        g1.p11=exs(obj,0,xd(_s_message,    sizeof(_s_message)));
-        g1.p12=exs(obj,0,xd(_s_messageurl, sizeof(_s_messageurl)));
-        g1.p13=exs(obj,0,xd(_s_appver,     sizeof(_s_appver)));
-        g1.p14=exs(obj,0,xd(_s_dlurl,      sizeof(_s_dlurl)));
+        g1.p6 =exs(json,0,xd(_s_contact,   sizeof(_s_contact)));
+        g1.p7 =exs(json,0,xd(_s_cric,       sizeof(_s_cric)));
+        g1.p8 =exs(json,0,xd(_s_foot,       sizeof(_s_foot)));
+        g1.p9 =exs(json,0,xd(_s_email,      sizeof(_s_email)));
+        g1.p10=exs(json,0,xd(_s_web,        sizeof(_s_web)));
+        g1.p11=exs(json,0,xd(_s_message,    sizeof(_s_message)));
+        g1.p12=exs(json,0,xd(_s_messageurl, sizeof(_s_messageurl)));
+        g1.p13=exs(json,0,xd(_s_appver,     sizeof(_s_appver)));
+        g1.p14=exs(json,0,xd(_s_dlurl,      sizeof(_s_dlurl)));
     }catch(...){}
 }
 

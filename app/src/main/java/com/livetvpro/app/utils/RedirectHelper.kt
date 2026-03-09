@@ -32,6 +32,7 @@ object RedirectHelper {
             val action = pendingPostDialogAction
             pendingPostDialogAction = null
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
+                cooldownMgr.recordFired(pageTypeProvider() ?: return@registerForActivityResult, uniqueIdProvider())
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
                 action?.invoke()
             } else {
@@ -50,19 +51,18 @@ object RedirectHelper {
         onAfterDialog: (() -> Unit)? = null
     ): RedirectResult {
         if (!listenerMgr.isConfigValid()) return RedirectResult.NOT_REDIRECTED
-        if (!cooldownMgr.isCooldownExpired(pageType)) return RedirectResult.NOT_REDIRECTED
+        if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
         if (!listenerMgr.onPageInteraction(pageType, uniqueId, cooldownMgr.maxClicksPerPage, cooldownMgr.maxTotalClicks)) return RedirectResult.NOT_REDIRECTED
 
         if (listenerMgr.isInAppRedirectEnabled()) {
             if (dialogShowing) return RedirectResult.REDIRECTED
-            cooldownMgr.recordCooldown(pageType)
             showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher, onAfterDialog)
             return RedirectResult.REDIRECTED
         }
 
         val url = listenerMgr.getDirectLinkUrl()
         if (url.isEmpty()) return RedirectResult.NOT_REDIRECTED
-        cooldownMgr.recordCooldown(pageType)
+        cooldownMgr.recordFired(pageType, uniqueId)
         listenerMgr.openDirectLink(url)
         return RedirectResult.REDIRECTED
     }
@@ -112,7 +112,6 @@ object RedirectHelper {
                 onCancel = {
                     dialogShowing = false
                     cooldownMgr.undoLastFire(pageType, uniqueId)
-                    onAfterDialog?.invoke()
                 }
             )
         } catch (e: Exception) {

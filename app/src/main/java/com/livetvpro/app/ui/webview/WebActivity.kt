@@ -140,7 +140,7 @@ class WebActivity : AppCompatActivity() {
                 TimerService.stop(this)
                 onCustomTabTimerFinished()
             } else {
-                // user came back early — cancel
+                
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
                 finish()

@@ -38,7 +38,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
-import com.livetvpro.app.MainActivity
 
 class WebActivity : AppCompatActivity() {
 
@@ -204,12 +203,8 @@ class WebActivity : AppCompatActivity() {
         if (validated) return
         validated = true
         TimerService.stop(this)
-        Toast.makeText(applicationContext, "Timer completed! You can go back now.", Toast.LENGTH_LONG).show()
-        startActivity(Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-        })
         setResult(RESULT_VALIDATED)
-        finish()
+        finishAndRemoveTask()
     }
 
     @SuppressLint("SetJavaScriptEnabled")

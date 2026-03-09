@@ -17,7 +17,6 @@ object RedirectHelper {
     }
 
     private var dialogShowing = false
-    private var validated = false
     private var pendingPostDialogAction: (() -> Unit)? = null
 
     fun registerLauncher(
@@ -33,7 +32,6 @@ object RedirectHelper {
             val action = pendingPostDialogAction
             pendingPostDialogAction = null
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
-                validated = true
                 cooldownMgr.recordFired(pageTypeProvider() ?: return@registerForActivityResult, uniqueIdProvider())
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
             }
@@ -51,17 +49,15 @@ object RedirectHelper {
         onAfterDialog: (() -> Unit)? = null
     ): RedirectResult {
         if (!listenerMgr.isConfigValid()) return RedirectResult.NOT_REDIRECTED
+        if (!listenerMgr.onPageInteraction(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
 
         if (listenerMgr.isInAppRedirectEnabled()) {
-            if (validated) return RedirectResult.NOT_REDIRECTED
             if (dialogShowing) return RedirectResult.REDIRECTED
             if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
             showSupportDialog(fragment, pageType, uniqueId, listenerMgr, cooldownMgr, launcher, onAfterDialog)
             return RedirectResult.REDIRECTED
         }
 
-        val redirected = listenerMgr.onPageInteraction(pageType, uniqueId)
-        if (!redirected) return RedirectResult.NOT_REDIRECTED
         cooldownMgr.recordFired(pageType, uniqueId)
         return RedirectResult.REDIRECTED
     }

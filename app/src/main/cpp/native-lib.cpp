@@ -17,7 +17,6 @@
 
 static std::mutex g_mutex;
 
-// ── XOR obfuscation ──────────────────────────────────────────────────────────
 static const uint8_t kX  = 0xA7;
 static const uint8_t kX2 = 0x5C;
 
@@ -28,7 +27,6 @@ static inline std::string xd(const uint8_t* b, size_t n) {
 }
 static std::string ds(const uint8_t* b, size_t n) { return xd(b,n); }
 
-// ── All sensitive strings XOR-encoded ────────────────────────────────────────
 static const uint8_t _s_frida[]       = {0xc1,0xd5,0xce,0xc3,0xc6};
 static const uint8_t _s_gumjs[]       = {0xc0,0xd2,0xca,0x8a,0xcd,0xd4,0x8a,0xcb,0xc8,0xc8,0xd7};
 static const uint8_t _s_gmain[]       = {0xc0,0xca,0xc6,0xce,0xc9};
@@ -59,7 +57,6 @@ static const uint8_t _pt_channels[]   = {0xc4,0xcf,0xc6,0xc9,0xc9,0xc2,0xcb,0xd4
 static const uint8_t _pt_live[]       = {0xcb,0xce,0xd1,0xc2,0xf8,0xc2,0xd1,0xc2,0xc9,0xd3,0xd4};
 static const uint8_t _pt_sports[]     = {0xd4,0xd7,0xc8,0xd5,0xd3,0xd4};
 
-// ── Self-integrity via ELF .text CRC ─────────────────────────────────────────
 static uint32_t g_self_crc  = 0;
 static bool     g_crc_ready = false;
 
@@ -114,7 +111,6 @@ static bool isSelfPatched() {
     return c != g_self_crc;
 }
 
-// ── Tamper detection ──────────────────────────────────────────────────────────
 static bool isFridaPortOpen() {
     int sock = socket(AF_INET, SOCK_STREAM, 0); if (sock < 0) return false;
     struct timeval tv{0, 200000};
@@ -191,7 +187,6 @@ static bool isTampered() {
     return false;
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
 static const size_t kP2Size = 256;
 static const size_t kP4Size = 65;
 
@@ -208,7 +203,6 @@ static std::string g4=""; static bool g5=false;
 static uint8_t g6[32]={0}; static bool g7=false,g8=false;
 static uint32_t g9=0;
 
-// ── Storage helpers ───────────────────────────────────────────────────────────
 static inline void ws(const std::string& s,uint8_t* out,size_t mx){
     if(!mx)return; size_t n=s.size()<(mx-1)?s.size():(mx-1);
     for(size_t i=0;i<n;i++) out[i]=(uint8_t)s[i]^kX; out[n]=0;
@@ -224,7 +218,6 @@ static inline std::string rs2(const uint8_t* in,size_t mx){
     std::string o; for(size_t i=0;i<mx&&in[i];i++) o+=(char)(in[i]^kX2); return o;
 }
 
-// ── Crypto ────────────────────────────────────────────────────────────────────
 static uint32_t im32(uint32_t a,uint32_t b){return(uint32_t)((uint64_t)a*b);}
 static const char* KC="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+!@#$%&=";
 static const size_t KL=70;
@@ -338,7 +331,6 @@ static std::string xenc(const std::string& b64ct){
     return adec(b64ct,pw);
 }
 
-// ── JSON helpers ──────────────────────────────────────────────────────────────
 static std::string epd(const std::string& json){
     std::string key=xd(_s_data,sizeof(_s_data));
     size_t dp=json.find(key);if(dp==std::string::npos)return"";
@@ -425,9 +417,6 @@ static inline bool isPageAllowed(const std::string& pt){
     return g_allowed.find(pt)!=g_allowed.end();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Implementation functions — no Java_ prefix, not exported
-// ══════════════════════════════════════════════════════════════════════════════
 static jboolean impl_validateIntegrity(JNIEnv*,jobject){return isTampered()?JNI_FALSE:JNI_TRUE;}
 
 static jstring impl_getConfigKey(JNIEnv* env,jobject){
@@ -462,31 +451,32 @@ static void impl_updateConfig(JNIEnv* env,jobject obj,jstring key){
 
 static jboolean impl_storeData(JNIEnv* env,jobject,jstring jsonData){
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(!g7||!g8){g3.ok=false;g3.d="";g1.p1=false;g1.p5=false;return JNI_FALSE;}
     const char* js=env->GetStringUTFChars(jsonData,nullptr);if(!js)return JNI_FALSE;
     std::string raw(js);env->ReleaseStringUTFChars(jsonData,js);
     try{
         std::string json=raw,ep=epd(raw);
-        if(!ep.empty()){std::string dec=xenc(ep);if(!dec.empty())json=dec;}
+        
+        
+        if(!ep.empty()&&g7&&g8){std::string dec=xenc(ep);if(!dec.empty())json=dec;}
         g3.d=json;g3.ok=true;elc(g3.d);if(!g1.p5)elc(raw);return JNI_TRUE;
     }catch(...){return JNI_FALSE;}
 }
 
 static jstring impl_getCategories(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(!g3.ok||!g8)return env->NewStringUTF("[]");
+    if(!g3.ok)return env->NewStringUTF("[]");
     if(!isPageAllowed(xd(_pt_home,sizeof(_pt_home))))return env->NewStringUTF("[]");
     return env->NewStringUTF(exa(g3.d,"categories").c_str());
 }
 static jstring impl_getChannels(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(!g3.ok||!g8)return env->NewStringUTF("[]");
+    if(!g3.ok)return env->NewStringUTF("[]");
     if(!isPageAllowed(xd(_pt_channels,sizeof(_pt_channels))))return env->NewStringUTF("[]");
     return env->NewStringUTF(exa(g3.d,"channels").c_str());
 }
 static jstring impl_getLiveEvents(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(!g3.ok||!g8)return env->NewStringUTF("[]");
+    if(!g3.ok)return env->NewStringUTF("[]");
     if(!isPageAllowed(xd(_pt_live,sizeof(_pt_live))))return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"live_events");if(r=="[]")r=exa(g3.d,"liveEvents");
     return env->NewStringUTF(r.c_str());
@@ -498,21 +488,21 @@ static jstring impl_getExternalLiveEvents(JNIEnv* env,jobject){
 }
 static jstring impl_getEventCategories(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(!g3.ok||!g8)return env->NewStringUTF("[]");
+    if(!g3.ok)return env->NewStringUTF("[]");
     if(!isPageAllowed(xd(_pt_live,sizeof(_pt_live))))return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"event_categories");if(r=="[]")r=exa(g3.d,"eventCategories");
     return env->NewStringUTF(r.c_str());
 }
 static jstring impl_getSports(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(!g3.ok||!g8)return env->NewStringUTF("[]");
+    if(!g3.ok)return env->NewStringUTF("[]");
     if(!isPageAllowed(xd(_pt_sports,sizeof(_pt_sports))))return env->NewStringUTF("[]");
     std::string r=exa(g3.d,"sports_slug");if(r=="[]")r=exa(g3.d,"sports");
     return env->NewStringUTF(r.c_str());
 }
 static jboolean impl_isDataLoaded(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(!g8)return JNI_FALSE;return g3.ok?JNI_TRUE:JNI_FALSE;
+    return g3.ok?JNI_TRUE:JNI_FALSE;
 }
 static void impl_storeConfigUrl(JNIEnv* env,jobject,jstring url){
     const char* us=env->GetStringUTFChars(url,nullptr);
@@ -526,7 +516,7 @@ static jboolean impl_shouldShowLink(JNIEnv* env,jobject,jstring pageType,jstring
     std::lock_guard<std::mutex> lk(g_mutex);
     if(g1.locked)return JNI_FALSE;
     if(isTampered()){g1.locked=true;g1.p1=false;g1.p1s=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return JNI_FALSE;}
-    if(!g8||!g7){g1.locked=true;return JNI_FALSE;}
+    if(!g8||!g7){return JNI_FALSE;}
     if(g1.p1!=g1.p1s){g1.locked=true;g1.p1=false;g1.p1s=false;return JNI_FALSE;}
     std::string u1=rs(g1.p2,kP2Size),u2=rs2(g1.p2s,kP2Size);
     if(u1!=u2){g1.locked=true;g1.p1=false;g1.p1s=false;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return JNI_FALSE;}
@@ -548,7 +538,7 @@ static jboolean impl_shouldShowLink(JNIEnv* env,jobject,jstring pageType,jstring
 }
 static jstring impl_getDirectLinkUrl(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
-    if(g1.locked||!g8)return env->NewStringUTF("");
+    if(g1.locked)return env->NewStringUTF("");
     std::string u1=rs(g1.p2,kP2Size),u2=rs2(g1.p2s,kP2Size);
     if(u1!=u2){g1.locked=true;memset(g1.p2,0,sizeof(g1.p2));memset(g1.p2s,0,sizeof(g1.p2s));return env->NewStringUTF("");}
     return env->NewStringUTF(u1.c_str());
@@ -559,7 +549,6 @@ static void impl_resetSessions(JNIEnv*,jobject){
 static jboolean impl_isConfigValid(JNIEnv*,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     if(isTampered()){g1.locked=true;g1.p1=false;g1.p5=false;return JNI_FALSE;}
-    if(!g8||!g7){g1.locked=true;return JNI_FALSE;}
     return g1.p5?JNI_TRUE:JNI_FALSE;
 }
 static jstring impl_getContactUrl (JNIEnv* e,jobject){std::lock_guard<std::mutex> lk(g_mutex);return e->NewStringUTF(g1.p6.c_str());}
@@ -572,15 +561,12 @@ static jstring impl_getMessageUrl(JNIEnv* e,jobject){std::lock_guard<std::mutex>
 static jstring impl_getAppVersion(JNIEnv* e,jobject){std::lock_guard<std::mutex> lk(g_mutex);return e->NewStringUTF(g1.p13.c_str());}
 static jstring impl_getDownloadUrl(JNIEnv* e,jobject){std::lock_guard<std::mutex> lk(g_mutex);return e->NewStringUTF(g1.p14.c_str());}
 
-// ══════════════════════════════════════════════════════════════════════════════
-// JNI_OnLoad — RegisterNatives with runtime-decoded names, zero Java_ exports
-// ══════════════════════════════════════════════════════════════════════════════
 extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     computeSelfCrc();
     JNIEnv* env=nullptr;
     if(vm->GetEnv((void**)&env,JNI_VERSION_1_6)!=JNI_OK)return JNI_ERR;
 
-    // Method name/signature byte arrays (XOR kX=0xA7)
+    
     static const uint8_t mn_vi[]  ={0xc9,0xc6,0xd3,0xce,0xd1,0xc2,0xf1,0xc6,0xcb,0xce,0xc3,0xc6,0xd3,0xc2,0xee,0xc9,0xd3,0xc2,0xc0,0xd5,0xce,0xd3,0xde};
     static const uint8_t ms_z[]   ={0x8f,0x8e,0xfd};
     static const uint8_t mn_gck[] ={0xc9,0xc6,0xd3,0xce,0xd1,0xc2,0xe0,0xc2,0xd3,0xe4,0xc8,0xc9,0xc1,0xce,0xc0,0xec,0xc2,0xde};
@@ -618,7 +604,7 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
     jclass clsMgr =env->FindClass("com/livetvpro/app/utils/NativeListenerManager");
     if(!clsRepo||!clsMgr)return JNI_ERR;
 
-    // Build all strings at runtime
+    
     std::string n_vi=ds(mn_vi,sizeof(mn_vi)),   s_z=ds(ms_z,sizeof(ms_z));
     std::string n_gck=ds(mn_gck,sizeof(mn_gck)), s_str=ds(ms_str,sizeof(ms_str));
     std::string n_uc=ds(mn_uc,sizeof(mn_uc)),    s_sv=ds(ms_sv,sizeof(ms_sv));

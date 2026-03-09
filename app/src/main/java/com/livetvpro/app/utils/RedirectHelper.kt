@@ -33,10 +33,10 @@ object RedirectHelper {
             pendingPostDialogAction = null
             if (result.resultCode == WebActivity.RESULT_VALIDATED) {
                 Toast.makeText(fragment.requireContext(), "Thank you for your support!", Toast.LENGTH_SHORT).show()
+                action?.invoke()
             } else {
                 cooldownMgr.undoLastFire(pageTypeProvider() ?: return@registerForActivityResult, uniqueIdProvider())
             }
-            action?.invoke()
         }
     }
 

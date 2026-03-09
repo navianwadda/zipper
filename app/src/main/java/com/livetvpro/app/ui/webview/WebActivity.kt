@@ -99,12 +99,6 @@ class WebActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (savedInstanceState != null) {
-            setResult(RESULT_CANCELED)
-            finish()
-            return
-        }
-
         val url             = intent.getStringExtra(EXTRA_URL) ?: ""
         val durationSeconds = intent.getLongExtra(EXTRA_DURATION, 10L)
 
@@ -140,7 +134,7 @@ class WebActivity : AppCompatActivity() {
                 TimerService.stop(this)
                 onCustomTabTimerFinished()
             } else {
-                
+                // user came back early — cancel
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
                 finish()
@@ -161,9 +155,10 @@ class WebActivity : AppCompatActivity() {
     override fun onBackPressed() {
         when {
             usingCustomTabs && !validated -> {
+                // Back on WebActivity while timer running — cancel gracefully
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
-                finishAndRemoveTask()
+                finish()
             }
             !usingCustomTabs && webView?.canGoBack() == true -> {
                 webView?.goBack()
@@ -171,7 +166,7 @@ class WebActivity : AppCompatActivity() {
             else -> {
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
-                finishAndRemoveTask()
+                finish()
             }
         }
     }
@@ -214,7 +209,7 @@ class WebActivity : AppCompatActivity() {
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         })
         setResult(RESULT_VALIDATED)
-        finishAndRemoveTask()
+        finish()
     }
 
     @SuppressLint("SetJavaScriptEnabled")

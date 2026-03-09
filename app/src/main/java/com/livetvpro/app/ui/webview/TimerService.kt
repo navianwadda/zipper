@@ -19,12 +19,12 @@ class TimerService : Service() {
     private var durationSeconds = 0L
     private var startTimeMs = 0L
     private var remainingSeconds = 0L
-
     private var isPaused = false
 
     private val tickRunnable = object : Runnable {
         override fun run() {
-val elapsed = (System.currentTimeMillis() - startTimeMs) / 1000L
+            if (isPaused) return
+            val elapsed = (System.currentTimeMillis() - startTimeMs) / 1000L
             remainingSeconds = durationSeconds - elapsed
             if (remainingSeconds <= 0) {
                 updateNotification(0)
@@ -88,16 +88,16 @@ val elapsed = (System.currentTimeMillis() - startTimeMs) / 1000L
                     isPaused = false
                     durationSeconds = remainingSeconds
                     startTimeMs = System.currentTimeMillis()
-                    handler.removeCallbacks(tickRunnable)
                     handler.post(tickRunnable)
                 }
             }
             else -> {
+                // Fresh start
                 durationSeconds = intent?.getLongExtra(EXTRA_DURATION, 30L) ?: 30L
                 remainingSeconds = durationSeconds
                 startTimeMs = System.currentTimeMillis()
+                isPaused = false
                 handler.removeCallbacks(tickRunnable)
-                updateNotification(remainingSeconds)
                 handler.post(tickRunnable)
             }
         }

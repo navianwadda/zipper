@@ -28,7 +28,7 @@
             android:focusableInTouchMode="false"
             android:clickable="false"
             app:show_buffering="when_playing"
-            app:surface_type="texture_view"
+            app:surface_type="surface_view"
             app:use_controller="false"
             app:resize_mode="fill" />
 

@@ -1875,16 +1875,19 @@ class PlayerActivity : AppCompatActivity() {
                     if (streamInfo.drmScheme == "clearkey") {
                         // For ClearKey: declare CLEARKEY_UUID on the MediaItem so ExoPlayer
                         // honours the DrmSessionManagerProvider set on the factory.
-                        // The actual key is supplied by the manager (not the license URI).
-                        val licenseUri = streamInfo.drmLicenseUrl
-                            ?.takeIf { it.startsWith("http", ignoreCase = true) }
-                            ?: "https://cwip-shaka-proxy.appspot.com/no_auth"
-                        mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
-                                .setLicenseUri(licenseUri)
+                        val drmConfigBuilder = MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
+                        if (streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true) {
+                            // Real license server URL — force ExoPlayer to use it
+                            drmConfigBuilder
+                                .setLicenseUri(streamInfo.drmLicenseUrl)
                                 .setForceDefaultLicenseUri(true)
-                                .build()
-                        )
+                        } else {
+                            // Inline keyId:key hex pair — key is in the LocalMediaDrmCallback,
+                            // use a dummy URI and do NOT force it so the local callback is used
+                            drmConfigBuilder
+                                .setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
+                        }
+                        mediaItemBuilder.setDrmConfiguration(drmConfigBuilder.build())
                     } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID

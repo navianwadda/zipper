@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
-import android.view.InputDevice
 
 object DeviceUtils {
 
@@ -35,40 +34,23 @@ object DeviceUtils {
 
     fun init(context: Context) {
         val pm = context.packageManager
-        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
 
-        deviceType = when (uiModeManager.currentModeType) {
-            Configuration.UI_MODE_TYPE_WATCH -> DeviceType.WATCH
-            Configuration.UI_MODE_TYPE_CAR -> DeviceType.AUTOMOTIVE
-            Configuration.UI_MODE_TYPE_TELEVISION -> DeviceType.TV
+        deviceType = when {
+            isTvHardware(pm) -> DeviceType.TV
+            isWatchHardware(context) -> DeviceType.WATCH
+            isAutomotiveHardware(pm) -> DeviceType.AUTOMOTIVE
             else -> detectHandheld(context)
-        }
-
-        if (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
-            deviceType = DeviceType.TV
-        }
-
-        if (pm.hasSystemFeature("amazon.hardware.fire_tv") && !hasPhysicalTouchInputDevice()) {
-            deviceType = DeviceType.TV
-        }
-
-        if (deviceType != DeviceType.TV
-            && !pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
-            && !hasPhysicalTouchInputDevice()
-            && context.resources.configuration.smallestScreenWidthDp >= 720
-        ) {
-            deviceType = DeviceType.TV
         }
 
         if (deviceType == DeviceType.PHONE || deviceType == DeviceType.TABLET
             || deviceType == DeviceType.FOLDABLE
         ) {
-            if (isX86OrEmulator()) {
+            if (isEmulatorBuild()) {
                 deviceType = DeviceType.EMULATOR
             }
         }
 
-        hasTouchInput = hasPhysicalTouchInputDevice()
+        hasTouchInput = pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
     }
 
     fun notifyTouchDetected() {
@@ -77,38 +59,35 @@ object DeviceUtils {
         }
     }
 
-    private fun hasPhysicalTouchInputDevice(): Boolean {
-        return try {
-            InputDevice.getDeviceIds().any { id ->
-                val device = InputDevice.getDevice(id) ?: return@any false
-                if (device.isVirtual) return@any false
-                (device.sources and InputDevice.SOURCE_TOUCHSCREEN) == InputDevice.SOURCE_TOUCHSCREEN
-            }
-        } catch (e: Exception) {
-            false
-        }
+    private fun isTvHardware(pm: PackageManager): Boolean {
+        return pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+            || pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)
+            || pm.hasSystemFeature("amazon.hardware.fire_tv")
     }
 
-    private fun isX86OrEmulator(): Boolean {
-        val supportedAbis = Build.SUPPORTED_ABIS
-        val isX86 = supportedAbis.any { it.startsWith("x86") }
+    private fun isWatchHardware(context: Context): Boolean {
+        return context.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
+    }
 
-        val isEmulatorBuild = (Build.FINGERPRINT.startsWith("generic")
+    private fun isAutomotiveHardware(pm: PackageManager): Boolean {
+        return pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)
+    }
+
+    private fun isEmulatorBuild(): Boolean {
+        return (Build.FINGERPRINT.startsWith("generic")
                 || Build.FINGERPRINT.startsWith("unknown")
                 || Build.MODEL.contains("Emulator", ignoreCase = true)
                 || Build.MODEL.contains("Android SDK", ignoreCase = true)
                 || Build.MANUFACTURER.contains("Genymotion", ignoreCase = true)
                 || Build.BRAND.startsWith("generic")
                 || Build.DEVICE.startsWith("generic"))
-
-        return isX86 || isEmulatorBuild
     }
 
     private fun detectHandheld(context: Context): DeviceType {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (context.packageManager.hasSystemFeature("android.hardware.sensor.hinge_angle")) {
-                return DeviceType.FOLDABLE
-            }
+        val pm = context.packageManager
+
+        if (pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_HINGE_ANGLE)) {
+            return DeviceType.FOLDABLE
         }
 
         val smallestWidthDp = context.resources.configuration.smallestScreenWidthDp

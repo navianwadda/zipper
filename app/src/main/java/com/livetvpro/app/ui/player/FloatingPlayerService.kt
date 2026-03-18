@@ -37,7 +37,6 @@ import androidx.media3.exoplayer.drm.HttpMediaDrmCallback
 import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
-import java.util.UUID
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import kotlin.math.abs
@@ -1587,7 +1586,6 @@ class FloatingPlayerService : Service() {
 
     private fun createClearKeyServerDrmManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
-            val clearKeyUuid = java.util.UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
             val factory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
@@ -1598,7 +1596,7 @@ class FloatingPlayerService : Service() {
             val cb = HttpMediaDrmCallback(licenseUrl, factory)
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
                 .build(cb)
         } catch (e: Exception) { null }
@@ -1606,26 +1604,32 @@ class FloatingPlayerService : Service() {
 
     private fun createClearKeyDrmManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
-            val uuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
-            val kidB64 = android.util.Base64.encodeToString(hexToBytes(keyIdHex),
+            val kidBytes = hexToBytes(keyIdHex)
+            val kBytes = hexToBytes(keyHex)
+            if (kidBytes.isEmpty() || kBytes.isEmpty()) return null
+            val kidB64 = android.util.Base64.encodeToString(kidBytes,
                 android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val kB64 = android.util.Base64.encodeToString(hexToBytes(keyHex),
+            val kB64 = android.util.Base64.encodeToString(kBytes,
                 android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val jwk = """{"keys":[{"kty":"oct","k":"$kB64","kid":"$kidB64"}],"type":"temporary"}"""
+            val jwk = "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$kidB64\",\"k\":\"$kB64\"}],\"type\":\"temporary\"}"
             DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .build(LocalMediaDrmCallback(jwk.toByteArray()))
+                .build(LocalMediaDrmCallback(jwk.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
     }
 
     private fun createClearKeyDrmManagerFromJwk(jwkJson: String): DefaultDrmSessionManager? {
         return try {
-            val uuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+            val json = if (!jwkJson.contains("\"type\"")) {
+                jwkJson.trimEnd().trimEnd('}') + ",\"type\":\"temporary\"}"
+            } else {
+                jwkJson
+            }
             DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .build(LocalMediaDrmCallback(jwkJson.toByteArray()))
+                .build(LocalMediaDrmCallback(json.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
     }
 

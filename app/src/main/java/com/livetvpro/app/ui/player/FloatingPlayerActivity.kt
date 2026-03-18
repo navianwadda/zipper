@@ -640,30 +640,38 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
             val streamUrlRaw = intent.getStringExtra("STREAM_URL") ?: ""
 
-            if (streamUrlRaw.contains("|")) {
-                streamUrl = streamUrlRaw
+            val cookie = intent.getStringExtra("COOKIE") ?: ""
+            val referer = intent.getStringExtra("REFERER") ?: ""
+            val origin = intent.getStringExtra("ORIGIN") ?: ""
+            val drmLicenseExtra = intent.getStringExtra("DRM_LICENSE") ?: ""
+            val userAgentExtra = intent.getStringExtra("USER_AGENT") ?: "Default"
+            val drmSchemeExtra = intent.getStringExtra("DRM_SCHEME") ?: ""
 
+            if (streamUrlRaw.contains("|")) {
                 val parsed = parseStreamUrl(streamUrlRaw)
+                val finalDrmScheme = parsed.drmScheme
+                    ?: drmSchemeExtra.takeIf { it.isNotEmpty() }
+                val finalDrmLicense = when {
+                    parsed.drmKeyId != null && parsed.drmKey != null ->
+                        "${parsed.drmKeyId}:${parsed.drmKey}"
+                    parsed.drmLicenseUrl != null -> parsed.drmLicenseUrl
+                    drmLicenseExtra.isNotEmpty() -> drmLicenseExtra
+                    else -> null
+                }
                 allEventLinks = listOf(
                     LiveEventLink(
                         quality = "Network Stream",
                         url = parsed.url,
-                        cookie = parsed.headers["Cookie"] ?: "",
-                        referer = parsed.headers["Referer"] ?: "",
-                        origin = parsed.headers["Origin"] ?: "",
-                        userAgent = parsed.headers["User-Agent"] ?: "Default",
-                        drmScheme = parsed.drmScheme,
-                        drmLicenseUrl = parsed.drmLicenseUrl
+                        cookie = parsed.headers["Cookie"]?.takeIf { it.isNotEmpty() } ?: cookie,
+                        referer = parsed.headers["Referer"]?.takeIf { it.isNotEmpty() } ?: referer,
+                        origin = parsed.headers["Origin"]?.takeIf { it.isNotEmpty() } ?: origin,
+                        userAgent = parsed.headers["User-Agent"]?.takeIf { it.isNotEmpty() } ?: userAgentExtra,
+                        drmScheme = finalDrmScheme,
+                        drmLicenseUrl = finalDrmLicense
                     )
                 )
+                streamUrl = buildStreamUrl(allEventLinks[0])
             } else {
-                val cookie = intent.getStringExtra("COOKIE") ?: ""
-                val referer = intent.getStringExtra("REFERER") ?: ""
-                val origin = intent.getStringExtra("ORIGIN") ?: ""
-                val drmLicense = intent.getStringExtra("DRM_LICENSE") ?: ""
-                val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
-                val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
-
                 allEventLinks = listOf(
                     LiveEventLink(
                         quality = "Network Stream",
@@ -671,12 +679,11 @@ class FloatingPlayerActivity : AppCompatActivity() {
                         cookie = cookie,
                         referer = referer,
                         origin = origin,
-                        userAgent = userAgent,
-                        drmScheme = drmScheme,
-                        drmLicenseUrl = drmLicense
+                        userAgent = userAgentExtra,
+                        drmScheme = drmSchemeExtra.takeIf { it.isNotEmpty() },
+                        drmLicenseUrl = drmLicenseExtra.takeIf { it.isNotEmpty() }
                     )
                 )
-
                 streamUrl = buildStreamUrl(allEventLinks[0])
             }
 
@@ -1094,45 +1101,33 @@ class FloatingPlayerActivity : AppCompatActivity() {
         val url = streamUrl.substring(0, pipeIndex).trim()
         val rawParams = streamUrl.substring(pipeIndex + 1).trim()
 
-        val parts = buildList {
-            for (segment in rawParams.split("|")) {
-                val eqIdx = segment.indexOf('=')
-                val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
-                if (value.startsWith("http://", ignoreCase = true) ||
-                    value.startsWith("https://", ignoreCase = true)) {
-                    add(segment)
-                } else {
-                    addAll(segment.split("&"))
-                }
-            }
-        }
-
         val headers = mutableMapOf<String, String>()
         var drmScheme: String? = null
         var drmKeyId: String? = null
         var drmKey: String? = null
         var drmLicenseUrl: String? = null
 
-        for (part in parts) {
-            val eqIndex = part.indexOf('=')
+        for (segment in rawParams.split("|")) {
+            val eqIndex = segment.indexOf('=')
             if (eqIndex == -1) continue
-
-            val key = part.substring(0, eqIndex).trim()
-            val value = part.substring(eqIndex + 1).trim()
+            val key = segment.substring(0, eqIndex).trim()
+            val value = segment.substring(eqIndex + 1).trim()
 
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
                 "drmlicense" -> {
-                    if (value.startsWith("http://", ignoreCase = true) ||
-                        value.startsWith("https://", ignoreCase = true)) {
-                        drmLicenseUrl = value
-                    } else if (value.trimStart().startsWith("{")) {
-                        drmLicenseUrl = value
-                    } else {
-                        val colonIndex = value.indexOf(':')
-                        if (colonIndex != -1) {
-                            drmKeyId = value.substring(0, colonIndex).trim()
-                            drmKey = value.substring(colonIndex + 1).trim()
+                    when {
+                        value.startsWith("http://", ignoreCase = true) ||
+                        value.startsWith("https://", ignoreCase = true) ->
+                            drmLicenseUrl = value
+                        value.trimStart().startsWith("{") ->
+                            drmLicenseUrl = value
+                        else -> {
+                            val colonIndex = value.indexOf(':')
+                            if (colonIndex != -1) {
+                                drmKeyId = value.substring(0, colonIndex).trim()
+                                drmKey = value.substring(colonIndex + 1).trim()
+                            }
                         }
                     }
                 }
@@ -1141,13 +1136,12 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 "origin" -> headers["Origin"] = value
                 "cookie" -> headers["Cookie"] = value
                 "x-forwarded-for" -> headers["X-Forwarded-For"] = value
-                else -> headers[key] = value
+                else -> if (key.isNotEmpty()) headers[key] = value
             }
         }
 
         return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
     }
-
     private fun normalizeDrmScheme(scheme: String): String {
         val lower = scheme.lowercase()
         return when {
@@ -1354,7 +1348,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
-                        val licenseHeaders = headers.filter { (k, _) -> k != "Referer" && k != "Origin" }
+                        val licenseHeaders = headers.filter { (k, _) -> val kl = k.lowercase(); kl != "referer" && kl != "origin" && kl != "host" }
                         mediaItemBuilder.setDrmConfiguration(
                             MediaItem.DrmConfiguration.Builder(drmUuid)
                                 .setLicenseUri(streamInfo.drmLicenseUrl)

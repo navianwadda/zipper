@@ -252,7 +252,7 @@ object FloatingPlayerHelper {
             return ChannelLink(quality = "Default", url = streamUrl)
         }
         val url = streamUrl.substring(0, pipeIndex).trim()
-        val parts = streamUrl.substring(pipeIndex + 1).replace("&", "|").split("|")
+        val rawParams = streamUrl.substring(pipeIndex + 1)
 
         var cookie: String? = null
         var referer: String? = null
@@ -260,19 +260,36 @@ object FloatingPlayerHelper {
         var userAgent: String? = null
         var drmScheme: String? = null
         var drmLicenseUrl: String? = null
+        val extraHeaders = mutableMapOf<String, String>()
 
-        for (part in parts) {
-            val eq = part.indexOf('=')
+        for (segment in rawParams.split("|")) {
+            val trimmed = segment.trim()
+            if (trimmed.isEmpty()) continue
+            val eq = trimmed.indexOf('=')
             if (eq == -1) continue
-            val key = part.substring(0, eq).trim().lowercase()
-            val value = part.substring(eq + 1).trim()
-            when (key) {
+            val key = trimmed.substring(0, eq).trim()
+            val value = trimmed.substring(eq + 1).trim()
+            if (key.isEmpty() || value.isEmpty()) continue
+
+            when (key.lowercase()) {
                 "drmscheme" -> drmScheme = value
                 "drmlicense" -> drmLicenseUrl = value
                 "cookie" -> cookie = value
                 "referer", "referrer" -> referer = value
                 "origin" -> origin = value
                 "user-agent", "useragent" -> userAgent = value
+                "x-forwarded-for" -> extraHeaders["X-Forwarded-For"] = value
+                "x-requested-with" -> extraHeaders["X-Requested-With"] = value
+                "authorization" -> extraHeaders["Authorization"] = value
+                "host" -> extraHeaders["Host"] = value
+                else -> {
+                    if (key.startsWith("x-", ignoreCase = true) ||
+                        key.startsWith("sec-", ignoreCase = true) ||
+                        key.equals("accept", ignoreCase = true) ||
+                        key.equals("range", ignoreCase = true)) {
+                        extraHeaders[key] = value
+                    }
+                }
             }
         }
 

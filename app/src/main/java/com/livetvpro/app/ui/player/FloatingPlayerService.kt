@@ -1489,57 +1489,70 @@ class FloatingPlayerService : Service() {
 
     private fun parseStreamUrl(streamUrl: String): StreamInfo {
         val pipeIndex = streamUrl.indexOf('|')
-        if (pipeIndex == -1) return StreamInfo(streamUrl, mapOf(), null, null, null, null)
+        if (pipeIndex == -1) {
+            return StreamInfo(streamUrl, mapOf(), null, null, null, null)
+        }
 
         val url = streamUrl.substring(0, pipeIndex).trim()
-        val parts = buildList {
-            for (segment in streamUrl.substring(pipeIndex + 1).split("|")) {
-                val eqIdx = segment.indexOf('=')
-                val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
-                if (value.startsWith("http://", ignoreCase = true) ||
-                    value.startsWith("https://", ignoreCase = true)) {
-                    add(segment)
-                } else {
-                    addAll(segment.split("&"))
-                }
-            }
-        }
+        val rawParams = streamUrl.substring(pipeIndex + 1).trim()
+
         val headers = mutableMapOf<String, String>()
         var drmScheme: String? = null
         var drmKeyId: String? = null
         var drmKey: String? = null
         var drmLicenseUrl: String? = null
 
-        for (part in parts) {
-            val eqIndex = part.indexOf('=')
+        for (segment in rawParams.split("|")) {
+            val trimmed = segment.trim()
+            if (trimmed.isEmpty()) continue
+            val eqIndex = trimmed.indexOf('=')
             if (eqIndex == -1) continue
-            val key = part.substring(0, eqIndex).trim()
-            val value = part.substring(eqIndex + 1).trim()
+            val key = trimmed.substring(0, eqIndex).trim()
+            val value = trimmed.substring(eqIndex + 1).trim()
+            if (key.isEmpty() || value.isEmpty()) continue
+
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
-                "drmlicense" -> when {
-                    value.startsWith("http://", ignoreCase = true) ||
-                    value.startsWith("https://", ignoreCase = true) -> drmLicenseUrl = value
-                    value.trimStart().startsWith("{") -> drmLicenseUrl = value
-                    else -> {
-                        val colonIndex = value.indexOf(':')
-                        if (colonIndex != -1) {
-                            drmKeyId = value.substring(0, colonIndex).trim()
-                            drmKey = value.substring(colonIndex + 1).trim()
+                "drmlicense" -> {
+                    when {
+                        value.startsWith("http://", ignoreCase = true) ||
+                        value.startsWith("https://", ignoreCase = true) ->
+                            drmLicenseUrl = value
+                        value.trimStart().startsWith("{") ->
+                            drmLicenseUrl = value
+                        else -> {
+                            val colonIndex = value.indexOf(':')
+                            if (colonIndex != -1) {
+                                drmKeyId = value.substring(0, colonIndex).trim()
+                                drmKey = value.substring(colonIndex + 1).trim()
+                            } else {
+                                drmLicenseUrl = value
+                            }
                         }
                     }
                 }
-                "user-agent", "useragent" -> headers["User-Agent"] = value
                 "referer", "referrer" -> headers["Referer"] = value
-                "cookie" -> headers["Cookie"] = value
+                "user-agent", "useragent" -> headers["User-Agent"] = value
                 "origin" -> headers["Origin"] = value
+                "cookie" -> headers["Cookie"] = value
                 "x-forwarded-for" -> headers["X-Forwarded-For"] = value
-                else -> headers[key] = value
+                "x-requested-with" -> headers["X-Requested-With"] = value
+                "authorization" -> headers["Authorization"] = value
+                "host" -> headers["Host"] = value
+                else -> {
+                    if (key.startsWith("x-", ignoreCase = true) ||
+                        key.startsWith("sec-", ignoreCase = true) ||
+                        key.equals("accept", ignoreCase = true) ||
+                        key.equals("accept-language", ignoreCase = true) ||
+                        key.equals("range", ignoreCase = true)) {
+                        headers[key] = value
+                    }
+                }
             }
         }
+
         return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
     }
-
 
     private fun buildStreamInfoFromDrmFields(
         url: String,
@@ -1547,20 +1560,85 @@ class FloatingPlayerService : Service() {
         drmScheme: String,
         drmLicense: String
     ): StreamInfo {
-        val scheme = normalizeDrmScheme(drmScheme).takeIf { it.isNotEmpty() }
-        return when {
-            drmLicense.trimStart().startsWith("{") ->
-                StreamInfo(url, headers, scheme, null, null, drmLicense)
-            drmLicense.startsWith("http://", ignoreCase = true) ||
-            drmLicense.startsWith("https://", ignoreCase = true) ->
-                StreamInfo(url, headers, scheme, null, null, drmLicense)
-            drmLicense.contains(':') -> {
-                val i = drmLicense.indexOf(':')
-                StreamInfo(url, headers, scheme,
-                    drmLicense.substring(0, i).trim(),
-                    drmLicense.substring(i + 1).trim(), null)
+        val pipeIndex = url.indexOf('|')
+        val cleanUrl: String
+        val mergedHeaders: Map<String, String>
+        var parsedDrmScheme: String? = null
+        var parsedDrmKeyId: String? = null
+        var parsedDrmKey: String? = null
+        var parsedDrmLicenseUrl: String? = null
+
+        if (pipeIndex != -1) {
+            cleanUrl = url.substring(0, pipeIndex).trim()
+            val rawParams = url.substring(pipeIndex + 1)
+            val extraHeaders = headers.toMutableMap()
+            val parts = buildList {
+                for (segment in rawParams.split("|")) {
+                    val eqIdx = segment.indexOf('=')
+                    val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
+                    if (value.startsWith("http://", ignoreCase = true) ||
+                        value.startsWith("https://", ignoreCase = true)) {
+                        add(segment)
+                    } else {
+                        addAll(segment.split("&"))
+                    }
+                }
             }
-            else -> StreamInfo(url, headers, scheme, null, null, null)
+            for (part in parts) {
+                val eqIndex = part.indexOf('=')
+                if (eqIndex == -1) continue
+                val key = part.substring(0, eqIndex).trim()
+                val value = part.substring(eqIndex + 1).trim()
+                when (key.lowercase()) {
+                    "user-agent", "useragent" -> extraHeaders["User-Agent"] = value
+                    "referer", "referrer" -> extraHeaders["Referer"] = value
+                    "origin" -> extraHeaders["Origin"] = value
+                    "cookie" -> extraHeaders["Cookie"] = value
+                    "drmscheme" -> parsedDrmScheme = normalizeDrmScheme(value)
+                    "drmlicense" -> {
+                        when {
+                            value.startsWith("http://", ignoreCase = true) ||
+                            value.startsWith("https://", ignoreCase = true) ->
+                                parsedDrmLicenseUrl = value
+                            value.trimStart().startsWith("{") ->
+                                parsedDrmLicenseUrl = value
+                            value.contains(':') -> {
+                                val i = value.indexOf(':')
+                                parsedDrmKeyId = value.substring(0, i).trim()
+                                parsedDrmKey = value.substring(i + 1).trim()
+                            }
+                        }
+                    }
+                }
+            }
+            mergedHeaders = extraHeaders
+        } else {
+            cleanUrl = url
+            mergedHeaders = headers
+        }
+
+        val finalScheme = (parsedDrmScheme ?: normalizeDrmScheme(drmScheme).takeIf { it.isNotEmpty() })
+        val finalLicense = when {
+            parsedDrmKeyId != null && parsedDrmKey != null -> "${parsedDrmKeyId}:${parsedDrmKey}"
+            parsedDrmLicenseUrl != null -> parsedDrmLicenseUrl
+            drmLicense.isNotEmpty() -> drmLicense
+            else -> null
+        }
+
+        return when {
+            finalLicense == null -> StreamInfo(cleanUrl, mergedHeaders, finalScheme, null, null, null)
+            finalLicense.trimStart().startsWith("{") ->
+                StreamInfo(cleanUrl, mergedHeaders, finalScheme, null, null, finalLicense)
+            finalLicense.startsWith("http://", ignoreCase = true) ||
+            finalLicense.startsWith("https://", ignoreCase = true) ->
+                StreamInfo(cleanUrl, mergedHeaders, finalScheme, null, null, finalLicense)
+            finalLicense.contains(':') -> {
+                val i = finalLicense.indexOf(':')
+                StreamInfo(cleanUrl, mergedHeaders, finalScheme,
+                    finalLicense.substring(0, i).trim(),
+                    finalLicense.substring(i + 1).trim(), null)
+            }
+            else -> StreamInfo(cleanUrl, mergedHeaders, finalScheme, null, null, null)
         }
     }
 
@@ -1704,7 +1782,8 @@ class FloatingPlayerService : Service() {
             streamInfo.drmLicenseUrl?.let { licUrl ->
                 val uuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                 val licenseHeaders = headers.filter { (k, _) ->
-                    k != "Referer" && k != "Origin"
+                    val kl = k.lowercase()
+                    kl != "referer" && kl != "origin" && kl != "host"
                 }
                 builder.setDrmConfiguration(
                     MediaItem.DrmConfiguration.Builder(uuid)

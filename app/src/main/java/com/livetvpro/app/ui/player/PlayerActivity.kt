@@ -1750,7 +1750,9 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
 
-        return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
+        return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl).also {
+            android.util.Log.d("DRM_DEBUG", "parseStreamUrl → url=${it.url} scheme=${it.drmScheme} keyId=${it.drmKeyId} key=${it.drmKey} licenseUrl=${it.drmLicenseUrl}")
+        }
     }
     private fun normalizeDrmScheme(scheme: String): String {
         val lower = scheme.lowercase()
@@ -1817,8 +1819,24 @@ class PlayerActivity : AppCompatActivity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            val mediaSourceFactory = DefaultMediaSourceFactory(this)
-                .setDataSourceFactory(dataSourceFactory)
+            val clearKeyMgr = when {
+                streamInfo.drmScheme != "clearkey" -> null
+                streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
+                    createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
+                    createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
+                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
+                    createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
+                else -> null
+            }
+            val mediaSourceFactory = if (clearKeyMgr != null) {
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(dataSourceFactory)
+                    .setDrmSessionManagerProvider { clearKeyMgr }
+            } else {
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(dataSourceFactory)
+            }
 
             player = ExoPlayer.Builder(this)
                 .setTrackSelector(trackSelector!!)
@@ -1859,42 +1877,28 @@ class PlayerActivity : AppCompatActivity() {
                     if (streamInfo.drmScheme == "clearkey") {
                         val drmConfigBuilder = MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
                         when {
-                            // Inline keyId:key hex pair — build JWK and embed as data URI
+                            // Local key (inline hex or JWK) — declare UUID with dummy URI but do NOT
+                            // setForceDefaultLicenseUri, so the factory's DrmSessionManagerProvider wins
                             streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
-                                val kidB64 = android.util.Base64.encodeToString(
-                                    hexToBytes(streamInfo.drmKeyId),
-                                    android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
-                                )
-                                val kB64 = android.util.Base64.encodeToString(
-                                    hexToBytes(streamInfo.drmKey),
-                                    android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
-                                )
-                                val jwk = "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$kidB64\",\"k\":\"$kB64\"}],\"type\":\"temporary\"}"
-                                val dataUri = "data:application/json;base64," +
-                                    android.util.Base64.encodeToString(jwk.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
-                                drmConfigBuilder
-                                    .setLicenseUri(dataUri)
-                                    .setForceDefaultLicenseUri(true)
+                                android.util.Log.d("DRM_DEBUG", "ClearKey inline hex: keyId=${streamInfo.drmKeyId} key=${streamInfo.drmKey}")
+                                drmConfigBuilder.setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
                             }
-                            // JWK JSON inline
                             streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
-                                val json = if (!streamInfo.drmLicenseUrl.contains("\"type\""))
-                                    streamInfo.drmLicenseUrl.trimEnd().trimEnd('}') + ",\"type\":\"temporary\"}"
-                                else streamInfo.drmLicenseUrl
-                                val dataUri = "data:application/json;base64," +
-                                    android.util.Base64.encodeToString(json.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
-                                drmConfigBuilder
-                                    .setLicenseUri(dataUri)
-                                    .setForceDefaultLicenseUri(true)
+                                android.util.Log.d("DRM_DEBUG", "ClearKey JWK JSON inline")
+                                drmConfigBuilder.setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
                             }
-                            // Real HTTP license server
+                            // HTTP license server — force ExoPlayer to use it
                             streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
+                                android.util.Log.d("DRM_DEBUG", "ClearKey HTTP server: ${streamInfo.drmLicenseUrl}")
                                 drmConfigBuilder
                                     .setLicenseUri(streamInfo.drmLicenseUrl)
                                     .setLicenseRequestHeaders(headers)
                                     .setForceDefaultLicenseUri(true)
                             }
-                            else -> drmConfigBuilder.setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
+                            else -> {
+                                android.util.Log.e("DRM_DEBUG", "ClearKey: no valid license source! drmLicenseUrl=${streamInfo.drmLicenseUrl} drmKeyId=${streamInfo.drmKeyId} drmKey=${streamInfo.drmKey}")
+                                drmConfigBuilder.setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
+                            }
                         }
                         mediaItemBuilder.setDrmConfiguration(drmConfigBuilder.build())
                     } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
@@ -1981,6 +1985,7 @@ class PlayerActivity : AppCompatActivity() {
 
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                             super.onPlayerError(error)
+                            android.util.Log.e("DRM_DEBUG", "onPlayerError: code=${error.errorCode} msg=${error.message} cause=${error.cause?.message}")
                             binding.progressBar.visibility = View.GONE
 
                             val errorMessage = when {

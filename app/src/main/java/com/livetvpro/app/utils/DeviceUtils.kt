@@ -1,9 +1,7 @@
 package com.livetvpro.app.utils
 
-import android.app.UiModeManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 
 object DeviceUtils {
@@ -15,7 +13,8 @@ object DeviceUtils {
         WATCH,
         AUTOMOTIVE,
         FOLDABLE,
-        EMULATOR
+        EMULATOR,
+        DESKTOP
     }
 
     var deviceType: DeviceType = DeviceType.PHONE
@@ -31,23 +30,18 @@ object DeviceUtils {
     val isAutomotive: Boolean get() = deviceType == DeviceType.AUTOMOTIVE
     val isFoldable: Boolean get() = deviceType == DeviceType.FOLDABLE
     val isEmulator: Boolean get() = deviceType == DeviceType.EMULATOR
+    val isDesktop: Boolean get() = deviceType == DeviceType.DESKTOP
 
     fun init(context: Context) {
         val pm = context.packageManager
 
         deviceType = when {
-            isTvHardware(pm) -> DeviceType.TV
-            isWatchHardware(context) -> DeviceType.WATCH
+            isTvHardware(pm)         -> DeviceType.TV
+            isWatchHardware(pm)      -> DeviceType.WATCH
             isAutomotiveHardware(pm) -> DeviceType.AUTOMOTIVE
-            else -> detectHandheld(context)
-        }
-
-        if (deviceType == DeviceType.PHONE || deviceType == DeviceType.TABLET
-            || deviceType == DeviceType.FOLDABLE
-        ) {
-            if (isEmulatorBuild()) {
-                deviceType = DeviceType.EMULATOR
-            }
+            isWsaDesktop()           -> DeviceType.DESKTOP
+            isEmulatorBuild()        -> DeviceType.EMULATOR
+            else                     -> detectHandheld(context)
         }
 
         hasTouchInput = pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
@@ -65,36 +59,40 @@ object DeviceUtils {
             || pm.hasSystemFeature("amazon.hardware.fire_tv")
     }
 
-    private fun isWatchHardware(context: Context): Boolean {
-        return context.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
+    private fun isWatchHardware(pm: PackageManager): Boolean {
+        return pm.hasSystemFeature(PackageManager.FEATURE_WATCH)
     }
 
     private fun isAutomotiveHardware(pm: PackageManager): Boolean {
         return pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)
     }
 
+    private fun isWsaDesktop(): Boolean {
+        return Build.MANUFACTURER.equals("Microsoft", ignoreCase = true)
+            && Build.MODEL.contains("Subsystem for Android", ignoreCase = true)
+    }
+
     private fun isEmulatorBuild(): Boolean {
-        return (Build.FINGERPRINT.startsWith("generic")
-                || Build.FINGERPRINT.startsWith("unknown")
-                || Build.MODEL.contains("Emulator", ignoreCase = true)
-                || Build.MODEL.contains("Android SDK", ignoreCase = true)
-                || Build.MANUFACTURER.contains("Genymotion", ignoreCase = true)
-                || Build.BRAND.startsWith("generic")
-                || Build.DEVICE.startsWith("generic"))
+        if (Build.VERSION.SDK_INT >= 36) {
+            return Build.IS_EMULATOR
+        }
+        return Build.HARDWARE.equals("goldfish", ignoreCase = true)
+            || Build.HARDWARE.equals("ranchu", ignoreCase = true)
+            || Build.FINGERPRINT.startsWith("generic")
+            || Build.FINGERPRINT.startsWith("unknown")
+            || Build.MODEL.contains("Android SDK built for x86", ignoreCase = true)
+            || Build.MODEL.contains("Emulator", ignoreCase = true)
+            || Build.MANUFACTURER.contains("Genymotion", ignoreCase = true)
+            || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
     }
 
     private fun detectHandheld(context: Context): DeviceType {
-        val pm = context.packageManager
-
-        if (pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_HINGE_ANGLE)) {
+        if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_HINGE_ANGLE)) {
             return DeviceType.FOLDABLE
         }
-
-        val smallestWidthDp = context.resources.configuration.smallestScreenWidthDp
-        if (smallestWidthDp >= 600) {
+        if (context.resources.configuration.smallestScreenWidthDp >= 600) {
             return DeviceType.TABLET
         }
-
         return DeviceType.PHONE
     }
 }

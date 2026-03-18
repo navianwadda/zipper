@@ -2112,7 +2112,8 @@ class PlayerActivity : AppCompatActivity() {
 
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
+                .setForceSessionCreationForAudioAndVideoTracks(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2129,7 +2130,8 @@ class PlayerActivity : AppCompatActivity() {
             val drmCallback = LocalMediaDrmCallback(json.toByteArray(Charsets.UTF_8))
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
+                .setForceSessionCreationForAudioAndVideoTracks(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2149,7 +2151,9 @@ class PlayerActivity : AppCompatActivity() {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false).build(cb)
+                .setMultiSession(true)
+                .setForceSessionCreationForAudioAndVideoTracks(true)
+                .build(cb)
         } catch (e: Exception) { null }
     }
 

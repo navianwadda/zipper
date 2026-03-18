@@ -1872,7 +1872,20 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
+                    if (streamInfo.drmScheme == "clearkey") {
+                        // For ClearKey: declare CLEARKEY_UUID on the MediaItem so ExoPlayer
+                        // honours the DrmSessionManagerProvider set on the factory.
+                        // The actual key is supplied by the manager (not the license URI).
+                        val licenseUri = streamInfo.drmLicenseUrl
+                            ?.takeIf { it.startsWith("http", ignoreCase = true) }
+                            ?: "https://cwip-shaka-proxy.appspot.com/no_auth"
+                        mediaItemBuilder.setDrmConfiguration(
+                            MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
+                                .setLicenseUri(licenseUri)
+                                .setForceDefaultLicenseUri(true)
+                                .build()
+                        )
+                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                         val licenseHeaders = headers.filter { (k, _) ->
@@ -2044,7 +2057,7 @@ class PlayerActivity : AppCompatActivity() {
 
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2061,7 +2074,7 @@ class PlayerActivity : AppCompatActivity() {
             val drmCallback = LocalMediaDrmCallback(json.toByteArray(Charsets.UTF_8))
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2081,7 +2094,7 @@ class PlayerActivity : AppCompatActivity() {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false).build(cb)
+                .setMultiSession(true).build(cb)
         } catch (e: Exception) { null }
     }
 

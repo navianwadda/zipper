@@ -73,9 +73,6 @@ object DeviceUtils {
     }
 
     private fun isEmulatorBuild(): Boolean {
-        if (Build.VERSION.SDK_INT >= 36) {
-            return Build.IS_EMULATOR
-        }
         return Build.HARDWARE.equals("goldfish", ignoreCase = true)
             || Build.HARDWARE.equals("ranchu", ignoreCase = true)
             || Build.FINGERPRINT.startsWith("generic")

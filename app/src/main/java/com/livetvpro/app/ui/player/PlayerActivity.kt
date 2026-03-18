@@ -2107,7 +2107,6 @@ class PlayerActivity : AppCompatActivity() {
             )
 
             val jwkResponse = "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$keyIdBase64\",\"k\":\"$keyBase64\"}],\"type\":\"temporary\"}"
-
             val drmCallback = LocalMediaDrmCallback(jwkResponse.toByteArray(Charsets.UTF_8))
 
             DefaultDrmSessionManager.Builder()

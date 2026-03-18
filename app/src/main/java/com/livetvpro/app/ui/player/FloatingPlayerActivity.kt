@@ -1345,7 +1345,18 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
+                    if (streamInfo.drmScheme == "clearkey") {
+                        val drmConfigBuilder = MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
+                        if (streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true) {
+                            drmConfigBuilder
+                                .setLicenseUri(streamInfo.drmLicenseUrl)
+                                .setForceDefaultLicenseUri(true)
+                        } else {
+                            drmConfigBuilder
+                                .setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
+                        }
+                        mediaItemBuilder.setDrmConfiguration(drmConfigBuilder.build())
+                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                         val licenseHeaders = headers.filter { (k, _) -> val kl = k.lowercase(); kl != "referer" && kl != "origin" && kl != "host" }
@@ -1534,7 +1545,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -1547,7 +1558,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             val drmCallback = LocalMediaDrmCallback(jwkJson.toByteArray())
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -1566,7 +1577,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false).build(cb)
+                .setMultiSession(true).build(cb)
         } catch (e: Exception) { null }
     }
 

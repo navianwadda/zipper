@@ -1675,7 +1675,7 @@ class FloatingPlayerService : Service() {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .build(cb)
         } catch (e: Exception) { null }
     }
@@ -1692,7 +1692,7 @@ class FloatingPlayerService : Service() {
             val jwk = "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$kidB64\",\"k\":\"$kB64\"}],\"type\":\"temporary\"}"
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .build(LocalMediaDrmCallback(jwk.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
     }
@@ -1706,7 +1706,7 @@ class FloatingPlayerService : Service() {
             }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .build(LocalMediaDrmCallback(json.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
     }
@@ -1778,7 +1778,18 @@ class FloatingPlayerService : Service() {
             url.contains(".ism") || url.contains(".isml") || url.contains("manifest(format=mpd") ->
                 builder.setMimeType(MimeTypes.APPLICATION_SS)
         }
-        if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
+        if (streamInfo.drmScheme == "clearkey") {
+            val drmConfigBuilder = MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
+            if (streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true) {
+                drmConfigBuilder
+                    .setLicenseUri(streamInfo.drmLicenseUrl)
+                    .setForceDefaultLicenseUri(true)
+            } else {
+                drmConfigBuilder
+                    .setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
+            }
+            builder.setDrmConfiguration(drmConfigBuilder.build())
+        } else if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->
                 val uuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                 val licenseHeaders = headers.filter { (k, _) ->

@@ -1285,24 +1285,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            val clearKeyMgr = when {
-                streamInfo.drmScheme != "clearkey" -> null
-                streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
-                    createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
-                    createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
-                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
-                    createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
-                else -> null
-            }
-            val mediaSourceFactory = if (clearKeyMgr != null) {
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(dataSourceFactory)
-                    .setDrmSessionManagerProvider { clearKeyMgr }
-            } else {
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(dataSourceFactory)
-            }
+            val mediaSourceFactory = DefaultMediaSourceFactory(this)
+                .setDataSourceFactory(dataSourceFactory)
 
             player = ExoPlayer.Builder(this)
                 .setRenderersFactory(
@@ -1347,13 +1331,36 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
                     if (streamInfo.drmScheme == "clearkey") {
                         val drmConfigBuilder = MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
-                        if (streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true) {
-                            drmConfigBuilder
-                                .setLicenseUri(streamInfo.drmLicenseUrl)
-                                .setForceDefaultLicenseUri(true)
-                        } else {
-                            drmConfigBuilder
-                                .setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
+                        when {
+                            streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
+                                val kidB64 = android.util.Base64.encodeToString(
+                                    hexToBytes(streamInfo.drmKeyId),
+                                    android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+                                )
+                                val kB64 = android.util.Base64.encodeToString(
+                                    hexToBytes(streamInfo.drmKey),
+                                    android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+                                )
+                                val jwk = "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$kidB64\",\"k\":\"$kB64\"}],\"type\":\"temporary\"}"
+                                val dataUri = "data:application/json;base64," +
+                                    android.util.Base64.encodeToString(jwk.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+                                drmConfigBuilder.setLicenseUri(dataUri).setForceDefaultLicenseUri(true)
+                            }
+                            streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
+                                val json = if (!streamInfo.drmLicenseUrl.contains("\"type\""))
+                                    streamInfo.drmLicenseUrl.trimEnd().trimEnd('}') + ",\"type\":\"temporary\"}"
+                                else streamInfo.drmLicenseUrl
+                                val dataUri = "data:application/json;base64," +
+                                    android.util.Base64.encodeToString(json.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+                                drmConfigBuilder.setLicenseUri(dataUri).setForceDefaultLicenseUri(true)
+                            }
+                            streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
+                                drmConfigBuilder
+                                    .setLicenseUri(streamInfo.drmLicenseUrl)
+                                    .setLicenseRequestHeaders(headers)
+                                    .setForceDefaultLicenseUri(true)
+                            }
+                            else -> drmConfigBuilder.setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
                         }
                         mediaItemBuilder.setDrmConfiguration(drmConfigBuilder.build())
                     } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")

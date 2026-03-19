@@ -1911,9 +1911,9 @@ class PlayerActivity : AppCompatActivity() {
                     }
 
                     if (streamInfo.drmScheme == "clearkey" && localLicenseServer != null) {
-                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey via local server $localLicenseServer")
+                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey local server $localLicenseServer")
                         mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                            MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
                                 .setLicenseUri(localLicenseServer)
                                 .setMultiSession(true)
                                 .build()
@@ -1921,7 +1921,7 @@ class PlayerActivity : AppCompatActivity() {
                     } else if (streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true) {
                         android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey HTTP server")
                         mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                            MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
                                 .setLicenseUri(streamInfo.drmLicenseUrl)
                                 .setMultiSession(true)
                                 .build()

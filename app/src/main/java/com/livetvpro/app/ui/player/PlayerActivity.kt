@@ -2095,24 +2095,33 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         override fun getUri(): android.net.Uri? = inner.uri
-        override fun close() { if (!isMpd) inner.close(); patchedBytes = null }
+        override fun close() {
+            try { if (!isMpd) inner.close() } catch (_: Exception) {}
+            patchedBytes = null
+            isMpd = false
+        }
         override fun getResponseHeaders(): Map<String, List<String>> = inner.responseHeaders
         override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) =
             inner.addTransferListener(transferListener)
     }
 
     private fun patchMpd(mpd: String, defaultKid: String): String {
-        // Inject cenc:default_KID into ContentProtection value="cenc" elements that lack it
-        return mpd.replace(
-            Regex("""(<ContentProtection[^>]*schemeIdUri="urn:mpeg:dash:mp4protection:2011"[^>]*value="cenc"[^>]*?)(?<!cenc:default_KID="[^"]{36}")(/?>)""")
-        ) { match ->
-            val tag = match.groupValues[1]
-            val close = match.groupValues[2]
-            if (tag.contains("default_KID", ignoreCase = true)) {
-                match.value // already has it
-            } else {
-                """$tag xmlns:cenc="urn:mpeg:cenc:2013" cenc:default_KID="$defaultKid"$close"""
+        return try {
+            // Inject cenc:default_KID into ContentProtection value="cenc" elements that lack it.
+            // Use simple string replacement to avoid regex lookbehind limitations.
+            val regex = Regex("""<ContentProtection([^>]*)schemeIdUri="urn:mpeg:dash:mp4protection:2011"([^>]*)value="cenc"([^>]*?)(/?>)""")
+            regex.replace(mpd) { match ->
+                val full = match.value
+                if (full.contains("default_KID", ignoreCase = true)) {
+                    full // already has it, don't touch
+                } else {
+                    val closeTag = match.groupValues[4]
+                    full.replace(closeTag, """ xmlns:cenc="urn:mpeg:cenc:2013" cenc:default_KID="$defaultKid"$closeTag""")
+                }
             }
+        } catch (e: Exception) {
+            android.util.Log.e("DRM_DEBUG", "patchMpd failed: ${e.message}")
+            mpd // return original if patching fails
         }
     }
 

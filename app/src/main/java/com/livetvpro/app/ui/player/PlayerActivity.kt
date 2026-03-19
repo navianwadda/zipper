@@ -1877,7 +1877,19 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
+                    if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
+                        // Manifest declares Widevine UUID. Use WIDEVINE_UUID on the MediaItem
+                        // so the track selector sees supported DRM and selects the tracks.
+                        // forceSessionsForAudioAndVideoTracks ensures sessions are created
+                        // even though we're injecting keys via LocalMediaDrmCallback.
+                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey with WIDEVINE_UUID")
+                        mediaItemBuilder.setDrmConfiguration(
+                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                                .setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
+                                .forceSessionsForAudioAndVideoTracks(true)
+                                .build()
+                        )
+                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: scheme=${streamInfo.drmScheme} licenseUrl=${streamInfo.drmLicenseUrl}")
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
@@ -2159,7 +2171,6 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(true)
-                .setUseDrmSessionsForClearContent(androidx.media3.common.C.TRACK_TYPE_VIDEO, androidx.media3.common.C.TRACK_TYPE_AUDIO, androidx.media3.common.C.TRACK_TYPE_TEXT)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2177,7 +2188,6 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(true)
-                .setUseDrmSessionsForClearContent(androidx.media3.common.C.TRACK_TYPE_VIDEO, androidx.media3.common.C.TRACK_TYPE_AUDIO, androidx.media3.common.C.TRACK_TYPE_TEXT)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2198,7 +2208,6 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(true)
-                .setUseDrmSessionsForClearContent(androidx.media3.common.C.TRACK_TYPE_VIDEO, androidx.media3.common.C.TRACK_TYPE_AUDIO, androidx.media3.common.C.TRACK_TYPE_TEXT)
                 .build(cb)
         } catch (e: Exception) { null }
     }

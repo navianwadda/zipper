@@ -1675,6 +1675,8 @@ class PlayerActivity : AppCompatActivity() {
         }
         player = null
         playerListener = null
+        try { localServer?.close() } catch (_: Exception) {}
+        localServer = null
     }
 
     private data class StreamInfo(
@@ -1839,15 +1841,38 @@ class PlayerActivity : AppCompatActivity() {
                     createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
                 else -> null
             }
-            android.util.Log.d("DRM_DEBUG", "clearKeyMgr=${if (clearKeyMgr != null) "BUILT" else "NULL"} scheme=${streamInfo.drmScheme}")
-            val mediaSourceFactory = if (clearKeyMgr != null) {
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(dataSourceFactory)
-                    .setDrmSessionManagerProvider { clearKeyMgr }
-            } else {
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(dataSourceFactory)
-            }
+
+            // For clearkey: build JWK and start a local HTTP server to serve it.
+            // This avoids the setDrmSessionManagerProvider conflict with track selector.
+            val localJwkServer = if (streamInfo.drmScheme == "clearkey") {
+                when {
+                    streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
+                        val kidB64 = android.util.Base64.encodeToString(
+                            hexToBytes(streamInfo.drmKeyId),
+                            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+                        )
+                        val kB64 = android.util.Base64.encodeToString(
+                            hexToBytes(streamInfo.drmKey),
+                            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+                        )
+                        "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$kidB64\",\"k\":\"$kB64\"}],\"type\":\"temporary\"}"
+                    }
+                    streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
+                        val json = streamInfo.drmLicenseUrl
+                        if (!json.contains("\"type\"")) json.trimEnd().trimEnd('}') + ",\"type\":\"temporary\"}" else json
+                    }
+                    else -> null
+                }
+            } else null
+
+            val localLicenseServer = if (localJwkServer != null) {
+                startLocalLicenseServer(localJwkServer)
+            } else null
+
+            android.util.Log.d("DRM_DEBUG", "localLicenseServer=${localLicenseServer} scheme=${streamInfo.drmScheme}")
+
+            val mediaSourceFactory = DefaultMediaSourceFactory(this)
+                .setDataSourceFactory(dataSourceFactory)
 
             player = ExoPlayer.Builder(this)
                 .setTrackSelector(trackSelector!!)
@@ -1885,12 +1910,20 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
-                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey via WIDEVINE_UUID")
+                    if (streamInfo.drmScheme == "clearkey" && localLicenseServer != null) {
+                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey via local server $localLicenseServer")
                         mediaItemBuilder.setDrmConfiguration(
                             MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
-                                .setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
-                                .forceSessionsForAudioAndVideoTracks(true)
+                                .setLicenseUri(localLicenseServer)
+                                .setMultiSession(true)
+                                .build()
+                        )
+                    } else if (streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true) {
+                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey HTTP server")
+                        mediaItemBuilder.setDrmConfiguration(
+                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                                .setLicenseUri(streamInfo.drmLicenseUrl)
+                                .setMultiSession(true)
                                 .build()
                         )
                     } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
@@ -2150,6 +2183,41 @@ class PlayerActivity : AppCompatActivity() {
             }
         } catch (ex: Exception) {
             android.util.Log.e("DRM_DEBUG", "saveDrmLog failed: ${ex.message}")
+        }
+    }
+
+    private var localServer: java.net.ServerSocket? = null
+
+    private fun startLocalLicenseServer(jwkResponse: String): String? {
+        return try {
+            localServer?.close()
+            val server = java.net.ServerSocket(0)
+            localServer = server
+            val port = server.localPort
+            Thread {
+                try {
+                    while (!server.isClosed) {
+                        val client = server.accept()
+                        Thread {
+                            try {
+                                client.getInputStream().bufferedReader().use { it.readText() }
+                                val body = jwkResponse.toByteArray(Charsets.UTF_8)
+                                val response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${body.size}\r\nConnection: close\r\n\r\n"
+                                client.getOutputStream().write(response.toByteArray())
+                                client.getOutputStream().write(body)
+                                client.getOutputStream().flush()
+                            } catch (_: Exception) {
+                            } finally {
+                                client.close()
+                            }
+                        }.start()
+                    }
+                } catch (_: Exception) {}
+            }.also { it.isDaemon = true }.start()
+            "http://127.0.0.1:$port/license"
+        } catch (e: Exception) {
+            android.util.Log.e("DRM_DEBUG", "startLocalLicenseServer failed: ${e.message}")
+            null
         }
     }
 

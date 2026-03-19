@@ -1886,9 +1886,9 @@ class PlayerActivity : AppCompatActivity() {
                     }
 
                     if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
-                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey")
+                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey via WIDEVINE_UUID")
                         mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
+                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
                                 .setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
                                 .forceSessionsForAudioAndVideoTracks(true)
                                 .build()

@@ -1828,24 +1828,54 @@ class PlayerActivity : AppCompatActivity() {
                 else -> null
             }
 
-            // For clearkey on CENC streams that lack cenc:default_KID in the manifest,
-            // Media3's canAcquireSession returns false → VIDEO selected=false.
-            // Fix: wrap DataSource.Factory to intercept .mpd and inject cenc:default_KID.
-            val effectiveFactory = if (clearKeyMgr != null && streamInfo.drmKeyId != null) {
+            // For clearkey with known keyId: pre-fetch the MPD manifest, inject
+            // cenc:default_KID so Media3 canAcquireSession returns true, save to
+            // temp file, and play from that file URI instead of the original URL.
+            val playUri: android.net.Uri
+            val playMimeType: String?
+            if (clearKeyMgr != null && streamInfo.drmKeyId != null &&
+                (streamInfo.url.contains(".mpd", ignoreCase = true) ||
+                 streamInfo.url.contains("/dash/", ignoreCase = true) ||
+                 streamInfo.url.contains("type=mpd", ignoreCase = true))) {
                 val kid = streamInfo.drmKeyId
                 val formattedKid = "${kid.substring(0,8)}-${kid.substring(8,12)}-${kid.substring(12,16)}-${kid.substring(16,20)}-${kid.substring(20)}".uppercase()
-                MpdPatchingDataSourceFactory(dataSourceFactory, formattedKid)
+                android.util.Log.d("DRM_DEBUG", "Pre-fetching MPD to inject KID=$formattedKid")
+                val patched = try {
+                    val conn = java.net.URL(streamInfo.url).openConnection() as java.net.HttpURLConnection
+                    headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+                    conn.connectTimeout = 15000
+                    conn.readTimeout = 15000
+                    val original = conn.inputStream.bufferedReader().readText()
+                    conn.disconnect()
+                    val result = patchMpd(original, formattedKid)
+                    android.util.Log.d("DRM_DEBUG", "MPD patched: hadKID=${original.contains("default_KID", ignoreCase = true)} patchedHasKID=${result.contains("default_KID", ignoreCase = true)}")
+                    result
+                } catch (e: Exception) {
+                    android.util.Log.e("DRM_DEBUG", "MPD pre-fetch failed: ${e.message}")
+                    null
+                }
+                if (patched != null) {
+                    val tmpFile = java.io.File(cacheDir, "patched_manifest.mpd")
+                    tmpFile.writeText(patched, Charsets.UTF_8)
+                    playUri = android.net.Uri.fromFile(tmpFile)
+                    playMimeType = androidx.media3.common.MimeTypes.APPLICATION_MPD
+                    android.util.Log.d("DRM_DEBUG", "Playing from patched local MPD: ${tmpFile.absolutePath}")
+                } else {
+                    playUri = android.net.Uri.parse(streamInfo.url)
+                    playMimeType = androidx.media3.common.MimeTypes.APPLICATION_MPD
+                }
             } else {
-                dataSourceFactory
+                playUri = android.net.Uri.parse(streamInfo.url)
+                playMimeType = null
             }
 
             val mediaSourceFactory = if (clearKeyMgr != null) {
                 DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(effectiveFactory)
+                    .setDataSourceFactory(dataSourceFactory)
                     .setDrmSessionManagerProvider { clearKeyMgr }
             } else {
                 DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(effectiveFactory)
+                    .setDataSourceFactory(dataSourceFactory)
             }
 
             player = ExoPlayer.Builder(this)
@@ -1871,17 +1901,20 @@ class PlayerActivity : AppCompatActivity() {
 
                     binding.playerView.hideController()
 
-                    val uri = android.net.Uri.parse(streamInfo.url)
-                    val mediaItemBuilder = MediaItem.Builder().setUri(uri)
+                    val mediaItemBuilder = MediaItem.Builder().setUri(playUri)
 
-                    val urlLower = streamInfo.url.lowercase()
-                    when {
-                        urlLower.contains("m3u8") || urlLower.contains("extension=m3u8") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
-                        urlLower.contains(".mpd") || urlLower.contains("/dash/") || urlLower.contains("type=mpd") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
-                        urlLower.contains(".ism") || urlLower.contains(".isml") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
+                    if (playMimeType != null) {
+                        mediaItemBuilder.setMimeType(playMimeType)
+                    } else {
+                        val urlLower = streamInfo.url.lowercase()
+                        when {
+                            urlLower.contains("m3u8") || urlLower.contains("extension=m3u8") ->
+                                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
+                            urlLower.contains(".mpd") || urlLower.contains("/dash/") || urlLower.contains("type=mpd") ->
+                                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
+                            urlLower.contains(".ism") || urlLower.contains(".isml") ->
+                                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
+                        }
                     }
 
                     if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
@@ -2083,87 +2116,13 @@ class PlayerActivity : AppCompatActivity() {
         binding.errorView.visibility = View.VISIBLE
     }
 
-    /**
-     * Wraps a DataSource.Factory to intercept DASH manifest (.mpd) responses and inject
-     * cenc:default_KID into ContentProtection elements that are missing it.
-     * This allows Media3's canAcquireSession to return true for ClearKey sessions
-     * on streams whose manifests only declare Widevine/PlayReady UUIDs.
-     */
-    private inner class MpdPatchingDataSourceFactory(
-        private val inner: androidx.media3.datasource.DataSource.Factory,
-        private val defaultKid: String
-    ) : androidx.media3.datasource.DataSource.Factory {
-        override fun createDataSource(): androidx.media3.datasource.DataSource {
-            return PatchingDataSource(inner.createDataSource(), defaultKid)
-        }
-    }
-
-    private inner class PatchingDataSource(
-        private val inner: androidx.media3.datasource.DataSource,
-        private val defaultKid: String
-    ) : androidx.media3.datasource.DataSource {
-        private var patchedBytes: ByteArray? = null
-        private var position = 0
-        private var isMpd = false
-
-        override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
-            isMpd = dataSpec.uri.toString().let {
-                it.contains(".mpd", ignoreCase = true) ||
-                it.contains("/dash/", ignoreCase = true) ||
-                it.contains("type=mpd", ignoreCase = true)
-            }
-            val result = inner.open(dataSpec)
-            if (isMpd) {
-                // Read entire manifest, patch it, serve from memory
-                val buffer = java.io.ByteArrayOutputStream()
-                val chunk = ByteArray(8192)
-                var n: Int
-                while (inner.read(chunk, 0, chunk.size).also { n = it } != C.RESULT_END_OF_INPUT) {
-                    if (n > 0) buffer.write(chunk, 0, n)
-                }
-                inner.close()
-                val original = buffer.toString(Charsets.UTF_8.name())
-                val patched = patchMpd(original, defaultKid)
-                android.util.Log.d("DRM_DEBUG", "MPD patched: hadKID=${original.contains("default_KID", ignoreCase = true)} patchedHasKID=${patched.contains("default_KID", ignoreCase = true)}")
-                patchedBytes = patched.toByteArray(Charsets.UTF_8)
-                position = 0
-                return patchedBytes!!.size.toLong()
-            }
-            return result
-        }
-
-        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-            if (isMpd) {
-                val bytes = patchedBytes ?: return C.RESULT_END_OF_INPUT
-                if (position >= bytes.size) return C.RESULT_END_OF_INPUT
-                val n = minOf(length, bytes.size - position)
-                bytes.copyInto(buffer, offset, position, position + n)
-                position += n
-                return n
-            }
-            return inner.read(buffer, offset, length)
-        }
-
-        override fun getUri(): android.net.Uri? = inner.uri
-        override fun close() {
-            try { if (!isMpd) inner.close() } catch (_: Exception) {}
-            patchedBytes = null
-            isMpd = false
-        }
-        override fun getResponseHeaders(): Map<String, List<String>> = inner.responseHeaders
-        override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) =
-            inner.addTransferListener(transferListener)
-    }
-
     private fun patchMpd(mpd: String, defaultKid: String): String {
         return try {
-            // Inject cenc:default_KID into ContentProtection value="cenc" elements that lack it.
-            // Use simple string replacement to avoid regex lookbehind limitations.
             val regex = Regex("""<ContentProtection([^>]*)schemeIdUri="urn:mpeg:dash:mp4protection:2011"([^>]*)value="cenc"([^>]*?)(/?>)""")
             regex.replace(mpd) { match ->
                 val full = match.value
                 if (full.contains("default_KID", ignoreCase = true)) {
-                    full // already has it, don't touch
+                    full
                 } else {
                     val closeTag = match.groupValues[4]
                     full.replace(closeTag, """ xmlns:cenc="urn:mpeg:cenc:2013" cenc:default_KID="$defaultKid"$closeTag""")
@@ -2171,7 +2130,7 @@ class PlayerActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             android.util.Log.e("DRM_DEBUG", "patchMpd failed: ${e.message}")
-            mpd // return original if patching fails
+            mpd
         }
     }
 

@@ -1664,6 +1664,44 @@ class PlayerActivity : AppCompatActivity() {
         releasePlayer()
     }
 
+    private var localLicenseServer: java.net.ServerSocket? = null
+
+    private fun startLocalLicenseServer(jwkResponse: String): String? {
+        return try {
+            localLicenseServer?.close()
+            val server = java.net.ServerSocket(0)
+            localLicenseServer = server
+            val port = server.localPort
+            Thread {
+                try {
+                    while (!server.isClosed) {
+                        val client = server.accept()
+                        Thread {
+                            try {
+                                // Read and discard the request
+                                val input = client.getInputStream()
+                                val buf = ByteArray(4096)
+                                while (input.available() > 0) input.read(buf)
+                                // Write JWK response
+                                val body = jwkResponse.toByteArray(Charsets.UTF_8)
+                                val response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${body.size}\r\nConnection: close\r\n\r\n"
+                                client.getOutputStream().write(response.toByteArray())
+                                client.getOutputStream().write(body)
+                                client.getOutputStream().flush()
+                            } catch (_: Exception) {
+                            } finally {
+                                client.close()
+                            }
+                        }.also { it.isDaemon = true }.start()
+                    }
+                } catch (_: Exception) {}
+            }.also { it.isDaemon = true }.start()
+            "http://127.0.0.1:$port/license"
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun releasePlayer() {
         player?.let {
             try {
@@ -1675,8 +1713,8 @@ class PlayerActivity : AppCompatActivity() {
         }
         player = null
         playerListener = null
-        try { localServer?.close() } catch (_: Exception) {}
-        localServer = null
+        try { localLicenseServer?.close() } catch (_: Exception) {}
+        localLicenseServer = null
     }
 
     private data class StreamInfo(
@@ -1752,11 +1790,7 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
 
-        return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl).also {
-            android.util.Log.d("DRM_DEBUG", "parseStreamUrl: url=${it.url}")
-            android.util.Log.d("DRM_DEBUG", "parseStreamUrl: scheme=${it.drmScheme} keyId=${it.drmKeyId} key=${it.drmKey} licenseUrl=${it.drmLicenseUrl}")
-            android.util.Log.d("DRM_DEBUG", "parseStreamUrl: headers=${it.headers}")
-        }
+        return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
     }
     private fun normalizeDrmScheme(scheme: String): String {
         val lower = scheme.lowercase()
@@ -1810,14 +1844,6 @@ class PlayerActivity : AppCompatActivity() {
                 return
             }
 
-            if (streamInfo.drmScheme == "clearkey") {
-                trackSelector!!.setParameters(
-                    trackSelector!!.buildUponParameters()
-                        .setExceedRendererCapabilitiesIfNecessary(true)
-                        .build()
-                )
-            }
-
             val headers = streamInfo.headers.toMutableMap()
             if (!headers.containsKey("User-Agent")) {
                 headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -1831,21 +1857,12 @@ class PlayerActivity : AppCompatActivity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            val clearKeyMgr = when {
-                streamInfo.drmScheme != "clearkey" -> null
-                streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
-                    createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
-                    createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
-                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
-                    createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
-                else -> null
-            }
-
-            // For clearkey: build JWK and start a local HTTP server to serve it.
-            // This avoids the setDrmSessionManagerProvider conflict with track selector.
-            val localJwkServer = if (streamInfo.drmScheme == "clearkey") {
-                when {
+            // For clearkey with inline key/JWK: start a local HTTP server that serves
+            // the JWK response. Set WIDEVINE_UUID on the MediaItem to match the manifest
+            // so the track selector selects tracks. Media3 calls our local server for the
+            // license, gets the JWK back, decrypts the CENC content.
+            val localLicenseUrl: String? = if (streamInfo.drmScheme == "clearkey") {
+                val jwk = when {
                     streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
                         val kidB64 = android.util.Base64.encodeToString(
                             hexToBytes(streamInfo.drmKeyId),
@@ -1863,13 +1880,8 @@ class PlayerActivity : AppCompatActivity() {
                     }
                     else -> null
                 }
+                if (jwk != null) startLocalLicenseServer(jwk) else streamInfo.drmLicenseUrl
             } else null
-
-            val localLicenseServer = if (localJwkServer != null) {
-                startLocalLicenseServer(localJwkServer)
-            } else null
-
-            android.util.Log.d("DRM_DEBUG", "localLicenseServer=${localLicenseServer} scheme=${streamInfo.drmScheme}")
 
             val mediaSourceFactory = DefaultMediaSourceFactory(this)
                 .setDataSourceFactory(dataSourceFactory)
@@ -1910,25 +1922,16 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if (streamInfo.drmScheme == "clearkey" && localLicenseServer != null) {
-                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey local server $localLicenseServer")
+                    if (streamInfo.drmScheme == "clearkey" && localLicenseUrl != null) {
                         mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
-                                .setLicenseUri(localLicenseServer)
+                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                                .setLicenseUri(localLicenseUrl)
                                 .setMultiSession(true)
-                                .build()
-                        )
-                    } else if (streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true) {
-                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey HTTP server")
-                        mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
-                                .setLicenseUri(streamInfo.drmLicenseUrl)
-                                .setMultiSession(true)
+                                .setForceDefaultLicenseUri(true)
                                 .build()
                         )
                     } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
-                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: scheme=${streamInfo.drmScheme} licenseUrl=${streamInfo.drmLicenseUrl}")
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                         val licenseHeaders = headers.filter { (k, _) ->
                             val kl = k.lowercase()
@@ -1952,14 +1955,11 @@ class PlayerActivity : AppCompatActivity() {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             when (playbackState) {
                                 Player.STATE_READY -> {
-                                    android.util.Log.d("DRM_DEBUG", "STATE_READY: isPlaying=${player?.isPlaying} videoSize=${player?.videoSize}")
-                                    saveDrmLog("STATE_READY: isPlaying=${player?.isPlaying} videoFormat=${player?.videoFormat} audioFormat=${player?.audioFormat}")
                                     binding.progressBar.visibility = View.GONE
                                     binding.errorView.visibility = View.GONE
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) updatePipParams()
                                 }
                                 Player.STATE_BUFFERING -> {
-                                    android.util.Log.d("DRM_DEBUG", "STATE_BUFFERING")
                                     binding.progressBar.visibility = View.VISIBLE
                                     binding.errorView.visibility = View.GONE
                                 }
@@ -1972,18 +1972,6 @@ class PlayerActivity : AppCompatActivity() {
                         }
 
                         override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
-                            val summary = tracks.groups.joinToString("\n") { group ->
-                                val type = when (group.type) {
-                                    androidx.media3.common.C.TRACK_TYPE_VIDEO -> "VIDEO"
-                                    androidx.media3.common.C.TRACK_TYPE_AUDIO -> "AUDIO"
-                                    androidx.media3.common.C.TRACK_TYPE_TEXT -> "TEXT"
-                                    else -> "OTHER(${group.type})"
-                                }
-                                val selected = (0 until group.length).any { group.isTrackSelected(it) }
-                                "$type selected=$selected"
-                            }
-                            android.util.Log.d("DRM_DEBUG", "onTracksChanged:\n$summary")
-                            saveDrmLog("onTracksChanged:\n$summary")
                             if (!preferencesManager.isForceLowestQualityEnabled()) return
                             val ts = trackSelector ?: return
                             var lowestHeight = Int.MAX_VALUE
@@ -2026,54 +2014,6 @@ class PlayerActivity : AppCompatActivity() {
 
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                             super.onPlayerError(error)
-                            android.util.Log.e("DRM_DEBUG", "onPlayerError: errorCode=${error.errorCode}")
-                            android.util.Log.e("DRM_DEBUG", "onPlayerError: message=${error.message}")
-                            android.util.Log.e("DRM_DEBUG", "onPlayerError: cause=${error.cause?.javaClass?.simpleName}: ${error.cause?.message}")
-                            android.util.Log.e("DRM_DEBUG", "onPlayerError: rootCause=${error.cause?.cause?.javaClass?.simpleName}: ${error.cause?.cause?.message}")
-                            // Save to Downloads folder via MediaStore (works Android 10+ without permissions)
-                            try {
-                                val log = buildString {
-                                    appendLine("=== DRM_DEBUG Log ===")
-                                    appendLine("Time: ${java.util.Date()}")
-                                    appendLine("errorCode: ${error.errorCode}")
-                                    appendLine("message: ${error.message}")
-                                    appendLine("cause: ${error.cause?.javaClass?.simpleName}: ${error.cause?.message}")
-                                    appendLine("rootCause: ${error.cause?.cause?.javaClass?.simpleName}: ${error.cause?.cause?.message}")
-                                    appendLine("streamUrl: $streamUrl")
-                                }
-                                val fileName = "drm_debug_log.txt"
-                                val resolver = contentResolver
-                                // Delete existing file with same name first
-                                val existing = resolver.query(
-                                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                                    arrayOf(android.provider.MediaStore.MediaColumns._ID),
-                                    "${android.provider.MediaStore.MediaColumns.DISPLAY_NAME} = ?",
-                                    arrayOf(fileName), null
-                                )
-                                existing?.use { c ->
-                                    if (c.moveToFirst()) {
-                                        val id = c.getLong(0)
-                                        resolver.delete(
-                                            android.content.ContentUris.withAppendedId(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, id),
-                                            null, null
-                                        )
-                                    }
-                                }
-                                val values = android.content.ContentValues().apply {
-                                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "text/plain")
-                                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-                                }
-                                val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                                uri?.let {
-                                    resolver.openOutputStream(it)?.use { os ->
-                                        os.write(log.toByteArray(Charsets.UTF_8))
-                                    }
-                                    android.util.Log.d("DRM_DEBUG", "Log saved to Downloads/$fileName")
-                                } ?: android.util.Log.e("DRM_DEBUG", "MediaStore insert returned null")
-                            } catch (ex: Exception) {
-                                android.util.Log.e("DRM_DEBUG", "Failed to save log: ${ex.javaClass.simpleName}: ${ex.message}")
-                            }
                             binding.progressBar.visibility = View.GONE
 
                             val errorMessage = when {
@@ -2110,20 +2050,6 @@ class PlayerActivity : AppCompatActivity() {
                     exo.addListener(playerListener!!)
                 }
         } catch (e: Exception) {
-            android.util.Log.e("DRM_DEBUG", "setupPlayer CRASHED: ${e.javaClass.simpleName}: ${e.message}")
-            android.util.Log.e("DRM_DEBUG", "stacktrace: ${e.stackTraceToString()}")
-            try {
-                val log = "=== CRASH ===\nTime: ${java.util.Date()}\n${e.javaClass.simpleName}: ${e.message}\n${e.stackTraceToString()}\n"
-                val fileName = "drm_debug_log.txt"
-                val resolver = contentResolver
-                val values = android.content.ContentValues().apply {
-                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "text/plain")
-                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-                }
-                val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                uri?.let { resolver.openOutputStream(it)?.use { os -> os.write(log.toByteArray(Charsets.UTF_8)) } }
-            } catch (_: Exception) {}
             showError("Failed to initialize player")
         }
     }
@@ -2154,73 +2080,6 @@ class PlayerActivity : AppCompatActivity() {
         binding.errorView.visibility = View.VISIBLE
     }
 
-    private fun saveDrmLog(message: String) {
-        try {
-            val line = "[${java.util.Date()}] $message\n"
-            val resolver = contentResolver
-            val existing = resolver.query(
-                android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                arrayOf(android.provider.MediaStore.MediaColumns._ID),
-                "${android.provider.MediaStore.MediaColumns.DISPLAY_NAME} = ?",
-                arrayOf("drm_debug_log.txt"), null
-            )
-            val uri = existing?.use { c ->
-                if (c.moveToFirst()) {
-                    android.content.ContentUris.withAppendedId(
-                        android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, c.getLong(0)
-                    )
-                } else null
-            } ?: run {
-                val values = android.content.ContentValues().apply {
-                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "drm_debug_log.txt")
-                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "text/plain")
-                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-                }
-                resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            }
-            uri?.let {
-                resolver.openOutputStream(it, "wa")?.use { os -> os.write(line.toByteArray(Charsets.UTF_8)) }
-            }
-        } catch (ex: Exception) {
-            android.util.Log.e("DRM_DEBUG", "saveDrmLog failed: ${ex.message}")
-        }
-    }
-
-    private var localServer: java.net.ServerSocket? = null
-
-    private fun startLocalLicenseServer(jwkResponse: String): String? {
-        return try {
-            localServer?.close()
-            val server = java.net.ServerSocket(0)
-            localServer = server
-            val port = server.localPort
-            Thread {
-                try {
-                    while (!server.isClosed) {
-                        val client = server.accept()
-                        Thread {
-                            try {
-                                client.getInputStream().bufferedReader().use { it.readText() }
-                                val body = jwkResponse.toByteArray(Charsets.UTF_8)
-                                val response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${body.size}\r\nConnection: close\r\n\r\n"
-                                client.getOutputStream().write(response.toByteArray())
-                                client.getOutputStream().write(body)
-                                client.getOutputStream().flush()
-                            } catch (_: Exception) {
-                            } finally {
-                                client.close()
-                            }
-                        }.start()
-                    }
-                } catch (_: Exception) {}
-            }.also { it.isDaemon = true }.start()
-            "http://127.0.0.1:$port/license"
-        } catch (e: Exception) {
-            android.util.Log.e("DRM_DEBUG", "startLocalLicenseServer failed: ${e.message}")
-            null
-        }
-    }
-
     private fun createClearKeyDrmManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
             val keyIdBytes = hexToBytes(keyIdHex)
@@ -2238,11 +2097,12 @@ class PlayerActivity : AppCompatActivity() {
             )
 
             val jwkResponse = "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$keyIdBase64\",\"k\":\"$keyBase64\"}],\"type\":\"temporary\"}"
+
             val drmCallback = LocalMediaDrmCallback(jwkResponse.toByteArray(Charsets.UTF_8))
 
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(true)
+                .setMultiSession(false)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2259,7 +2119,7 @@ class PlayerActivity : AppCompatActivity() {
             val drmCallback = LocalMediaDrmCallback(json.toByteArray(Charsets.UTF_8))
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(true)
+                .setMultiSession(false)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2279,8 +2139,7 @@ class PlayerActivity : AppCompatActivity() {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(true)
-                .build(cb)
+                .setMultiSession(false).build(cb)
         } catch (e: Exception) { null }
     }
 

@@ -2112,7 +2112,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(true)
-                .setForceSessionCreationForAudioAndVideoTracks(true)
+                .setUseDrmSessionsForClearContent(androidx.media3.common.C.TRACK_TYPE_VIDEO, androidx.media3.common.C.TRACK_TYPE_AUDIO)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2130,7 +2130,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(true)
-                .setForceSessionCreationForAudioAndVideoTracks(true)
+                .setUseDrmSessionsForClearContent(androidx.media3.common.C.TRACK_TYPE_VIDEO, androidx.media3.common.C.TRACK_TYPE_AUDIO)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2151,7 +2151,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(true)
-                .setForceSessionCreationForAudioAndVideoTracks(true)
+                .setUseDrmSessionsForClearContent(androidx.media3.common.C.TRACK_TYPE_VIDEO, androidx.media3.common.C.TRACK_TYPE_AUDIO)
                 .build(cb)
         } catch (e: Exception) { null }
     }

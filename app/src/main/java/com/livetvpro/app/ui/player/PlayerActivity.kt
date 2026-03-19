@@ -1828,6 +1828,9 @@ class PlayerActivity : AppCompatActivity() {
                 else -> null
             }
 
+            android.util.Log.d("DRM_DEBUG", "clearKeyMgr=${if (clearKeyMgr != null) "BUILT" else "NULL"} scheme=${streamInfo.drmScheme} keyId=${streamInfo.drmKeyId} key=${streamInfo.drmKey} licenseUrl=${streamInfo.drmLicenseUrl} url=${streamInfo.url.take(80)}")
+            saveDrmLog("clearKeyMgr=${if (clearKeyMgr != null) "BUILT" else "NULL"} scheme=${streamInfo.drmScheme} keyId=${streamInfo.drmKeyId} key=${if (streamInfo.drmKey != null) "SET" else "NULL"} licenseUrl=${streamInfo.drmLicenseUrl}")
+
             // For clearkey with known keyId: pre-fetch the MPD manifest, inject
             // cenc:default_KID so Media3 canAcquireSession returns true, save to
             // temp file, and play from that file URI instead of the original URL.

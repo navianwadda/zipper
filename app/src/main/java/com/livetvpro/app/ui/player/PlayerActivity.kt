@@ -1664,44 +1664,6 @@ class PlayerActivity : AppCompatActivity() {
         releasePlayer()
     }
 
-    private var localLicenseServer: java.net.ServerSocket? = null
-
-    private fun startLocalLicenseServer(jwkResponse: String): String? {
-        return try {
-            localLicenseServer?.close()
-            val server = java.net.ServerSocket(0)
-            localLicenseServer = server
-            val port = server.localPort
-            Thread {
-                try {
-                    while (!server.isClosed) {
-                        val client = server.accept()
-                        Thread {
-                            try {
-                                // Read and discard the request
-                                val input = client.getInputStream()
-                                val buf = ByteArray(4096)
-                                while (input.available() > 0) input.read(buf)
-                                // Write JWK response
-                                val body = jwkResponse.toByteArray(Charsets.UTF_8)
-                                val response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${body.size}\r\nConnection: close\r\n\r\n"
-                                client.getOutputStream().write(response.toByteArray())
-                                client.getOutputStream().write(body)
-                                client.getOutputStream().flush()
-                            } catch (_: Exception) {
-                            } finally {
-                                client.close()
-                            }
-                        }.also { it.isDaemon = true }.start()
-                    }
-                } catch (_: Exception) {}
-            }.also { it.isDaemon = true }.start()
-            "http://127.0.0.1:$port/license"
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     private fun releasePlayer() {
         player?.let {
             try {
@@ -1713,8 +1675,6 @@ class PlayerActivity : AppCompatActivity() {
         }
         player = null
         playerListener = null
-        try { localLicenseServer?.close() } catch (_: Exception) {}
-        localLicenseServer = null
     }
 
     private data class StreamInfo(
@@ -1857,34 +1817,36 @@ class PlayerActivity : AppCompatActivity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            // For clearkey with inline key/JWK: start a local HTTP server that serves
-            // the JWK response. Set WIDEVINE_UUID on the MediaItem to match the manifest
-            // so the track selector selects tracks. Media3 calls our local server for the
-            // license, gets the JWK back, decrypts the CENC content.
-            val localLicenseUrl: String? = if (streamInfo.drmScheme == "clearkey") {
-                val jwk = when {
-                    streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
-                        val kidB64 = android.util.Base64.encodeToString(
-                            hexToBytes(streamInfo.drmKeyId),
-                            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
-                        )
-                        val kB64 = android.util.Base64.encodeToString(
-                            hexToBytes(streamInfo.drmKey),
-                            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
-                        )
-                        "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$kidB64\",\"k\":\"$kB64\"}],\"type\":\"temporary\"}"
-                    }
-                    streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
-                        val json = streamInfo.drmLicenseUrl
-                        if (!json.contains("\"type\"")) json.trimEnd().trimEnd('}') + ",\"type\":\"temporary\"}" else json
-                    }
-                    else -> null
-                }
-                if (jwk != null) startLocalLicenseServer(jwk) else streamInfo.drmLicenseUrl
-            } else null
+            val clearKeyMgr = when {
+                streamInfo.drmScheme != "clearkey" -> null
+                streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
+                    createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
+                    createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
+                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
+                    createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
+                else -> null
+            }
 
-            val mediaSourceFactory = DefaultMediaSourceFactory(this)
-                .setDataSourceFactory(dataSourceFactory)
+            // For clearkey on CENC streams that lack cenc:default_KID in the manifest,
+            // Media3's canAcquireSession returns false → VIDEO selected=false.
+            // Fix: wrap DataSource.Factory to intercept .mpd and inject cenc:default_KID.
+            val effectiveFactory = if (clearKeyMgr != null && streamInfo.drmKeyId != null) {
+                val kid = streamInfo.drmKeyId
+                val formattedKid = "${kid.substring(0,8)}-${kid.substring(8,12)}-${kid.substring(12,16)}-${kid.substring(16,20)}-${kid.substring(20)}".uppercase()
+                MpdPatchingDataSourceFactory(dataSourceFactory, formattedKid)
+            } else {
+                dataSourceFactory
+            }
+
+            val mediaSourceFactory = if (clearKeyMgr != null) {
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(effectiveFactory)
+                    .setDrmSessionManagerProvider { clearKeyMgr }
+            } else {
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(effectiveFactory)
+            }
 
             player = ExoPlayer.Builder(this)
                 .setTrackSelector(trackSelector!!)
@@ -1922,15 +1884,7 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if (streamInfo.drmScheme == "clearkey" && localLicenseUrl != null) {
-                        mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
-                                .setLicenseUri(localLicenseUrl)
-                                .setMultiSession(true)
-                                .setForceDefaultLicenseUri(true)
-                                .build()
-                        )
-                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
+                    if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                         val licenseHeaders = headers.filter { (k, _) ->
@@ -2080,6 +2034,88 @@ class PlayerActivity : AppCompatActivity() {
         binding.errorView.visibility = View.VISIBLE
     }
 
+    /**
+     * Wraps a DataSource.Factory to intercept DASH manifest (.mpd) responses and inject
+     * cenc:default_KID into ContentProtection elements that are missing it.
+     * This allows Media3's canAcquireSession to return true for ClearKey sessions
+     * on streams whose manifests only declare Widevine/PlayReady UUIDs.
+     */
+    private inner class MpdPatchingDataSourceFactory(
+        private val inner: androidx.media3.datasource.DataSource.Factory,
+        private val defaultKid: String
+    ) : androidx.media3.datasource.DataSource.Factory {
+        override fun createDataSource(): androidx.media3.datasource.DataSource {
+            return PatchingDataSource(inner.createDataSource(), defaultKid)
+        }
+    }
+
+    private inner class PatchingDataSource(
+        private val inner: androidx.media3.datasource.DataSource,
+        private val defaultKid: String
+    ) : androidx.media3.datasource.DataSource {
+        private var patchedBytes: ByteArray? = null
+        private var position = 0
+        private var isMpd = false
+
+        override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
+            isMpd = dataSpec.uri.toString().let {
+                it.contains(".mpd", ignoreCase = true) ||
+                it.contains("/dash/", ignoreCase = true) ||
+                it.contains("type=mpd", ignoreCase = true)
+            }
+            val result = inner.open(dataSpec)
+            if (isMpd) {
+                // Read entire manifest, patch it, serve from memory
+                val buffer = java.io.ByteArrayOutputStream()
+                val chunk = ByteArray(8192)
+                var n: Int
+                while (inner.read(chunk, 0, chunk.size).also { n = it } != androidx.media3.datasource.DataSource.RESULT_END_OF_INPUT) {
+                    if (n > 0) buffer.write(chunk, 0, n)
+                }
+                inner.close()
+                val original = buffer.toString(Charsets.UTF_8.name())
+                val patched = patchMpd(original, defaultKid)
+                patchedBytes = patched.toByteArray(Charsets.UTF_8)
+                position = 0
+                return patchedBytes!!.size.toLong()
+            }
+            return result
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            if (isMpd) {
+                val bytes = patchedBytes ?: return androidx.media3.datasource.DataSource.RESULT_END_OF_INPUT
+                if (position >= bytes.size) return androidx.media3.datasource.DataSource.RESULT_END_OF_INPUT
+                val n = minOf(length, bytes.size - position)
+                bytes.copyInto(buffer, offset, position, position + n)
+                position += n
+                return n
+            }
+            return inner.read(buffer, offset, length)
+        }
+
+        override fun getUri(): android.net.Uri? = inner.uri
+        override fun close() { if (!isMpd) inner.close(); patchedBytes = null }
+        override fun getResponseHeaders(): Map<String, List<String>> = inner.responseHeaders
+        override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) =
+            inner.addTransferListener(transferListener)
+    }
+
+    private fun patchMpd(mpd: String, defaultKid: String): String {
+        // Inject cenc:default_KID into ContentProtection value="cenc" elements that lack it
+        return mpd.replace(
+            Regex("""(<ContentProtection[^>]*schemeIdUri="urn:mpeg:dash:mp4protection:2011"[^>]*value="cenc"[^>]*?)(?<!cenc:default_KID="[^"]{36}")(/?>)""")
+        ) { match ->
+            val tag = match.groupValues[1]
+            val close = match.groupValues[2]
+            if (tag.contains("default_KID", ignoreCase = true)) {
+                match.value // already has it
+            } else {
+                """$tag xmlns:cenc="urn:mpeg:cenc:2013" cenc:default_KID="$defaultKid"$close"""
+            }
+        }
+    }
+
     private fun createClearKeyDrmManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
             val keyIdBytes = hexToBytes(keyIdHex)
@@ -2102,7 +2138,8 @@ class PlayerActivity : AppCompatActivity() {
 
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
+                .setUseDrmSessionsForClearContent(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO, C.TRACK_TYPE_TEXT)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2119,7 +2156,8 @@ class PlayerActivity : AppCompatActivity() {
             val drmCallback = LocalMediaDrmCallback(json.toByteArray(Charsets.UTF_8))
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
+                .setUseDrmSessionsForClearContent(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO, C.TRACK_TYPE_TEXT)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -2139,7 +2177,9 @@ class PlayerActivity : AppCompatActivity() {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false).build(cb)
+                .setMultiSession(true)
+                .setUseDrmSessionsForClearContent(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO, C.TRACK_TYPE_TEXT)
+                .build(cb)
         } catch (e: Exception) { null }
     }
 

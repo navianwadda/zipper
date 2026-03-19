@@ -1808,6 +1808,14 @@ class PlayerActivity : AppCompatActivity() {
                 return
             }
 
+            if (streamInfo.drmScheme == "clearkey") {
+                trackSelector!!.setParameters(
+                    trackSelector!!.buildUponParameters()
+                        .setExceedRendererCapabilitiesIfNecessary(true)
+                        .build()
+                )
+            }
+
             val headers = streamInfo.headers.toMutableMap()
             if (!headers.containsKey("User-Agent")) {
                 headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -1878,13 +1886,9 @@ class PlayerActivity : AppCompatActivity() {
                     }
 
                     if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
-                        // Manifest declares Widevine UUID. Use WIDEVINE_UUID on the MediaItem
-                        // so the track selector sees supported DRM and selects the tracks.
-                        // forceSessionsForAudioAndVideoTracks ensures sessions are created
-                        // even though we're injecting keys via LocalMediaDrmCallback.
-                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey with WIDEVINE_UUID")
+                        android.util.Log.d("DRM_DEBUG", "setDrmConfiguration: clearkey")
                         mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                            MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
                                 .setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
                                 .forceSessionsForAudioAndVideoTracks(true)
                                 .build()

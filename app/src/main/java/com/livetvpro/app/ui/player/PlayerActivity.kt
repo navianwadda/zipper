@@ -2069,7 +2069,7 @@ class PlayerActivity : AppCompatActivity() {
                 val buffer = java.io.ByteArrayOutputStream()
                 val chunk = ByteArray(8192)
                 var n: Int
-                while (inner.read(chunk, 0, chunk.size).also { n = it } != androidx.media3.datasource.DataSource.RESULT_END_OF_INPUT) {
+                while (inner.read(chunk, 0, chunk.size).also { n = it } != C.RESULT_END_OF_INPUT) {
                     if (n > 0) buffer.write(chunk, 0, n)
                 }
                 inner.close()
@@ -2084,8 +2084,8 @@ class PlayerActivity : AppCompatActivity() {
 
         override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
             if (isMpd) {
-                val bytes = patchedBytes ?: return androidx.media3.datasource.DataSource.RESULT_END_OF_INPUT
-                if (position >= bytes.size) return androidx.media3.datasource.DataSource.RESULT_END_OF_INPUT
+                val bytes = patchedBytes ?: return C.RESULT_END_OF_INPUT
+                if (position >= bytes.size) return C.RESULT_END_OF_INPUT
                 val n = minOf(length, bytes.size - position)
                 bytes.copyInto(buffer, offset, position, position + n)
                 position += n

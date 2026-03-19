@@ -1909,11 +1909,15 @@ class PlayerActivity : AppCompatActivity() {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             when (playbackState) {
                                 Player.STATE_READY -> {
+                                    val msg = "STATE_READY: videoFormat=${player?.videoFormat} audioFormat=${player?.audioFormat}"
+                                    android.util.Log.d("DRM_DEBUG", msg)
+                                    saveDrmLog(msg)
                                     binding.progressBar.visibility = View.GONE
                                     binding.errorView.visibility = View.GONE
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) updatePipParams()
                                 }
                                 Player.STATE_BUFFERING -> {
+                                    android.util.Log.d("DRM_DEBUG", "STATE_BUFFERING")
                                     binding.progressBar.visibility = View.VISIBLE
                                     binding.errorView.visibility = View.GONE
                                 }
@@ -1926,6 +1930,18 @@ class PlayerActivity : AppCompatActivity() {
                         }
 
                         override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                            val summary = tracks.groups.joinToString("\n") { group ->
+                                val type = when (group.type) {
+                                    C.TRACK_TYPE_VIDEO -> "VIDEO"
+                                    C.TRACK_TYPE_AUDIO -> "AUDIO"
+                                    C.TRACK_TYPE_TEXT -> "TEXT"
+                                    else -> "OTHER(${group.type})"
+                                }
+                                val selected = (0 until group.length).any { group.isTrackSelected(it) }
+                                "$type selected=$selected"
+                            }
+                            android.util.Log.d("DRM_DEBUG", "onTracksChanged:\n$summary")
+                            saveDrmLog("onTracksChanged:\n$summary")
                             if (!preferencesManager.isForceLowestQualityEnabled()) return
                             val ts = trackSelector ?: return
                             var lowestHeight = Int.MAX_VALUE
@@ -1968,6 +1984,9 @@ class PlayerActivity : AppCompatActivity() {
 
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                             super.onPlayerError(error)
+                            val msg = "onPlayerError: errorCode=${error.errorCode} message=${error.message} cause=${error.cause?.javaClass?.simpleName}: ${error.cause?.message} rootCause=${error.cause?.cause?.javaClass?.simpleName}: ${error.cause?.cause?.message}"
+                            android.util.Log.e("DRM_DEBUG", msg)
+                            saveDrmLog(msg)
                             binding.progressBar.visibility = View.GONE
 
                             val errorMessage = when {
@@ -2004,7 +2023,37 @@ class PlayerActivity : AppCompatActivity() {
                     exo.addListener(playerListener!!)
                 }
         } catch (e: Exception) {
+            android.util.Log.e("DRM_DEBUG", "setupPlayer CRASHED: ${e.javaClass.simpleName}: ${e.message}\n${e.stackTraceToString()}")
+            saveDrmLog("CRASH: ${e.javaClass.simpleName}: ${e.message}\n${e.stackTraceToString()}")
             showError("Failed to initialize player")
+        }
+    }
+
+    private fun saveDrmLog(message: String) {
+        try {
+            val line = "[${java.util.Date()}] $message\n"
+            val resolver = contentResolver
+            val existing = resolver.query(
+                android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(android.provider.MediaStore.MediaColumns._ID),
+                "${android.provider.MediaStore.MediaColumns.DISPLAY_NAME} = ?",
+                arrayOf("drm_debug_log.txt"), null
+            )
+            val uri = existing?.use { c ->
+                if (c.moveToFirst()) android.content.ContentUris.withAppendedId(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, c.getLong(0)
+                ) else null
+            } ?: run {
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "drm_debug_log.txt")
+                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+                }
+                resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            }
+            uri?.let { resolver.openOutputStream(it, "wa")?.use { os -> os.write(line.toByteArray(Charsets.UTF_8)) } }
+        } catch (ex: Exception) {
+            android.util.Log.e("DRM_DEBUG", "saveDrmLog failed: ${ex.message}")
         }
     }
 
@@ -2075,6 +2124,7 @@ class PlayerActivity : AppCompatActivity() {
                 inner.close()
                 val original = buffer.toString(Charsets.UTF_8.name())
                 val patched = patchMpd(original, defaultKid)
+                android.util.Log.d("DRM_DEBUG", "MPD patched: hadKID=${original.contains("default_KID", ignoreCase = true)} patchedHasKID=${patched.contains("default_KID", ignoreCase = true)}")
                 patchedBytes = patched.toByteArray(Charsets.UTF_8)
                 position = 0
                 return patchedBytes!!.size.toLong()

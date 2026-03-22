@@ -2195,12 +2195,13 @@ class PlayerActivity : AppCompatActivity() {
                 override fun executeProvisionRequest(
                     uuid: UUID,
                     request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest
-                ): ByteArray = ByteArray(0)
+                ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response =
+                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(ByteArray(0), emptyMap())
 
                 override fun executeKeyRequest(
                     uuid: UUID,
                     request: androidx.media3.exoplayer.drm.ExoMediaDrm.KeyRequest
-                ): ByteArray {
+                ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response {
                     return try {
                         // Parse the request body to get the actual kids ExoPlayer wants
                         val requestBody = String(request.data, Charsets.UTF_8)
@@ -2237,12 +2238,14 @@ class PlayerActivity : AppCompatActivity() {
                             com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
                             "JWK response: $jwkResponse")
 
-                        jwkResponse.toByteArray(Charsets.UTF_8)
+                        androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
+                            jwkResponse.toByteArray(Charsets.UTF_8), emptyMap())
                     } catch (e: Exception) {
                         com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-AdaptiveCallback", false, e)
                         // Last-resort fallback to original hardcoded JWK
-                        """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$keyIdBase64"}],"type":"temporary"}"""
-                            .toByteArray(Charsets.UTF_8)
+                        val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$keyIdBase64"}],"type":"temporary"}"""
+                        androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
+                            fallback.toByteArray(Charsets.UTF_8), emptyMap())
                     }
                 }
             }

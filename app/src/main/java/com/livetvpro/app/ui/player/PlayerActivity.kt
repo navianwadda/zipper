@@ -1906,13 +1906,94 @@ class PlayerActivity : AppCompatActivity() {
                 headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
 
-            val dataSourceFactory = DefaultHttpDataSource.Factory()
+            val baseDataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
                 .setConnectTimeoutMs(30000)
                 .setReadTimeoutMs(30000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
+
+            // AES-128 key injection: for clearkey inline-hex streams (GuardEncType-style),
+            // wrap the DataSource so any key URI request returns the raw key bytes directly.
+            // This handles MAG/Odido AES-128 segment encryption which is NOT standard CENC —
+            // ExoPlayer fetches a key URI from the manifest; we intercept it and return the
+            // user-supplied 16-byte key instead of hitting the remote key server.
+            val dataSourceFactory = if (
+                streamInfo.drmScheme == "clearkey" &&
+                streamInfo.drmKeyId != null && streamInfo.drmKey != null
+            ) {
+                val keyBytes = hexToBytes(streamInfo.drmKey)
+                val ivBytes  = hexToBytes(streamInfo.drmKeyId)
+                com.livetvpro.app.utils.DrmDebugLogger.log(
+                    com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                    "AES-128 key injection active — key=${streamInfo.drmKey} iv=${streamInfo.drmKeyId}")
+                androidx.media3.datasource.DataSource.Factory {
+                    object : androidx.media3.datasource.DataSource {
+                        private var delegate: androidx.media3.datasource.DataSource? = null
+                        private var isKeyRequest = false
+                        private var keyRead = false
+
+                        override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
+                            val uriLower = dataSpec.uri.toString().lowercase()
+                            // Intercept requests that look like AES key fetches:
+                            // short URIs, "key" in path, or the scheme's key URI
+                            isKeyRequest = uriLower.contains("/key") ||
+                                uriLower.contains("keyid") ||
+                                uriLower.contains("license") ||
+                                uriLower.contains("encryption") ||
+                                (!uriLower.contains(".mpd") &&
+                                 !uriLower.contains(".m3u8") &&
+                                 !uriLower.contains(".ts") &&
+                                 !uriLower.contains(".mp4") &&
+                                 !uriLower.contains(".cmf") &&
+                                 !uriLower.contains(".dash") &&
+                                 dataSpec.uri.path?.let { p ->
+                                     p.substringAfterLast('/').length <= 50 &&
+                                     !p.contains('.') } == true)
+                            keyRead = false
+                            if (isKeyRequest) {
+                                com.livetvpro.app.utils.DrmDebugLogger.log(
+                                    com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                                    "Key URI intercepted: ${dataSpec.uri} → returning ${keyBytes.size}-byte key")
+                                return keyBytes.size.toLong()
+                            }
+                            val d = baseDataSourceFactory.createDataSource()
+                            delegate = d
+                            return d.open(dataSpec)
+                        }
+
+                        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                            if (isKeyRequest && !keyRead) {
+                                val toCopy = minOf(length, keyBytes.size)
+                                System.arraycopy(keyBytes, 0, buffer, offset, toCopy)
+                                keyRead = true
+                                return toCopy
+                            }
+                            return delegate?.read(buffer, offset, length)
+                                ?: androidx.media3.datasource.DataSource.RESULT_END_OF_INPUT
+                        }
+
+                        override fun getUri(): android.net.Uri? =
+                            delegate?.uri
+
+                        override fun getResponseHeaders(): Map<String, List<String>> =
+                            delegate?.responseHeaders ?: emptyMap()
+
+                        override fun close() {
+                            delegate?.close()
+                            delegate = null
+                        }
+
+                        override fun addTransferListener(
+                            transferListener: androidx.media3.datasource.TransferListener) {
+                            delegate?.addTransferListener(transferListener)
+                        }
+                    }
+                }
+            } else {
+                baseDataSourceFactory
+            }
 
             // ── DRM Debug: log parsed stream info ──
             com.livetvpro.app.utils.DrmDebugLogger.logUrlParse(

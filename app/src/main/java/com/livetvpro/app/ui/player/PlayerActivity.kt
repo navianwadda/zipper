@@ -2288,6 +2288,9 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(true)
+                .setUseDrmSessionsForClearContent(
+                    androidx.media3.common.C.TRACK_TYPE_VIDEO,
+                    androidx.media3.common.C.TRACK_TYPE_AUDIO)
                 .build(adaptiveCallback)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", false, e)
@@ -2305,6 +2308,9 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
+                .setUseDrmSessionsForClearContent(
+                    androidx.media3.common.C.TRACK_TYPE_VIDEO,
+                    androidx.media3.common.C.TRACK_TYPE_AUDIO)
                 .build(drmCallback)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-JWK", false, e)
@@ -2328,7 +2334,11 @@ class PlayerActivity : AppCompatActivity() {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false).build(cb)
+                .setMultiSession(false)
+                .setUseDrmSessionsForClearContent(
+                    androidx.media3.common.C.TRACK_TYPE_VIDEO,
+                    androidx.media3.common.C.TRACK_TYPE_AUDIO)
+                .build(cb)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-Server", false, e)
             null

@@ -2177,28 +2177,84 @@ class PlayerActivity : AppCompatActivity() {
                 android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
             )
 
-            val jwkResponse = """
-            {
-                "keys": [
-                    {
-                        "kty": "oct",
-                        "k": "$keyBase64",
-                        "kid": "$keyIdBase64"
+            // BUG FIX: Black screen caused by key ID mismatch between the hardcoded kid
+            // in the JWK and the actual key ID(s) advertised in the MPD PSSH box.
+            //
+            // ExoPlayer sends a license request containing the key IDs it read from the
+            // manifest PSSH. The request body looks like:
+            //   {"kids":["<base64url of PSSH kid>"],"type":"temporary"}
+            //
+            // Our LocalMediaDrmCallback must respond with a JWK whose "kid" exactly matches
+            // whatever kid ExoPlayer requested — NOT the hardcoded one from the stream URL,
+            // which may differ (different byte order, different encoding, wrong value).
+            //
+            // Solution: use a custom DrmCallback that parses the incoming license request,
+            // extracts the kid(s) ExoPlayer is actually asking for, and echoes them back
+            // in the JWK response paired with our content decryption key.
+            val adaptiveCallback = object : androidx.media3.exoplayer.drm.MediaDrmCallback {
+                override fun executeProvisionRequest(
+                    uuid: UUID,
+                    request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest
+                ): ByteArray = ByteArray(0)
+
+                override fun executeKeyRequest(
+                    uuid: UUID,
+                    request: androidx.media3.exoplayer.drm.ExoMediaDrm.KeyRequest
+                ): ByteArray {
+                    return try {
+                        // Parse the request body to get the actual kids ExoPlayer wants
+                        val requestBody = String(request.data, Charsets.UTF_8)
+                        com.livetvpro.app.utils.DrmDebugLogger.log(
+                            com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                            "KeyRequest body: $requestBody")
+
+                        val requestedKids = mutableListOf<String>()
+                        val kidsMatch = Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(requestBody)
+                        if (kidsMatch != null) {
+                            val kidsArray = kidsMatch.groupValues[1]
+                            Regex(""""([A-Za-z0-9+/=_-]+)"""").findAll(kidsArray).forEach {
+                                requestedKids.add(it.groupValues[1])
+                            }
+                        }
+
+                        com.livetvpro.app.utils.DrmDebugLogger.log(
+                            com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                            "PSSH kids from manifest: $requestedKids  our kid: $keyIdBase64")
+
+                        // Build a JWK entry for every kid the manifest requests,
+                        // mapping each one to our content decryption key.
+                        val keyEntries = if (requestedKids.isNotEmpty()) {
+                            requestedKids.joinToString(",") { kid ->
+                                """{"kty":"oct","k":"$keyBase64","kid":"$kid"}"""
+                            }
+                        } else {
+                            // Fallback: use our hardcoded kid
+                            """{"kty":"oct","k":"$keyBase64","kid":"$keyIdBase64"}"""
+                        }
+
+                        val jwkResponse = """{"keys":[$keyEntries],"type":"temporary"}"""
+                        com.livetvpro.app.utils.DrmDebugLogger.log(
+                            com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                            "JWK response: $jwkResponse")
+
+                        jwkResponse.toByteArray(Charsets.UTF_8)
+                    } catch (e: Exception) {
+                        com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-AdaptiveCallback", false, e)
+                        // Last-resort fallback to original hardcoded JWK
+                        """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$keyIdBase64"}],"type":"temporary"}"""
+                            .toByteArray(Charsets.UTF_8)
                     }
-                ]
+                }
             }
-            """.trimIndent()
 
             com.livetvpro.app.utils.DrmDebugLogger.log(
                 com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
-                "JWK built — kid(b64)=$keyIdBase64  k(b64)=$keyBase64")
-
-            val drmCallback = LocalMediaDrmCallback(jwkResponse.toByteArray())
+                "Adaptive ClearKey callback created — will echo manifest kid(s) back with key k(b64)=$keyBase64")
 
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .build(drmCallback)
+                .setMultiSession(true)
+                .build(adaptiveCallback)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", false, e)
             null

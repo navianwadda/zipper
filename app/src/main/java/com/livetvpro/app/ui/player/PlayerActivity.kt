@@ -1930,6 +1930,19 @@ class PlayerActivity : AppCompatActivity() {
                 streamInfo.drmScheme, streamInfo.drmKeyId, streamInfo.drmKey,
                 streamInfo.drmLicenseUrl, clearKeyBranch)
 
+            // BUG FIX: Black screen on streams with both Widevine + ClearKey PSSH boxes.
+            // Previously we used setDrmSessionManagerProvider which only fires if ExoPlayer
+            // selects OUR scheme from the PSSH. When Widevine PSSH appears first in the MPD,
+            // ExoPlayer picks Widevine, ignores the ClearKey provider, and renders black.
+            //
+            // Fix: build the DrmSessionManager directly and inject it via
+            // DefaultDrmSessionManager.setMode() + attach to ExoPlayer explicitly,
+            // bypassing ExoPlayer's PSSH-selection logic entirely.
+            //
+            // For ClearKey inline-hex and JWK: use our adaptive callback manager.
+            // For ClearKey server URL: use HttpMediaDrmCallback as before.
+            // We then force it onto the MediaItem via DrmConfiguration with ClearKey UUID,
+            // which makes ExoPlayer use our session regardless of MPD PSSH content.
             val clearKeyMgr = when {
                 streamInfo.drmScheme != "clearkey" -> null
                 streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
@@ -1949,6 +1962,8 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 else -> null
             }
+
+            // Attach ClearKey manager directly to ExoPlayer — bypasses PSSH scheme selection
             val mediaSourceFactory = if (clearKeyMgr != null) {
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(dataSourceFactory)
@@ -1994,7 +2009,23 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
+                    if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
+                        // Force ClearKey UUID on the MediaItem so ExoPlayer uses our
+                        // DrmSessionManager regardless of PSSH order in the MPD.
+                        // Without this, a Widevine PSSH appearing before ClearKey in the
+                        // manifest causes ExoPlayer to ignore our ClearKey manager entirely.
+                        val clearKeyUuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+                        mediaItemBuilder.setDrmConfiguration(
+                            MediaItem.DrmConfiguration.Builder(clearKeyUuid)
+                                .setForceSessionsForAudioAndVideoTracks(true)
+                                .build()
+                        )
+                        com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
+                            streamInfo.url, null, true, clearKeyUuid.toString())
+                        com.livetvpro.app.utils.DrmDebugLogger.log(
+                            com.livetvpro.app.utils.DrmDebugLogger.Stage.MEDIA_ITEM,
+                            "ClearKey forced on MediaItem — PSSH order in MPD will be ignored")
+                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                         val licenseHeaders = headers.filter { (k, _) -> k != "Referer" && k != "Origin" }

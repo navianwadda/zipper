@@ -2196,7 +2196,7 @@ class PlayerActivity : AppCompatActivity() {
                     uuid: UUID,
                     request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest
                 ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response =
-                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(ByteArray(0), emptyMap())
+                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(ByteArray(0))
 
                 override fun executeKeyRequest(
                     uuid: UUID,
@@ -2239,13 +2239,13 @@ class PlayerActivity : AppCompatActivity() {
                             "JWK response: $jwkResponse")
 
                         androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
-                            jwkResponse.toByteArray(Charsets.UTF_8), emptyMap())
+                            jwkResponse.toByteArray(Charsets.UTF_8))
                     } catch (e: Exception) {
                         com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-AdaptiveCallback", false, e)
                         // Last-resort fallback to original hardcoded JWK
                         val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$keyIdBase64"}],"type":"temporary"}"""
                         androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
-                            fallback.toByteArray(Charsets.UTF_8), emptyMap())
+                            fallback.toByteArray(Charsets.UTF_8))
                     }
                 }
             }

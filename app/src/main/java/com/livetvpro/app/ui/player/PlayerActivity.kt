@@ -1314,26 +1314,63 @@ class PlayerActivity : AppCompatActivity() {
 
                 val parsed = parseStreamUrl(streamUrlRaw)
 
-                // Debug
-                com.livetvpro.app.utils.DrmDebugLogger.startSession("NETWORK_STREAM", contentName, streamUrlRaw)
-                com.livetvpro.app.utils.DrmDebugLogger.logIntent("IS_NETWORK_STREAM", "NETWORK_STREAM",
-                    streamUrlRaw, parsed.drmScheme, parsed.drmLicenseUrl)
-                com.livetvpro.app.utils.DrmDebugLogger.logUrlParse(
-                    streamUrlRaw, parsed.url, parsed.headers,
-                    parsed.drmScheme, parsed.drmKeyId, parsed.drmKey, parsed.drmLicenseUrl)
+                // BUG FIX: when the URL already contains pipe params (e.g. |User-Agent=Mozila),
+                // the UI's separate DRM Scheme and DRM License fields were being silently ignored.
+                // Fall back to those extras when the pipe-parsed result has no DRM.
+                val extraDrmScheme = intent.getStringExtra("DRM_SCHEME")?.takeIf { it.isNotBlank() }
+                val extraDrmLicense = intent.getStringExtra("DRM_LICENSE")?.takeIf { it.isNotBlank() }
+                val resolvedDrmScheme = parsed.drmScheme ?: extraDrmScheme
+                val resolvedDrmLicenseUrl: String?
+                val resolvedDrmKeyId: String?
+                val resolvedDrmKey: String?
+                if (parsed.drmKeyId != null) {
+                    resolvedDrmLicenseUrl = null
+                    resolvedDrmKeyId = parsed.drmKeyId
+                    resolvedDrmKey = parsed.drmKey
+                } else if (extraDrmLicense != null) {
+                    val colonIdx = extraDrmLicense.indexOf(':')
+                    if (extraDrmLicense.startsWith("http", ignoreCase = true)) {
+                        resolvedDrmLicenseUrl = extraDrmLicense
+                        resolvedDrmKeyId = null
+                        resolvedDrmKey = null
+                    } else if (colonIdx != -1) {
+                        resolvedDrmLicenseUrl = null
+                        resolvedDrmKeyId = extraDrmLicense.substring(0, colonIdx).trim()
+                        resolvedDrmKey = extraDrmLicense.substring(colonIdx + 1).trim()
+                    } else {
+                        resolvedDrmLicenseUrl = extraDrmLicense
+                        resolvedDrmKeyId = null
+                        resolvedDrmKey = null
+                    }
+                } else {
+                    resolvedDrmLicenseUrl = parsed.drmLicenseUrl
+                    resolvedDrmKeyId = null
+                    resolvedDrmKey = null
+                }
 
-                allEventLinks = listOf(
-                    LiveEventLink(
-                        quality = "Network Stream",
-                        url = parsed.url,
-                        cookie = parsed.headers["Cookie"] ?: "",
-                        referer = parsed.headers["Referer"] ?: "",
-                        origin = parsed.headers["Origin"] ?: "",
-                        userAgent = parsed.headers["User-Agent"] ?: "Default",
-                        drmScheme = parsed.drmScheme,
-                        drmLicenseUrl = parsed.drmLicenseUrl
-                    )
+                // Rebuild streamUrl to include DRM params so setupPlayer's parseStreamUrl sees them
+                val mergedLink = LiveEventLink(
+                    quality = "Network Stream",
+                    url = parsed.url,
+                    cookie = parsed.headers["Cookie"] ?: "",
+                    referer = parsed.headers["Referer"] ?: "",
+                    origin = parsed.headers["Origin"] ?: "",
+                    userAgent = parsed.headers["User-Agent"] ?: intent.getStringExtra("USER_AGENT") ?: "Default",
+                    drmScheme = resolvedDrmScheme,
+                    drmLicenseUrl = resolvedDrmLicenseUrl
+                        ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } }
                 )
+                streamUrl = buildStreamUrl(mergedLink)
+
+                // Debug
+                com.livetvpro.app.utils.DrmDebugLogger.startSession("NETWORK_STREAM", contentName, streamUrl)
+                com.livetvpro.app.utils.DrmDebugLogger.logIntent("IS_NETWORK_STREAM", "NETWORK_STREAM",
+                    streamUrl, resolvedDrmScheme, mergedLink.drmLicenseUrl)
+                com.livetvpro.app.utils.DrmDebugLogger.logUrlParse(
+                    streamUrl, parsed.url, parsed.headers,
+                    resolvedDrmScheme, resolvedDrmKeyId, resolvedDrmKey, resolvedDrmLicenseUrl)
+
+                allEventLinks = listOf(mergedLink)
             } else {
                 val cookie = intent.getStringExtra("COOKIE") ?: ""
                 val referer = intent.getStringExtra("REFERER") ?: ""

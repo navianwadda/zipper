@@ -37,6 +37,7 @@ import androidx.media3.exoplayer.drm.HttpMediaDrmCallback
 import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import java.util.UUID
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import kotlin.math.abs
@@ -1489,70 +1490,57 @@ class FloatingPlayerService : Service() {
 
     private fun parseStreamUrl(streamUrl: String): StreamInfo {
         val pipeIndex = streamUrl.indexOf('|')
-        if (pipeIndex == -1) {
-            return StreamInfo(streamUrl, mapOf(), null, null, null, null)
-        }
+        if (pipeIndex == -1) return StreamInfo(streamUrl, mapOf(), null, null, null, null)
 
         val url = streamUrl.substring(0, pipeIndex).trim()
-        val rawParams = streamUrl.substring(pipeIndex + 1).trim()
-
+        val parts = buildList {
+            for (segment in streamUrl.substring(pipeIndex + 1).split("|")) {
+                val eqIdx = segment.indexOf('=')
+                val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
+                if (value.startsWith("http://", ignoreCase = true) ||
+                    value.startsWith("https://", ignoreCase = true)) {
+                    add(segment)
+                } else {
+                    addAll(segment.split("&"))
+                }
+            }
+        }
         val headers = mutableMapOf<String, String>()
         var drmScheme: String? = null
         var drmKeyId: String? = null
         var drmKey: String? = null
         var drmLicenseUrl: String? = null
 
-        for (segment in rawParams.split("|")) {
-            val trimmed = segment.trim()
-            if (trimmed.isEmpty()) continue
-            val eqIndex = trimmed.indexOf('=')
+        for (part in parts) {
+            val eqIndex = part.indexOf('=')
             if (eqIndex == -1) continue
-            val key = trimmed.substring(0, eqIndex).trim()
-            val value = trimmed.substring(eqIndex + 1).trim()
-            if (key.isEmpty() || value.isEmpty()) continue
-
+            val key = part.substring(0, eqIndex).trim()
+            val value = part.substring(eqIndex + 1).trim()
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
-                "drmlicense" -> {
-                    when {
-                        value.startsWith("http://", ignoreCase = true) ||
-                        value.startsWith("https://", ignoreCase = true) ->
-                            drmLicenseUrl = value
-                        value.trimStart().startsWith("{") ->
-                            drmLicenseUrl = value
-                        else -> {
-                            val colonIndex = value.indexOf(':')
-                            if (colonIndex != -1) {
-                                drmKeyId = value.substring(0, colonIndex).trim()
-                                drmKey = value.substring(colonIndex + 1).trim()
-                            } else {
-                                drmLicenseUrl = value
-                            }
+                "drmlicense" -> when {
+                    value.startsWith("http://", ignoreCase = true) ||
+                    value.startsWith("https://", ignoreCase = true) -> drmLicenseUrl = value
+                    value.trimStart().startsWith("{") -> drmLicenseUrl = value
+                    else -> {
+                        val colonIndex = value.indexOf(':')
+                        if (colonIndex != -1) {
+                            drmKeyId = value.substring(0, colonIndex).trim()
+                            drmKey = value.substring(colonIndex + 1).trim()
                         }
                     }
                 }
-                "referer", "referrer" -> headers["Referer"] = value
                 "user-agent", "useragent" -> headers["User-Agent"] = value
-                "origin" -> headers["Origin"] = value
+                "referer", "referrer" -> headers["Referer"] = value
                 "cookie" -> headers["Cookie"] = value
+                "origin" -> headers["Origin"] = value
                 "x-forwarded-for" -> headers["X-Forwarded-For"] = value
-                "x-requested-with" -> headers["X-Requested-With"] = value
-                "authorization" -> headers["Authorization"] = value
-                "host" -> headers["Host"] = value
-                else -> {
-                    if (key.startsWith("x-", ignoreCase = true) ||
-                        key.startsWith("sec-", ignoreCase = true) ||
-                        key.equals("accept", ignoreCase = true) ||
-                        key.equals("accept-language", ignoreCase = true) ||
-                        key.equals("range", ignoreCase = true)) {
-                        headers[key] = value
-                    }
-                }
+                else -> headers[key] = value
             }
         }
-
         return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
     }
+
 
     private fun buildStreamInfoFromDrmFields(
         url: String,
@@ -1560,85 +1548,20 @@ class FloatingPlayerService : Service() {
         drmScheme: String,
         drmLicense: String
     ): StreamInfo {
-        val pipeIndex = url.indexOf('|')
-        val cleanUrl: String
-        val mergedHeaders: Map<String, String>
-        var parsedDrmScheme: String? = null
-        var parsedDrmKeyId: String? = null
-        var parsedDrmKey: String? = null
-        var parsedDrmLicenseUrl: String? = null
-
-        if (pipeIndex != -1) {
-            cleanUrl = url.substring(0, pipeIndex).trim()
-            val rawParams = url.substring(pipeIndex + 1)
-            val extraHeaders = headers.toMutableMap()
-            val parts = buildList {
-                for (segment in rawParams.split("|")) {
-                    val eqIdx = segment.indexOf('=')
-                    val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
-                    if (value.startsWith("http://", ignoreCase = true) ||
-                        value.startsWith("https://", ignoreCase = true)) {
-                        add(segment)
-                    } else {
-                        addAll(segment.split("&"))
-                    }
-                }
-            }
-            for (part in parts) {
-                val eqIndex = part.indexOf('=')
-                if (eqIndex == -1) continue
-                val key = part.substring(0, eqIndex).trim()
-                val value = part.substring(eqIndex + 1).trim()
-                when (key.lowercase()) {
-                    "user-agent", "useragent" -> extraHeaders["User-Agent"] = value
-                    "referer", "referrer" -> extraHeaders["Referer"] = value
-                    "origin" -> extraHeaders["Origin"] = value
-                    "cookie" -> extraHeaders["Cookie"] = value
-                    "drmscheme" -> parsedDrmScheme = normalizeDrmScheme(value)
-                    "drmlicense" -> {
-                        when {
-                            value.startsWith("http://", ignoreCase = true) ||
-                            value.startsWith("https://", ignoreCase = true) ->
-                                parsedDrmLicenseUrl = value
-                            value.trimStart().startsWith("{") ->
-                                parsedDrmLicenseUrl = value
-                            value.contains(':') -> {
-                                val i = value.indexOf(':')
-                                parsedDrmKeyId = value.substring(0, i).trim()
-                                parsedDrmKey = value.substring(i + 1).trim()
-                            }
-                        }
-                    }
-                }
-            }
-            mergedHeaders = extraHeaders
-        } else {
-            cleanUrl = url
-            mergedHeaders = headers
-        }
-
-        val finalScheme = (parsedDrmScheme ?: normalizeDrmScheme(drmScheme).takeIf { it.isNotEmpty() })
-        val finalLicense = when {
-            parsedDrmKeyId != null && parsedDrmKey != null -> "${parsedDrmKeyId}:${parsedDrmKey}"
-            parsedDrmLicenseUrl != null -> parsedDrmLicenseUrl
-            drmLicense.isNotEmpty() -> drmLicense
-            else -> null
-        }
-
+        val scheme = normalizeDrmScheme(drmScheme).takeIf { it.isNotEmpty() }
         return when {
-            finalLicense == null -> StreamInfo(cleanUrl, mergedHeaders, finalScheme, null, null, null)
-            finalLicense.trimStart().startsWith("{") ->
-                StreamInfo(cleanUrl, mergedHeaders, finalScheme, null, null, finalLicense)
-            finalLicense.startsWith("http://", ignoreCase = true) ||
-            finalLicense.startsWith("https://", ignoreCase = true) ->
-                StreamInfo(cleanUrl, mergedHeaders, finalScheme, null, null, finalLicense)
-            finalLicense.contains(':') -> {
-                val i = finalLicense.indexOf(':')
-                StreamInfo(cleanUrl, mergedHeaders, finalScheme,
-                    finalLicense.substring(0, i).trim(),
-                    finalLicense.substring(i + 1).trim(), null)
+            drmLicense.trimStart().startsWith("{") ->
+                StreamInfo(url, headers, scheme, null, null, drmLicense)
+            drmLicense.startsWith("http://", ignoreCase = true) ||
+            drmLicense.startsWith("https://", ignoreCase = true) ->
+                StreamInfo(url, headers, scheme, null, null, drmLicense)
+            drmLicense.contains(':') -> {
+                val i = drmLicense.indexOf(':')
+                StreamInfo(url, headers, scheme,
+                    drmLicense.substring(0, i).trim(),
+                    drmLicense.substring(i + 1).trim(), null)
             }
-            else -> StreamInfo(cleanUrl, mergedHeaders, finalScheme, null, null, null)
+            else -> StreamInfo(url, headers, scheme, null, null, null)
         }
     }
 
@@ -1664,6 +1587,7 @@ class FloatingPlayerService : Service() {
 
     private fun createClearKeyServerDrmManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
+            val clearKeyUuid = java.util.UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
             val factory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
@@ -1674,40 +1598,34 @@ class FloatingPlayerService : Service() {
             val cb = HttpMediaDrmCallback(licenseUrl, factory)
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(true)
+                .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setMultiSession(false)
                 .build(cb)
         } catch (e: Exception) { null }
     }
 
     private fun createClearKeyDrmManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
-            val kidBytes = hexToBytes(keyIdHex)
-            val kBytes = hexToBytes(keyHex)
-            if (kidBytes.isEmpty() || kBytes.isEmpty()) return null
-            val kidB64 = android.util.Base64.encodeToString(kidBytes,
+            val uuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+            val kidB64 = android.util.Base64.encodeToString(hexToBytes(keyIdHex),
                 android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val kB64 = android.util.Base64.encodeToString(kBytes,
+            val kB64 = android.util.Base64.encodeToString(hexToBytes(keyHex),
                 android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val jwk = "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$kidB64\",\"k\":\"$kB64\"}],\"type\":\"temporary\"}"
+            val jwk = """{"keys":[{"kty":"oct","k":"$kB64","kid":"$kidB64"}],"type":"temporary"}"""
             DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(true)
-                .build(LocalMediaDrmCallback(jwk.toByteArray(Charsets.UTF_8)))
+                .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setMultiSession(false)
+                .build(LocalMediaDrmCallback(jwk.toByteArray()))
         } catch (e: Exception) { null }
     }
 
     private fun createClearKeyDrmManagerFromJwk(jwkJson: String): DefaultDrmSessionManager? {
         return try {
-            val json = if (!jwkJson.contains("\"type\"")) {
-                jwkJson.trimEnd().trimEnd('}') + ",\"type\":\"temporary\"}"
-            } else {
-                jwkJson
-            }
+            val uuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
             DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(true)
-                .build(LocalMediaDrmCallback(json.toByteArray(Charsets.UTF_8)))
+                .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setMultiSession(false)
+                .build(LocalMediaDrmCallback(jwkJson.toByteArray()))
         } catch (e: Exception) { null }
     }
 
@@ -1748,7 +1666,23 @@ class FloatingPlayerService : Service() {
         dataSourceFactory: DefaultHttpDataSource.Factory,
         headers: Map<String, String>
     ): DefaultMediaSourceFactory {
-        return DefaultMediaSourceFactory(this).setDataSourceFactory(dataSourceFactory)
+        val clearKeyMgr = when {
+            streamInfo.drmScheme != "clearkey" -> null
+            streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
+                createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
+            streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
+                createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
+            streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
+                createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
+            else -> null
+        }
+        return if (clearKeyMgr != null) {
+            DefaultMediaSourceFactory(this)
+                .setDataSourceFactory(dataSourceFactory)
+                .setDrmSessionManagerProvider { clearKeyMgr }
+        } else {
+            DefaultMediaSourceFactory(this).setDataSourceFactory(dataSourceFactory)
+        }
     }
 
     private fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
@@ -1762,46 +1696,11 @@ class FloatingPlayerService : Service() {
             url.contains(".ism") || url.contains(".isml") || url.contains("manifest(format=mpd") ->
                 builder.setMimeType(MimeTypes.APPLICATION_SS)
         }
-        if (streamInfo.drmScheme == "clearkey") {
-            val drmConfigBuilder = MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
-            when {
-                streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
-                    val kidB64 = android.util.Base64.encodeToString(
-                        hexToBytes(streamInfo.drmKeyId),
-                        android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
-                    )
-                    val kB64 = android.util.Base64.encodeToString(
-                        hexToBytes(streamInfo.drmKey),
-                        android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
-                    )
-                    val jwk = "{\"keys\":[{\"kty\":\"oct\",\"kid\":\"$kidB64\",\"k\":\"$kB64\"}],\"type\":\"temporary\"}"
-                    val dataUri = "data:application/json;base64," +
-                        android.util.Base64.encodeToString(jwk.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
-                    drmConfigBuilder.setLicenseUri(dataUri).setForceDefaultLicenseUri(true)
-                }
-                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
-                    val json = if (!streamInfo.drmLicenseUrl.contains("\"type\""))
-                        streamInfo.drmLicenseUrl.trimEnd().trimEnd('}') + ",\"type\":\"temporary\"}"
-                    else streamInfo.drmLicenseUrl
-                    val dataUri = "data:application/json;base64," +
-                        android.util.Base64.encodeToString(json.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
-                    drmConfigBuilder.setLicenseUri(dataUri).setForceDefaultLicenseUri(true)
-                }
-                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
-                    drmConfigBuilder
-                        .setLicenseUri(streamInfo.drmLicenseUrl)
-                        .setLicenseRequestHeaders(headers)
-                        .setForceDefaultLicenseUri(true)
-                }
-                else -> drmConfigBuilder.setLicenseUri("https://cwip-shaka-proxy.appspot.com/no_auth")
-            }
-            builder.setDrmConfiguration(drmConfigBuilder.build())
-        } else if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
+        if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->
                 val uuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                 val licenseHeaders = headers.filter { (k, _) ->
-                    val kl = k.lowercase()
-                    kl != "referer" && kl != "origin" && kl != "host"
+                    k != "Referer" && k != "Origin"
                 }
                 builder.setDrmConfiguration(
                     MediaItem.DrmConfiguration.Builder(uuid)

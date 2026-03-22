@@ -1261,17 +1261,39 @@ class PlayerActivity : AppCompatActivity() {
             contentType = ContentType.NETWORK_STREAM
             contentName = uri.lastPathSegment ?: "Stream"
             contentId = "external_${System.currentTimeMillis()}"
-            streamUrl = uri.toString()
+
+            // BUG FIX: Android percent-encodes '|' to '%7C' in Uri objects when the URL
+            // is passed via ACTION_VIEW (e.g. from OTT apps, browsers, playlist launchers).
+            // parseStreamUrl relies on '|' as the separator for DRM/header params.
+            // Without decoding first, ALL DRM params are silently lost.
+            val rawUriString = uri.toString()
+            val decodedUriString = android.net.Uri.decode(rawUriString)
+            streamUrl = decodedUriString
+
+            val parsed = parseStreamUrl(decodedUriString)
+
+            // Debug logging
+            com.livetvpro.app.utils.DrmDebugLogger.startSession("EXTERNAL/ACTION_VIEW", contentName, decodedUriString)
+            com.livetvpro.app.utils.DrmDebugLogger.logIntent(
+                action = intent.action,
+                contentType = "EXTERNAL/ACTION_VIEW",
+                rawStreamUrl = decodedUriString,
+                drmSchemeRaw = parsed.drmScheme,
+                drmLicenseRaw = parsed.drmLicenseUrl ?: parsed.drmKeyId?.let { "${it}:${parsed.drmKey}" }
+            )
+
             allEventLinks = listOf(
                 com.livetvpro.app.data.models.LiveEventLink(
                     quality = "Auto",
-                    url = uri.toString(),
-                    cookie = "",
-                    referer = "",
-                    origin = "",
-                    userAgent = "Default",
-                    drmScheme = "",
-                    drmLicenseUrl = ""
+                    url = parsed.url,
+                    cookie = parsed.headers["Cookie"] ?: "",
+                    referer = parsed.headers["Referer"] ?: "",
+                    origin = parsed.headers["Origin"] ?: "",
+                    userAgent = parsed.headers["User-Agent"] ?: "Default",
+                    drmScheme = parsed.drmScheme ?: "",
+                    drmLicenseUrl = parsed.drmLicenseUrl
+                        ?: parsed.drmKeyId?.let { id -> parsed.drmKey?.let { k -> "$id:$k" } }
+                        ?: ""
                 )
             )
             currentLinkIndex = 0
@@ -1291,6 +1313,15 @@ class PlayerActivity : AppCompatActivity() {
                 streamUrl = streamUrlRaw
 
                 val parsed = parseStreamUrl(streamUrlRaw)
+
+                // Debug
+                com.livetvpro.app.utils.DrmDebugLogger.startSession("NETWORK_STREAM", contentName, streamUrlRaw)
+                com.livetvpro.app.utils.DrmDebugLogger.logIntent("IS_NETWORK_STREAM", "NETWORK_STREAM",
+                    streamUrlRaw, parsed.drmScheme, parsed.drmLicenseUrl)
+                com.livetvpro.app.utils.DrmDebugLogger.logUrlParse(
+                    streamUrlRaw, parsed.url, parsed.headers,
+                    parsed.drmScheme, parsed.drmKeyId, parsed.drmKey, parsed.drmLicenseUrl)
+
                 allEventLinks = listOf(
                     LiveEventLink(
                         quality = "Network Stream",
@@ -1311,6 +1342,11 @@ class PlayerActivity : AppCompatActivity() {
                 val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
 
+                // Debug
+                com.livetvpro.app.utils.DrmDebugLogger.startSession("NETWORK_STREAM", contentName, streamUrlRaw)
+                com.livetvpro.app.utils.DrmDebugLogger.logIntent("IS_NETWORK_STREAM(extras)", "NETWORK_STREAM",
+                    streamUrlRaw, drmScheme, drmLicense)
+
                 allEventLinks = listOf(
                     LiveEventLink(
                         quality = "Network Stream",
@@ -1325,6 +1361,9 @@ class PlayerActivity : AppCompatActivity() {
                 )
 
                 streamUrl = buildStreamUrl(allEventLinks[0])
+                com.livetvpro.app.utils.DrmDebugLogger.log(
+                    com.livetvpro.app.utils.DrmDebugLogger.Stage.BUILD_URL,
+                    "Built streamUrl: $streamUrl")
             }
 
             currentLinkIndex = 0
@@ -1387,8 +1426,25 @@ class PlayerActivity : AppCompatActivity() {
 
                 streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
+                // BUG NOTE: Channel has no links — DRM must be pipe-encoded in streamUrl.
+                // If channel.streamUrl does NOT contain pipe-encoded drmScheme/drmLicense,
+                // DRM will silently fail. Ensure M3uParser.buildStreamUrlWithMetadata() is called.
                 streamUrl = channel.streamUrl
                 allEventLinks = emptyList()
+            }
+
+            val activeLinkForDebug = allEventLinks.getOrNull(currentLinkIndex)
+            com.livetvpro.app.utils.DrmDebugLogger.startSession("CHANNEL", contentName, streamUrl)
+            com.livetvpro.app.utils.DrmDebugLogger.logIntent("CHANNEL", "CHANNEL", streamUrl,
+                activeLinkForDebug?.drmScheme, activeLinkForDebug?.drmLicenseUrl)
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.INTENT,
+                "Links count: ${allEventLinks.size}  currentLinkIndex: $currentLinkIndex")
+            if (allEventLinks.isEmpty()) {
+                com.livetvpro.app.utils.DrmDebugLogger.log(
+                    com.livetvpro.app.utils.DrmDebugLogger.Stage.INTENT,
+                    "WARNING: no links — DRM depends entirely on pipe-encoded streamUrl",
+                    isError = !streamUrl.contains("drmScheme", ignoreCase = true))
             }
 
         } else if (eventData != null) {
@@ -1406,6 +1462,15 @@ class PlayerActivity : AppCompatActivity() {
                 currentLinkIndex = 0
                 streamUrl = ""
             }
+
+            val activeLinkForDebug = allEventLinks.getOrNull(currentLinkIndex)
+            com.livetvpro.app.utils.DrmDebugLogger.startSession("EVENT", contentName, streamUrl)
+            com.livetvpro.app.utils.DrmDebugLogger.logIntent("EVENT", "EVENT", streamUrl,
+                activeLinkForDebug?.drmScheme, activeLinkForDebug?.drmLicenseUrl)
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.INTENT,
+                "Links count: ${allEventLinks.size}  currentLinkIndex: $currentLinkIndex")
+
         } else {
             finish()
             return
@@ -1656,6 +1721,10 @@ class PlayerActivity : AppCompatActivity() {
         mainHandler.removeCallbacksAndMessages(null)
         unregisterPipReceiver()
         releasePlayer()
+        // Export DRM debug log to Downloads
+        com.livetvpro.app.utils.DrmDebugLogger.log(
+            com.livetvpro.app.utils.DrmDebugLogger.Stage.PLAYBACK, "=== SESSION END (onDestroy) ===")
+        com.livetvpro.app.utils.DrmDebugLogger.exportToDownloads(this)
     }
 
     private fun releasePlayer() {
@@ -1808,14 +1877,39 @@ class PlayerActivity : AppCompatActivity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
+            // ── DRM Debug: log parsed stream info ──
+            com.livetvpro.app.utils.DrmDebugLogger.logUrlParse(
+                streamUrl, streamInfo.url, streamInfo.headers,
+                streamInfo.drmScheme, streamInfo.drmKeyId, streamInfo.drmKey, streamInfo.drmLicenseUrl)
+
+            val clearKeyBranch = when {
+                streamInfo.drmScheme != "clearkey" -> "none(scheme=${streamInfo.drmScheme})"
+                streamInfo.drmKeyId != null && streamInfo.drmKey != null -> "inline-hex-keys"
+                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> "jwk-inline"
+                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> "license-server"
+                else -> "none(no key material)"
+            }
+            com.livetvpro.app.utils.DrmDebugLogger.logDrmResolve(
+                streamInfo.drmScheme, streamInfo.drmKeyId, streamInfo.drmKey,
+                streamInfo.drmLicenseUrl, clearKeyBranch)
+
             val clearKeyMgr = when {
                 streamInfo.drmScheme != "clearkey" -> null
-                streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
-                    createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
-                    createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
-                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
-                    createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
+                streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
+                    val mgr = createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                    com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", mgr != null)
+                    mgr
+                }
+                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
+                    val mgr = createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
+                    com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-JWK", mgr != null)
+                    mgr
+                }
+                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
+                    val mgr = createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
+                    com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-Server", mgr != null)
+                    mgr
+                }
                 else -> null
             }
             val mediaSourceFactory = if (clearKeyMgr != null) {
@@ -1874,6 +1968,14 @@ class PlayerActivity : AppCompatActivity() {
                                 .setForceDefaultLicenseUri(true)
                                 .build()
                         )
+                        com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
+                            streamInfo.url, null, true,
+                            if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID.toString() else C.PLAYREADY_UUID.toString())
+                        com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate(
+                            "${streamInfo.drmScheme}-MediaItem", true)
+                    } else {
+                        com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
+                            streamInfo.url, null, false, null)
                     }
 
                     val mediaItem = mediaItemBuilder.build()
@@ -1883,6 +1985,7 @@ class PlayerActivity : AppCompatActivity() {
 
                     playerListener = object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
+                            com.livetvpro.app.utils.DrmDebugLogger.logPlaybackState(playbackState)
                             when (playbackState) {
                                 Player.STATE_READY -> {
                                     binding.progressBar.visibility = View.GONE
@@ -1945,6 +2048,12 @@ class PlayerActivity : AppCompatActivity() {
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                             super.onPlayerError(error)
                             binding.progressBar.visibility = View.GONE
+
+                            // Full error detail for debug log
+                            com.livetvpro.app.utils.DrmDebugLogger.logPlaybackState(
+                                Player.STATE_IDLE, isError = true,
+                                errorCode = error.errorCode,
+                                errorMsg = "${error.message} | cause=${error.cause?.message} | cause2=${error.cause?.cause?.message}")
 
                             val errorMessage = when {
                                 error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
@@ -2016,6 +2125,12 @@ class PlayerActivity : AppCompatActivity() {
             val keyIdBytes = hexToBytes(keyIdHex)
             val keyBytes = hexToBytes(keyHex)
 
+            if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) {
+                com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", false,
+                    IllegalArgumentException("hexToBytes returned empty — keyIdHex='$keyIdHex' keyHex='$keyHex'"))
+                return null
+            }
+
             val keyIdBase64 = android.util.Base64.encodeToString(
                 keyIdBytes,
                 android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
@@ -2037,6 +2152,10 @@ class PlayerActivity : AppCompatActivity() {
             }
             """.trimIndent()
 
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                "JWK built — kid(b64)=$keyIdBase64  k(b64)=$keyBase64")
+
             val drmCallback = LocalMediaDrmCallback(jwkResponse.toByteArray())
 
             DefaultDrmSessionManager.Builder()
@@ -2044,6 +2163,7 @@ class PlayerActivity : AppCompatActivity() {
                 .setMultiSession(false)
                 .build(drmCallback)
         } catch (e: Exception) {
+            com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", false, e)
             null
         }
     }
@@ -2051,12 +2171,16 @@ class PlayerActivity : AppCompatActivity() {
     private fun createClearKeyDrmManagerFromJwk(jwkJson: String): DefaultDrmSessionManager? {
         return try {
             val clearKeyUuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                "JWK inline: ${jwkJson.take(120)}")
             val drmCallback = LocalMediaDrmCallback(jwkJson.toByteArray())
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
                 .build(drmCallback)
         } catch (e: Exception) {
+            com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-JWK", false, e)
             null
         }
     }
@@ -2064,6 +2188,9 @@ class PlayerActivity : AppCompatActivity() {
     private fun createClearKeyServerDrmManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
             val clearKeyUuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                "ClearKey server: $licenseUrl  headers=${headers.keys}")
             val factory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
@@ -2075,7 +2202,10 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false).build(cb)
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-Server", false, e)
+            null
+        }
     }
 
     private fun createWidevineDrmManager(licenseUrl: String, requestHeaders: Map<String, String>): DefaultDrmSessionManager? {

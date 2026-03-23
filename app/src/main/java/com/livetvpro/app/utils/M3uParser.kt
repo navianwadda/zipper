@@ -526,7 +526,7 @@ object M3uParser {
             } catch (e: Exception) {}
         }
         
-        val base64Patterns = listOf("token", "auth", "key", "data", "meta", "params", "h", "headers", "b64", "encoded")
+        val base64Patterns = listOf("data", "meta", "params", "h", "headers", "b64", "encoded")
         for (paramName in base64Patterns) {
             val pattern = Regex("[&?]$paramName=([A-Za-z0-9+/=_-]{20,})")
             val match = pattern.find(cleanUrl)
@@ -620,7 +620,7 @@ object M3uParser {
                 val value = part.substring(eqIndex + 1).trim()
                 
                 when (key.lowercase()) {
-                    "auth", "token", "key", "bearer", "jwt" -> headers["Authorization"] = if (value.startsWith("Bearer ")) value else "Bearer $value"
+                    // Note: "token", "key", "bearer", "jwt" intentionally omitted — these are stream auth params, not HTTP headers
                     "cookie" -> headers["Cookie"] = value
                     "apikey", "api-key", "api_key" -> headers["X-API-Key"] = value
                 }
@@ -751,7 +751,7 @@ object M3uParser {
                         "origin", "org" -> headers["Origin"] = value
                         "cookie", "cookies" -> if (!headers.containsKey("Cookie")) headers["Cookie"] = value
                         "x-forwarded-for", "x_forwarded_for", "xff" -> headers["X-Forwarded-For"] = value
-                        "authorization", "auth", "bearer", "token" -> headers["Authorization"] = if (value.startsWith("Bearer ", ignoreCase = true)) value else "Bearer $value"
+                        "authorization" -> headers["Authorization"] = if (value.startsWith("Bearer ", ignoreCase = true)) value else "Bearer $value"
                         "content-type", "content_type", "ct" -> headers["Content-Type"] = value
                         "accept", "acc" -> headers["Accept"] = value
                         "range" -> headers["Range"] = value
@@ -817,6 +817,10 @@ object M3uParser {
         val headers = mutableMapOf<String, String>()
         var cleanUrl = url
         
+        // BUG FIX: Do NOT strip "token", "jwt", "bearer", "auth" from query strings.
+        // Stream servers use ?token=xxx as their own auth mechanism in the URL.
+        // Stripping it and converting to Authorization header breaks playback (401/403).
+        // Only strip params that are unambiguously meant as HTTP request headers.
         val commonHeaderParams = mapOf(
             "ua" to "User-Agent",
             "user-agent" to "User-Agent",
@@ -827,18 +831,10 @@ object M3uParser {
             "cookie" to "Cookie",
             "cookies" to "Cookie",
             "origin" to "Origin",
-            "auth" to "Authorization",
-            "authorization" to "Authorization",
-            "bearer" to "Authorization",
-            "token" to "Authorization",
-            "jwt" to "Authorization",
             "xff" to "X-Forwarded-For",
             "x-forwarded-for" to "X-Forwarded-For",
             "range" to "Range",
-            "accept" to "Accept",
-            "apikey" to "X-API-Key",
-            "api-key" to "X-API-Key",
-            "api_key" to "X-API-Key"
+            "accept" to "Accept"
         )
         
         for ((param, headerName) in commonHeaderParams) {

@@ -88,6 +88,7 @@ class PlayerActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val viewModel: PlayerViewModel by viewModels()
     private var player: ExoPlayer? = null
+    private val aesDecryptionActive = java.util.concurrent.atomic.AtomicBoolean(false)
     private var trackSelector: DefaultTrackSelector? = null
     private var playerListener: Player.Listener? = null
 
@@ -1765,6 +1766,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun releasePlayer() {
+        aesDecryptionActive.set(false)
         player?.let {
             try {
                 playerListener?.let { listener -> it.removeListener(listener) }
@@ -1928,6 +1930,7 @@ class PlayerActivity : AppCompatActivity() {
                 com.livetvpro.app.utils.DrmDebugLogger.log(
                     com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
                     "AES-128 segment decryption active — key=${streamInfo.drmKey} iv=${streamInfo.drmKeyId}")
+                aesDecryptionActive.set(true)
                 createAesDecryptingDataSourceFactory(baseDataSourceFactory, keyBytes, ivBytes)
             } else {
                 baseDataSourceFactory
@@ -2258,6 +2261,7 @@ class PlayerActivity : AppCompatActivity() {
                         com.livetvpro.app.utils.DrmDebugLogger.log(
                             com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
                             "KeyRequest body: $requestBody")
+                        aesDecryptionActive.set(false)
 
                         val requestedKids = mutableListOf<String>()
                         val kidsMatch = Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(requestBody)
@@ -2439,21 +2443,15 @@ class PlayerActivity : AppCompatActivity() {
 
                 override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
                     val uriLower = dataSpec.uri.toString().lowercase()
-                    // Only decrypt actual media segments — never manifests, playlists, or key files
-                    shouldDecrypt = (uriLower.contains(".ts") ||
-                        uriLower.contains(".mp4") ||
-                        uriLower.contains(".m4s") ||
-                        uriLower.contains(".m4v") ||
-                        uriLower.contains(".m4a") ||
-                        uriLower.contains(".cmfv") ||
-                        uriLower.contains(".cmfa") ||
-                        uriLower.contains(".fmp4") ||
-                        uriLower.contains("/seg") ||
-                        uriLower.contains("segment") ||
-                        uriLower.contains("chunk")) &&
-                        !uriLower.contains(".mpd") &&
+                    // Only decrypt segments when no real CENC key request has fired.
+                    // If executeKeyRequest was called, ExoPlayer handles decryption itself
+                    // and we must NOT apply AES on top (would corrupt already-clear data).
+                    val isMediaSegment = !uriLower.contains(".mpd") &&
                         !uriLower.contains(".m3u8") &&
-                        !uriLower.contains(".xml")
+                        !uriLower.contains(".xml") &&
+                        !uriLower.contains(".vtt") &&
+                        !uriLower.contains(".ttml")
+                    shouldDecrypt = isMediaSegment && aesDecryptionActive.get()
                     val size = delegate.open(dataSpec)
                     decryptedBuffer = null
                     bufferPos = 0

@@ -1996,7 +1996,20 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
+                    if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
+                        // In Media3 1.9.0, setDrmSessionManagerProvider is scheme-aware.
+                        // Without a DrmConfiguration on the MediaItem, ExoPlayer picks the
+                        // first PSSH scheme it finds (e.g. Widevine) and ignores our ClearKey
+                        // manager entirely. Setting ClearKey UUID here routes the stream to
+                        // our manager without forcing DRM on unprotected tracks.
+                        val clearKeyUuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+                        mediaItemBuilder.setDrmConfiguration(
+                            MediaItem.DrmConfiguration.Builder(clearKeyUuid)
+                                .build()
+                        )
+                        com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
+                            streamInfo.url, null, true, clearKeyUuid.toString())
+                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                         val licenseHeaders = headers.filter { (k, _) -> k != "Referer" && k != "Origin" }
@@ -2197,12 +2210,13 @@ class PlayerActivity : AppCompatActivity() {
                 override fun executeProvisionRequest(
                     uuid: UUID,
                     request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest
-                ): ByteArray = ByteArray(0)
+                ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response =
+                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(ByteArray(0))
 
                 override fun executeKeyRequest(
                     uuid: UUID,
                     request: androidx.media3.exoplayer.drm.ExoMediaDrm.KeyRequest
-                ): ByteArray {
+                ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response {
                     return try {
                         // Parse the request body to get the actual kids ExoPlayer wants
                         val requestBody = String(request.data, Charsets.UTF_8)
@@ -2239,12 +2253,14 @@ class PlayerActivity : AppCompatActivity() {
                             com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
                             "JWK response: $jwkResponse")
 
-                        jwkResponse.toByteArray(Charsets.UTF_8)
+                        androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
+                            jwkResponse.toByteArray(Charsets.UTF_8))
                     } catch (e: Exception) {
                         com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-AdaptiveCallback", false, e)
                         // Last-resort fallback to original hardcoded JWK
                         val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$keyIdBase64"}],"type":"temporary"}"""
-                        fallback.toByteArray(Charsets.UTF_8)
+                        androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
+                            fallback.toByteArray(Charsets.UTF_8))
                     }
                 }
             }

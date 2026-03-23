@@ -1351,7 +1351,12 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
+                    if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
+                        val clearKeyUuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+                        mediaItemBuilder.setDrmConfiguration(
+                            MediaItem.DrmConfiguration.Builder(clearKeyUuid).build()
+                        )
+                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                         val licenseHeaders = headers.filter { (k, _) -> k != "Referer" && k != "Origin" }

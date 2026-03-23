@@ -620,7 +620,7 @@ object M3uParser {
                 val value = part.substring(eqIndex + 1).trim()
                 
                 when (key.lowercase()) {
-                    // Note: "token", "key", "bearer", "jwt" intentionally omitted — these are stream auth params, not HTTP headers
+
                     "cookie" -> headers["Cookie"] = value
                     "apikey", "api-key", "api_key" -> headers["X-API-Key"] = value
                 }
@@ -817,10 +817,6 @@ object M3uParser {
         val headers = mutableMapOf<String, String>()
         var cleanUrl = url
         
-        // BUG FIX: Do NOT strip "token", "jwt", "bearer", "auth" from query strings.
-        // Stream servers use ?token=xxx as their own auth mechanism in the URL.
-        // Stripping it and converting to Authorization header breaks playback (401/403).
-        // Only strip params that are unambiguously meant as HTTP request headers.
         val commonHeaderParams = mapOf(
             "ua" to "User-Agent",
             "user-agent" to "User-Agent",

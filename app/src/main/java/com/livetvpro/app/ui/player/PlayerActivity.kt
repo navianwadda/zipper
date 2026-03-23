@@ -88,7 +88,6 @@ class PlayerActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val viewModel: PlayerViewModel by viewModels()
     private var player: ExoPlayer? = null
-    private val aesDecryptionActive = java.util.concurrent.atomic.AtomicBoolean(false)
     private var trackSelector: DefaultTrackSelector? = null
     private var playerListener: Player.Listener? = null
 
@@ -1766,7 +1765,6 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun releasePlayer() {
-        aesDecryptionActive.set(false)
         player?.let {
             try {
                 playerListener?.let { listener -> it.removeListener(listener) }
@@ -1921,8 +1919,12 @@ class PlayerActivity : AppCompatActivity() {
             // This handles MAG/Odido AES-128 segment encryption which is NOT standard CENC —
             // ExoPlayer fetches a key URI from the manifest; we intercept it and return the
             // user-supplied 16-byte key instead of hitting the remote key server.
-            val dataSourceFactory = if (
-                streamInfo.drmScheme == "clearkey" &&
+            val isAes128Stream = (streamInfo.drmScheme == "aes128") ||
+                (streamInfo.drmScheme == "clearkey" &&
+                    streamInfo.drmKeyId != null && streamInfo.drmKey != null &&
+                    streamInfo.url.contains("GuardEncType", ignoreCase = true))
+
+            val dataSourceFactory = if (isAes128Stream &&
                 streamInfo.drmKeyId != null && streamInfo.drmKey != null
             ) {
                 val keyBytes = hexToBytes(streamInfo.drmKey)
@@ -1930,7 +1932,6 @@ class PlayerActivity : AppCompatActivity() {
                 com.livetvpro.app.utils.DrmDebugLogger.log(
                     com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
                     "AES-128 segment decryption active — key=${streamInfo.drmKey} iv=${streamInfo.drmKeyId}")
-                aesDecryptionActive.set(true)
                 createAesDecryptingDataSourceFactory(baseDataSourceFactory, keyBytes, ivBytes)
             } else {
                 baseDataSourceFactory
@@ -1942,7 +1943,8 @@ class PlayerActivity : AppCompatActivity() {
                 streamInfo.drmScheme, streamInfo.drmKeyId, streamInfo.drmKey, streamInfo.drmLicenseUrl)
 
             val clearKeyBranch = when {
-                streamInfo.drmScheme != "clearkey" -> "none(scheme=${streamInfo.drmScheme})"
+                streamInfo.drmScheme != "clearkey" && streamInfo.drmScheme != "aes128" -> "none(scheme=${streamInfo.drmScheme})"
+                isAes128Stream -> "none(aes128-segment-mode)"
                 streamInfo.drmKeyId != null && streamInfo.drmKey != null -> "inline-hex-keys"
                 streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> "jwk-inline"
                 streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> "license-server"
@@ -1966,7 +1968,8 @@ class PlayerActivity : AppCompatActivity() {
             // We then force it onto the MediaItem via DrmConfiguration with ClearKey UUID,
             // which makes ExoPlayer use our session regardless of MPD PSSH content.
             val clearKeyMgr = when {
-                streamInfo.drmScheme != "clearkey" -> null
+                streamInfo.drmScheme != "clearkey" && streamInfo.drmScheme != "aes128" -> null
+                isAes128Stream -> null
                 streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
                     val mgr = createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
                     com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", mgr != null)
@@ -2261,7 +2264,6 @@ class PlayerActivity : AppCompatActivity() {
                         com.livetvpro.app.utils.DrmDebugLogger.log(
                             com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
                             "KeyRequest body: $requestBody")
-                        aesDecryptionActive.set(false)
 
                         val requestedKids = mutableListOf<String>()
                         val kidsMatch = Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(requestBody)
@@ -2451,7 +2453,7 @@ class PlayerActivity : AppCompatActivity() {
                         !uriLower.contains(".xml") &&
                         !uriLower.contains(".vtt") &&
                         !uriLower.contains(".ttml")
-                    shouldDecrypt = isMediaSegment && aesDecryptionActive.get()
+                    shouldDecrypt = isMediaSegment
                     val size = delegate.open(dataSpec)
                     decryptedBuffer = null
                     bufferPos = 0

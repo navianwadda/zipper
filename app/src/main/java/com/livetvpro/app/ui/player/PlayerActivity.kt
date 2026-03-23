@@ -1971,7 +1971,7 @@ class PlayerActivity : AppCompatActivity() {
                                 return toCopy
                             }
                             return delegate?.read(buffer, offset, length)
-                                ?: androidx.media3.datasource.DataSource.RESULT_END_OF_INPUT
+                                ?: androidx.media3.common.C.RESULT_END_OF_INPUT
                         }
 
                         override fun getUri(): android.net.Uri? =

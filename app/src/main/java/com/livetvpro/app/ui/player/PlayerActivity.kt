@@ -2435,7 +2435,25 @@ class PlayerActivity : AppCompatActivity() {
                 private var decryptedBuffer: ByteArray? = null
                 private var bufferPos = 0
 
+                private var shouldDecrypt = false
+
                 override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
+                    val uriLower = dataSpec.uri.toString().lowercase()
+                    // Only decrypt actual media segments — never manifests, playlists, or key files
+                    shouldDecrypt = (uriLower.contains(".ts") ||
+                        uriLower.contains(".mp4") ||
+                        uriLower.contains(".m4s") ||
+                        uriLower.contains(".m4v") ||
+                        uriLower.contains(".m4a") ||
+                        uriLower.contains(".cmfv") ||
+                        uriLower.contains(".cmfa") ||
+                        uriLower.contains(".fmp4") ||
+                        uriLower.contains("/seg") ||
+                        uriLower.contains("segment") ||
+                        uriLower.contains("chunk")) &&
+                        !uriLower.contains(".mpd") &&
+                        !uriLower.contains(".m3u8") &&
+                        !uriLower.contains(".xml")
                     val size = delegate.open(dataSpec)
                     decryptedBuffer = null
                     bufferPos = 0
@@ -2443,6 +2461,10 @@ class PlayerActivity : AppCompatActivity() {
                 }
 
                 override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                    if (!shouldDecrypt) {
+                        return delegate.read(buffer, offset, length)
+                    }
+
                     val db = decryptedBuffer
                     if (db != null) {
                         if (bufferPos >= db.size) return androidx.media3.common.C.RESULT_END_OF_INPUT

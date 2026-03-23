@@ -1600,6 +1600,7 @@ class FloatingPlayerService : Service() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(cb)
         } catch (e: Exception) { null }
     }
@@ -1615,6 +1616,7 @@ class FloatingPlayerService : Service() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(LocalMediaDrmCallback(jwk.toByteArray()))
         } catch (e: Exception) { null }
     }
@@ -1625,6 +1627,7 @@ class FloatingPlayerService : Service() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(LocalMediaDrmCallback(jwkJson.toByteArray()))
         } catch (e: Exception) { null }
     }

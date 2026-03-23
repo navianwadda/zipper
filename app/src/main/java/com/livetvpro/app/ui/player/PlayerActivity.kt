@@ -1914,28 +1914,7 @@ class PlayerActivity : AppCompatActivity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            // AES-128 key injection: for clearkey inline-hex streams (GuardEncType-style),
-            // wrap the DataSource so any key URI request returns the raw key bytes directly.
-            // This handles MAG/Odido AES-128 segment encryption which is NOT standard CENC —
-            // ExoPlayer fetches a key URI from the manifest; we intercept it and return the
-            // user-supplied 16-byte key instead of hitting the remote key server.
-            val isAes128Stream = (streamInfo.drmScheme == "aes128") ||
-                (streamInfo.drmScheme == "clearkey" &&
-                    streamInfo.drmKeyId != null && streamInfo.drmKey != null &&
-                    streamInfo.url.contains("GuardEncType", ignoreCase = true))
-
-            val dataSourceFactory = if (isAes128Stream &&
-                streamInfo.drmKeyId != null && streamInfo.drmKey != null
-            ) {
-                val keyBytes = hexToBytes(streamInfo.drmKey)
-                val ivBytes  = hexToBytes(streamInfo.drmKeyId)
-                com.livetvpro.app.utils.DrmDebugLogger.log(
-                    com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
-                    "AES-128 segment decryption active — key=${streamInfo.drmKey} iv=${streamInfo.drmKeyId}")
-                createAesDecryptingDataSourceFactory(baseDataSourceFactory, keyBytes, ivBytes)
-            } else {
-                baseDataSourceFactory
-            }
+            val dataSourceFactory = baseDataSourceFactory
 
             // ── DRM Debug: log parsed stream info ──
             com.livetvpro.app.utils.DrmDebugLogger.logUrlParse(
@@ -1943,44 +1922,28 @@ class PlayerActivity : AppCompatActivity() {
                 streamInfo.drmScheme, streamInfo.drmKeyId, streamInfo.drmKey, streamInfo.drmLicenseUrl)
 
             val clearKeyBranch = when {
-                streamInfo.drmScheme != "clearkey" && streamInfo.drmScheme != "aes128" -> "none(scheme=${streamInfo.drmScheme})"
-                isAes128Stream -> "none(aes128-segment-mode)"
-                streamInfo.drmKeyId != null && streamInfo.drmKey != null -> "inline-hex-keys"
-                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> "jwk-inline"
-                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> "license-server"
-                else -> "none(no key material)"
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> "inline-hex-keys"
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> "jwk-inline"
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> "license-server"
+                streamInfo.drmScheme == "clearkey" -> "none(no key material)"
+                else -> "none(scheme=${streamInfo.drmScheme})"
             }
             com.livetvpro.app.utils.DrmDebugLogger.logDrmResolve(
                 streamInfo.drmScheme, streamInfo.drmKeyId, streamInfo.drmKey,
                 streamInfo.drmLicenseUrl, clearKeyBranch)
 
-            // BUG FIX: Black screen on streams with both Widevine + ClearKey PSSH boxes.
-            // Previously we used setDrmSessionManagerProvider which only fires if ExoPlayer
-            // selects OUR scheme from the PSSH. When Widevine PSSH appears first in the MPD,
-            // ExoPlayer picks Widevine, ignores the ClearKey provider, and renders black.
-            //
-            // Fix: build the DrmSessionManager directly and inject it via
-            // DefaultDrmSessionManager.setMode() + attach to ExoPlayer explicitly,
-            // bypassing ExoPlayer's PSSH-selection logic entirely.
-            //
-            // For ClearKey inline-hex and JWK: use our adaptive callback manager.
-            // For ClearKey server URL: use HttpMediaDrmCallback as before.
-            // We then force it onto the MediaItem via DrmConfiguration with ClearKey UUID,
-            // which makes ExoPlayer use our session regardless of MPD PSSH content.
             val clearKeyMgr = when {
-                streamInfo.drmScheme != "clearkey" && streamInfo.drmScheme != "aes128" -> null
-                isAes128Stream -> null
-                streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
                     val mgr = createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
                     com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", mgr != null)
                     mgr
                 }
-                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
                     val mgr = createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
                     com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-JWK", mgr != null)
                     mgr
                 }
-                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
                     val mgr = createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
                     com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-Server", mgr != null)
                     mgr
@@ -1988,7 +1951,6 @@ class PlayerActivity : AppCompatActivity() {
                 else -> null
             }
 
-            // Attach ClearKey manager directly to ExoPlayer — bypasses PSSH scheme selection
             val mediaSourceFactory = if (clearKeyMgr != null) {
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(dataSourceFactory)
@@ -2034,23 +1996,7 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
                     }
 
-                    if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
-                        // Force ClearKey UUID on the MediaItem so ExoPlayer uses our
-                        // DrmSessionManager regardless of PSSH order in the MPD.
-                        // Without this, a Widevine PSSH appearing before ClearKey in the
-                        // manifest causes ExoPlayer to ignore our ClearKey manager entirely.
-                        val clearKeyUuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
-                        mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(clearKeyUuid)
-                                .setForceSessionsForAudioAndVideoTracks(true)
-                                .build()
-                        )
-                        com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
-                            streamInfo.url, null, true, clearKeyUuid.toString())
-                        com.livetvpro.app.utils.DrmDebugLogger.log(
-                            com.livetvpro.app.utils.DrmDebugLogger.Stage.MEDIA_ITEM,
-                            "ClearKey forced on MediaItem — PSSH order in MPD will be ignored")
-                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
+                    if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                         val licenseHeaders = headers.filter { (k, _) -> k != "Referer" && k != "Origin" }
@@ -2312,10 +2258,8 @@ class PlayerActivity : AppCompatActivity() {
 
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(true)
-                .setUseDrmSessionsForClearContent(
-                    androidx.media3.common.C.TRACK_TYPE_VIDEO,
-                    androidx.media3.common.C.TRACK_TYPE_AUDIO)
+                .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(adaptiveCallback)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", false, e)
@@ -2333,9 +2277,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setUseDrmSessionsForClearContent(
-                    androidx.media3.common.C.TRACK_TYPE_VIDEO,
-                    androidx.media3.common.C.TRACK_TYPE_AUDIO)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-JWK", false, e)
@@ -2360,9 +2302,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setUseDrmSessionsForClearContent(
-                    androidx.media3.common.C.TRACK_TYPE_VIDEO,
-                    androidx.media3.common.C.TRACK_TYPE_AUDIO)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(cb)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-Server", false, e)

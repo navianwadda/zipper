@@ -180,7 +180,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     // Media3 (ExoPlayer)
-    val media3Version = "1.9.0"
+    val media3Version = "1.8.0"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
     implementation("androidx.media3:media3-exoplayer-dash:$media3Version")
@@ -191,7 +191,7 @@ dependencies {
     // androidx.media3:media3-exoplayer-ffmpeg is NOT on Maven — it needs manual native compilation.
     // This drop-in provides the same libffmpegjni.so for all ABIs from the same source.
     // License: GPL-3.0  |  https://github.com/jellyfin/jellyfin-androidx-media
-    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
+    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1")
 
     // Network - OkHttp & Retrofit
     val okhttpVersion = "4.12.0"

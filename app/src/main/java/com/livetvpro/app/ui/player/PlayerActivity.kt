@@ -1927,70 +1927,8 @@ class PlayerActivity : AppCompatActivity() {
                 val ivBytes  = hexToBytes(streamInfo.drmKeyId)
                 com.livetvpro.app.utils.DrmDebugLogger.log(
                     com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
-                    "AES-128 key injection active — key=${streamInfo.drmKey} iv=${streamInfo.drmKeyId}")
-                androidx.media3.datasource.DataSource.Factory {
-                    object : androidx.media3.datasource.DataSource {
-                        private var delegate: androidx.media3.datasource.DataSource? = null
-                        private var isKeyRequest = false
-                        private var keyRead = false
-
-                        override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
-                            val uriLower = dataSpec.uri.toString().lowercase()
-                            // Intercept requests that look like AES key fetches:
-                            // short URIs, "key" in path, or the scheme's key URI
-                            isKeyRequest = uriLower.contains("/key") ||
-                                uriLower.contains("keyid") ||
-                                uriLower.contains("license") ||
-                                uriLower.contains("encryption") ||
-                                (!uriLower.contains(".mpd") &&
-                                 !uriLower.contains(".m3u8") &&
-                                 !uriLower.contains(".ts") &&
-                                 !uriLower.contains(".mp4") &&
-                                 !uriLower.contains(".cmf") &&
-                                 !uriLower.contains(".dash") &&
-                                 dataSpec.uri.path?.let { p ->
-                                     p.substringAfterLast('/').length <= 50 &&
-                                     !p.contains('.') } == true)
-                            keyRead = false
-                            if (isKeyRequest) {
-                                com.livetvpro.app.utils.DrmDebugLogger.log(
-                                    com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
-                                    "Key URI intercepted: ${dataSpec.uri} → returning ${keyBytes.size}-byte key")
-                                return keyBytes.size.toLong()
-                            }
-                            val d = baseDataSourceFactory.createDataSource()
-                            delegate = d
-                            return d.open(dataSpec)
-                        }
-
-                        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-                            if (isKeyRequest && !keyRead) {
-                                val toCopy = minOf(length, keyBytes.size)
-                                System.arraycopy(keyBytes, 0, buffer, offset, toCopy)
-                                keyRead = true
-                                return toCopy
-                            }
-                            return delegate?.read(buffer, offset, length)
-                                ?: androidx.media3.common.C.RESULT_END_OF_INPUT
-                        }
-
-                        override fun getUri(): android.net.Uri? =
-                            delegate?.uri
-
-                        override fun getResponseHeaders(): Map<String, List<String>> =
-                            delegate?.responseHeaders ?: emptyMap()
-
-                        override fun close() {
-                            delegate?.close()
-                            delegate = null
-                        }
-
-                        override fun addTransferListener(
-                            transferListener: androidx.media3.datasource.TransferListener) {
-                            delegate?.addTransferListener(transferListener)
-                        }
-                    }
-                }
+                    "AES-128 segment decryption active — key=${streamInfo.drmKey} iv=${streamInfo.drmKeyId}")
+                createAesDecryptingDataSourceFactory(baseDataSourceFactory, keyBytes, ivBytes)
             } else {
                 baseDataSourceFactory
             }
@@ -2486,7 +2424,95 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun hexToBytes(hex: String): ByteArray {
+    private fun createAesDecryptingDataSourceFactory(
+        upstream: androidx.media3.datasource.DataSource.Factory,
+        keyBytes: ByteArray,
+        ivBytes: ByteArray
+    ): androidx.media3.datasource.DataSource.Factory {
+        return androidx.media3.datasource.DataSource.Factory {
+            object : androidx.media3.datasource.DataSource {
+                private val delegate = upstream.createDataSource()
+                private var decryptedBuffer: ByteArray? = null
+                private var bufferPos = 0
+
+                override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
+                    val size = delegate.open(dataSpec)
+                    decryptedBuffer = null
+                    bufferPos = 0
+                    return size
+                }
+
+                override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                    val db = decryptedBuffer
+                    if (db != null) {
+                        if (bufferPos >= db.size) return androidx.media3.common.C.RESULT_END_OF_INPUT
+                        val toCopy = minOf(length, db.size - bufferPos)
+                        System.arraycopy(db, bufferPos, buffer, offset, toCopy)
+                        bufferPos += toCopy
+                        return toCopy
+                    }
+
+                    // Read all encrypted bytes from upstream
+                    val encrypted = mutableListOf<Byte>()
+                    val tmp = ByteArray(32768)
+                    while (true) {
+                        val n = delegate.read(tmp, 0, tmp.size)
+                        if (n == androidx.media3.common.C.RESULT_END_OF_INPUT || n <= 0) break
+                        for (i in 0 until n) encrypted.add(tmp[i])
+                    }
+
+                    if (encrypted.isEmpty()) return androidx.media3.common.C.RESULT_END_OF_INPUT
+
+                    val encBytes = encrypted.toByteArray()
+                    val plain = tryDecrypt(encBytes, keyBytes, ivBytes)
+                    com.livetvpro.app.utils.DrmDebugLogger.log(
+                        com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                        "Segment decrypted: ${encBytes.size} → ${plain.size} bytes")
+
+                    decryptedBuffer = plain
+                    bufferPos = 0
+                    val toCopy = minOf(length, plain.size)
+                    System.arraycopy(plain, 0, buffer, offset, toCopy)
+                    bufferPos = toCopy
+                    return toCopy
+                }
+
+                private fun tryDecrypt(data: ByteArray, key: ByteArray, iv: ByteArray): ByteArray {
+                    // Try AES-128-CTR first (used by MPEG-CENC / MAG GuardEncType)
+                    // then fall back to AES-128-CBC (used by HLS AES-128)
+                    return try {
+                        val spec = javax.crypto.spec.IvParameterSpec(iv)
+                        val keySpec = javax.crypto.spec.SecretKeySpec(key, "AES")
+                        val cipher = javax.crypto.Cipher.getInstance("AES/CTR/NoPadding")
+                        cipher.init(javax.crypto.Cipher.DECRYPT_MODE, keySpec, spec)
+                        cipher.doFinal(data)
+                    } catch (e1: Exception) {
+                        try {
+                            val spec = javax.crypto.spec.IvParameterSpec(iv)
+                            val keySpec = javax.crypto.spec.SecretKeySpec(key, "AES")
+                            val cipher = javax.crypto.Cipher.getInstance("AES/CBC/NoPadding")
+                            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, keySpec, spec)
+                            cipher.doFinal(data)
+                        } catch (e2: Exception) {
+                            com.livetvpro.app.utils.DrmDebugLogger.log(
+                                com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                                "Decrypt failed: CTR=${e1.message} CBC=${e2.message}", isError = true)
+                            data
+                        }
+                    }
+                }
+
+                override fun getUri(): android.net.Uri? = delegate.uri
+                override fun getResponseHeaders(): Map<String, List<String>> = delegate.responseHeaders ?: emptyMap()
+                override fun close() { delegate.close(); decryptedBuffer = null }
+                override fun addTransferListener(t: androidx.media3.datasource.TransferListener) {
+                    delegate.addTransferListener(t)
+                }
+            }
+        }
+    }
+
+        private fun hexToBytes(hex: String): ByteArray {
         return try {
             val cleanHex = hex.replace(" ", "").replace("-", "").lowercase()
             if (cleanHex.length % 2 != 0) return ByteArray(0)

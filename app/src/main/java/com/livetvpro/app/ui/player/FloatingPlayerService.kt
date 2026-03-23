@@ -1699,7 +1699,13 @@ class FloatingPlayerService : Service() {
             url.contains(".ism") || url.contains(".isml") || url.contains("manifest(format=mpd") ->
                 builder.setMimeType(MimeTypes.APPLICATION_SS)
         }
-        if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
+        if (streamInfo.drmScheme == "clearkey" &&
+            (streamInfo.drmKeyId != null || streamInfo.drmLicenseUrl != null)) {
+            val clearKeyUuid = java.util.UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+            builder.setDrmConfiguration(
+                MediaItem.DrmConfiguration.Builder(clearKeyUuid).build()
+            )
+        } else if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->
                 val uuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                 val licenseHeaders = headers.filter { (k, _) ->

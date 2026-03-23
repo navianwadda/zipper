@@ -1541,6 +1541,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -1554,6 +1555,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(drmCallback)
         } catch (e: Exception) {
             null
@@ -1572,7 +1574,9 @@ class FloatingPlayerActivity : AppCompatActivity() {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false).build(cb)
+                .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(true)
+                .build(cb)
         } catch (e: Exception) { null }
     }
 

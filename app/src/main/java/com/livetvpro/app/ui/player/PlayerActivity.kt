@@ -46,6 +46,8 @@ import androidx.media3.exoplayer.drm.FrameworkMediaDrm
 import androidx.media3.exoplayer.drm.HttpMediaDrmCallback
 import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -1921,7 +1923,17 @@ class PlayerActivity : AppCompatActivity() {
                 ?.setOnClickListener { retryPlayback() }
         }
 
-        trackSelector = DefaultTrackSelector(this)
+        // ── TrackSelector — prefer adaptive qualities, allow mixed mime types ──
+        trackSelector = DefaultTrackSelector(this).apply {
+            parameters = buildUponParameters()
+                .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                .setAllowAudioMixedChannelCountAdaptiveness(true)
+                .clearVideoSizeConstraints()
+                // Enable tunneled video rendering on TV — required for Dolby Vision passthrough
+                .setTunnelingEnabled(DeviceUtils.isTvDevice)
+                .build()
+        }
 
         try {
             val streamInfo = parseStreamUrl(streamUrl)
@@ -2004,7 +2016,39 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             // ── Build ExoPlayer ────────────────────────────────────────────────
+            // DefaultRenderersFactory with EXTENSION_RENDERER_MODE_PREFER:
+            //   • Prefers extension renderers (FFmpeg via Jellyfin AAR) over platform MediaCodec
+            //     when both can handle the format — this gives us:
+            //     - Dolby Vision profile 5/8 (FFmpeg software decode)
+            //     - Dolby Atmos (E-AC3-JOC / AC-4) via FFmpeg audio renderer
+            //     - HDR10+ tonemapping via FFmpeg
+            //     - Formats the platform codec can't handle (some HEVC profiles, AV1, etc.)
+            //   • Falls back to platform MediaCodec when FFmpeg doesn't handle the format
+            //   • enableDecoderFallback = true: if preferred decoder fails to initialise
+            //     (hardware codec refuses the format), ExoPlayer tries the next decoder
+            //     automatically — prevents black screen on streams that hardware rejects
+            //
+            // DefaultLoadControl tuning for live IPTV / MAG streams:
+            //   • Shorter min/max buffer vs defaults: live streams have small segments (~2s),
+            //     default 50s max buffer wastes memory and increases seek-to-live latency
+            //   • bufferForPlayback: how much to buffer before initial playback starts
+            //   • bufferForPlaybackAfterRebuffer: how much to buffer after a stall
+            val renderersFactory = DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
+
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    /* minBufferMs  */ 15_000,
+                    /* maxBufferMs  */ 50_000,
+                    /* bufferForPlaybackMs */ 2_500,
+                    /* bufferForPlaybackAfterRebufferMs */ 5_000
+                )
+                .build()
+
             player = ExoPlayer.Builder(this)
+                .setRenderersFactory(renderersFactory)
+                .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector!!)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setSeekBackIncrementMs(skipMs)

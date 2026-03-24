@@ -30,6 +30,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.drm.FrameworkMediaDrm
@@ -446,12 +447,15 @@ class FloatingPlayerService : Service() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
             val mediaSourceFactory = buildDrmMediaSourceFactory(effectiveStreamInfo, dataSourceFactory, headers)
+            val renderersFactory = DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+                .build()
             val player = ExoPlayer.Builder(this)
-                .setRenderersFactory(
-                    DefaultRenderersFactory(this).setExtensionRendererMode(
-                        DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                    )
-                )
+                .setRenderersFactory(renderersFactory)
+                .setLoadControl(loadControl)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .build()
             val playerView = floatingView.findViewById<PlayerView>(R.id.player_view)
@@ -776,12 +780,15 @@ class FloatingPlayerService : Service() {
             val nsStreamInfo = buildStreamInfoFromDrmFields(streamUrl, headers, drmScheme, drmLicense)
             val nsMediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, nsDataSourceFactory, headers)
 
+            val renderersFactory = DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+                .build()
             val player = ExoPlayer.Builder(this)
-                .setRenderersFactory(
-                    DefaultRenderersFactory(this).setExtensionRendererMode(
-                        DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                    )
-                )
+                .setRenderersFactory(renderersFactory)
+                .setLoadControl(loadControl)
                 .setMediaSourceFactory(nsMediaSourceFactory)
                 .build()
 
@@ -889,12 +896,15 @@ class FloatingPlayerService : Service() {
             instance.player.stop()
             instance.player.release()
 
+            val renderersFactory2 = DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
+            val loadControl2 = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+                .build()
             val newPlayer = ExoPlayer.Builder(this)
-                .setRenderersFactory(
-                    DefaultRenderersFactory(this).setExtensionRendererMode(
-                        DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                    )
-                )
+                .setRenderersFactory(renderersFactory2)
+                .setLoadControl(loadControl2)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .build()
             newPlayer.volume = if (wasMuted) 0f else 1f
@@ -1326,12 +1336,15 @@ class FloatingPlayerService : Service() {
                 instance.player.stop()
                 instance.player.release()
 
+                val renderersFactory3 = DefaultRenderersFactory(this)
+                    .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                    .setEnableDecoderFallback(true)
+                val loadControl3 = DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+                    .build()
                 val newPlayer = ExoPlayer.Builder(this)
-                    .setRenderersFactory(
-                        DefaultRenderersFactory(this).setExtensionRendererMode(
-                            DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                        )
-                    )
+                    .setRenderersFactory(renderersFactory3)
+                    .setLoadControl(loadControl3)
                     .setMediaSourceFactory(mediaSourceFactory)
                     .build()
 
@@ -1575,6 +1588,7 @@ class FloatingPlayerService : Service() {
         }
     }
 
+    // ── Hex utility ───────────────────────────────────────────────────────────
     private fun hexToBytes(hex: String): ByteArray {
         return try {
             val clean = hex.replace(" ", "").replace("-", "").lowercase()
@@ -1583,87 +1597,98 @@ class FloatingPlayerService : Service() {
         } catch (e: Exception) { ByteArray(0) }
     }
 
-
-
-    private fun createClearKeyServerDrmManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
+    // ── ClearKey: inline hex key+keyId ───────────────────────────────────────
+    // Adaptive callback echoes back PSSH kid(s) from the manifest → our key.
+    // Required for GuardEncType=2 DASH streams (Widevine PSSH + ClearKey keys).
+    private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
-            val clearKeyUuid = java.util.UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
+            val keyIdBytes = hexToBytes(keyIdHex)
+            val keyBytes   = hexToBytes(keyHex)
+            if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) return null
+            val keyBase64 = android.util.Base64.encodeToString(keyBytes,   android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+            val kidBase64 = android.util.Base64.encodeToString(keyIdBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+            DefaultDrmSessionManager.Builder()
+                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(false)
+                .build(buildAdaptiveClearKeyCallback(keyBase64, kidBase64))
+        } catch (e: Exception) { null }
+    }
+
+    // ── ClearKey: inline JWK JSON ─────────────────────────────────────────────
+    private fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
+        return try {
+            DefaultDrmSessionManager.Builder()
+                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(false)
+                .build(LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8)))
+        } catch (e: Exception) { null }
+    }
+
+    // ── ClearKey: remote license server ──────────────────────────────────────
+    private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
+        return try {
             val factory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30000)
-                .setReadTimeoutMs(30000)
-                .setAllowCrossProtocolRedirects(true)
-                .setKeepPostFor302Redirects(true)
+                .setConnectTimeoutMs(30_000).setReadTimeoutMs(30_000)
+                .setAllowCrossProtocolRedirects(true).setKeepPostFor302Redirects(true)
             val cb = HttpMediaDrmCallback(licenseUrl, factory)
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
+                .setPlayClearSamplesWithoutKeys(false)
                 .build(cb)
         } catch (e: Exception) { null }
     }
 
-    private fun createClearKeyDrmManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
-        return try {
-            val uuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
-            val kidB64 = android.util.Base64.encodeToString(hexToBytes(keyIdHex),
-                android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val kB64 = android.util.Base64.encodeToString(hexToBytes(keyHex),
-                android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val jwk = """{"keys":[{"kty":"oct","k":"$kB64","kid":"$kidB64"}],"type":"temporary"}"""
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
-                .build(LocalMediaDrmCallback(jwk.toByteArray()))
-        } catch (e: Exception) { null }
+    // ── Adaptive ClearKey callback ────────────────────────────────────────────
+    // Parses the EME license request body, extracts all kid(s) ExoPlayer found
+    // in the PSSH, and returns a JWK mapping each kid → our content key.
+    private fun buildAdaptiveClearKeyCallback(
+        keyBase64: String,
+        fallbackKidBase64: String
+    ): androidx.media3.exoplayer.drm.MediaDrmCallback {
+        return object : androidx.media3.exoplayer.drm.MediaDrmCallback {
+            override fun executeProvisionRequest(
+                uuid: UUID,
+                request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest
+            ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response =
+                androidx.media3.exoplayer.drm.MediaDrmCallback.Response(ByteArray(0))
+
+            override fun executeKeyRequest(
+                uuid: UUID,
+                request: androidx.media3.exoplayer.drm.ExoMediaDrm.KeyRequest
+            ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response {
+                return try {
+                    val body = String(request.data, Charsets.UTF_8)
+                    val kids = mutableListOf<String>()
+                    Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(body)?.let { m ->
+                        Regex(""""([A-Za-z0-9+/=_-]+)"""").findAll(m.groupValues[1])
+                            .forEach { kids.add(it.groupValues[1]) }
+                    }
+                    val entries = if (kids.isNotEmpty()) {
+                        kids.joinToString(",") { kid -> """{"kty":"oct","k":"$keyBase64","kid":"$kid"}""" }
+                    } else {
+                        """{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}"""
+                    }
+                    val jwk = """{"keys":[$entries],"type":"temporary"}"""
+                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(jwk.toByteArray(Charsets.UTF_8))
+                } catch (e: Exception) {
+                    val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}],"type":"temporary"}"""
+                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(fallback.toByteArray(Charsets.UTF_8))
+                }
+            }
+        }
     }
 
-    private fun createClearKeyDrmManagerFromJwk(jwkJson: String): DefaultDrmSessionManager? {
-        return try {
-            val uuid = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
-                .build(LocalMediaDrmCallback(jwkJson.toByteArray()))
-        } catch (e: Exception) { null }
-    }
-
-    private fun createWidevineDrmManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
-        return try {
-            val factory = DefaultHttpDataSource.Factory()
-                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
-                .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30000).setReadTimeoutMs(30000)
-                .setAllowCrossProtocolRedirects(true)
-                .setKeepPostFor302Redirects(true)
-            val cb = HttpMediaDrmCallback(licenseUrl, factory)
-            headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false).build(cb)
-        } catch (e: Exception) { null }
-    }
-
-    private fun createPlayReadyDrmManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
-        return try {
-            val factory = DefaultHttpDataSource.Factory()
-                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
-                .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30000).setReadTimeoutMs(30000)
-                .setAllowCrossProtocolRedirects(true)
-                .setKeepPostFor302Redirects(true)
-            val cb = HttpMediaDrmCallback(licenseUrl, factory)
-            headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.PLAYREADY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false).build(cb)
-        } catch (e: Exception) { null }
-    }
-
+    // ── buildDrmMediaSourceFactory ────────────────────────────────────────────
+    // ClearKey: inject via setDrmSessionManagerProvider so ExoPlayer bypasses
+    // UUID matching — required for GuardEncType=2 (Widevine PSSH + ClearKey keys).
+    // Widevine/PlayReady: no manager here; DrmConfiguration on the MediaItem
+    // (built in buildDrmMediaItem) tells ExoPlayer's default factory what to do.
     private fun buildDrmMediaSourceFactory(
         streamInfo: StreamInfo,
         dataSourceFactory: DefaultHttpDataSource.Factory,
@@ -1672,11 +1697,11 @@ class FloatingPlayerService : Service() {
         val clearKeyMgr = when {
             streamInfo.drmScheme != "clearkey" -> null
             streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
-                createClearKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
             streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
-                createClearKeyDrmManagerFromJwk(streamInfo.drmLicenseUrl)
+                buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
             streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
-                createClearKeyServerDrmManager(streamInfo.drmLicenseUrl, headers)
+                buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
             else -> null
         }
         return if (clearKeyMgr != null) {
@@ -1688,6 +1713,11 @@ class FloatingPlayerService : Service() {
         }
     }
 
+    // ── buildDrmMediaItem ─────────────────────────────────────────────────────
+    // ClearKey: do NOT set DrmConfiguration — the provider in buildDrmMediaSourceFactory
+    // handles it unconditionally (setting DrmConfiguration re-enables UUID filtering
+    // and breaks GuardEncType=2 Widevine PSSH streams).
+    // Widevine/PlayReady: DrmConfiguration is the official Media3 approach.
     private fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
         val builder = MediaItem.Builder().setUri(streamInfo.url)
         val url = streamInfo.url.lowercase()
@@ -1699,23 +1729,19 @@ class FloatingPlayerService : Service() {
             url.contains(".ism") || url.contains(".isml") || url.contains("manifest(format=mpd") ->
                 builder.setMimeType(MimeTypes.APPLICATION_SS)
         }
-        if (streamInfo.drmScheme == "clearkey" &&
-            (streamInfo.drmKeyId != null || streamInfo.drmLicenseUrl != null)) {
-            val clearKeyUuid = java.util.UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
-            builder.setDrmConfiguration(
-                MediaItem.DrmConfiguration.Builder(clearKeyUuid).build()
-            )
-        } else if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
+        // ClearKey: no DrmConfiguration — provider handles it
+        if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->
                 val uuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                 val licenseHeaders = headers.filter { (k, _) ->
-                    k != "Referer" && k != "Origin"
+                    k.lowercase() !in setOf("referer", "origin")
                 }
                 builder.setDrmConfiguration(
                     MediaItem.DrmConfiguration.Builder(uuid)
                         .setLicenseUri(licUrl)
                         .setLicenseRequestHeaders(licenseHeaders)
                         .setForceDefaultLicenseUri(true)
+                        .setMultiSession(false)
                         .build()
                 )
             }

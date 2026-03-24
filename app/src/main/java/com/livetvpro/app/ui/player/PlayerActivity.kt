@@ -1951,49 +1951,23 @@ class PlayerActivity : AppCompatActivity() {
                 else -> null
             }
 
-            // For ClearKey+hex-keys on DASH streams (e.g. MAG GuardEncType=2), the MPD may contain
-            // only a Widevine PSSH box (no ClearKey PSSH). ExoPlayer matches the DrmSessionManager
-            // to the PSSH UUID in the manifest — if the manifest has a Widevine PSSH but we only
-            // register a ClearKey manager, ExoPlayer ignores our manager and the stream fails.
+            // KEY INSIGHT (learned from reverse-engineering Leone Player):
+            // When using setDrmSessionManagerProvider{} WITHOUT setting DrmConfiguration
+            // on the MediaItem, ExoPlayer does NOT filter by PSSH UUID. The provider lambda
+            // is called unconditionally and our ClearKey manager handles all PSSH types —
+            // including Widevine PSSH boxes (common in MAG/GuardEncType=2 DASH streams).
             //
-            // Fix: when clearkey+hex-keys is used on an MPD, also create a Widevine-UUID manager
-            // with the same adaptive local-key callback. The DrmSessionManagerProvider then picks
-            // the right manager based on which UUID the manifest actually advertises.
-            val widevineLocalMgr: androidx.media3.exoplayer.drm.DrmSessionManager? =
-                if (streamInfo.drmScheme == "clearkey"
-                    && streamInfo.drmKeyId != null && streamInfo.drmKey != null
-                    && streamInfo.url.lowercase().let { it.contains(".mpd") || it.contains("/dash/") || it.contains("type=mpd") }
-                ) {
-                    val mgr = createWidevineLocalKeyDrmManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                    com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("Widevine-LocalKey(MAG-fallback)", mgr != null)
-                    mgr
-                } else null
-
-            val clearKeyUuidConst = UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
-
-            val mediaSourceFactory = when {
-                clearKeyMgr != null && widevineLocalMgr != null -> {
-                    // Dual-UUID provider: route by the PSSH UUID ExoPlayer detected in the manifest
-                    DefaultMediaSourceFactory(this)
-                        .setDataSourceFactory(dataSourceFactory)
-                        .setDrmSessionManagerProvider { mediaItem ->
-                            val drmConfig = mediaItem.localConfiguration?.drmConfiguration
-                            val uuid = drmConfig?.scheme
-                            com.livetvpro.app.utils.DrmDebugLogger.log(
-                                com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
-                                "DrmSessionManagerProvider: uuid=$uuid widevine=${C.WIDEVINE_UUID} clearkey=$clearKeyUuidConst")
-                            if (uuid == C.WIDEVINE_UUID) widevineLocalMgr else clearKeyMgr
-                        }
-                }
-                clearKeyMgr != null -> {
-                    DefaultMediaSourceFactory(this)
-                        .setDataSourceFactory(dataSourceFactory)
-                        .setDrmSessionManagerProvider { clearKeyMgr }
-                }
-                else -> {
-                    DefaultMediaSourceFactory(this)
-                        .setDataSourceFactory(dataSourceFactory)
-                }
+            // Setting DrmConfiguration(Widevine UUID) on the MediaItem causes ExoPlayer to
+            // try a real Widevine TEE session first, which fails without a license server.
+            // Correct approach: always use ClearKey UUID in the manager, never set
+            // DrmConfiguration on the MediaItem for clearkey streams.
+            val mediaSourceFactory = if (clearKeyMgr != null) {
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(dataSourceFactory)
+                    .setDrmSessionManagerProvider { clearKeyMgr }
+            } else {
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(dataSourceFactory)
             }
 
             player = ExoPlayer.Builder(this)
@@ -2033,30 +2007,15 @@ class PlayerActivity : AppCompatActivity() {
                     }
 
                     if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
-                        // In Media3 1.9.0, setDrmSessionManagerProvider is scheme-aware.
-                        // Without a DrmConfiguration on the MediaItem, ExoPlayer picks the
-                        // first PSSH scheme it finds (e.g. Widevine) and ignores our ClearKey
-                        // manager entirely. Setting the correct UUID here routes the stream to
-                        // our manager without forcing DRM on unprotected tracks.
-                        //
-                        // For MAG GuardEncType=2 DASH streams (e.g. Odido/T-Mobile NL), the MPD
-                        // contains a Widevine PSSH box rather than a ClearKey PSSH. We detect this
-                        // via the widevineLocalMgr being non-null and tell ExoPlayer to use
-                        // Widevine UUID so it routes to our local-key Widevine manager.
-                        val drmUuidForMediaItem = if (widevineLocalMgr != null) {
-                            com.livetvpro.app.utils.DrmDebugLogger.log(
-                                com.livetvpro.app.utils.DrmDebugLogger.Stage.MEDIA_ITEM,
-                                "Dual-UUID: setting Widevine UUID on MediaItem (MAG GuardEncType=2 fallback)")
-                            C.WIDEVINE_UUID
-                        } else {
-                            UUID.fromString("e2719d58-a985-b3c9-781a-b030af78d30e")
-                        }
-                        mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(drmUuidForMediaItem)
-                                .build()
-                        )
+                        // Do NOT set DrmConfiguration on the MediaItem for ClearKey streams.
+                        // When setDrmSessionManagerProvider is used without a DrmConfiguration,
+                        // ExoPlayer skips UUID matching and unconditionally calls our provider,
+                        // which returns the ClearKey manager regardless of what PSSH UUID
+                        // (Widevine, ClearKey, etc.) is present in the manifest. This is the
+                        // correct approach for MAG/GuardEncType=2 DASH streams and all other
+                        // ClearKey streams with Widevine PSSH boxes.
                         com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
-                            streamInfo.url, null, true, drmUuidForMediaItem.toString())
+                            streamInfo.url, null, true, "clearkey-no-drm-config")
                     } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
@@ -2320,7 +2279,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
+                .setPlayClearSamplesWithoutKeys(false)
                 .build(adaptiveCallback)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", false, e)
@@ -2410,7 +2369,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
+                .setPlayClearSamplesWithoutKeys(false)
                 .build(adaptiveCallback)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("Widevine-LocalKey", false, e)
@@ -2428,7 +2387,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
+                .setPlayClearSamplesWithoutKeys(false)
                 .build(drmCallback)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-JWK", false, e)
@@ -2453,7 +2412,7 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(clearKeyUuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
+                .setPlayClearSamplesWithoutKeys(false)
                 .build(cb)
         } catch (e: Exception) {
             com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-Server", false, e)

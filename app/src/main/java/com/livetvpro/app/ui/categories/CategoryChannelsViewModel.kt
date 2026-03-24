@@ -18,14 +18,18 @@ import com.livetvpro.app.utils.M3uParser
 import com.livetvpro.app.utils.AndroidRetryViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class CategoryChannelsViewModel @Inject constructor(
     application: Application,
@@ -36,41 +40,45 @@ class CategoryChannelsViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle
 ) : AndroidRetryViewModel(application) {
 
-    private val _channels = MutableStateFlow<List<Channel>>(emptyList())
-    private val _searchQuery = MutableStateFlow("")
+    private val _channels      = MutableStateFlow<List<Channel>>(emptyList())
+    private val _searchQuery   = MutableStateFlow("")
     private val _selectedGroup = MutableStateFlow("All")
-    
+
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
-    
+
     val categoryName: String = savedStateHandle.get<String>("categoryName") ?: "Channels"
 
     private val _categoryGroups = MutableLiveData<List<String>>(emptyList())
     val categoryGroups: LiveData<List<String>> = _categoryGroups
-    
+
     private val _currentGroup = MutableLiveData<String>("All")
     val currentGroup: LiveData<String> = _currentGroup
-    
+
     private var lastLoadedCategoryId: String? = null
 
     val filteredChannels: LiveData<List<Channel>> = combine(
-        _channels, 
-        _searchQuery, 
+        _channels,
+        // Debounce search input so we don't filter on every keystroke with 100k+ channels
+        _searchQuery.debounce(150),
         _selectedGroup
     ) { list, query, group ->
+        // Run the filter work on Default (CPU) dispatcher, not Main
         var filtered = list
-        
+
         if (group != "All") {
             filtered = filtered.filter { channel ->
                 extractGroupFromChannel(channel) == group
             }
         }
-        
+
         if (query.isNotEmpty()) {
             filtered = filtered.filter { it.name.contains(query, ignoreCase = true) }
         }
-        
+
         filtered
-    }.asLiveData(viewModelScope.coroutineContext + Dispatchers.Main)
+    }
+        .flowOn(Dispatchers.Default)   // heavy filtering stays off the main thread
+        .asLiveData(viewModelScope.coroutineContext)
 
     init {
         loadFavoriteCache()
@@ -95,22 +103,21 @@ class CategoryChannelsViewModel @Inject constructor(
         viewModelScope.launch {
             startLoading()
             lastLoadedCategoryId = categoryId
-            
+
             try {
                 val playlist = playlistRepository.getPlaylistById(categoryId)
-                
+
                 if (playlist != null) {
                     loadPlaylistChannels(playlist)
                 } else {
                     val channels = channelRepository.getChannelsByCategory(categoryId)
                     _channels.value = channels
                     extractAndSetGroups(channels)
-                    
+
                     finishLoading(dataIsEmpty = channels.isEmpty())
                 }
             } catch (e: Exception) {
                 _channels.value = emptyList()
-                
                 finishLoading(dataIsEmpty = true, error = e)
             }
         }
@@ -120,29 +127,28 @@ class CategoryChannelsViewModel @Inject constructor(
         try {
             val playlistSource = if (playlist.isFile) playlist.filePath else playlist.url
             val channels = if (playlistSource.startsWith("content://") || playlistSource.startsWith("file://")) {
-                val uri = Uri.parse(playlistSource)
+                val uri         = Uri.parse(playlistSource)
                 val inputStream = getApplication<Application>().contentResolver.openInputStream(uri)
-                val content = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
+                val content     = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
                 val m3uChannels = M3uParser.parseM3uContent(content)
                 M3uParser.convertToChannels(m3uChannels, playlist.id, playlist.title)
             } else {
                 withContext(Dispatchers.IO) {
-                    val client = OkHttpClient()
-                    val request = Request.Builder().url(playlistSource).build()
+                    val client   = OkHttpClient()
+                    val request  = Request.Builder().url(playlistSource).build()
                     val response = client.newCall(request).execute()
-                    val content = response.body?.string() ?: ""
+                    val content  = response.body?.string() ?: ""
                     val m3uChannels = M3uParser.parseM3uContent(content)
                     M3uParser.convertToChannels(m3uChannels, playlist.id, playlist.title)
                 }
             }
-            
+
             _channels.value = channels
             extractAndSetGroups(channels)
-            
+
             finishLoading(dataIsEmpty = channels.isEmpty())
         } catch (e: Exception) {
             _channels.value = emptyList()
-            
             finishLoading(dataIsEmpty = true, error = e)
         }
     }
@@ -152,14 +158,12 @@ class CategoryChannelsViewModel @Inject constructor(
             .mapNotNull { extractGroupFromChannel(it) }
             .toSet()
             .sorted()
-        
-        val groupsList = if (groupsSet.isNotEmpty()) {
+
+        _categoryGroups.value = if (groupsSet.isNotEmpty()) {
             listOf("All") + groupsSet
         } else {
             emptyList()
         }
-        
-        _categoryGroups.value = groupsList
     }
 
     private fun extractGroupFromChannel(channel: Channel): String? {
@@ -172,24 +176,24 @@ class CategoryChannelsViewModel @Inject constructor(
 
     fun selectGroup(group: String) {
         _selectedGroup.value = group
-        _currentGroup.value = group
+        _currentGroup.value  = group
     }
 
     fun toggleFavorite(channel: Channel) {
         viewModelScope.launch {
             val favoriteLinks = channel.links?.map { channelLink ->
                 ChannelLink(
-                    quality = channelLink.quality,
-                    url = channelLink.url,
-                    cookie = channelLink.cookie,
-                    referer = channelLink.referer,
-                    origin = channelLink.origin,
-                    userAgent = channelLink.userAgent,
-                    drmScheme = channelLink.drmScheme,
+                    quality       = channelLink.quality,
+                    url           = channelLink.url,
+                    cookie        = channelLink.cookie,
+                    referer       = channelLink.referer,
+                    origin        = channelLink.origin,
+                    userAgent     = channelLink.userAgent,
+                    drmScheme     = channelLink.drmScheme,
                     drmLicenseUrl = channelLink.drmLicenseUrl
                 )
             }
-            
+
             val streamUrlToSave = when {
                 channel.streamUrl.isNotEmpty() -> channel.streamUrl
                 !favoriteLinks.isNullOrEmpty() -> {
@@ -198,17 +202,17 @@ class CategoryChannelsViewModel @Inject constructor(
                 }
                 else -> ""
             }
-            
+
             val favoriteChannel = FavoriteChannel(
-                id = channel.id,
-                name = channel.name,
-                logoUrl = channel.logoUrl,
-                streamUrl = streamUrlToSave,
-                categoryId = channel.categoryId,
+                id           = channel.id,
+                name         = channel.name,
+                logoUrl      = channel.logoUrl,
+                streamUrl    = streamUrlToSave,
+                categoryId   = channel.categoryId,
                 categoryName = categoryName,
-                links = favoriteLinks
+                links        = favoriteLinks
             )
-            
+
             if (favoritesRepository.isFavorite(channel.id)) {
                 favoritesRepository.removeFavorite(channel.id)
             } else {
@@ -216,23 +220,17 @@ class CategoryChannelsViewModel @Inject constructor(
             }
         }
     }
-    
+
     private fun buildStreamUrlFromLink(link: ChannelLink): String {
         val parts = mutableListOf<String>()
         parts.add(link.url)
-        
-        link.referer?.let { if (it.isNotEmpty()) parts.add("referer=$it") }
-        link.cookie?.let { if (it.isNotEmpty()) parts.add("cookie=$it") }
-        link.origin?.let { if (it.isNotEmpty()) parts.add("origin=$it") }
-        link.userAgent?.let { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
-        link.drmScheme?.let { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
+        link.referer?.let    { if (it.isNotEmpty()) parts.add("referer=$it") }
+        link.cookie?.let     { if (it.isNotEmpty()) parts.add("cookie=$it") }
+        link.origin?.let     { if (it.isNotEmpty()) parts.add("origin=$it") }
+        link.userAgent?.let  { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
+        link.drmScheme?.let  { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) parts.add("drmLicense=$it") }
-        
-        return if (parts.size > 1) {
-            parts.joinToString("|")
-        } else {
-            parts[0]
-        }
+        return if (parts.size > 1) parts.joinToString("|") else parts[0]
     }
 
     fun isFavorite(channelId: String): Boolean {

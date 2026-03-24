@@ -24,6 +24,60 @@ object M3uParser {
         val drmKey: String? = null
     )
 
+    // -------------------------------------------------------------------------
+    // All regex patterns compiled ONCE here instead of per-channel per-call
+    // -------------------------------------------------------------------------
+    private val PIPE_PARAM_PATTERN    = Regex("[&?]([^=]+)=(?:%7C|\\|)([^=]+)=([^&]+)")
+    private val JSON_HEADER_PATTERN   = Regex("[&?](headers?|hdr|h)=(%7B[^&]+|\\{[^&]+)")
+    private val COOKIE_MULTI_PATTERN  = Regex("[&?](c|cookie)\\d+=([^&]+)")
+    private val DOUBLE_COLON_PATTERN  = Regex("::([^:=]+)=([^:]+)")
+    private val PIPE_SPLIT_PATTERN    = Regex("[&|]")
+    private val AMP_SPLIT_PATTERN     = Regex("[&|;]")
+    private val TRAILING_SEP_PATTERN  = Regex("[&?]+$")
+    private val QUESTION_AMP_PATTERN  = Regex("\\?&")
+    private val JWK_KID_PATTERN       = Regex(""""kid"\s*:\s*"([^"]+)"""")
+    private val JWK_K_PATTERN         = Regex(""""k"\s*:\s*"([^"]+)"""")
+    private val BASE64_URL_PATTERN    = Regex("([?&])(url|u|target|dest|destination|link|redirect|goto)=([A-Za-z0-9+/=_-]{20,})")
+    private val PROXY_D_PARAM_PATTERN = Regex("[?&]d=([^&]+)")
+    private val HMA_URL_PATTERN       = Regex("[?&](url|u|target)=([^&]+)")
+    private val KPROXY_PATTERN        = Regex("kproxy\\.com/\\?([^&]+)")
+    private val HIDE_ME_PATTERN       = Regex("[?&]u=([^&]+)")
+    private val CROXY_PATTERN         = Regex("croxyproxy\\.com/\\?url=([^&]+)")
+
+    // Pre-built patterns for the 7 base64 param names
+    private val BASE64_PARAM_PATTERNS = listOf("data", "meta", "params", "h", "headers", "b64", "encoded")
+        .map { name -> name to Regex("[&?]$name=([A-Za-z0-9+/=_-]{20,})") }
+
+    // Pre-built patterns for common header query params (used in extractHeadersFromQueryParams)
+    private val COMMON_HEADER_PARAMS = mapOf(
+        "ua"             to "User-Agent",
+        "user-agent"     to "User-Agent",
+        "useragent"      to "User-Agent",
+        "ref"            to "Referer",
+        "referer"        to "Referer",
+        "referrer"       to "Referer",
+        "cookie"         to "Cookie",
+        "cookies"        to "Cookie",
+        "origin"         to "Origin",
+        "xff"            to "X-Forwarded-For",
+        "x-forwarded-for" to "X-Forwarded-For",
+        "range"          to "Range",
+        "accept"         to "Accept"
+    )
+    private val COMMON_HEADER_PATTERNS: Map<String, Pair<String, Regex>> =
+        COMMON_HEADER_PARAMS.entries.associate { (param, header) ->
+            param to (header to Regex("[&?]$param=([^&]+)", RegexOption.IGNORE_CASE))
+        }
+
+    // Pre-built patterns for fixed M3U attributes
+    private val ATTR_PATTERN_CACHE = mutableMapOf<String, Pair<Regex, Regex>>()
+    private fun attributePatterns(attribute: String): Pair<Regex, Regex> =
+        ATTR_PATTERN_CACHE.getOrPut(attribute) {
+            Regex("""$attribute="([^"]*)"""") to Regex("""$attribute=([^ ]*)""")
+        }
+
+    // -------------------------------------------------------------------------
+
     suspend fun parseM3uFromUrl(m3uUrl: String): List<M3uChannel> {
         val trimmedUrl = m3uUrl.trim()
 
@@ -59,7 +113,7 @@ object M3uParser {
             connection.disconnect()
 
             android.util.Log.d("M3uParser", "Content length: ${content.length} bytes")
-            if (content.length > 0) {
+            if (content.isNotEmpty()) {
                 android.util.Log.d("M3uParser", "First 200 chars: ${content.take(200)}")
             }
 
@@ -126,97 +180,96 @@ object M3uParser {
         val channels = mutableListOf<M3uChannel>()
         try {
             val trimmed = jsonContent.trim()
-            
+
             val jsonArray = if (trimmed.startsWith("[")) {
                 JSONArray(trimmed)
             } else if (trimmed.startsWith("{")) {
                 val jsonObject = JSONObject(trimmed)
                 when {
                     jsonObject.has("channels") -> jsonObject.getJSONArray("channels")
-                    jsonObject.has("items") -> jsonObject.getJSONArray("items")
-                    jsonObject.has("data") -> jsonObject.getJSONArray("data")
+                    jsonObject.has("items")    -> jsonObject.getJSONArray("items")
+                    jsonObject.has("data")     -> jsonObject.getJSONArray("data")
                     else -> return emptyList()
                 }
             } else {
                 return emptyList()
             }
-            
+
             for (i in 0 until jsonArray.length()) {
                 val item = jsonArray.getJSONObject(i)
-                
+
                 val name = item.optString("name", "Unknown Channel")
-                var link = item.optString("link", "") 
+                var link = item.optString("link", "")
                     .ifEmpty { item.optString("url", "") }
                     .ifEmpty { item.optString("stream", "") }
                     .ifEmpty { item.optString("streamUrl", "") }
-                
+
                 val logo = item.optString("logo", "")
                     .ifEmpty { item.optString("logoUrl", "") }
                     .ifEmpty { item.optString("icon", "") }
-                
+
                 val category = item.optString("category", "")
                     .ifEmpty { item.optString("group", "") }
-                
-                val cookie = item.optString("cookie", "")
-                val userAgent = item.optString("user-agent", null) 
+
+                val cookie    = item.optString("cookie", "")
+                val userAgent = item.optString("user-agent", null)
                     ?: item.optString("user_agent", null)
                     ?: item.optString("userAgent", null)
-                val referer = item.optString("referer", null) 
+                val referer   = item.optString("referer", null)
                     ?: item.optString("referrer", null)
-                val origin = item.optString("origin", null)
-                
+                val origin    = item.optString("origin", null)
+
                 val headers = mutableMapOf<String, String>()
                 if (cookie.isNotEmpty()) headers["Cookie"] = cookie
                 referer?.let { headers["Referer"] = it }
-                origin?.let { headers["Origin"] = it }
-                
+                origin?.let  { headers["Origin"]  = it }
+
                 link = decodeProxyUrl(link)
-                
+
                 var drmScheme = item.optString("drmScheme", null)
                     ?: item.optString("drm_scheme", null)
                     ?: item.optString("drm", null)
-                
+
                 var drmKeyId: String? = null
-                var drmKey: String? = null
-                
+                var drmKey: String?   = null
+
                 val drmLicense = item.optString("drmLicense", null)
                     ?: item.optString("drm_license", null)
                     ?: item.optString("license", null)
-                
+
                 if (drmLicense != null && drmLicense.isNotEmpty()) {
-                    if (drmLicense.startsWith("http://", ignoreCase = true) || 
+                    if (drmLicense.startsWith("http://", ignoreCase = true) ||
                         drmLicense.startsWith("https://", ignoreCase = true)) {
                         drmKeyId = drmLicense
-                        drmKey = "LICENSE_URL"
-                    } 
-                    else if (drmLicense.contains(":")) {
+                        drmKey   = "LICENSE_URL"
+                    } else if (drmLicense.contains(":")) {
                         val parts = drmLicense.split(":", limit = 2)
                         if (parts.size == 2) {
                             drmKeyId = parts[0].trim()
-                            drmKey = parts[1].trim()
+                            drmKey   = parts[1].trim()
                         }
                     }
                 }
-                
+
                 if (drmScheme != null) {
                     drmScheme = normalizeDrmScheme(drmScheme)
                 }
-                
+
                 if (link.isNotEmpty()) {
                     channels.add(M3uChannel(
-                        name = name,
-                        logoUrl = logo,
-                        streamUrl = link,
+                        name       = name,
+                        logoUrl    = logo,
+                        streamUrl  = link,
                         groupTitle = category,
-                        userAgent = userAgent,
+                        userAgent  = userAgent,
                         httpHeaders = headers,
-                        drmScheme = drmScheme,
-                        drmKeyId = drmKeyId,
-                        drmKey = drmKey
+                        drmScheme  = drmScheme,
+                        drmKeyId   = drmKeyId,
+                        drmKey     = drmKey
                     ))
                 }
             }
-            
+
         } catch (e: Exception) {
         }
         return channels
@@ -224,34 +277,16 @@ object M3uParser {
 
     private fun decodeProxyUrl(url: String): String {
         if (url.isEmpty()) return url
-        
+
         try {
-            if (url.contains("proxysite.com/process.php")) {
-                return decodeProxySiteUrl(url)
-            }
-            
-            if (url.contains("hidemyass.com") || url.contains("hma.com")) {
-                return decodeHMAProxyUrl(url)
-            }
-            
-            if (url.contains("/process.php") && url.contains("d=")) {
-                return decodeGenericProxyUrl(url)
-            }
-            
-            if (url.contains("kproxy.com")) {
-                return decodeKProxyUrl(url)
-            }
-            
-            if (url.contains("hide.me/proxy")) {
-                return decodeHideMeProxyUrl(url)
-            }
-            
-            if (url.contains("croxyproxy.com")) {
-                return decodeCroxyProxyUrl(url)
-            }
-            
-            val base64Pattern = Regex("([?&])(url|u|target|dest|destination|link|redirect|goto)=([A-Za-z0-9+/=_-]{20,})")
-            val base64Match = base64Pattern.find(url)
+            if (url.contains("proxysite.com/process.php"))        return decodeProxySiteUrl(url)
+            if (url.contains("hidemyass.com") || url.contains("hma.com")) return decodeHMAProxyUrl(url)
+            if (url.contains("/process.php") && url.contains("d=")) return decodeGenericProxyUrl(url)
+            if (url.contains("kproxy.com"))    return decodeKProxyUrl(url)
+            if (url.contains("hide.me/proxy")) return decodeHideMeProxyUrl(url)
+            if (url.contains("croxyproxy.com")) return decodeCroxyProxyUrl(url)
+
+            val base64Match = BASE64_URL_PATTERN.find(url)
             if (base64Match != null) {
                 try {
                     val encoded = base64Match.groupValues[3]
@@ -260,185 +295,146 @@ object M3uParser {
                     } catch (e: Exception) {
                         String(Base64.decode(encoded, Base64.DEFAULT))
                     }
-                    if (decoded.startsWith("http", ignoreCase = true)) {
-                        return decoded
-                    }
+                    if (decoded.startsWith("http", ignoreCase = true)) return decoded
                 } catch (e: Exception) {}
             }
-            
+
         } catch (e: Exception) {
         }
-        
+
         return url
     }
-    
+
     private fun decodeProxySiteUrl(url: String): String {
-        try {
-            val dParamMatch = Regex("[?&]d=([^&]+)").find(url) ?: return url
-            val encodedUrl = dParamMatch.groupValues[1]
-            val urlDecoded = java.net.URLDecoder.decode(encodedUrl, "UTF-8")
-            
-            val base64Decoded = try {
+        return try {
+            val dParamMatch = PROXY_D_PARAM_PATTERN.find(url) ?: return url
+            val urlDecoded  = java.net.URLDecoder.decode(dParamMatch.groupValues[1], "UTF-8")
+            val decoded     = try {
                 String(Base64.decode(urlDecoded, Base64.URL_SAFE or Base64.NO_WRAP))
             } catch (e: Exception) {
                 String(Base64.decode(urlDecoded, Base64.DEFAULT))
             }
-            
-            return if (base64Decoded.startsWith("http", ignoreCase = true)) {
-                base64Decoded
-            } else {
-                url
-            }
-        } catch (e: Exception) {
-            return url
-        }
+            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
+        } catch (e: Exception) { url }
     }
-    
+
     private fun decodeGenericProxyUrl(url: String): String {
-        try {
-            val dParamMatch = Regex("[?&]d=([^&]+)").find(url) ?: return url
-            val encodedUrl = dParamMatch.groupValues[1]
-            val decoded = java.net.URLDecoder.decode(encodedUrl, "UTF-8")
-            
+        return try {
+            val dParamMatch = PROXY_D_PARAM_PATTERN.find(url) ?: return url
+            val decoded     = java.net.URLDecoder.decode(dParamMatch.groupValues[1], "UTF-8")
             val base64Decoded = try {
                 String(Base64.decode(decoded, Base64.URL_SAFE or Base64.NO_WRAP))
             } catch (e: Exception) {
                 String(Base64.decode(decoded, Base64.DEFAULT))
             }
-            
-            return if (base64Decoded.startsWith("http", ignoreCase = true)) {
-                base64Decoded
-            } else {
-                url
-            }
-        } catch (e: Exception) {
-            return url
-        }
+            if (base64Decoded.startsWith("http", ignoreCase = true)) base64Decoded else url
+        } catch (e: Exception) { url }
     }
-    
+
     private fun decodeHMAProxyUrl(url: String): String {
-        try {
-            val pattern = Regex("[?&](url|u|target)=([^&]+)")
-            val match = pattern.find(url) ?: return url
-            val encoded = match.groupValues[2]
-            val decoded = java.net.URLDecoder.decode(encoded, "UTF-8")
-            return if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) {
-            return url
-        }
+        return try {
+            val match = HMA_URL_PATTERN.find(url) ?: return url
+            val decoded = java.net.URLDecoder.decode(match.groupValues[2], "UTF-8")
+            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
+        } catch (e: Exception) { url }
     }
-    
+
     private fun decodeKProxyUrl(url: String): String {
-        try {
-            val pattern = Regex("kproxy\\.com/\\?([^&]+)")
-            val match = pattern.find(url) ?: return url
-            val encoded = match.groupValues[1]
-            val decoded = java.net.URLDecoder.decode(encoded, "UTF-8")
-            return if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) {
-            return url
-        }
+        return try {
+            val match = KPROXY_PATTERN.find(url) ?: return url
+            val decoded = java.net.URLDecoder.decode(match.groupValues[1], "UTF-8")
+            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
+        } catch (e: Exception) { url }
     }
-    
+
     private fun decodeHideMeProxyUrl(url: String): String {
-        try {
-            val pattern = Regex("[?&]u=([^&]+)")
-            val match = pattern.find(url) ?: return url
+        return try {
+            val match   = HIDE_ME_PATTERN.find(url) ?: return url
             val encoded = match.groupValues[1]
-            
             val decoded = try {
                 String(Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_WRAP))
             } catch (e: Exception) {
                 java.net.URLDecoder.decode(encoded, "UTF-8")
             }
-            
-            return if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) {
-            return url
-        }
+            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
+        } catch (e: Exception) { url }
     }
-    
+
     private fun decodeCroxyProxyUrl(url: String): String {
-        try {
-            val pattern = Regex("croxyproxy\\.com/\\?url=([^&]+)")
-            val match = pattern.find(url) ?: return url
-            val encoded = match.groupValues[1]
-            val decoded = java.net.URLDecoder.decode(encoded, "UTF-8")
-            return if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) {
-            return url
-        }
+        return try {
+            val match = CROXY_PATTERN.find(url) ?: return url
+            val decoded = java.net.URLDecoder.decode(match.groupValues[1], "UTF-8")
+            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
+        } catch (e: Exception) { url }
     }
 
+    // -------------------------------------------------------------------------
+    // Core parser — streams line-by-line instead of splitting the whole file
+    // -------------------------------------------------------------------------
     fun parseM3uContent(content: String): List<M3uChannel> {
-        val channels = mutableListOf<M3uChannel>()
-        val lines = content.lines()
+        val channels = ArrayList<M3uChannel>(1024)
 
-        if (lines.isEmpty()) return emptyList()
-
-        var currentName = ""
-        var currentLogo = ""
-        var currentGroup = ""
+        var currentName      = ""
+        var currentLogo      = ""
+        var currentGroup     = ""
         var currentUserAgent: String? = null
-        var currentHeaders = mutableMapOf<String, String>()
+        var currentHeaders   = mutableMapOf<String, String>()
         var currentDrmScheme: String? = null
-        var currentDrmKeyId: String? = null
-        var currentDrmKey: String? = null
+        var currentDrmKeyId: String?  = null
+        var currentDrmKey: String?    = null
 
-        for (line in lines) {
+        // Stream line-by-line — avoids creating a huge List<String> for the whole file
+        content.reader().forEachLine { line ->
             val trimmedLine = line.trim()
-            if (trimmedLine.isEmpty()) continue
-            if (trimmedLine.startsWith("#EXTM3U")) continue
+            if (trimmedLine.isEmpty() || trimmedLine.startsWith("#EXTM3U")) return@forEachLine
 
             when {
                 trimmedLine.startsWith("#KODIPROP:inputstream.adaptive.license_type=") -> {
                     val rawScheme = trimmedLine.substringAfter("=").trim().lowercase()
                     currentDrmScheme = normalizeDrmScheme(rawScheme)
                 }
-                
+
                 trimmedLine.startsWith("#KODIPROP:inputstream.adaptive.license_key=") -> {
                     val keyValue = trimmedLine.substringAfter("=").trim()
-                    
                     when {
-                        keyValue.startsWith("http://", ignoreCase = true) || 
+                        keyValue.startsWith("http://", ignoreCase = true) ||
                         keyValue.startsWith("https://", ignoreCase = true) -> {
                             currentDrmKeyId = keyValue
-                            currentDrmKey = "LICENSE_URL"
+                            currentDrmKey   = "LICENSE_URL"
                         }
                         keyValue.contains(":") && !keyValue.startsWith("{") -> {
                             val parts = keyValue.split(":", limit = 2)
                             if (parts.size == 2) {
                                 currentDrmKeyId = parts[0].trim()
-                                currentDrmKey = parts[1].trim()
+                                currentDrmKey   = parts[1].trim()
                             }
                         }
                         keyValue.startsWith("{") -> {
                             val (keyId, key) = parseJWKToKeyIdPair(keyValue)
                             if (keyId != null && key != null) {
                                 currentDrmKeyId = keyId
-                                currentDrmKey = key
+                                currentDrmKey   = key
                             }
                         }
                     }
                 }
-                
+
                 trimmedLine.startsWith("#EXTINF:") -> {
                     currentUserAgent = null
-                    currentHeaders = mutableMapOf()
-                    
-                    currentName = extractChannelName(trimmedLine)
-                    currentLogo = extractAttribute(trimmedLine, "tvg-logo")
-                    currentGroup = extractAttribute(trimmedLine, "group-title")
+                    currentHeaders   = mutableMapOf()
+                    currentName      = extractChannelName(trimmedLine)
+                    currentLogo      = extractAttribute(trimmedLine, "tvg-logo")
+                    currentGroup     = extractAttribute(trimmedLine, "group-title")
                 }
-                
+
                 trimmedLine.startsWith("#EXTVLCOPT:http-user-agent=") -> {
                     currentUserAgent = trimmedLine.substringAfter("=").trim()
                 }
-                
+
                 trimmedLine.startsWith("#EXTVLCOPT:http-origin=") -> {
                     currentHeaders["Origin"] = trimmedLine.substringAfter("=").trim()
                 }
-                
+
                 trimmedLine.startsWith("#EXTVLCOPT:http-referrer=") -> {
                     currentHeaders["Referer"] = trimmedLine.substringAfter("=").trim()
                 }
@@ -446,334 +442,303 @@ object M3uParser {
                 trimmedLine.startsWith("#EXTHTTP:") -> {
                     try {
                         val jsonPart = trimmedLine.substringAfter("#EXTHTTP:").trim()
-                        
                         if (jsonPart.startsWith("{")) {
                             val json = JSONObject(jsonPart)
                             json.keys().forEach { key ->
                                 val value = json.optString(key, "")
                                 when (key.lowercase()) {
-                                    "cookie" -> currentHeaders["Cookie"] = value
-                                    "user-agent" -> currentUserAgent = value
-                                    "referer", "referrer" -> currentHeaders["Referer"] = value
-                                    "origin" -> currentHeaders["Origin"] = value
-                                    else -> currentHeaders[key] = value
+                                    "cookie"            -> currentHeaders["Cookie"] = value
+                                    "user-agent"        -> currentUserAgent = value
+                                    "referer","referrer"-> currentHeaders["Referer"] = value
+                                    "origin"            -> currentHeaders["Origin"] = value
+                                    else                -> currentHeaders[key] = value
                                 }
                             }
                         }
-                    } catch (e: Exception) {
-                    }
+                    } catch (e: Exception) {}
                 }
-                
+
                 !trimmedLine.startsWith("#") -> {
                     if (currentName.isNotEmpty()) {
                         val (streamUrl, inlineHeaders, inlineDrmInfo) = parseInlineMetadata(trimmedLine)
-                        
+
                         val finalHeaders = currentHeaders.toMutableMap()
                         finalHeaders.putAll(inlineHeaders)
-                        
-                        val finalDrmScheme = inlineDrmInfo.first ?: currentDrmScheme
-                        val finalDrmKeyId = inlineDrmInfo.second ?: currentDrmKeyId
-                        val finalDrmKey = inlineDrmInfo.third ?: currentDrmKey
-                        
+
                         channels.add(M3uChannel(
-                            name = currentName,
-                            logoUrl = currentLogo,
-                            streamUrl = streamUrl,
-                            groupTitle = currentGroup,
-                            userAgent = currentUserAgent,
+                            name        = currentName,
+                            logoUrl     = currentLogo,
+                            streamUrl   = streamUrl,
+                            groupTitle  = currentGroup,
+                            userAgent   = currentUserAgent,
                             httpHeaders = finalHeaders,
-                            drmScheme = finalDrmScheme,
-                            drmKeyId = finalDrmKeyId,
-                            drmKey = finalDrmKey
+                            drmScheme   = inlineDrmInfo.first  ?: currentDrmScheme,
+                            drmKeyId    = inlineDrmInfo.second ?: currentDrmKeyId,
+                            drmKey      = inlineDrmInfo.third  ?: currentDrmKey
                         ))
-                        
+
                         currentDrmScheme = null
-                        currentDrmKeyId = null
-                        currentDrmKey = null
+                        currentDrmKeyId  = null
+                        currentDrmKey    = null
                     }
                 }
             }
         }
-        
+
         return channels
     }
 
+    // -------------------------------------------------------------------------
+    // Inline metadata — all Regex objects come from companion-level constants
+    // -------------------------------------------------------------------------
     private fun parseInlineMetadata(urlLine: String): Triple<String, Map<String, String>, Triple<String?, String?, String?>> {
-        val headers = mutableMapOf<String, String>()
+        val headers    = mutableMapOf<String, String>()
         var drmScheme: String? = null
-        var drmKeyId: String? = null
-        var drmKey: String? = null
-        
+        var drmKeyId: String?  = null
+        var drmKey: String?    = null
+
         var cleanUrl = urlLine.trim()
-        
-        val pipeParamPattern = Regex("[&?]([^=]+)=(?:%7C|\\|)([^=]+)=([^&]+)")
-        val pipeParamMatch = pipeParamPattern.find(cleanUrl)
+
+        // Pipe-encoded header param
+        val pipeParamMatch = PIPE_PARAM_PATTERN.find(cleanUrl)
         if (pipeParamMatch != null) {
             try {
-                val headerKey = pipeParamMatch.groupValues[2].trim()
-                val rawValue = pipeParamMatch.groupValues[3]
-                val decodedValue = java.net.URLDecoder.decode(rawValue, "UTF-8")
-                
+                val headerKey    = pipeParamMatch.groupValues[2].trim()
+                val decodedValue = java.net.URLDecoder.decode(pipeParamMatch.groupValues[3], "UTF-8")
                 when (headerKey.lowercase()) {
-                    "cookie" -> headers["Cookie"] = decodedValue
-                    "referer", "referrer" -> headers["Referer"] = decodedValue
-                    "user-agent", "useragent" -> headers["User-Agent"] = decodedValue
-                    "origin" -> headers["Origin"] = decodedValue
-                    "authorization", "auth" -> headers["Authorization"] = decodedValue
+                    "cookie"               -> headers["Cookie"]        = decodedValue
+                    "referer","referrer"   -> headers["Referer"]       = decodedValue
+                    "user-agent","useragent" -> headers["User-Agent"]  = decodedValue
+                    "origin"               -> headers["Origin"]        = decodedValue
+                    "authorization","auth" -> headers["Authorization"] = decodedValue
                 }
-                
                 cleanUrl = cleanUrl.replace(pipeParamMatch.value, "")
             } catch (e: Exception) {}
         }
-        
-        val base64Patterns = listOf("data", "meta", "params", "h", "headers", "b64", "encoded")
-        for (paramName in base64Patterns) {
-            val pattern = Regex("[&?]$paramName=([A-Za-z0-9+/=_-]{20,})")
-            val match = pattern.find(cleanUrl)
-            if (match != null) {
-                try {
-                    val encoded = match.groupValues[1]
-                    val decoded = try {
-                        String(Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_WRAP))
-                    } catch (e: Exception) {
-                        String(Base64.decode(encoded, Base64.DEFAULT))
+
+        // Base64-encoded params (pre-compiled patterns)
+        for ((_, pattern) in BASE64_PARAM_PATTERNS) {
+            val match = pattern.find(cleanUrl) ?: continue
+            try {
+                val encoded = match.groupValues[1]
+                val decoded = try {
+                    String(Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_WRAP))
+                } catch (e: Exception) {
+                    String(Base64.decode(encoded, Base64.DEFAULT))
+                }
+                when {
+                    decoded.startsWith("{") && decoded.endsWith("}") -> {
+                        try {
+                            val json = JSONObject(decoded)
+                            json.keys().forEach { key -> headers[key] = json.optString(key, "") }
+                            cleanUrl = cleanUrl.replace(match.value, "")
+                        } catch (e: Exception) {}
                     }
-                    
-                    when {
-                        decoded.startsWith("{") && decoded.endsWith("}") -> {
-                            try {
-                                val json = JSONObject(decoded)
-                                json.keys().forEach { key ->
-                                    headers[key] = json.optString(key, "")
-                                }
-                                cleanUrl = cleanUrl.replace(match.value, "")
-                            } catch (e: Exception) {}
-                        }
-                        decoded.contains("=") -> {
-                            val decodedParts = decoded.split(Regex("[&|;]"))
-                            var foundHeaders = false
-                            for (part in decodedParts) {
-                                val eqIndex = part.indexOf('=')
-                                if (eqIndex == -1) continue
-                                val key = part.substring(0, eqIndex).trim()
-                                val value = part.substring(eqIndex + 1).trim()
-                                when (key.lowercase()) {
-                                    "cookie" -> { headers["Cookie"] = value; foundHeaders = true }
-                                    "referer", "referrer" -> { headers["Referer"] = value; foundHeaders = true }
-                                    "user-agent", "useragent" -> { headers["User-Agent"] = value; foundHeaders = true }
-                                    "origin" -> { headers["Origin"] = value; foundHeaders = true }
-                                    "authorization", "auth" -> { headers["Authorization"] = value; foundHeaders = true }
-                                }
-                            }
-                            if (foundHeaders) {
-                                cleanUrl = cleanUrl.replace(match.value, "")
+                    decoded.contains("=") -> {
+                        val decodedParts = decoded.split(AMP_SPLIT_PATTERN)
+                        var foundHeaders = false
+                        for (part in decodedParts) {
+                            val eqIndex = part.indexOf('=')
+                            if (eqIndex == -1) continue
+                            val key   = part.substring(0, eqIndex).trim()
+                            val value = part.substring(eqIndex + 1).trim()
+                            when (key.lowercase()) {
+                                "cookie"               -> { headers["Cookie"]        = value; foundHeaders = true }
+                                "referer","referrer"   -> { headers["Referer"]       = value; foundHeaders = true }
+                                "user-agent","useragent" -> { headers["User-Agent"]  = value; foundHeaders = true }
+                                "origin"               -> { headers["Origin"]        = value; foundHeaders = true }
+                                "authorization","auth" -> { headers["Authorization"] = value; foundHeaders = true }
                             }
                         }
+                        if (foundHeaders) cleanUrl = cleanUrl.replace(match.value, "")
                     }
-                } catch (e: Exception) {}
-            }
+                }
+            } catch (e: Exception) {}
         }
-        
-        val jsonPattern = Regex("[&?](headers?|hdr|h)=(%7B[^&]+|\\{[^&]+)")
-        val jsonMatch = jsonPattern.find(cleanUrl)
+
+        // JSON headers param
+        val jsonMatch = JSON_HEADER_PATTERN.find(cleanUrl)
         if (jsonMatch != null) {
             try {
                 val encodedJson = jsonMatch.groupValues[2]
                 val decodedJson = if (encodedJson.startsWith("%")) {
                     java.net.URLDecoder.decode(encodedJson, "UTF-8")
-                } else {
-                    encodedJson
-                }
+                } else encodedJson
                 val json = JSONObject(decodedJson)
-                
-                json.keys().forEach { key ->
-                    headers[key] = json.optString(key, "")
-                }
-                
+                json.keys().forEach { key -> headers[key] = json.optString(key, "") }
                 cleanUrl = cleanUrl.replace(jsonMatch.value, "")
             } catch (e: Exception) {}
         }
-        
+
+        // Multiple cookie params
         val multipleCookies = mutableListOf<String>()
-        val cookiePattern = Regex("[&?](c|cookie)\\d+=([^&]+)")
-        var cookieMatch = cookiePattern.find(cleanUrl)
+        var cookieMatch = COOKIE_MULTI_PATTERN.find(cleanUrl)
         while (cookieMatch != null) {
             try {
                 val value = java.net.URLDecoder.decode(cookieMatch.groupValues[2], "UTF-8")
                 multipleCookies.add(value)
                 cleanUrl = cleanUrl.replace(cookieMatch.value, "")
             } catch (e: Exception) {}
-            cookieMatch = cookiePattern.find(cleanUrl)
+            cookieMatch = COOKIE_MULTI_PATTERN.find(cleanUrl)
         }
         if (multipleCookies.isNotEmpty()) {
             headers["Cookie"] = multipleCookies.joinToString("; ")
         }
-        
+
+        // Hash fragment params
         val hashIndex = cleanUrl.indexOf('#')
         if (hashIndex != -1) {
-            val hashPart = cleanUrl.substring(hashIndex + 1)
-            val hashParts = hashPart.split('&')
+            val hashParts = cleanUrl.substring(hashIndex + 1).split('&')
             for (part in hashParts) {
                 val eqIndex = part.indexOf('=')
                 if (eqIndex == -1) continue
-                val key = part.substring(0, eqIndex).trim()
+                val key   = part.substring(0, eqIndex).trim()
                 val value = part.substring(eqIndex + 1).trim()
-                
                 when (key.lowercase()) {
-
-                    "cookie" -> headers["Cookie"] = value
-                    "apikey", "api-key", "api_key" -> headers["X-API-Key"] = value
+                    "cookie"                     -> headers["Cookie"]    = value
+                    "apikey","api-key","api_key" -> headers["X-API-Key"] = value
                 }
             }
             cleanUrl = cleanUrl.substring(0, hashIndex)
         }
-        
-        val doubleColonPattern = Regex("::([^:=]+)=([^:]+)")
-        var doubleColonMatch = doubleColonPattern.find(cleanUrl)
+
+        // Double-colon encoded headers
+        var doubleColonMatch = DOUBLE_COLON_PATTERN.find(cleanUrl)
         while (doubleColonMatch != null) {
             try {
-                val key = doubleColonMatch.groupValues[1].trim()
+                val key   = doubleColonMatch.groupValues[1].trim()
                 val value = doubleColonMatch.groupValues[2].trim()
                 when (key.lowercase()) {
-                    "cookie" -> headers["Cookie"] = value
-                    "referer", "referrer" -> headers["Referer"] = value
-                    "user-agent", "useragent", "ua" -> headers["User-Agent"] = value
-                    "origin" -> headers["Origin"] = value
-                    "authorization", "auth" -> headers["Authorization"] = value
+                    "cookie"               -> headers["Cookie"]        = value
+                    "referer","referrer"   -> headers["Referer"]       = value
+                    "user-agent","useragent","ua" -> headers["User-Agent"] = value
+                    "origin"               -> headers["Origin"]        = value
+                    "authorization","auth" -> headers["Authorization"] = value
                 }
                 cleanUrl = cleanUrl.replace(doubleColonMatch.value, "")
             } catch (e: Exception) {}
-            doubleColonMatch = doubleColonPattern.find(cleanUrl)
+            doubleColonMatch = DOUBLE_COLON_PATTERN.find(cleanUrl)
         }
-        
+
+        // Semicolon-separated params
         val semicolonIndex = cleanUrl.indexOf(';')
         if (semicolonIndex != -1 && !cleanUrl.contains('|')) {
-            val url = cleanUrl.substring(0, semicolonIndex).trim()
+            val urlPart      = cleanUrl.substring(0, semicolonIndex).trim()
             val paramsString = cleanUrl.substring(semicolonIndex + 1).trim()
-            
             if (paramsString.isNotEmpty()) {
-                val parts = paramsString.split(';')
                 var foundHeaders = false
-                for (part in parts) {
+                for (part in paramsString.split(';')) {
                     val eqIndex = part.indexOf('=')
                     if (eqIndex == -1) continue
-                    val key = part.substring(0, eqIndex).trim()
+                    val key   = part.substring(0, eqIndex).trim()
                     val value = part.substring(eqIndex + 1).trim()
-                    
                     when (key.lowercase()) {
-                        "cookie" -> { headers["Cookie"] = value; foundHeaders = true }
-                        "referer", "referrer" -> { headers["Referer"] = value; foundHeaders = true }
-                        "user-agent", "useragent", "ua" -> { headers["User-Agent"] = value; foundHeaders = true }
-                        "origin" -> { headers["Origin"] = value; foundHeaders = true }
+                        "cookie"               -> { headers["Cookie"]    = value; foundHeaders = true }
+                        "referer","referrer"   -> { headers["Referer"]   = value; foundHeaders = true }
+                        "user-agent","useragent","ua" -> { headers["User-Agent"] = value; foundHeaders = true }
+                        "origin"               -> { headers["Origin"]    = value; foundHeaders = true }
                     }
                 }
-                if (foundHeaders) {
-                    cleanUrl = url
-                }
+                if (foundHeaders) cleanUrl = urlPart
             }
         }
-        
+
+        // Custom separators
         val customSeparators = listOf("$", "@@", "##", "%%")
         for (separator in customSeparators) {
             val sepIndex = cleanUrl.indexOf(separator)
             if (sepIndex != -1 && !cleanUrl.contains('|')) {
-                val url = cleanUrl.substring(0, sepIndex).trim()
+                val urlPart      = cleanUrl.substring(0, sepIndex).trim()
                 val paramsString = cleanUrl.substring(sepIndex + separator.length).trim()
-                
                 if (paramsString.isNotEmpty()) {
-                    val parts = paramsString.split(separator)
                     var foundHeaders = false
-                    for (part in parts) {
+                    for (part in paramsString.split(separator)) {
                         val eqIndex = part.indexOf('=')
                         if (eqIndex == -1) continue
-                        val key = part.substring(0, eqIndex).trim()
+                        val key   = part.substring(0, eqIndex).trim()
                         val value = part.substring(eqIndex + 1).trim()
-                        
                         when (key.lowercase()) {
-                            "cookie" -> { headers["Cookie"] = value; foundHeaders = true }
-                            "referer", "referrer" -> { headers["Referer"] = value; foundHeaders = true }
-                            "user-agent", "useragent", "ua" -> { headers["User-Agent"] = value; foundHeaders = true }
-                            "origin" -> { headers["Origin"] = value; foundHeaders = true }
-                            "authorization", "auth" -> { headers["Authorization"] = value; foundHeaders = true }
+                            "cookie"               -> { headers["Cookie"]        = value; foundHeaders = true }
+                            "referer","referrer"   -> { headers["Referer"]       = value; foundHeaders = true }
+                            "user-agent","useragent","ua" -> { headers["User-Agent"] = value; foundHeaders = true }
+                            "origin"               -> { headers["Origin"]        = value; foundHeaders = true }
+                            "authorization","auth" -> { headers["Authorization"] = value; foundHeaders = true }
                         }
                     }
-                    if (foundHeaders) {
-                        cleanUrl = url
-                        break
-                    }
+                    if (foundHeaders) { cleanUrl = urlPart; break }
                 }
             }
         }
-        
+
+        // Query param headers
         val (urlAfterQuery, queryHeaders) = extractHeadersFromQueryParams(cleanUrl)
         headers.putAll(queryHeaders)
         cleanUrl = urlAfterQuery
-        
-        cleanUrl = cleanUrl.replace(Regex("[&?]$"), "")
-        
+
+        cleanUrl = cleanUrl.replace(TRAILING_SEP_PATTERN, "")
+
+        // Pipe-separated metadata at end of URL
         val pipeIndex = cleanUrl.indexOf('|')
         if (pipeIndex != -1) {
-            val url = cleanUrl.substring(0, pipeIndex).trim()
+            val urlPart      = cleanUrl.substring(0, pipeIndex).trim()
             val paramsString = cleanUrl.substring(pipeIndex + 1).trim()
-            
+
             if (paramsString.isNotEmpty()) {
-                val parts = paramsString.split(Regex("[&|]"))
-                
-                for (part in parts) {
+                for (part in paramsString.split(PIPE_SPLIT_PATTERN)) {
                     val trimmedPart = part.trim()
                     if (trimmedPart.isEmpty()) continue
-                    
                     val eqIndex = trimmedPart.indexOf('=')
                     if (eqIndex == -1) continue
-                    
-                    val key = trimmedPart.substring(0, eqIndex).trim()
+                    val key   = trimmedPart.substring(0, eqIndex).trim()
                     val value = trimmedPart.substring(eqIndex + 1).trim()
-                    
+
                     when (key.lowercase()) {
-                        "drmscheme", "drm-scheme", "drm_scheme", "drm" -> drmScheme = normalizeDrmScheme(value)
-                        "drmlicense", "drm-license", "drm_license", "license", "lic" -> {
-                            if (value.startsWith("http://", ignoreCase = true) || 
+                        "drmscheme","drm-scheme","drm_scheme","drm" -> drmScheme = normalizeDrmScheme(value)
+                        "drmlicense","drm-license","drm_license","license","lic" -> {
+                            if (value.startsWith("http://", ignoreCase = true) ||
                                 value.startsWith("https://", ignoreCase = true)) {
                                 drmKeyId = value
-                                drmKey = "LICENSE_URL"
+                                drmKey   = "LICENSE_URL"
                             } else {
                                 val colonIndex = value.indexOf(':')
                                 if (colonIndex != -1) {
                                     drmKeyId = value.substring(0, colonIndex).trim()
-                                    drmKey = value.substring(colonIndex + 1).trim()
+                                    drmKey   = value.substring(colonIndex + 1).trim()
                                 }
                             }
                         }
-                        "drmkey", "drm-key", "drm_key", "kid" -> drmKeyId = value
-                        "key", "k" -> if (drmKeyId != null) drmKey = value
-                        "user-agent", "useragent", "user_agent", "ua" -> headers["User-Agent"] = value
-                        "referer", "referrer", "ref" -> headers["Referer"] = value
-                        "origin", "org" -> headers["Origin"] = value
-                        "cookie", "cookies" -> if (!headers.containsKey("Cookie")) headers["Cookie"] = value
-                        "x-forwarded-for", "x_forwarded_for", "xff" -> headers["X-Forwarded-For"] = value
-                        "authorization" -> headers["Authorization"] = if (value.startsWith("Bearer ", ignoreCase = true)) value else "Bearer $value"
-                        "content-type", "content_type", "ct" -> headers["Content-Type"] = value
-                        "accept", "acc" -> headers["Accept"] = value
-                        "range" -> headers["Range"] = value
-                        "host" -> headers["Host"] = value
-                        "connection", "conn" -> headers["Connection"] = value
-                        "cache-control", "cache_control" -> headers["Cache-Control"] = value
-                        "pragma" -> headers["Pragma"] = value
-                        "upgrade-insecure-requests" -> headers["Upgrade-Insecure-Requests"] = value
-                        "sec-fetch-site" -> headers["Sec-Fetch-Site"] = value
-                        "sec-fetch-mode" -> headers["Sec-Fetch-Mode"] = value
-                        "sec-fetch-dest" -> headers["Sec-Fetch-Dest"] = value
-                        "apikey", "api-key", "api_key" -> headers["X-API-Key"] = value
-                        else -> if (key.startsWith("x-", ignoreCase = true) || key.startsWith("sec-", ignoreCase = true) || key.contains("-")) {
+                        "drmkey","drm-key","drm_key","kid" -> drmKeyId = value
+                        "key","k"                          -> if (drmKeyId != null) drmKey = value
+                        "user-agent","useragent","user_agent","ua" -> headers["User-Agent"] = value
+                        "referer","referrer","ref"         -> headers["Referer"]        = value
+                        "origin","org"                     -> headers["Origin"]         = value
+                        "cookie","cookies"                 -> if (!headers.containsKey("Cookie")) headers["Cookie"] = value
+                        "x-forwarded-for","x_forwarded_for","xff" -> headers["X-Forwarded-For"] = value
+                        "authorization"                    -> headers["Authorization"]  = if (value.startsWith("Bearer ", ignoreCase = true)) value else "Bearer $value"
+                        "content-type","content_type","ct" -> headers["Content-Type"]  = value
+                        "accept","acc"                     -> headers["Accept"]         = value
+                        "range"                            -> headers["Range"]          = value
+                        "host"                             -> headers["Host"]           = value
+                        "connection","conn"                -> headers["Connection"]     = value
+                        "cache-control","cache_control"    -> headers["Cache-Control"]  = value
+                        "pragma"                           -> headers["Pragma"]         = value
+                        "upgrade-insecure-requests"        -> headers["Upgrade-Insecure-Requests"] = value
+                        "sec-fetch-site"                   -> headers["Sec-Fetch-Site"] = value
+                        "sec-fetch-mode"                   -> headers["Sec-Fetch-Mode"] = value
+                        "sec-fetch-dest"                   -> headers["Sec-Fetch-Dest"] = value
+                        "apikey","api-key","api_key"        -> headers["X-API-Key"]     = value
+                        else -> if (key.startsWith("x-", ignoreCase = true) ||
+                                    key.startsWith("sec-", ignoreCase = true) ||
+                                    key.contains("-")) {
                             headers[key] = value
                         }
                     }
                 }
             }
-            
-            return Triple(url, headers, Triple(drmScheme, drmKeyId, drmKey))
+
+            return Triple(urlPart, headers, Triple(drmScheme, drmKeyId, drmKey))
         }
-        
+
         return Triple(cleanUrl, headers, Triple(drmScheme, drmKeyId, drmKey))
     }
 
@@ -786,164 +751,117 @@ object M3uParser {
         }
     }
 
+    // Uses cached compiled patterns — no per-call compilation
     private fun extractAttribute(line: String, attribute: String): String {
-        val pattern = """$attribute="([^"]*)"""".toRegex()
-        val match = pattern.find(line)
+        val (quoted, unquoted) = attributePatterns(attribute)
+        val match = quoted.find(line)
         if (match != null) return match.groupValues[1]
-        
-        val unquotedPattern = """$attribute=([^ ]*)""".toRegex()
-        val unquotedMatch = unquotedPattern.find(line)
-        return unquotedMatch?.groupValues?.get(1) ?: ""
+        return unquoted.find(line)?.groupValues?.get(1) ?: ""
     }
 
     private fun normalizeDrmScheme(scheme: String): String {
         val lower = scheme.lowercase()
         return when {
             lower.contains("clearkey") || lower == "org.w3.clearkey" || lower == "cenc" -> "clearkey"
-            lower.contains("widevine") || lower == "com.widevine.alpha" -> "widevine"
-            lower.contains("playready") || lower == "com.microsoft.playready" -> "playready"
-            lower.contains("fairplay") || lower == "com.apple.fps" || lower == "fps" -> "fairplay"
-            lower.contains("marlin") -> "marlin"
+            lower.contains("widevine") || lower == "com.widevine.alpha"                 -> "widevine"
+            lower.contains("playready") || lower == "com.microsoft.playready"           -> "playready"
+            lower.contains("fairplay") || lower == "com.apple.fps" || lower == "fps"   -> "fairplay"
+            lower.contains("marlin")      -> "marlin"
             lower.contains("primetime") || lower.contains("adobe") -> "primetime"
-            lower.contains("verimatrix") -> "verimatrix"
+            lower.contains("verimatrix")  -> "verimatrix"
             lower.contains("securemedia") -> "securemedia"
-            lower.contains("irdeto") -> "irdeto"
-            lower.contains("nagra") -> "nagra"
+            lower.contains("irdeto")      -> "irdeto"
+            lower.contains("nagra")       -> "nagra"
             else -> lower
         }
     }
-    
+
+    // Uses pre-compiled patterns from companion-level map — no per-call compilation
     private fun extractHeadersFromQueryParams(url: String): Pair<String, Map<String, String>> {
-        val headers = mutableMapOf<String, String>()
+        val headers  = mutableMapOf<String, String>()
         var cleanUrl = url
-        
-        val commonHeaderParams = mapOf(
-            "ua" to "User-Agent",
-            "user-agent" to "User-Agent",
-            "useragent" to "User-Agent",
-            "ref" to "Referer",
-            "referer" to "Referer",
-            "referrer" to "Referer",
-            "cookie" to "Cookie",
-            "cookies" to "Cookie",
-            "origin" to "Origin",
-            "xff" to "X-Forwarded-For",
-            "x-forwarded-for" to "X-Forwarded-For",
-            "range" to "Range",
-            "accept" to "Accept"
-        )
-        
-        for ((param, headerName) in commonHeaderParams) {
-            val pattern = Regex("[&?]$param=([^&]+)", RegexOption.IGNORE_CASE)
-            val match = pattern.find(cleanUrl)
-            if (match != null) {
-                try {
-                    val value = java.net.URLDecoder.decode(match.groupValues[1], "UTF-8")
-                    
-                    if (headerName == "Authorization") {
-                        headers[headerName] = when {
-                            value.startsWith("Bearer ", ignoreCase = true) -> value
-                            value.contains(".") && value.split(".").size == 3 -> "Bearer $value"
-                            else -> "Bearer $value"
-                        }
-                    } else {
-                        headers[headerName] = value
+
+        for ((_, pair) in COMMON_HEADER_PATTERNS) {
+            val (headerName, pattern) = pair
+            val match = pattern.find(cleanUrl) ?: continue
+            try {
+                val value = java.net.URLDecoder.decode(match.groupValues[1], "UTF-8")
+                if (headerName == "Authorization") {
+                    headers[headerName] = when {
+                        value.startsWith("Bearer ", ignoreCase = true)                  -> value
+                        value.contains(".") && value.split(".").size == 3               -> "Bearer $value"
+                        else                                                             -> "Bearer $value"
                     }
-                    
-                    cleanUrl = cleanUrl.replace(match.value, "")
-                } catch (e: Exception) {}
-            }
+                } else {
+                    headers[headerName] = value
+                }
+                cleanUrl = cleanUrl.replace(match.value, "")
+            } catch (e: Exception) {}
         }
-        
-        cleanUrl = cleanUrl.replace(Regex("[&?]+$"), "").replace(Regex("\\?&"), "?")
-        
+
+        cleanUrl = cleanUrl.replace(TRAILING_SEP_PATTERN, "").replace(QUESTION_AMP_PATTERN, "?")
         return Pair(cleanUrl, headers)
     }
-    
+
     private fun decodeJWT(token: String): Map<String, String>? {
         return try {
             val parts = token.split(".")
             if (parts.size != 3) return null
-            
-            val payload = parts[1]
+            val payload       = parts[1]
             val paddedPayload = payload + "=".repeat((4 - payload.length % 4) % 4)
-            val decoded = String(Base64.decode(paddedPayload.replace("-", "+").replace("_", "/"), Base64.DEFAULT))
-            
-            val json = JSONObject(decoded)
-            val headers = mutableMapOf<String, String>()
-            
-            json.keys().forEach { key ->
-                headers[key] = json.optString(key, "")
-            }
-            
-            headers
-        } catch (e: Exception) {
-            null
-        }
+            val decoded       = String(Base64.decode(paddedPayload.replace("-", "+").replace("_", "/"), Base64.DEFAULT))
+            val json          = JSONObject(decoded)
+            val result        = mutableMapOf<String, String>()
+            json.keys().forEach { key -> result[key] = json.optString(key, "") }
+            result
+        } catch (e: Exception) { null }
     }
-    
+
     private fun detectStreamType(url: String): String {
         return when {
-            url.contains(".m3u8", ignoreCase = true) || url.contains("/hls/", ignoreCase = true) -> "HLS"
-            url.contains(".mpd", ignoreCase = true) || url.contains("/dash/", ignoreCase = true) -> "DASH"
-            url.contains(".ism", ignoreCase = true) || url.contains("manifest", ignoreCase = true) -> "SMOOTH"
-            url.contains(".flv", ignoreCase = true) -> "FLV"
+            url.contains(".m3u8", ignoreCase = true) || url.contains("/hls/", ignoreCase = true)      -> "HLS"
+            url.contains(".mpd", ignoreCase = true)  || url.contains("/dash/", ignoreCase = true)     -> "DASH"
+            url.contains(".ism", ignoreCase = true)  || url.contains("manifest", ignoreCase = true)   -> "SMOOTH"
+            url.contains(".flv", ignoreCase = true)                                                   -> "FLV"
             url.contains("rtmp://", ignoreCase = true) || url.contains("rtmps://", ignoreCase = true) -> "RTMP"
-            url.contains(".ts", ignoreCase = true) -> "TS"
-            url.contains(".mp4", ignoreCase = true) -> "MP4"
-            url.contains(".mkv", ignoreCase = true) -> "MKV"
-            else -> "UNKNOWN"
+            url.contains(".ts", ignoreCase = true)                                                    -> "TS"
+            url.contains(".mp4", ignoreCase = true)                                                   -> "MP4"
+            url.contains(".mkv", ignoreCase = true)                                                   -> "MKV"
+            else                                                                                       -> "UNKNOWN"
         }
     }
 
     private fun parseJWKToKeyIdPair(jwk: String): Pair<String?, String?> {
         return try {
-            val kidMatch = Regex(""""kid"\s*:\s*"([^"]+)"""").find(jwk)
-            val kMatch = Regex(""""k"\s*:\s*"([^"]+)"""").find(jwk)
-            
+            val kidMatch = JWK_KID_PATTERN.find(jwk)
+            val kMatch   = JWK_K_PATTERN.find(jwk)
             if (kidMatch != null && kMatch != null) {
-                val kidBase64 = kidMatch.groupValues[1]
-                val kBase64 = kMatch.groupValues[1]
-                
-                val kidHex = base64UrlToHex(kidBase64)
-                val kHex = base64UrlToHex(kBase64)
-                
-                if (kidHex.isNotEmpty() && kHex.isNotEmpty()) {
-                    kidHex to kHex
-                } else {
-                    null to null
-                }
+                val kidHex = base64UrlToHex(kidMatch.groupValues[1])
+                val kHex   = base64UrlToHex(kMatch.groupValues[1])
+                if (kidHex.isNotEmpty() && kHex.isNotEmpty()) kidHex to kHex else null to null
             } else {
                 null to null
             }
-        } catch (e: Exception) {
-            null to null
-        }
+        } catch (e: Exception) { null to null }
     }
 
     private fun base64UrlToHex(base64Url: String): String {
         return try {
             var base64 = base64Url.replace('-', '+').replace('_', '/')
-            val paddingNeeded = (4 - (base64.length % 4)) % 4
-            base64 += "=".repeat(paddingNeeded)
-            
+            base64 += "=".repeat((4 - (base64.length % 4)) % 4)
             val bytes = try {
                 Base64.decode(base64, Base64.NO_WRAP)
             } catch (e: Exception) {
                 Base64.decode(base64, Base64.URL_SAFE or Base64.NO_WRAP)
             }
-            
             bytes.joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) {
-            ""
-        }
+        } catch (e: Exception) { "" }
     }
 
     private fun generateChannelId(streamUrl: String, name: String): String {
         val combined = "$streamUrl|$name"
         return try {
-            val md = MessageDigest.getInstance("MD5")
-            val digest = md.digest(combined.toByteArray())
+            val digest = MessageDigest.getInstance("MD5").digest(combined.toByteArray())
             digest.joinToString("") { "%02x".format(it) }
         } catch (e: Exception) {
             "m3u_${combined.hashCode()}"
@@ -957,35 +875,27 @@ object M3uParser {
     ): List<Channel> {
         return m3uChannels.map { m3u ->
             val metaUrl = buildStreamUrlWithMetadata(m3u)
-            
             Channel(
-    id = generateChannelId(m3u.streamUrl, m3u.name),
-    name = m3u.name,
-    logoUrl = m3u.logoUrl,
-    streamUrl = metaUrl,
-    categoryId = categoryId,
-    categoryName = categoryName,
-    groupTitle = m3u.groupTitle  
-)
+                id           = generateChannelId(m3u.streamUrl, m3u.name),
+                name         = m3u.name,
+                logoUrl      = m3u.logoUrl,
+                streamUrl    = metaUrl,
+                categoryId   = categoryId,
+                categoryName = categoryName,
+                groupTitle   = m3u.groupTitle
+            )
         }
     }
 
     private fun buildStreamUrlWithMetadata(m3u: M3uChannel): String {
         val parts = mutableListOf<String>()
-        
         parts.add(m3u.streamUrl)
-        
         m3u.userAgent?.let { parts.add("User-Agent=$it") }
-        
-        m3u.httpHeaders.forEach { (key, value) -> 
-            parts.add("$key=$value")
-        }
-        
+        m3u.httpHeaders.forEach { (key, value) -> parts.add("$key=$value") }
         if (m3u.drmScheme != null) {
             parts.add("drmScheme=${m3u.drmScheme}")
-            
             if (m3u.drmKeyId != null && m3u.drmKey != null) {
-                if (m3u.drmKeyId.startsWith("http://", ignoreCase = true) || 
+                if (m3u.drmKeyId.startsWith("http://", ignoreCase = true) ||
                     m3u.drmKeyId.startsWith("https://", ignoreCase = true)) {
                     parts.add("drmLicense=${m3u.drmKeyId}")
                 } else {
@@ -993,11 +903,6 @@ object M3uParser {
                 }
             }
         }
-        
-        return if (parts.size > 1) {
-            parts.joinToString("|")
-        } else {
-            parts[0]
-        }
+        return if (parts.size > 1) parts.joinToString("|") else parts[0]
     }
 }

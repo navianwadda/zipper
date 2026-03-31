@@ -117,7 +117,8 @@ data class LiveEventLink(
     val origin: String? = null,
     val userAgent: String? = null,
     val drmScheme: String? = null,
-    val drmLicenseUrl: String? = null
+    val drmLicenseUrl: String? = null,
+    val extraHeaders: Map<String, String>? = null
 ) : Parcelable
 
 @Parcelize
@@ -238,4 +239,3 @@ private fun String.toIso8601UtcPlusHours(hours: Int): String? {
         null
     }
 }
-

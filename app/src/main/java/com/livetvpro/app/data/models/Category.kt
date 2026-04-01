@@ -117,8 +117,7 @@ data class LiveEventLink(
     val origin: String? = null,
     val userAgent: String? = null,
     val drmScheme: String? = null,
-    val drmLicenseUrl: String? = null,
-    val extraHeaders: Map<String, String>? = null
+    val drmLicenseUrl: String? = null
 ) : Parcelable
 
 @Parcelize

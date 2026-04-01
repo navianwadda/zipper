@@ -39,7 +39,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import okhttp3.OkHttpClient
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.drm.FrameworkMediaDrm
@@ -98,6 +99,9 @@ class PlayerActivity : AppCompatActivity() {
 
     @javax.inject.Inject
     lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
+
+    @javax.inject.Inject
+    lateinit var okHttpClient: OkHttpClient
 
     private lateinit var relatedChannelsAdapter: RelatedChannelAdapter
     private var relatedChannels = listOf<Channel>()
@@ -1848,13 +1852,18 @@ class PlayerActivity : AppCompatActivity() {
                 headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
 
-            val baseDataSourceFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
+            val requestHeaders = headers.toMap()
+            val streamOkHttpClient = okHttpClient.newBuilder()
+                .addNetworkInterceptor { chain ->
+                    val original = chain.request()
+                    val requestBuilder = original.newBuilder()
+                    requestHeaders.forEach { (k, v) -> requestBuilder.header(k, v) }
+                    chain.proceed(requestBuilder.build())
+                }
+                .build()
+
+            val baseDataSourceFactory = OkHttpDataSource.Factory(streamOkHttpClient)
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30_000)
-                .setReadTimeoutMs(30_000)
-                .setAllowCrossProtocolRedirects(true)
-                .setKeepPostFor302Redirects(true)
 
             val clearKeyMgr: DefaultDrmSessionManager? = when {
                 streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
@@ -2129,13 +2138,16 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
-            val licenseFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
+            val licenseOkHttpClient = okHttpClient.newBuilder()
+                .addNetworkInterceptor { chain ->
+                    val original = chain.request()
+                    val rb = original.newBuilder()
+                    headers.forEach { (k, v) -> rb.header(k, v) }
+                    chain.proceed(rb.build())
+                }
+                .build()
+            val licenseFactory = OkHttpDataSource.Factory(licenseOkHttpClient)
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30_000)
-                .setReadTimeoutMs(30_000)
-                .setAllowCrossProtocolRedirects(true)
-                .setKeepPostFor302Redirects(true)
             val callback = HttpMediaDrmCallback(licenseUrl, licenseFactory)
             headers.forEach { (k, v) -> callback.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()

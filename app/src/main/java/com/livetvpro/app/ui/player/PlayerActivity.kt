@@ -1259,10 +1259,14 @@ class PlayerActivity : AppCompatActivity() {
 
             val parsed = parseStreamUrl(decodedUriString)
 
+            val knownKeys1 = setOf("Cookie", "Referer", "Origin", "User-Agent")
+            val extraParams1 = parsed.headers.filter { (k, v) -> k !in knownKeys1 && v.isNotEmpty() }.map { (k, v) -> "$k=$v" }
+            val urlWithExtras1 = if (extraParams1.isNotEmpty()) "${parsed.url}|${extraParams1.joinToString("|")}" else parsed.url
+
             allEventLinks = listOf(
                 LiveEventLink(
                     quality = "Auto",
-                    url = parsed.url,
+                    url = urlWithExtras1,
                     cookie = parsed.headers["Cookie"] ?: "",
                     referer = parsed.headers["Referer"] ?: "",
                     origin = parsed.headers["Origin"] ?: "",
@@ -1270,10 +1274,7 @@ class PlayerActivity : AppCompatActivity() {
                     drmScheme = parsed.drmScheme ?: "",
                     drmLicenseUrl = parsed.drmLicenseUrl
                         ?: parsed.drmKeyId?.let { id -> parsed.drmKey?.let { k -> "$id:$k" } }
-                        ?: "",
-                    extraHeaders = parsed.headers.filterKeys { key ->
-                        key !in setOf("Cookie", "Referer", "Origin", "User-Agent")
-                    }.ifEmpty { null }
+                        ?: ""
                 )
             )
             currentLinkIndex = 0
@@ -1325,19 +1326,20 @@ class PlayerActivity : AppCompatActivity() {
                     resolvedDrmKey = null
                 }
 
+                val knownKeys2 = setOf("Cookie", "Referer", "Origin", "User-Agent")
+                val extraParams2 = parsed.headers.filter { (k, v) -> k !in knownKeys2 && v.isNotEmpty() }.map { (k, v) -> "$k=$v" }
+                val urlWithExtras2 = if (extraParams2.isNotEmpty()) "${parsed.url}|${extraParams2.joinToString("|")}" else parsed.url
+
                 val mergedLink = LiveEventLink(
                     quality = "Network Stream",
-                    url = parsed.url,
+                    url = urlWithExtras2,
                     cookie = parsed.headers["Cookie"] ?: "",
                     referer = parsed.headers["Referer"] ?: "",
                     origin = parsed.headers["Origin"] ?: "",
                     userAgent = parsed.headers["User-Agent"] ?: intent.getStringExtra("USER_AGENT") ?: "Default",
                     drmScheme = resolvedDrmScheme,
                     drmLicenseUrl = resolvedDrmLicenseUrl
-                        ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } },
-                    extraHeaders = parsed.headers.filterKeys { key ->
-                        key !in setOf("Cookie", "Referer", "Origin", "User-Agent")
-                    }.ifEmpty { null }
+                        ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } }
                 )
                 streamUrl = buildStreamUrl(mergedLink)
                 allEventLinks = listOf(mergedLink)
@@ -1793,22 +1795,22 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun buildStreamUrl(link: LiveEventLink): String {
-        var url = link.url
-        val params = mutableListOf<String>()
+        val knownKeys = setOf("Cookie", "Referer", "Origin", "User-Agent")
+        val existingParsed = if (link.url.contains("|")) parseStreamUrl(link.url) else null
+        val baseUrl = existingParsed?.url ?: link.url
 
+        val params = mutableListOf<String>()
         link.referer?.let { if (it.isNotEmpty()) params.add("referer=$it") }
         link.cookie?.let { if (it.isNotEmpty()) params.add("cookie=$it") }
         link.origin?.let { if (it.isNotEmpty()) params.add("origin=$it") }
         link.userAgent?.let { if (it.isNotEmpty()) params.add("user-agent=$it") }
         link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
-        link.extraHeaders?.forEach { (k, v) -> if (v.isNotEmpty()) params.add("$k=$v") }
-
-        if (params.isNotEmpty()) {
-            url += "|" + params.joinToString("|")
+        existingParsed?.headers?.forEach { (k, v) ->
+            if (v.isNotEmpty() && k !in knownKeys) params.add("$k=$v")
         }
 
-        return url
+        return if (params.isNotEmpty()) "$baseUrl|${params.joinToString("|")}" else baseUrl
     }
 
     private fun setupPlayer() {

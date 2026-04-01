@@ -1758,7 +1758,8 @@ class PlayerActivity : AppCompatActivity() {
             if (eqIndex == -1) continue
 
             val key = part.substring(0, eqIndex).trim()
-            val value = part.substring(eqIndex + 1).trim()
+            val rawValue = part.substring(eqIndex + 1).trim()
+            val value = try { java.net.URLDecoder.decode(rawValue.replace("+", " "), "UTF-8") } catch (e: Exception) { rawValue.replace("+", " ") }
 
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
@@ -1804,10 +1805,15 @@ class PlayerActivity : AppCompatActivity() {
         val baseUrl = existingParsed?.url ?: link.url
 
         val params = mutableListOf<String>()
-        link.referer?.let { if (it.isNotEmpty()) params.add("referer=$it") }
-        link.cookie?.let { if (it.isNotEmpty()) params.add("cookie=$it") }
-        link.origin?.let { if (it.isNotEmpty()) params.add("origin=$it") }
-        link.userAgent?.let { if (it.isNotEmpty()) params.add("user-agent=$it") }
+        link.referer?.let { if (it.isNotEmpty()) params.add("referer=${it}") }
+        link.cookie?.let { if (it.isNotEmpty()) params.add("cookie=${it}") }
+        link.origin?.let { if (it.isNotEmpty()) params.add("origin=${it}") }
+        link.userAgent?.let { v ->
+            if (v.isNotEmpty()) {
+                val decoded = try { java.net.URLDecoder.decode(v, "UTF-8") } catch (e: Exception) { v }
+                params.add("user-agent=${decoded}")
+            }
+        }
         link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
         existingParsed?.headers?.forEach { (k, v) ->

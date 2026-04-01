@@ -1858,17 +1858,8 @@ class PlayerActivity : AppCompatActivity() {
                 headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
 
-            val requestHeaders = headers.toMap()
-            val streamOkHttpClient = okHttpClient.newBuilder()
-                .addNetworkInterceptor { chain ->
-                    val original = chain.request()
-                    val requestBuilder = original.newBuilder()
-                    requestHeaders.forEach { (k, v) -> requestBuilder.header(k, v) }
-                    chain.proceed(requestBuilder.build())
-                }
-                .build()
-
-            val baseDataSourceFactory = OkHttpDataSource.Factory(streamOkHttpClient)
+            val baseDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
+                .setUserAgent(headers["User-Agent"] ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 .setDefaultRequestProperties(headers)
 
             val clearKeyMgr: DefaultDrmSessionManager? = when {
@@ -2144,15 +2135,8 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
-            val licenseOkHttpClient = okHttpClient.newBuilder()
-                .addNetworkInterceptor { chain ->
-                    val original = chain.request()
-                    val rb = original.newBuilder()
-                    headers.forEach { (k, v) -> rb.header(k, v) }
-                    chain.proceed(rb.build())
-                }
-                .build()
-            val licenseFactory = OkHttpDataSource.Factory(licenseOkHttpClient)
+            val licenseFactory = OkHttpDataSource.Factory(okHttpClient)
+                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
             val callback = HttpMediaDrmCallback(licenseUrl, licenseFactory)
             headers.forEach { (k, v) -> callback.setKeyRequestProperty(k, v) }

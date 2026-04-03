@@ -446,8 +446,8 @@ class FloatingPlayerService : Service() {
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30000)
-                .setReadTimeoutMs(30000)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
             val mediaSourceFactory = buildDrmMediaSourceFactory(effectiveStreamInfo, dataSourceFactory, headers)
@@ -455,12 +455,29 @@ class FloatingPlayerService : Service() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
                 .build()
+            val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
+                parameters = buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedChannelCountAdaptiveness(true)
+                    .build()
+            }
             val player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
                 .setLoadControl(loadControl)
+                .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(mediaSourceFactory)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(true)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    true
+                )
                 .build()
             val playerView = floatingView.findViewById<PlayerView>(R.id.player_view)
             playerView.player = player
@@ -780,8 +797,8 @@ class FloatingPlayerService : Service() {
             val nsDataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(effectiveUserAgent)
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30000)
-                .setReadTimeoutMs(30000)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
@@ -792,12 +809,29 @@ class FloatingPlayerService : Service() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
                 .build()
+            val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
+                parameters = buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedChannelCountAdaptiveness(true)
+                    .build()
+            }
             val player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
                 .setLoadControl(loadControl)
+                .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(nsMediaSourceFactory)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(true)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    true
+                )
                 .build()
 
             val nsMediaItem = buildDrmMediaItem(nsStreamInfo, headers)
@@ -889,8 +923,8 @@ class FloatingPlayerService : Service() {
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30000)
-                .setReadTimeoutMs(30000)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
             val mediaSourceFactory = buildDrmMediaSourceFactory(parsedStream, dataSourceFactory, headers)
@@ -909,12 +943,29 @@ class FloatingPlayerService : Service() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
             val loadControl2 = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
                 .build()
+            val trackSelector2 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
+                parameters = buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedChannelCountAdaptiveness(true)
+                    .build()
+            }
             val newPlayer = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory2)
                 .setLoadControl(loadControl2)
+                .setTrackSelector(trackSelector2)
                 .setMediaSourceFactory(mediaSourceFactory)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(true)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    true
+                )
                 .build()
             newPlayer.volume = if (wasMuted) 0f else 1f
             instance.playerView.player = newPlayer
@@ -1339,8 +1390,8 @@ class FloatingPlayerService : Service() {
                 val dataSourceFactory = DefaultHttpDataSource.Factory()
                     .setUserAgent(effectiveUserAgent)
                     .setDefaultRequestProperties(headers)
-                    .setConnectTimeoutMs(30000)
-                    .setReadTimeoutMs(30000)
+                    .setConnectTimeoutMs(15_000)
+                    .setReadTimeoutMs(15_000)
                     .setAllowCrossProtocolRedirects(true)
                     .setKeepPostFor302Redirects(true)
                 val mediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, dataSourceFactory, headers)
@@ -1352,12 +1403,29 @@ class FloatingPlayerService : Service() {
                     .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                     .setEnableDecoderFallback(true)
                 val loadControl3 = DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+                    .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
                     .build()
+                val trackSelector3 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
+                    parameters = buildUponParameters()
+                        .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                        .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                        .setAllowAudioMixedChannelCountAdaptiveness(true)
+                        .build()
+                }
                 val newPlayer = ExoPlayer.Builder(this)
                     .setRenderersFactory(renderersFactory3)
                     .setLoadControl(loadControl3)
+                    .setTrackSelector(trackSelector3)
                     .setMediaSourceFactory(mediaSourceFactory)
+                    .setWakeMode(C.WAKE_MODE_NETWORK)
+                    .setHandleAudioBecomingNoisy(true)
+                    .setAudioAttributes(
+                        androidx.media3.common.AudioAttributes.Builder()
+                            .setUsage(C.USAGE_MEDIA)
+                            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                            .build(),
+                        true
+                    )
                     .build()
 
                 instance.playerView.player = newPlayer
@@ -1640,7 +1708,7 @@ class FloatingPlayerService : Service() {
             val factory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30_000).setReadTimeoutMs(30_000)
+                .setConnectTimeoutMs(15_000).setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true).setKeepPostFor302Redirects(true)
             val cb = HttpMediaDrmCallback(licenseUrl, factory)
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
@@ -1723,6 +1791,22 @@ class FloatingPlayerService : Service() {
                 builder.setMimeType(MimeTypes.APPLICATION_MPD)
             url.contains(".ism") || url.contains(".isml") || url.contains("manifest(format=mpd") ->
                 builder.setMimeType(MimeTypes.APPLICATION_SS)
+            url.contains(".flv") ->
+                builder.setMimeType("video/x-flv")
+            url.contains(".ts") || url.contains("/ts") ->
+                builder.setMimeType("video/mp2t")
+            url.contains(".mp4") || url.contains(".m4v") || url.contains(".m4a") ->
+                builder.setMimeType("video/mp4")
+            url.contains(".mkv") ->
+                builder.setMimeType("video/x-matroska")
+            url.contains(".webm") ->
+                builder.setMimeType("video/webm")
+            url.contains(".avi") ->
+                builder.setMimeType("video/avi")
+            url.startsWith("rtmp://") || url.startsWith("rtmps://") ->
+                builder.setMimeType(MimeTypes.APPLICATION_RTSP)
+            url.startsWith("rtsp://") ->
+                builder.setMimeType(MimeTypes.APPLICATION_RTSP)
         }
         if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->

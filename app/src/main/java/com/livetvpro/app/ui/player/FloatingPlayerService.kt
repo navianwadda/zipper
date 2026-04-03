@@ -1602,7 +1602,6 @@ class FloatingPlayerService : Service() {
         }
     }
 
-    // ── Hex utility ───────────────────────────────────────────────────────────
     private fun hexToBytes(hex: String): ByteArray {
         return try {
             val clean = hex.replace(" ", "").replace("-", "").lowercase()
@@ -1611,9 +1610,6 @@ class FloatingPlayerService : Service() {
         } catch (e: Exception) { ByteArray(0) }
     }
 
-    // ── ClearKey: inline hex key+keyId ───────────────────────────────────────
-    // Adaptive callback echoes back PSSH kid(s) from the manifest → our key.
-    // Required for GuardEncType=2 DASH streams (Widevine PSSH + ClearKey keys).
     private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
             val keyIdBytes = hexToBytes(keyIdHex)
@@ -1629,7 +1625,6 @@ class FloatingPlayerService : Service() {
         } catch (e: Exception) { null }
     }
 
-    // ── ClearKey: inline JWK JSON ─────────────────────────────────────────────
     private fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
         return try {
             DefaultDrmSessionManager.Builder()
@@ -1640,7 +1635,6 @@ class FloatingPlayerService : Service() {
         } catch (e: Exception) { null }
     }
 
-    // ── ClearKey: remote license server ──────────────────────────────────────
     private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
             val factory = DefaultHttpDataSource.Factory()
@@ -1658,9 +1652,6 @@ class FloatingPlayerService : Service() {
         } catch (e: Exception) { null }
     }
 
-    // ── Adaptive ClearKey callback ────────────────────────────────────────────
-    // Parses the EME license request body, extracts all kid(s) ExoPlayer found
-    // in the PSSH, and returns a JWK mapping each kid → our content key.
     private fun buildAdaptiveClearKeyCallback(
         keyBase64: String,
         fallbackKidBase64: String
@@ -1698,11 +1689,6 @@ class FloatingPlayerService : Service() {
         }
     }
 
-    // ── buildDrmMediaSourceFactory ────────────────────────────────────────────
-    // ClearKey: inject via setDrmSessionManagerProvider so ExoPlayer bypasses
-    // UUID matching — required for GuardEncType=2 (Widevine PSSH + ClearKey keys).
-    // Widevine/PlayReady: no manager here; DrmConfiguration on the MediaItem
-    // (built in buildDrmMediaItem) tells ExoPlayer's default factory what to do.
     private fun buildDrmMediaSourceFactory(
         streamInfo: StreamInfo,
         dataSourceFactory: DefaultHttpDataSource.Factory,
@@ -1727,11 +1713,6 @@ class FloatingPlayerService : Service() {
         }
     }
 
-    // ── buildDrmMediaItem ─────────────────────────────────────────────────────
-    // ClearKey: do NOT set DrmConfiguration — the provider in buildDrmMediaSourceFactory
-    // handles it unconditionally (setting DrmConfiguration re-enables UUID filtering
-    // and breaks GuardEncType=2 Widevine PSSH streams).
-    // Widevine/PlayReady: DrmConfiguration is the official Media3 approach.
     private fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
         val builder = MediaItem.Builder().setUri(streamInfo.url)
         val url = streamInfo.url.lowercase()
@@ -1743,7 +1724,6 @@ class FloatingPlayerService : Service() {
             url.contains(".ism") || url.contains(".isml") || url.contains("manifest(format=mpd") ->
                 builder.setMimeType(MimeTypes.APPLICATION_SS)
         }
-        // ClearKey: no DrmConfiguration — provider handles it
         if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->
                 val uuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID

@@ -383,14 +383,15 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         viewModel.relatedItems.observe(this) { channels ->
+            if (contentType != ContentType.CHANNEL) return@observe
             relatedChannels = channels
             if (!::relatedChannelsAdapter.isInitialized) {
                 relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
                     switchToChannel(relatedItem)
                 }
-                binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
-                binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
             }
+            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
+            binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
             relatedChannelsAdapter.submitList(channels)
             binding.relatedChannelsSection.visibility = if (channels.isEmpty()) {
                 View.GONE
@@ -402,16 +403,27 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
-            if (contentType == ContentType.EVENT && ::relatedEventsAdapter.isInitialized) {
-                relatedEventsAdapter.updateData(liveEvents)
-                binding.relatedChannelsSection.visibility = if (liveEvents.isEmpty()) {
-                    View.GONE
-                } else {
-                    View.VISIBLE
-                }
-                binding.relatedLoadingProgress.visibility = View.GONE
-                binding.relatedChannelsRecycler.visibility = View.VISIBLE
+            if (contentType != ContentType.EVENT) return@observe
+            if (!::relatedEventsAdapter.isInitialized) {
+                relatedEventsAdapter = LiveEventAdapter(
+                    context = this,
+                    events = emptyList(),
+                    preferencesManager = preferencesManager,
+                    onEventClick = { event, _ ->
+                        switchToEventFromLiveEvent(event)
+                    }
+                )
             }
+            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.event_span_count))
+            binding.relatedChannelsRecycler.adapter = relatedEventsAdapter
+            relatedEventsAdapter.updateData(liveEvents)
+            binding.relatedChannelsSection.visibility = if (liveEvents.isEmpty()) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
+            binding.relatedLoadingProgress.visibility = View.GONE
+            binding.relatedChannelsRecycler.visibility = View.VISIBLE
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1682,21 +1694,23 @@ class PlayerActivity : AppCompatActivity() {
         setupPlayer()
         setupLinksUI()
 
-        if (previousContentType == ContentType.EVENT) {
-            relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
-                switchToChannel(relatedItem)
-            }
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
-            binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
+        relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
+            switchToChannel(relatedItem)
         }
+        binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
+        binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
 
         binding.relatedLoadingProgress.visibility = View.VISIBLE
         binding.relatedChannelsRecycler.visibility = View.GONE
-        if (intentIsSports) {
+
+        val isSports = newChannel.categoryId == "sports" || intentIsSports && previousContentType != ContentType.EVENT
+        val categoryId = newChannel.categoryId.takeIf { it.isNotEmpty() } ?: intentCategoryId ?: ""
+        val group = if (previousContentType == ContentType.EVENT) null else intentSelectedGroup
+
+        if (isSports) {
             viewModel.loadRandomRelatedSports(newChannel.id)
         } else {
-            val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
-            viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
+            viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, group)
         }
     }
 
@@ -1726,6 +1740,19 @@ class PlayerActivity : AppCompatActivity() {
 
             setupPlayer()
             setupLinksUI()
+
+            if (!::relatedEventsAdapter.isInitialized) {
+                relatedEventsAdapter = LiveEventAdapter(
+                    context = this,
+                    events = emptyList(),
+                    preferencesManager = preferencesManager,
+                    onEventClick = { event, _ ->
+                        switchToEventFromLiveEvent(event)
+                    }
+                )
+            }
+            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.event_span_count))
+            binding.relatedChannelsRecycler.adapter = relatedEventsAdapter
 
             binding.relatedLoadingProgress.visibility = View.VISIBLE
             binding.relatedChannelsRecycler.visibility = View.GONE

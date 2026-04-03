@@ -150,6 +150,7 @@ data class NewExternalEventRow(
     @SerializedName("stream_url")     val streamUrl: String = "",
     @SerializedName("keyid")          val keyId: String? = null,
     @SerializedName("key")            val key: String? = null,
+    @SerializedName("x_forwarded_for") val xForwardedFor: String? = null,
     @SerializedName("headers")        val headers: String? = null,
     @SerializedName("referer")        val referer: String? = null,
     @SerializedName("origin")         val origin: String? = null,
@@ -172,10 +173,11 @@ fun List<NewExternalEventRow>.toGroupedLiveEvents(): List<LiveEvent> {
                     url           = row.streamUrl,
                     referer       = row.referer,
                     origin        = row.origin,
-                    xForwardedFor = row.headers
-                        ?.split("&")
-                        ?.firstOrNull { it.startsWith("X-Forwarded-For=", ignoreCase = true) }
-                        ?.substringAfter("="),
+                    xForwardedFor = row.xForwardedFor
+                        ?: row.headers
+                            ?.split("&")
+                            ?.firstOrNull { it.startsWith("X-Forwarded-For=", ignoreCase = true) }
+                            ?.substringAfter("="),
                     drmScheme     = if (row.hasDrm()) "clearkey" else null,
                     drmLicenseUrl = if (row.hasDrm()) "${row.keyId}:${row.key}" else null
                 )
@@ -244,4 +246,3 @@ private fun String.toIso8601UtcPlusHours(hours: Int): String? {
         null
     }
 }
-

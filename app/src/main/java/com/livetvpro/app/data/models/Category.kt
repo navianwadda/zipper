@@ -44,6 +44,7 @@ data class ChannelLink(
     val referer: String? = null,
     val origin: String? = null,
     val userAgent: String? = null,
+    val xForwardedFor: String? = null,
     val drmScheme: String? = null,
     val drmLicenseUrl: String? = null
 ) : Parcelable
@@ -116,6 +117,7 @@ data class LiveEventLink(
     val referer: String? = null,
     val origin: String? = null,
     val userAgent: String? = null,
+    val xForwardedFor: String? = null,
     val drmScheme: String? = null,
     val drmLicenseUrl: String? = null
 ) : Parcelable
@@ -170,6 +172,10 @@ fun List<NewExternalEventRow>.toGroupedLiveEvents(): List<LiveEvent> {
                     url           = row.streamUrl,
                     referer       = row.referer,
                     origin        = row.origin,
+                    xForwardedFor = row.headers
+                        ?.split("&")
+                        ?.firstOrNull { it.startsWith("X-Forwarded-For=", ignoreCase = true) }
+                        ?.substringAfter("="),
                     drmScheme     = if (row.hasDrm()) "clearkey" else null,
                     drmLicenseUrl = if (row.hasDrm()) "${row.keyId}:${row.key}" else null
                 )
@@ -238,3 +244,4 @@ private fun String.toIso8601UtcPlusHours(hours: Int): String? {
         null
     }
 }
+

@@ -109,7 +109,8 @@ object FloatingPlayerHelper {
         drmLicense: String = "",
         userAgent: String = "Default",
         drmScheme: String = "clearkey",
-        streamName: String = "Network Stream"
+        streamName: String = "Network Stream",
+        xForwardedFor: String = ""
     ): String? {
         if (DeviceUtils.isTvDevice) {
             FloatingPlayerActivity.startWithNetworkStream(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName)
@@ -134,7 +135,8 @@ object FloatingPlayerHelper {
                 drmLicense = drmLicense,
                 userAgent = userAgent,
                 drmScheme = drmScheme,
-                streamName = streamName
+                streamName = streamName,
+                xForwardedFor = xForwardedFor
             )
             if (started) {
                 createdInstances.add(instanceId)
@@ -258,6 +260,7 @@ object FloatingPlayerHelper {
         var referer: String? = null
         var origin: String? = null
         var userAgent: String? = null
+        var xForwardedFor: String? = null
         var drmScheme: String? = null
         var drmLicenseUrl: String? = null
         val extraHeaders = mutableMapOf<String, String>()
@@ -278,7 +281,7 @@ object FloatingPlayerHelper {
                 "referer", "referrer" -> referer = value
                 "origin" -> origin = value
                 "user-agent", "useragent" -> userAgent = value
-                "x-forwarded-for" -> extraHeaders["X-Forwarded-For"] = value
+                "x-forwarded-for" -> xForwardedFor = value
                 "x-requested-with" -> extraHeaders["X-Requested-With"] = value
                 "authorization" -> extraHeaders["Authorization"] = value
                 "host" -> extraHeaders["Host"] = value
@@ -300,6 +303,7 @@ object FloatingPlayerHelper {
             referer = referer,
             origin = origin,
             userAgent = userAgent,
+            xForwardedFor = xForwardedFor,
             drmScheme = drmScheme,
             drmLicenseUrl = drmLicenseUrl
         )

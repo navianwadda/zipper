@@ -66,7 +66,8 @@ class FloatingPlayerService : Service() {
         var networkOrigin: String? = null,
         var networkDrmLicense: String? = null,
         var networkUserAgent: String? = null,
-        var networkDrmScheme: String? = null
+        var networkDrmScheme: String? = null,
+        var networkXForwardedFor: String? = null
     )
 
     private var windowManager: WindowManager? = null
@@ -166,7 +167,8 @@ class FloatingPlayerService : Service() {
             drmLicense: String = "",
             userAgent: String = "Default",
             drmScheme: String = "clearkey",
-            streamName: String = "Network Stream"
+            streamName: String = "Network Stream",
+            xForwardedFor: String = ""
         ): Boolean {
             try {
                 val intent = Intent(context, FloatingPlayerService::class.java).apply {
@@ -180,6 +182,7 @@ class FloatingPlayerService : Service() {
                     putExtra("USER_AGENT", userAgent)
                     putExtra("DRM_SCHEME", drmScheme)
                     putExtra("CHANNEL_NAME", streamName)
+                    putExtra("X_FORWARDED_FOR", xForwardedFor)
                     putExtra(EXTRA_LINK_INDEX, 0)
                 }
 
@@ -299,14 +302,15 @@ class FloatingPlayerService : Service() {
             val userAgent = intent?.getStringExtra("USER_AGENT") ?: "Default"
             val drmScheme = intent?.getStringExtra("DRM_SCHEME") ?: "clearkey"
             val streamName = intent?.getStringExtra("CHANNEL_NAME") ?: "Network Stream"
+            val xForwardedFor = intent?.getStringExtra("X_FORWARDED_FOR") ?: ""
 
             if (isRestoredFromFullscreen && PlayerHolder.player != null) {
                 createFloatingPlayerInstanceFromNetworkStreamTransfer(
-                    instanceId, streamName, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme
+                    instanceId, streamName, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, xForwardedFor
                 )
                 updateNotification()
             } else if (streamUrl.isNotBlank()) {
-                createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName)
+                createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor)
                 updateNotification()
             }
             return START_STICKY
@@ -421,13 +425,13 @@ class FloatingPlayerService : Service() {
                 channel != null -> {
                     val links = channel.links
                     val sel = if (links != null && linkIndex in links.indices) links[linkIndex] else links?.firstOrNull()
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl)
+                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor)
                     else streamUrl
                 }
                 event != null -> {
                     val links = event.links
                     val sel = if (linkIndex in links.indices) links[linkIndex] else links.firstOrNull()
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl)
+                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor)
                     else streamUrl
                 }
                 else -> streamUrl
@@ -607,13 +611,14 @@ class FloatingPlayerService : Service() {
         origin: String,
         drmLicense: String,
         userAgent: String,
-        drmScheme: String
+        drmScheme: String,
+        xForwardedFor: String = ""
     ) {
         try {
             val transferredPlayer = PlayerHolder.player
             if (transferredPlayer == null) {
                 createFloatingPlayerInstanceForNetworkStream(
-                    instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName
+                    instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor
                 )
                 return
             }
@@ -693,7 +698,8 @@ class FloatingPlayerService : Service() {
                 networkOrigin = origin,
                 networkDrmLicense = drmLicense,
                 networkUserAgent = userAgent,
-                networkDrmScheme = drmScheme
+                networkDrmScheme = drmScheme,
+                networkXForwardedFor = xForwardedFor
             )
             activeInstances[instanceId] = instance
 
@@ -717,7 +723,8 @@ class FloatingPlayerService : Service() {
         drmLicense: String,
         userAgent: String,
         drmScheme: String,
-        streamName: String
+        streamName: String,
+        xForwardedFor: String = ""
     ) {
         try {
             val floatingView = LayoutInflater.from(this).inflate(R.layout.floating_player_window, null)
@@ -765,6 +772,7 @@ class FloatingPlayerService : Service() {
             if (cookie.isNotEmpty()) headers["Cookie"] = cookie
             if (referer.isNotEmpty()) headers["Referer"] = referer
             if (origin.isNotEmpty()) headers["Origin"] = origin
+            if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
                 userAgent else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             headers["User-Agent"] = effectiveUserAgent
@@ -829,7 +837,8 @@ class FloatingPlayerService : Service() {
                 networkOrigin = origin,
                 networkDrmLicense = drmLicense,
                 networkUserAgent = userAgent,
-                networkDrmScheme = drmScheme
+                networkDrmScheme = drmScheme,
+                networkXForwardedFor = xForwardedFor
             )
             activeInstances[instanceId] = instance
 
@@ -857,14 +866,14 @@ class FloatingPlayerService : Service() {
                         if (linkIndex in channel.links!!.indices) channel.links!![linkIndex]
                         else channel.links!!.firstOrNull()
                     } else null
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl)
+                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor)
                     else channel.streamUrl.takeIf { it.isNotBlank() } ?: return
                 }
                 event != null -> {
                     val links = event.links
                     if (links.isEmpty()) return
                     val sel = if (linkIndex in links.indices) links[linkIndex] else links.firstOrNull() ?: return
-                    buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl)
+                    buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor)
                 }
                 else -> return
             }
@@ -985,6 +994,7 @@ class FloatingPlayerService : Service() {
                         putExtra("DRM_LICENSE", inst.networkDrmLicense ?: "")
                         putExtra("USER_AGENT", inst.networkUserAgent ?: "Default")
                         putExtra("DRM_SCHEME", inst.networkDrmScheme ?: "clearkey")
+                        putExtra("X_FORWARDED_FOR", inst.networkXForwardedFor ?: "")
                     } else {
                         if (currentChannel != null) putExtra("extra_channel", currentChannel)
                         if (currentEvent != null) putExtra("extra_event", currentEvent)
@@ -1314,11 +1324,13 @@ class FloatingPlayerService : Service() {
                 val drmLicense = instance.networkDrmLicense ?: ""
                 val userAgent = instance.networkUserAgent ?: "Default"
                 val drmScheme = instance.networkDrmScheme ?: "clearkey"
+                val xForwardedFor = instance.networkXForwardedFor ?: ""
 
                 val headers = mutableMapOf<String, String>()
                 if (cookie.isNotEmpty()) headers["Cookie"] = cookie
                 if (referer.isNotEmpty()) headers["Referer"] = referer
                 if (origin.isNotEmpty()) headers["Origin"] = origin
+                if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
                 val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
                     userAgent else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
                 headers["User-Agent"] = effectiveUserAgent
@@ -1489,13 +1501,15 @@ class FloatingPlayerService : Service() {
         origin: String?,
         userAgent: String?,
         drmScheme: String?,
-        drmLicenseUrl: String?
+        drmLicenseUrl: String?,
+        xForwardedFor: String? = null
     ): String {
         val params = mutableListOf<String>()
         referer?.takeIf { it.isNotEmpty() }?.let { params.add("referer=$it") }
         cookie?.takeIf { it.isNotEmpty() }?.let { params.add("cookie=$it") }
         origin?.takeIf { it.isNotEmpty() }?.let { params.add("origin=$it") }
         userAgent?.takeIf { it.isNotEmpty() }?.let { params.add("user-agent=$it") }
+        xForwardedFor?.takeIf { it.isNotEmpty() }?.let { params.add("x-forwarded-for=$it") }
         drmScheme?.takeIf { it.isNotEmpty() }?.let { params.add("drmScheme=$it") }
         drmLicenseUrl?.takeIf { it.isNotEmpty() }?.let { params.add("drmLicense=$it") }
         return if (params.isNotEmpty()) "$url|${params.joinToString("|")}" else url

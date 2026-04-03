@@ -384,6 +384,13 @@ class PlayerActivity : AppCompatActivity() {
 
         viewModel.relatedItems.observe(this) { channels ->
             relatedChannels = channels
+            if (!::relatedChannelsAdapter.isInitialized) {
+                relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
+                    switchToChannel(relatedItem)
+                }
+                binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
+                binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
+            }
             relatedChannelsAdapter.submitList(channels)
             binding.relatedChannelsSection.visibility = if (channels.isEmpty()) {
                 View.GONE
@@ -1644,6 +1651,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
         releasePlayer()
+        val previousContentType = contentType
         channelData = newChannel
         eventData = null
         contentType = ContentType.CHANNEL
@@ -1673,6 +1681,14 @@ class PlayerActivity : AppCompatActivity() {
 
         setupPlayer()
         setupLinksUI()
+
+        if (previousContentType == ContentType.EVENT) {
+            relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
+                switchToChannel(relatedItem)
+            }
+            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
+            binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
+        }
 
         binding.relatedLoadingProgress.visibility = View.VISIBLE
         binding.relatedChannelsRecycler.visibility = View.GONE

@@ -117,20 +117,6 @@ object M3uParser {
         connection.setRequestProperty("Accept-Language", "en-GB,en-US;q=0.9,en;q=0.8")
         connection.setRequestProperty("Connection", "keep-alive")
 
-        if (isXtreamUrl(trimmedUrl)) {
-            connection.setRequestProperty("Accept-Encoding", "gzip, deflate, br, zstd")
-            connection.setRequestProperty("Origin", "https://dekhoprime.live")
-            connection.setRequestProperty("Referer", "https://dekhoprime.live/")
-            connection.setRequestProperty("sec-ch-ua-platform", "\"Android\"")
-            connection.setRequestProperty("sec-ch-ua", "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Android WebView\";v=\"146\"")
-            connection.setRequestProperty("sec-ch-ua-mobile", "?1")
-            connection.setRequestProperty("x-requested-with", "mark.via.gp")
-            connection.setRequestProperty("sec-fetch-site", "cross-site")
-            connection.setRequestProperty("sec-fetch-mode", "cors")
-            connection.setRequestProperty("sec-fetch-dest", "empty")
-            connection.setRequestProperty("priority", "u=1, i")
-        }
-
         connection.instanceFollowRedirects = true
         HttpURLConnection.setFollowRedirects(true)
 
@@ -141,7 +127,13 @@ object M3uParser {
             val contentType = connection.contentType
             android.util.Log.d("M3uParser", "Content-Type: $contentType")
 
-            val reader = BufferedReader(InputStreamReader(connection.inputStream))
+            val encoding = connection.contentEncoding
+            val inputStream = if (encoding?.equals("gzip", ignoreCase = true) == true) {
+                java.util.zip.GZIPInputStream(connection.inputStream)
+            } else {
+                connection.inputStream
+            }
+            val reader = BufferedReader(InputStreamReader(inputStream))
             val content = reader.readText()
             reader.close()
             connection.disconnect()

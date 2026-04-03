@@ -86,7 +86,8 @@ object M3uParser {
             }
             val username = params["username"] ?: return url
             val password = params["password"] ?: return url
-            val pathStart = decoded.indexOf('/', decoded.indexOf("//") + 2).takeIf { it != -1 } ?: return url
+            val schemeEnd = decoded.indexOf("//") + 2
+            val pathStart = decoded.indexOf('/', schemeEnd).takeIf { it != -1 } ?: return url
             val baseUrl = decoded.substring(0, pathStart)
             "$baseUrl/get.php?username=$username&password=$password&type=m3u_plus&output=m3u8"
         } catch (_: Exception) { url }
@@ -111,9 +112,21 @@ object M3uParser {
         connection.connectTimeout = 30000
         connection.readTimeout = 30000
 
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 15; V2253 Build/AP3A.240905.015.A2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.7680.119 Mobile Safari/537.36")
         connection.setRequestProperty("Accept", "*/*")
+        connection.setRequestProperty("Accept-Encoding", "gzip, deflate, br, zstd")
+        connection.setRequestProperty("Accept-Language", "en-GB,en-US;q=0.9,en;q=0.8")
         connection.setRequestProperty("Connection", "keep-alive")
+        connection.setRequestProperty("Origin", "https://dekhoprime.live")
+        connection.setRequestProperty("Referer", "https://dekhoprime.live/")
+        connection.setRequestProperty("sec-ch-ua-platform", "\"Android\"")
+        connection.setRequestProperty("sec-ch-ua", "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Android WebView\";v=\"146\"")
+        connection.setRequestProperty("sec-ch-ua-mobile", "?1")
+        connection.setRequestProperty("x-requested-with", "mark.via.gp")
+        connection.setRequestProperty("sec-fetch-site", "cross-site")
+        connection.setRequestProperty("sec-fetch-mode", "cors")
+        connection.setRequestProperty("sec-fetch-dest", "empty")
+        connection.setRequestProperty("priority", "u=1, i")
 
         connection.instanceFollowRedirects = true
         HttpURLConnection.setFollowRedirects(true)

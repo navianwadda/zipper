@@ -39,8 +39,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.okhttp.OkHttpDataSource
-import okhttp3.OkHttpClient
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.drm.FrameworkMediaDrm
@@ -100,9 +99,6 @@ class PlayerActivity : AppCompatActivity() {
     @javax.inject.Inject
     lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
 
-    @javax.inject.Inject
-    lateinit var okHttpClient: OkHttpClient
-
     private lateinit var relatedChannelsAdapter: RelatedChannelAdapter
     private var relatedChannels = listOf<Channel>()
     private lateinit var relatedEventsAdapter: LiveEventAdapter
@@ -143,8 +139,8 @@ class PlayerActivity : AppCompatActivity() {
     private val channelNumberRunnable = Runnable { navigateToChannelByNumber() }
     private val overlayHideRunnable = Runnable { binding.channelNumberOverlay?.visibility = View.GONE }
     private var pendingChannelIndex: Int = -1
-    private var pendingChannelDirection: Int = 0
-    private var pendingChannelNumber: Int = -1
+    private var pendingChannelDirection: Int = 0 // +1 = up, -1 = down, 0 = none
+    private var pendingChannelNumber: Int = -1   // number pad target when list wasn't ready
     private var channelData: Channel? = null
     private var eventData: LiveEvent? = null
     private var allEventLinks = listOf<LiveEventLink>()
@@ -330,6 +326,7 @@ class PlayerActivity : AppCompatActivity() {
                             referer = it.referer,
                             origin = it.origin,
                             userAgent = it.userAgent,
+                            xForwardedFor = it.xForwardedFor,
                             drmScheme = it.drmScheme,
                             drmLicenseUrl = it.drmLicenseUrl
                         )
@@ -349,6 +346,7 @@ class PlayerActivity : AppCompatActivity() {
         viewModel.channelListItems.observe(this) { items ->
             if (items.isNullOrEmpty() || contentType != ContentType.CHANNEL) return@observe
 
+            // Execute pending number pad navigation first (takes priority over direction)
             val pendingNum = pendingChannelNumber
             if (pendingNum != -1) {
                 pendingChannelNumber = -1
@@ -361,11 +359,13 @@ class PlayerActivity : AppCompatActivity() {
                     channelNumberHandler.removeCallbacks(overlayHideRunnable)
                     channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
                 } else {
+                    // Number out of range — just hide overlay
                     binding.channelNumberOverlay?.visibility = View.GONE
                 }
                 return@observe
             }
 
+            // Execute pending direction navigation
             val direction = pendingChannelDirection
             if (direction != 0) {
                 pendingChannelDirection = 0
@@ -375,6 +375,7 @@ class PlayerActivity : AppCompatActivity() {
                 if (targetChannel.id != contentId) {
                     switchToChannel(targetChannel)
                 }
+                // Always update overlay — clears "..." and shows real channel info
                 showChannelOverlay((targetIndex + 1).toString(), targetChannel)
                 channelNumberHandler.removeCallbacks(overlayHideRunnable)
                 channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
@@ -779,10 +780,12 @@ class PlayerActivity : AppCompatActivity() {
         binding.channelNumberOverlay?.visibility = View.GONE
     }
 
+    // Clears typed number input only. Preserves pendingChannelIndex and pendingChannelDirection for hold-to-scroll.
     private fun clearNumberTyping() {
         channelNumberInput = ""
         channelNumberHandler.removeCallbacks(channelNumberRunnable)
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
+        // Don't hide overlay — caller will immediately show updated overlay
     }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
@@ -816,8 +819,9 @@ class PlayerActivity : AppCompatActivity() {
                 val items = viewModel.channelListItems.value
 
                 when {
-                    contentType != ContentType.CHANNEL -> { }
+                    contentType != ContentType.CHANNEL -> { /* non-channel, ignore */ }
 
+                    // Normal path: list was ready during keyDown, index computed
                     index != -1 && !items.isNullOrEmpty() && index in items.indices -> {
                         pendingChannelDirection = 0
                         val targetChannel = items[index]
@@ -826,6 +830,7 @@ class PlayerActivity : AppCompatActivity() {
                         channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
                     }
 
+                    // List loaded between keyDown and keyUp — compute now
                     index == -1 && !items.isNullOrEmpty() && pendingChannelDirection != 0 -> {
                         val dir = pendingChannelDirection
                         pendingChannelDirection = 0
@@ -840,6 +845,7 @@ class PlayerActivity : AppCompatActivity() {
                         channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
                     }
 
+                    // List still empty — keep direction queued, trigger load
                     items.isNullOrEmpty() -> {
                         pendingChannelDirection = direction
                         viewModel.loadAllChannelsForList(
@@ -995,7 +1001,7 @@ class PlayerActivity : AppCompatActivity() {
                 if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
                 if (event?.repeatCount != 0) return true
                 if (showChannelList.value) return true
-                pendingChannelDirection = 0
+                pendingChannelDirection = 0  // typing overrides any queued direction
                 channelNumberInput += (keyCode - android.view.KeyEvent.KEYCODE_0).toString()
                 channelNumberHandler.removeCallbacks(overlayHideRunnable)
                 showChannelOverlay(channelNumberInput, null)
@@ -1037,6 +1043,7 @@ class PlayerActivity : AppCompatActivity() {
         }
         val items = viewModel.channelListItems.value
         if (items.isNullOrEmpty()) {
+            // Store the number so the observer can execute it once the list loads
             pendingChannelNumber = number
             showChannelOverlay("...", null)
             viewModel.loadAllChannelsForList(
@@ -1246,6 +1253,7 @@ class PlayerActivity : AppCompatActivity() {
             dialog.show()
         } catch (e: Exception) {
             isShowingSettingsDialog = false
+            android.util.Log.e("PlayerActivity", "Error showing settings dialog", e)
         }
     }
 
@@ -1257,24 +1265,35 @@ class PlayerActivity : AppCompatActivity() {
             contentName = uri.lastPathSegment ?: "Stream"
             contentId = "external_${System.currentTimeMillis()}"
 
+            // BUG FIX: Android percent-encodes '|' to '%7C' in Uri objects when the URL
+            // is passed via ACTION_VIEW (e.g. from OTT apps, browsers, playlist launchers).
+            // parseStreamUrl relies on '|' as the separator for DRM/header params.
+            // Without decoding first, ALL DRM params are silently lost.
             val rawUriString = uri.toString()
             val decodedUriString = android.net.Uri.decode(rawUriString)
             streamUrl = decodedUriString
 
             val parsed = parseStreamUrl(decodedUriString)
 
-            val knownKeys1 = setOf("Cookie", "Referer", "Origin", "User-Agent")
-            val extraParams1 = parsed.headers.filter { (k, v) -> k !in knownKeys1 && v.isNotEmpty() }.map { (k, v) -> "$k=$v" }
-            val urlWithExtras1 = if (extraParams1.isNotEmpty()) "${parsed.url}|${extraParams1.joinToString("|")}" else parsed.url
+            // Debug logging
+            com.livetvpro.app.utils.DrmDebugLogger.startSession("EXTERNAL/ACTION_VIEW", contentName, decodedUriString)
+            com.livetvpro.app.utils.DrmDebugLogger.logIntent(
+                action = intent.action,
+                contentType = "EXTERNAL/ACTION_VIEW",
+                rawStreamUrl = decodedUriString,
+                drmSchemeRaw = parsed.drmScheme,
+                drmLicenseRaw = parsed.drmLicenseUrl ?: parsed.drmKeyId?.let { "${it}:${parsed.drmKey}" }
+            )
 
             allEventLinks = listOf(
-                LiveEventLink(
+                com.livetvpro.app.data.models.LiveEventLink(
                     quality = "Auto",
-                    url = urlWithExtras1,
+                    url = parsed.url,
                     cookie = parsed.headers["Cookie"] ?: "",
                     referer = parsed.headers["Referer"] ?: "",
                     origin = parsed.headers["Origin"] ?: "",
                     userAgent = parsed.headers["User-Agent"] ?: "Default",
+                    xForwardedFor = parsed.headers["X-Forwarded-For"],
                     drmScheme = parsed.drmScheme ?: "",
                     drmLicenseUrl = parsed.drmLicenseUrl
                         ?: parsed.drmKeyId?.let { id -> parsed.drmKey?.let { k -> "$id:$k" } }
@@ -1299,6 +1318,9 @@ class PlayerActivity : AppCompatActivity() {
 
                 val parsed = parseStreamUrl(streamUrlRaw)
 
+                // BUG FIX: when the URL already contains pipe params (e.g. |User-Agent=Mozila),
+                // the UI's separate DRM Scheme and DRM License fields were being silently ignored.
+                // Fall back to those extras when the pipe-parsed result has no DRM.
                 val extraDrmScheme = intent.getStringExtra("DRM_SCHEME")?.takeIf { it.isNotBlank() }
                 val extraDrmLicense = intent.getStringExtra("DRM_LICENSE")?.takeIf { it.isNotBlank() }
                 val resolvedDrmScheme = parsed.drmScheme ?: extraDrmScheme
@@ -1330,22 +1352,29 @@ class PlayerActivity : AppCompatActivity() {
                     resolvedDrmKey = null
                 }
 
-                val knownKeys2 = setOf("Cookie", "Referer", "Origin", "User-Agent")
-                val extraParams2 = parsed.headers.filter { (k, v) -> k !in knownKeys2 && v.isNotEmpty() }.map { (k, v) -> "$k=$v" }
-                val urlWithExtras2 = if (extraParams2.isNotEmpty()) "${parsed.url}|${extraParams2.joinToString("|")}" else parsed.url
-
+                // Rebuild streamUrl to include DRM params so setupPlayer's parseStreamUrl sees them
                 val mergedLink = LiveEventLink(
                     quality = "Network Stream",
-                    url = urlWithExtras2,
+                    url = parsed.url,
                     cookie = parsed.headers["Cookie"] ?: "",
                     referer = parsed.headers["Referer"] ?: "",
                     origin = parsed.headers["Origin"] ?: "",
                     userAgent = parsed.headers["User-Agent"] ?: intent.getStringExtra("USER_AGENT") ?: "Default",
+                    xForwardedFor = parsed.headers["X-Forwarded-For"],
                     drmScheme = resolvedDrmScheme,
                     drmLicenseUrl = resolvedDrmLicenseUrl
                         ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } }
                 )
                 streamUrl = buildStreamUrl(mergedLink)
+
+                // Debug
+                com.livetvpro.app.utils.DrmDebugLogger.startSession("NETWORK_STREAM", contentName, streamUrl)
+                com.livetvpro.app.utils.DrmDebugLogger.logIntent("IS_NETWORK_STREAM", "NETWORK_STREAM",
+                    streamUrl, resolvedDrmScheme, mergedLink.drmLicenseUrl)
+                com.livetvpro.app.utils.DrmDebugLogger.logUrlParse(
+                    streamUrl, parsed.url, parsed.headers,
+                    resolvedDrmScheme, resolvedDrmKeyId, resolvedDrmKey, resolvedDrmLicenseUrl)
+
                 allEventLinks = listOf(mergedLink)
             } else {
                 val cookie = intent.getStringExtra("COOKIE") ?: ""
@@ -1354,6 +1383,11 @@ class PlayerActivity : AppCompatActivity() {
                 val drmLicense = intent.getStringExtra("DRM_LICENSE") ?: ""
                 val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
+
+                // Debug
+                com.livetvpro.app.utils.DrmDebugLogger.startSession("NETWORK_STREAM", contentName, streamUrlRaw)
+                com.livetvpro.app.utils.DrmDebugLogger.logIntent("IS_NETWORK_STREAM(extras)", "NETWORK_STREAM",
+                    streamUrlRaw, drmScheme, drmLicense)
 
                 allEventLinks = listOf(
                     LiveEventLink(
@@ -1369,6 +1403,9 @@ class PlayerActivity : AppCompatActivity() {
                 )
 
                 streamUrl = buildStreamUrl(allEventLinks[0])
+                com.livetvpro.app.utils.DrmDebugLogger.log(
+                    com.livetvpro.app.utils.DrmDebugLogger.Stage.BUILD_URL,
+                    "Built streamUrl: $streamUrl")
             }
 
             currentLinkIndex = 0
@@ -1417,6 +1454,7 @@ class PlayerActivity : AppCompatActivity() {
                         referer = it.referer,
                         origin = it.origin,
                         userAgent = it.userAgent,
+                        xForwardedFor = it.xForwardedFor,
                         drmScheme = it.drmScheme,
                         drmLicenseUrl = it.drmLicenseUrl
                     )
@@ -1431,8 +1469,25 @@ class PlayerActivity : AppCompatActivity() {
 
                 streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
+                // BUG NOTE: Channel has no links — DRM must be pipe-encoded in streamUrl.
+                // If channel.streamUrl does NOT contain pipe-encoded drmScheme/drmLicense,
+                // DRM will silently fail. Ensure M3uParser.buildStreamUrlWithMetadata() is called.
                 streamUrl = channel.streamUrl
                 allEventLinks = emptyList()
+            }
+
+            val activeLinkForDebug = allEventLinks.getOrNull(currentLinkIndex)
+            com.livetvpro.app.utils.DrmDebugLogger.startSession("CHANNEL", contentName, streamUrl)
+            com.livetvpro.app.utils.DrmDebugLogger.logIntent("CHANNEL", "CHANNEL", streamUrl,
+                activeLinkForDebug?.drmScheme, activeLinkForDebug?.drmLicenseUrl)
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.INTENT,
+                "Links count: ${allEventLinks.size}  currentLinkIndex: $currentLinkIndex")
+            if (allEventLinks.isEmpty()) {
+                com.livetvpro.app.utils.DrmDebugLogger.log(
+                    com.livetvpro.app.utils.DrmDebugLogger.Stage.INTENT,
+                    "WARNING: no links — DRM depends entirely on pipe-encoded streamUrl",
+                    isError = !streamUrl.contains("drmScheme", ignoreCase = true))
             }
 
         } else if (eventData != null) {
@@ -1450,6 +1505,14 @@ class PlayerActivity : AppCompatActivity() {
                 currentLinkIndex = 0
                 streamUrl = ""
             }
+
+            val activeLinkForDebug = allEventLinks.getOrNull(currentLinkIndex)
+            com.livetvpro.app.utils.DrmDebugLogger.startSession("EVENT", contentName, streamUrl)
+            com.livetvpro.app.utils.DrmDebugLogger.logIntent("EVENT", "EVENT", streamUrl,
+                activeLinkForDebug?.drmScheme, activeLinkForDebug?.drmLicenseUrl)
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.INTENT,
+                "Links count: ${allEventLinks.size}  currentLinkIndex: $currentLinkIndex")
 
         } else {
             finish()
@@ -1596,6 +1659,7 @@ class PlayerActivity : AppCompatActivity() {
                     referer = it.referer,
                     origin = it.origin,
                     userAgent = it.userAgent,
+                    xForwardedFor = it.xForwardedFor,
                     drmScheme = it.drmScheme,
                     drmLicenseUrl = it.drmLicenseUrl
                 )
@@ -1687,6 +1751,7 @@ class PlayerActivity : AppCompatActivity() {
             if (isFinishing) {
                 finish()
             } else {
+                // User closed the PiP window via the X button — stop audio and clean up
                 releasePlayer()
                 finish()
             }
@@ -1700,6 +1765,10 @@ class PlayerActivity : AppCompatActivity() {
         mainHandler.removeCallbacksAndMessages(null)
         unregisterPipReceiver()
         releasePlayer()
+        // Export DRM debug log to Downloads
+        com.livetvpro.app.utils.DrmDebugLogger.log(
+            com.livetvpro.app.utils.DrmDebugLogger.Stage.PLAYBACK, "=== SESSION END (onDestroy) ===")
+        com.livetvpro.app.utils.DrmDebugLogger.exportToDownloads(this)
     }
 
     private fun releasePlayer() {
@@ -1724,8 +1793,7 @@ class PlayerActivity : AppCompatActivity() {
         val drmLicenseUrl: String? = null
     )
 
-    private fun parseStreamUrl(rawStreamUrl: String): StreamInfo {
-        val streamUrl = rawStreamUrl.replace("?|", "|")
+    private fun parseStreamUrl(streamUrl: String): StreamInfo {
         val pipeIndex = streamUrl.indexOf('|')
         if (pipeIndex == -1) {
             return StreamInfo(streamUrl, mapOf(), null, null, null, null)
@@ -1758,8 +1826,7 @@ class PlayerActivity : AppCompatActivity() {
             if (eqIndex == -1) continue
 
             val key = part.substring(0, eqIndex).trim()
-            val rawValue = part.substring(eqIndex + 1).trim()
-            val value = try { java.net.URLDecoder.decode(rawValue.replace("+", " "), "UTF-8") } catch (e: Exception) { rawValue.replace("+", " ") }
+            val value = part.substring(eqIndex + 1).trim()
 
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
@@ -1781,6 +1848,7 @@ class PlayerActivity : AppCompatActivity() {
                 "user-agent", "useragent" -> headers["User-Agent"] = value
                 "origin" -> headers["Origin"] = value
                 "cookie" -> headers["Cookie"] = value
+                "x-forwarded-for" -> headers["X-Forwarded-For"] = value
                 else -> headers[key] = value
             }
         }
@@ -1800,28 +1868,54 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun buildStreamUrl(link: LiveEventLink): String {
-        val knownKeys = setOf("Cookie", "Referer", "Origin", "User-Agent")
-        val existingParsed = if (link.url.contains("|")) parseStreamUrl(link.url) else null
-        val baseUrl = existingParsed?.url ?: link.url
-
+        var url = link.url
         val params = mutableListOf<String>()
-        link.referer?.let { if (it.isNotEmpty()) params.add("referer=${it}") }
-        link.cookie?.let { if (it.isNotEmpty()) params.add("cookie=${it}") }
-        link.origin?.let { if (it.isNotEmpty()) params.add("origin=${it}") }
-        link.userAgent?.let { v ->
-            if (v.isNotEmpty()) {
-                val decoded = try { java.net.URLDecoder.decode(v, "UTF-8") } catch (e: Exception) { v }
-                params.add("user-agent=${decoded}")
-            }
-        }
+
+        link.referer?.let { if (it.isNotEmpty()) params.add("referer=$it") }
+        link.cookie?.let { if (it.isNotEmpty()) params.add("cookie=$it") }
+        link.origin?.let { if (it.isNotEmpty()) params.add("origin=$it") }
+        link.userAgent?.let { if (it.isNotEmpty()) params.add("user-agent=$it") }
+        link.xForwardedFor?.let { if (it.isNotEmpty()) params.add("x-forwarded-for=$it") }
         link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
-        existingParsed?.headers?.forEach { (k, v) ->
-            if (v.isNotEmpty() && k !in knownKeys) params.add("$k=$v")
+
+        if (params.isNotEmpty()) {
+            url += "|" + params.joinToString("|")
         }
 
-        return if (params.isNotEmpty()) "$baseUrl|${params.joinToString("|")}" else baseUrl
+        return url
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  setupPlayer — official Media3 best-practice DRM implementation
+    //
+    //  Decision tree (per official docs at developer.android.com/media/media3/exoplayer/drm):
+    //
+    //  ┌─ scheme == "clearkey"
+    //  │   ├─ inline hex key+keyId   → AdaptiveLocalClearKeyCallback  (ClearKey UUID)
+    //  │   │                           • echoes back PSSH kid(s) from manifest, maps to our key
+    //  │   │                           • covers GuardEncType=2 DASH: Widevine PSSH + ClearKey decryption
+    //  │   ├─ inline JWK JSON        → LocalMediaDrmCallback          (ClearKey UUID)
+    //  │   └─ http license server    → HttpMediaDrmCallback           (ClearKey UUID)
+    //  │
+    //  ├─ scheme == "widevine"       → HttpMediaDrmCallback           (Widevine UUID)
+    //  │                               • DrmConfiguration set on MediaItem (official approach)
+    //  │                               • setForceDefaultLicenseUri(true) so our URL is always used
+    //  │
+    //  └─ scheme == "playready"      → HttpMediaDrmCallback           (PlayReady UUID)
+    //                                  • DrmConfiguration set on MediaItem (official approach)
+    //
+    //  GuardEncType=2 note:
+    //  These MAG-middleware DASH streams use ClearKey decryption but advertise a *Widevine* PSSH
+    //  box in the MPD.  The correct approach (verified against official ExoPlayer behaviour) is:
+    //    • Use setDrmSessionManagerProvider { manager } on DefaultMediaSourceFactory
+    //    • Do NOT set DrmConfiguration on the MediaItem
+    //    • The provider lambda is called unconditionally, regardless of PSSH UUID
+    //    • Our adaptive callback reads the actual kid(s) from ExoPlayer's license request body
+    //      and responds with a JWK that maps every manifest kid → our single content key
+    //  This is identical to what LeonePlayer does and avoids the TEE failure that happens
+    //  when you try to open a real Widevine session without a license server.
+    // ═══════════════════════════════════════════════════════════════════════
 
     private fun setupPlayer() {
         if (player != null) return
@@ -1835,12 +1929,14 @@ class PlayerActivity : AppCompatActivity() {
                 ?.setOnClickListener { retryPlayback() }
         }
 
+        // ── TrackSelector — prefer adaptive qualities, allow mixed mime types ──
         trackSelector = DefaultTrackSelector(this).apply {
             parameters = buildUponParameters()
                 .setAllowVideoMixedMimeTypeAdaptiveness(true)
                 .setAllowAudioMixedMimeTypeAdaptiveness(true)
                 .setAllowAudioMixedChannelCountAdaptiveness(true)
                 .clearVideoSizeConstraints()
+                // Enable tunneled video rendering on TV — required for Dolby Vision passthrough
                 .setTunnelingEnabled(DeviceUtils.isTvDevice)
                 .build()
         }
@@ -1853,47 +1949,106 @@ class PlayerActivity : AppCompatActivity() {
                 return
             }
 
+            // ── Build request headers ──────────────────────────────────────────
             val headers = streamInfo.headers.toMutableMap()
             if (!headers.containsKey("User-Agent")) {
                 headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
 
-            val baseDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
-                .setUserAgent(headers["User-Agent"] ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            val baseDataSourceFactory = DefaultHttpDataSource.Factory()
+                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
+                .setConnectTimeoutMs(30_000)
+                .setReadTimeoutMs(30_000)
+                .setAllowCrossProtocolRedirects(true)
+                .setKeepPostFor302Redirects(true)
 
+            // ── DRM debug logging ──────────────────────────────────────────────
+            com.livetvpro.app.utils.DrmDebugLogger.logUrlParse(
+                streamUrl, streamInfo.url, streamInfo.headers,
+                streamInfo.drmScheme, streamInfo.drmKeyId, streamInfo.drmKey, streamInfo.drmLicenseUrl)
+
+            // ── Resolve DRM path ───────────────────────────────────────────────
+            val clearKeyBranch = when {
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> "inline-hex"
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> "jwk-inline"
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> "license-server"
+                streamInfo.drmScheme == "clearkey" -> "none(no-key-material)"
+                else -> "none(scheme=${streamInfo.drmScheme})"
+            }
+            com.livetvpro.app.utils.DrmDebugLogger.logDrmResolve(
+                streamInfo.drmScheme, streamInfo.drmKeyId, streamInfo.drmKey,
+                streamInfo.drmLicenseUrl, clearKeyBranch)
+
+            // ── Build ClearKey DRM session manager (if applicable) ─────────────
+            //
+            // Official docs: "If an app wants to customise the DrmSessionManager used for
+            // playback, they can implement a DrmSessionManagerProvider and pass this to the
+            // MediaSource.Factory."  We use setDrmSessionManagerProvider so ExoPlayer calls
+            // our provider unconditionally (no UUID filtering), which is required for
+            // GuardEncType=2 DASH streams that carry a Widevine PSSH but use ClearKey keys.
             val clearKeyMgr: DefaultDrmSessionManager? = when {
                 streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
-                    buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                    val mgr = buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                    com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", mgr != null)
+                    mgr
                 }
                 streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
-                    buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
+                    val mgr = buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
+                    com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-JWK", mgr != null)
+                    mgr
                 }
                 streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
-                    buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
+                    val mgr = buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
+                    com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-Server", mgr != null)
+                    mgr
                 }
                 else -> null
             }
 
+            // ── Wire up the media source factory ──────────────────────────────
             val mediaSourceFactory = if (clearKeyMgr != null) {
+                // ClearKey path: inject manager via provider so UUID matching is bypassed.
+                // This is the correct approach for GuardEncType=2 and all ClearKey streams.
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(baseDataSourceFactory)
                     .setDrmSessionManagerProvider { clearKeyMgr }
             } else {
+                // Widevine / PlayReady path (and no-DRM): DrmConfiguration on MediaItem
+                // tells ExoPlayer which UUID to use; DefaultDrmSessionManager is built
+                // internally by the factory using the MediaItem's DrmConfiguration.
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(baseDataSourceFactory)
             }
 
+            // ── Build ExoPlayer ────────────────────────────────────────────────
+            // DefaultRenderersFactory with EXTENSION_RENDERER_MODE_PREFER:
+            //   • Prefers extension renderers (FFmpeg via Jellyfin AAR) over platform MediaCodec
+            //     when both can handle the format — this gives us:
+            //     - Dolby Vision profile 5/8 (FFmpeg software decode)
+            //     - Dolby Atmos (E-AC3-JOC / AC-4) via FFmpeg audio renderer
+            //     - HDR10+ tonemapping via FFmpeg
+            //     - Formats the platform codec can't handle (some HEVC profiles, AV1, etc.)
+            //   • Falls back to platform MediaCodec when FFmpeg doesn't handle the format
+            //   • enableDecoderFallback = true: if preferred decoder fails to initialise
+            //     (hardware codec refuses the format), ExoPlayer tries the next decoder
+            //     automatically — prevents black screen on streams that hardware rejects
+            //
+            // DefaultLoadControl tuning for live IPTV / MAG streams:
+            //   • Shorter min/max buffer vs defaults: live streams have small segments (~2s),
+            //     default 50s max buffer wastes memory and increases seek-to-live latency
+            //   • bufferForPlayback: how much to buffer before initial playback starts
+            //   • bufferForPlaybackAfterRebuffer: how much to buffer after a stall
             val renderersFactory = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
 
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    15_000,
-                    50_000,
-                    2_500,
-                    5_000
+                    /* minBufferMs  */ 15_000,
+                    /* maxBufferMs  */ 50_000,
+                    /* bufferForPlaybackMs */ 2_500,
+                    /* bufferForPlaybackAfterRebufferMs */ 5_000
                 )
                 .build()
 
@@ -1921,9 +2076,11 @@ class PlayerActivity : AppCompatActivity() {
                     )
                     binding.playerView.hideController()
 
+                    // ── Build MediaItem ────────────────────────────────────────
                     val uri = android.net.Uri.parse(streamInfo.url)
                     val mediaItemBuilder = MediaItem.Builder().setUri(uri)
 
+                    // Hint MIME type so ExoPlayer skips format detection round-trips
                     val urlLower = streamInfo.url.lowercase()
                     when {
                         urlLower.contains("m3u8") || urlLower.contains("extension=m3u8") ->
@@ -1935,9 +2092,21 @@ class PlayerActivity : AppCompatActivity() {
                     }
 
                     when {
-                        streamInfo.drmScheme == "clearkey" && clearKeyMgr != null -> { }
+                        // ── ClearKey: never set DrmConfiguration on MediaItem ──────────────
+                        // DrmConfiguration would cause ExoPlayer to filter by UUID before calling
+                        // our provider, breaking GuardEncType=2 streams with Widevine PSSH boxes.
+                        // The provider approach handles UUID matching entirely on our side.
+                        streamInfo.drmScheme == "clearkey" && clearKeyMgr != null -> {
+                            com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
+                                streamInfo.url, null, true, "clearkey-provider-no-drm-config")
+                        }
 
+                        // ── Widevine: official approach — DrmConfiguration on MediaItem ────
+                        // Per official docs: "the UUID of the DRM system must be specified when
+                        // building a media item". ExoPlayer's DefaultDrmSessionManager handles
+                        // the license request lifecycle, retries, and key rotation automatically.
                         streamInfo.drmScheme == "widevine" && streamInfo.drmLicenseUrl != null -> {
+                            // Strip Referer/Origin from license request headers (causes 403 on some CDNs)
                             val licenseHeaders = headers.filter { (k, _) ->
                                 k.lowercase() !in setOf("referer", "origin")
                             }
@@ -1945,12 +2114,21 @@ class PlayerActivity : AppCompatActivity() {
                                 MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
                                     .setLicenseUri(streamInfo.drmLicenseUrl)
                                     .setLicenseRequestHeaders(licenseHeaders)
+                                    // Forces use of our URI even when the manifest embeds its own
                                     .setForceDefaultLicenseUri(true)
+                                    // Enable if the stream uses rotating keys across periods
                                     .setMultiSession(false)
                                     .build()
                             )
+                            com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
+                                streamInfo.url, null, true, C.WIDEVINE_UUID.toString())
+                            com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("Widevine-MediaItem", true)
                         }
 
+                        // ── PlayReady: official approach — DrmConfiguration on MediaItem ───
+                        // Identical pattern to Widevine. PlayReady is primarily used on
+                        // Smooth Streaming and some DASH streams; Android's MediaDrm supports
+                        // it on devices that have the PlayReady CDM installed.
                         streamInfo.drmScheme == "playready" && streamInfo.drmLicenseUrl != null -> {
                             val licenseHeaders = headers.filter { (k, _) ->
                                 k.lowercase() !in setOf("referer", "origin")
@@ -1963,9 +2141,15 @@ class PlayerActivity : AppCompatActivity() {
                                     .setMultiSession(false)
                                     .build()
                             )
+                            com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
+                                streamInfo.url, null, true, C.PLAYREADY_UUID.toString())
+                            com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("PlayReady-MediaItem", true)
                         }
 
-                        else -> { }
+                        else -> {
+                            com.livetvpro.app.utils.DrmDebugLogger.logMediaItem(
+                                streamInfo.url, null, false, null)
+                        }
                     }
 
                     val mediaItem = mediaItemBuilder.build()
@@ -1973,8 +2157,10 @@ class PlayerActivity : AppCompatActivity() {
                     exo.prepare()
                     exo.playWhenReady = true
 
+                    // ── Player event listener ──────────────────────────────────
                     playerListener = object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
+                            com.livetvpro.app.utils.DrmDebugLogger.logPlaybackState(playbackState)
                             when (playbackState) {
                                 Player.STATE_READY -> {
                                     binding.progressBar.visibility = View.GONE
@@ -2037,6 +2223,10 @@ class PlayerActivity : AppCompatActivity() {
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                             super.onPlayerError(error)
                             binding.progressBar.visibility = View.GONE
+                            com.livetvpro.app.utils.DrmDebugLogger.logPlaybackState(
+                                Player.STATE_IDLE, isError = true,
+                                errorCode = error.errorCode,
+                                errorMsg = "${error.message} | cause=${error.cause?.message} | cause2=${error.cause?.cause?.message}")
 
                             val errorMessage = when {
                                 error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
@@ -2097,18 +2287,49 @@ class PlayerActivity : AppCompatActivity() {
         binding.errorView.visibility = View.VISIBLE
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  ClearKey — Inline hex key+keyId
+    //
+    //  This is the primary path for GuardEncType=2 streams like:
+    //    ...mpd?...|drmScheme=clearkey|drmLicense=ef34ae91b4f2415e...:243248d8de1ff8c7...
+    //
+    //  The core insight (from reverse-engineering and official Media3 source):
+    //  ExoPlayer sends a W3C EME license request:
+    //    {"kids":["<base64url-of-PSSH-kid>"],"type":"temporary"}
+    //  The kid in this request comes from the PSSH box in the MPD/manifest —
+    //  it may differ from the kid embedded in the stream URL (different byte order,
+    //  encoding, or the stream URL kid is just a hint).
+    //
+    //  Our adaptive callback reads the actual kid(s) from the request body and
+    //  echoes them back in the JWK response, each mapped to our content decryption key.
+    //  This guarantees a kid match regardless of what the MPD advertises.
+    //
+    //  Uses C.CLEARKEY_UUID (= e2719d58-a985-b3c9-781a-b030af78d30e) with
+    //  FrameworkMediaDrm, which maps to Android's ClearKey CDM — no hardware
+    //  security level required, works on all Android 5+ devices.
+    // ─────────────────────────────────────────────────────────────────────────
     private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
             val keyIdBytes = hexToBytes(keyIdHex)
             val keyBytes   = hexToBytes(keyHex)
-            if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) return null
+            if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) {
+                com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", false,
+                    IllegalArgumentException("hexToBytes returned empty — keyIdHex='$keyIdHex' keyHex='$keyHex'"))
+                return null
+            }
 
+            // Pre-encode our key as base64url (no padding) for JWK responses
             val keyBase64 = android.util.Base64.encodeToString(
                 keyBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+            // Also encode our keyId as a fallback if the manifest sends no kids
             val keyIdBase64 = android.util.Base64.encodeToString(
                 keyIdBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
 
             val adaptiveCallback = buildAdaptiveClearKeyCallback(keyBase64, keyIdBase64, "ClearKey-InlineHex")
+
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                "AdaptiveClearKey ready — key(b64)=$keyBase64 fallbackKid(b64)=$keyIdBase64")
 
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
@@ -2116,12 +2337,29 @@ class PlayerActivity : AppCompatActivity() {
                 .setPlayClearSamplesWithoutKeys(false)
                 .build(adaptiveCallback)
         } catch (e: Exception) {
+            com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-InlineHex", false, e)
             null
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  ClearKey — Inline JWK JSON
+    //
+    //  Used when drmLicense starts with '{', e.g.:
+    //    drmLicense={"keys":[{"kty":"oct","k":"...","kid":"..."}],"type":"temporary"}
+    //
+    //  LocalMediaDrmCallback handles the JWK response directly without any HTTP
+    //  round-trip.  The JWK must be valid W3C ClearKey format.
+    //
+    //  Limitation: the kid in the JWK must exactly match what ExoPlayer requests
+    //  from the manifest.  If it doesn't match, use buildClearKeyInlineManager
+    //  with the raw hex values instead (which uses the adaptive callback).
+    // ─────────────────────────────────────────────────────────────────────────
     private fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
         return try {
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                "ClearKey-JWK inline: ${jwkJson.take(120)}")
             val drmCallback = LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8))
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
@@ -2129,15 +2367,32 @@ class PlayerActivity : AppCompatActivity() {
                 .setPlayClearSamplesWithoutKeys(false)
                 .build(drmCallback)
         } catch (e: Exception) {
+            com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-JWK", false, e)
             null
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  ClearKey — Remote license server
+    //
+    //  Used when drmLicense is an http(s) URL pointing to a ClearKey license server.
+    //  HttpMediaDrmCallback posts the EME license request to the server and
+    //  expects a W3C ClearKey JWK response.
+    //
+    //  Headers are forwarded so the server can authenticate the request.
+    // ─────────────────────────────────────────────────────────────────────────
     private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
-            val licenseFactory = OkHttpDataSource.Factory(okHttpClient)
+            com.livetvpro.app.utils.DrmDebugLogger.log(
+                com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                "ClearKey-Server: $licenseUrl  headers=${headers.keys}")
+            val licenseFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
+                .setConnectTimeoutMs(30_000)
+                .setReadTimeoutMs(30_000)
+                .setAllowCrossProtocolRedirects(true)
+                .setKeepPostFor302Redirects(true)
             val callback = HttpMediaDrmCallback(licenseUrl, licenseFactory)
             headers.forEach { (k, v) -> callback.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
@@ -2146,10 +2401,28 @@ class PlayerActivity : AppCompatActivity() {
                 .setPlayClearSamplesWithoutKeys(false)
                 .build(callback)
         } catch (e: Exception) {
+            com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("ClearKey-Server", false, e)
             null
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Adaptive ClearKey Callback (shared by inline-hex and GuardEncType=2)
+    //
+    //  The W3C EME license request body that ExoPlayer sends looks like:
+    //    {"kids":["<base64url kid from PSSH>"],"type":"temporary"}
+    //
+    //  This callback:
+    //    1. Parses the "kids" array from the request
+    //    2. Builds one JWK entry per kid, each pointing to our single content key
+    //    3. Returns a valid W3C ClearKey license response
+    //
+    //  This handles the common case where the PSSH kid differs from the kid in
+    //  the stream URL (different byte order / encoding), and the GuardEncType=2
+    //  case where a Widevine PSSH is present but keys are inline ClearKey.
+    //
+    //  executeProvisionRequest: ClearKey has no provisioning step — return empty.
+    // ─────────────────────────────────────────────────────────────────────────
     private fun buildAdaptiveClearKeyCallback(
         keyBase64: String,
         fallbackKidBase64: String,
@@ -2169,26 +2442,40 @@ class PlayerActivity : AppCompatActivity() {
             ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response {
                 return try {
                     val requestBody = String(request.data, Charsets.UTF_8)
+                    com.livetvpro.app.utils.DrmDebugLogger.log(
+                        com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                        "$tag KeyRequest body: $requestBody")
 
+                    // Extract all kids that ExoPlayer found in the manifest PSSH
                     val requestedKids = mutableListOf<String>()
                     Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(requestBody)?.let { match ->
                         Regex(""""([A-Za-z0-9+/=_-]+)"""").findAll(match.groupValues[1])
                             .forEach { requestedKids.add(it.groupValues[1]) }
                     }
+                    com.livetvpro.app.utils.DrmDebugLogger.log(
+                        com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                        "$tag PSSH kids=${requestedKids}  ourFallbackKid=$fallbackKidBase64")
 
+                    // Map every manifest kid → our content decryption key
                     val keyEntries = if (requestedKids.isNotEmpty()) {
                         requestedKids.joinToString(",") { kid ->
                             """{"kty":"oct","k":"$keyBase64","kid":"$kid"}"""
                         }
                     } else {
+                        // No kids in request — fall back to the kid from the stream URL
                         """{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}"""
                     }
 
                     val jwkResponse = """{"keys":[$keyEntries],"type":"temporary"}"""
+                    com.livetvpro.app.utils.DrmDebugLogger.log(
+                        com.livetvpro.app.utils.DrmDebugLogger.Stage.DRM_CREATE,
+                        "$tag JWK response: $jwkResponse")
 
                     androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
                         jwkResponse.toByteArray(Charsets.UTF_8))
                 } catch (e: Exception) {
+                    com.livetvpro.app.utils.DrmDebugLogger.logDrmCreate("$tag-AdaptiveCallback", false, e)
+                    // Last-resort fallback: single entry with our fallback kid
                     val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}],"type":"temporary"}"""
                     androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
                         fallback.toByteArray(Charsets.UTF_8))
@@ -2197,6 +2484,9 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  Hex utility
+    // ─────────────────────────────────────────────────────────────────────────
     private fun hexToBytes(hex: String): ByteArray {
         return try {
             val clean = hex.replace(" ", "").replace("-", "").lowercase()

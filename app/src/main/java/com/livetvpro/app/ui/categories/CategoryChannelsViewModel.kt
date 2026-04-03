@@ -25,8 +25,6 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
@@ -58,11 +56,9 @@ class CategoryChannelsViewModel @Inject constructor(
 
     val filteredChannels: LiveData<List<Channel>> = combine(
         _channels,
-        // Debounce search input so we don't filter on every keystroke with 100k+ channels
         _searchQuery.debounce(150),
         _selectedGroup
     ) { list, query, group ->
-        // Run the filter work on Default (CPU) dispatcher, not Main
         var filtered = list
 
         if (group != "All") {
@@ -134,11 +130,7 @@ class CategoryChannelsViewModel @Inject constructor(
                 M3uParser.convertToChannels(m3uChannels, playlist.id, playlist.title)
             } else {
                 withContext(Dispatchers.IO) {
-                    val client   = OkHttpClient()
-                    val request  = Request.Builder().url(playlistSource).build()
-                    val response = client.newCall(request).execute()
-                    val content  = response.body?.string() ?: ""
-                    val m3uChannels = M3uParser.parseM3uContent(content)
+                    val m3uChannels = M3uParser.parseM3uFromUrl(playlistSource)
                     M3uParser.convertToChannels(m3uChannels, playlist.id, playlist.title)
                 }
             }

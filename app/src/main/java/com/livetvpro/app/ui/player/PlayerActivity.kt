@@ -1958,8 +1958,8 @@ class PlayerActivity : AppCompatActivity() {
             val baseDataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30_000)
-                .setReadTimeoutMs(30_000)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
@@ -2045,10 +2045,10 @@ class PlayerActivity : AppCompatActivity() {
 
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    /* minBufferMs  */ 15_000,
-                    /* maxBufferMs  */ 50_000,
-                    /* bufferForPlaybackMs */ 2_500,
-                    /* bufferForPlaybackAfterRebufferMs */ 5_000
+                    /* minBufferMs              */ 5_000,
+                    /* maxBufferMs              */ 30_000,
+                    /* bufferForPlaybackMs      */ 1_500,
+                    /* bufferForPlaybackAfterRebufferMs */ 3_000
                 )
                 .build()
 
@@ -2059,6 +2059,15 @@ class PlayerActivity : AppCompatActivity() {
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setSeekBackIncrementMs(skipMs)
                 .setSeekForwardIncrementMs(skipMs)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(true)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    true
+                )
                 .build().also { exo ->
                     binding.playerView.player = exo
 
@@ -2089,6 +2098,28 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
                         urlLower.contains(".ism") || urlLower.contains(".isml") ->
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
+                        urlLower.contains(".flv") ->
+                            mediaItemBuilder.setMimeType("video/x-flv")
+                        urlLower.contains(".ts") || urlLower.contains(".mts") || urlLower.contains(".m2ts") ->
+                            mediaItemBuilder.setMimeType("video/mp2t")
+                        urlLower.contains(".mp4") || urlLower.contains(".m4v") || urlLower.contains(".m4a") ->
+                            mediaItemBuilder.setMimeType("video/mp4")
+                        urlLower.contains(".mkv") ->
+                            mediaItemBuilder.setMimeType("video/x-matroska")
+                        urlLower.contains(".webm") ->
+                            mediaItemBuilder.setMimeType("video/webm")
+                        urlLower.contains(".avi") ->
+                            mediaItemBuilder.setMimeType("video/avi")
+                        urlLower.contains(".mov") ->
+                            mediaItemBuilder.setMimeType("video/quicktime")
+                        urlLower.contains(".mp3") ->
+                            mediaItemBuilder.setMimeType("audio/mpeg")
+                        urlLower.contains(".aac") ->
+                            mediaItemBuilder.setMimeType("audio/aac")
+                        urlLower.startsWith("rtmp://") || urlLower.startsWith("rtmps://") ->
+                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
+                        urlLower.startsWith("rtsp://") ->
+                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
                     }
 
                     when {
@@ -2389,8 +2420,8 @@ class PlayerActivity : AppCompatActivity() {
             val licenseFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(30_000)
-                .setReadTimeoutMs(30_000)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
             val callback = HttpMediaDrmCallback(licenseUrl, licenseFactory)

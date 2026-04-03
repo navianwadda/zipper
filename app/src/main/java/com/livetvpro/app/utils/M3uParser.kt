@@ -24,9 +24,6 @@ object M3uParser {
         val drmKey: String? = null
     )
 
-    // -------------------------------------------------------------------------
-    // All regex patterns compiled ONCE here instead of per-channel per-call
-    // -------------------------------------------------------------------------
     private val PIPE_PARAM_PATTERN    = Regex("[&?]([^=]+)=(?:%7C|\\|)([^=]+)=([^&]+)")
     private val JSON_HEADER_PATTERN   = Regex("[&?](headers?|hdr|h)=(%7B[^&]+|\\{[^&]+)")
     private val COOKIE_MULTI_PATTERN  = Regex("[&?](c|cookie)\\d+=([^&]+)")
@@ -44,11 +41,9 @@ object M3uParser {
     private val HIDE_ME_PATTERN       = Regex("[?&]u=([^&]+)")
     private val CROXY_PATTERN         = Regex("croxyproxy\\.com/\\?url=([^&]+)")
 
-    // Pre-built patterns for the 7 base64 param names
     private val BASE64_PARAM_PATTERNS = listOf("data", "meta", "params", "h", "headers", "b64", "encoded")
         .map { name -> name to Regex("[&?]$name=([A-Za-z0-9+/=_-]{20,})") }
 
-    // Pre-built patterns for common header query params (used in extractHeadersFromQueryParams)
     private val COMMON_HEADER_PARAMS = mapOf(
         "ua"             to "User-Agent",
         "user-agent"     to "User-Agent",
@@ -69,17 +64,40 @@ object M3uParser {
             param to (header to Regex("[&?]$param=([^&]+)", RegexOption.IGNORE_CASE))
         }
 
-    // Pre-built patterns for fixed M3U attributes
     private val ATTR_PATTERN_CACHE = mutableMapOf<String, Pair<Regex, Regex>>()
     private fun attributePatterns(attribute: String): Pair<Regex, Regex> =
         ATTR_PATTERN_CACHE.getOrPut(attribute) {
             Regex("""$attribute="([^"]*)"""") to Regex("""$attribute=([^ ]*)""")
         }
 
-    // -------------------------------------------------------------------------
+    fun isXtreamUrl(url: String): Boolean {
+        val lower = url.lowercase()
+        return (lower.contains("/get.php") || lower.contains("/player_api.php")) &&
+                lower.contains("username=") && lower.contains("password=")
+    }
+
+    fun normalizeXtreamUrl(url: String): String {
+        return try {
+            val decoded = try { java.net.URLDecoder.decode(url, "UTF-8") } catch (_: Exception) { url }
+            val queryStart = decoded.indexOf('?').takeIf { it != -1 } ?: return url
+            val params = decoded.substring(queryStart + 1).split('&').associate { part ->
+                val eq = part.indexOf('=')
+                if (eq == -1) part to "" else part.substring(0, eq) to part.substring(eq + 1)
+            }
+            val username = params["username"] ?: return url
+            val password = params["password"] ?: return url
+            val pathStart = decoded.indexOf('/', decoded.indexOf("//") + 2).takeIf { it != -1 } ?: return url
+            val baseUrl = decoded.substring(0, pathStart)
+            "$baseUrl/get.php?username=$username&password=$password&type=m3u_plus&output=m3u8"
+        } catch (_: Exception) { url }
+    }
 
     suspend fun parseM3uFromUrl(m3uUrl: String): List<M3uChannel> {
-        val trimmedUrl = m3uUrl.trim()
+        val trimmedUrl = if (isXtreamUrl(m3uUrl.trim())) {
+            normalizeXtreamUrl(m3uUrl.trim())
+        } else {
+            m3uUrl.trim()
+        }
 
         if (trimmedUrl.startsWith("[") || trimmedUrl.startsWith("{")) {
             return parseJsonPlaylist(trimmedUrl)
@@ -368,9 +386,6 @@ object M3uParser {
         } catch (e: Exception) { url }
     }
 
-    // -------------------------------------------------------------------------
-    // Core parser — streams line-by-line instead of splitting the whole file
-    // -------------------------------------------------------------------------
     fun parseM3uContent(content: String): List<M3uChannel> {
         val channels = ArrayList<M3uChannel>(1024)
 
@@ -383,7 +398,6 @@ object M3uParser {
         var currentDrmKeyId: String?  = null
         var currentDrmKey: String?    = null
 
-        // Stream line-by-line — avoids creating a huge List<String> for the whole file
         content.reader().forEachLine { line ->
             val trimmedLine = line.trim()
             if (trimmedLine.isEmpty() || trimmedLine.startsWith("#EXTM3U")) return@forEachLine
@@ -488,9 +502,6 @@ object M3uParser {
         return channels
     }
 
-    // -------------------------------------------------------------------------
-    // Inline metadata — all Regex objects come from companion-level constants
-    // -------------------------------------------------------------------------
     private fun parseInlineMetadata(urlLine: String): Triple<String, Map<String, String>, Triple<String?, String?, String?>> {
         val headers    = mutableMapOf<String, String>()
         var drmScheme: String? = null
@@ -499,7 +510,6 @@ object M3uParser {
 
         var cleanUrl = urlLine.trim()
 
-        // Pipe-encoded header param
         val pipeParamMatch = PIPE_PARAM_PATTERN.find(cleanUrl)
         if (pipeParamMatch != null) {
             try {
@@ -516,7 +526,6 @@ object M3uParser {
             } catch (e: Exception) {}
         }
 
-        // Base64-encoded params (pre-compiled patterns)
         for ((_, pattern) in BASE64_PARAM_PATTERNS) {
             val match = pattern.find(cleanUrl) ?: continue
             try {
@@ -556,7 +565,6 @@ object M3uParser {
             } catch (e: Exception) {}
         }
 
-        // JSON headers param
         val jsonMatch = JSON_HEADER_PATTERN.find(cleanUrl)
         if (jsonMatch != null) {
             try {
@@ -570,7 +578,6 @@ object M3uParser {
             } catch (e: Exception) {}
         }
 
-        // Multiple cookie params
         val multipleCookies = mutableListOf<String>()
         var cookieMatch = COOKIE_MULTI_PATTERN.find(cleanUrl)
         while (cookieMatch != null) {
@@ -585,7 +592,6 @@ object M3uParser {
             headers["Cookie"] = multipleCookies.joinToString("; ")
         }
 
-        // Hash fragment params
         val hashIndex = cleanUrl.indexOf('#')
         if (hashIndex != -1) {
             val hashParts = cleanUrl.substring(hashIndex + 1).split('&')
@@ -602,7 +608,6 @@ object M3uParser {
             cleanUrl = cleanUrl.substring(0, hashIndex)
         }
 
-        // Double-colon encoded headers
         var doubleColonMatch = DOUBLE_COLON_PATTERN.find(cleanUrl)
         while (doubleColonMatch != null) {
             try {
@@ -620,7 +625,6 @@ object M3uParser {
             doubleColonMatch = DOUBLE_COLON_PATTERN.find(cleanUrl)
         }
 
-        // Semicolon-separated params
         val semicolonIndex = cleanUrl.indexOf(';')
         if (semicolonIndex != -1 && !cleanUrl.contains('|')) {
             val urlPart      = cleanUrl.substring(0, semicolonIndex).trim()
@@ -643,7 +647,6 @@ object M3uParser {
             }
         }
 
-        // Custom separators
         val customSeparators = listOf("$", "@@", "##", "%%")
         for (separator in customSeparators) {
             val sepIndex = cleanUrl.indexOf(separator)
@@ -670,14 +673,12 @@ object M3uParser {
             }
         }
 
-        // Query param headers
         val (urlAfterQuery, queryHeaders) = extractHeadersFromQueryParams(cleanUrl)
         headers.putAll(queryHeaders)
         cleanUrl = urlAfterQuery
 
         cleanUrl = cleanUrl.replace(TRAILING_SEP_PATTERN, "")
 
-        // Pipe-separated metadata at end of URL
         val pipeIndex = cleanUrl.indexOf('|')
         if (pipeIndex != -1) {
             val urlPart      = cleanUrl.substring(0, pipeIndex).trim()
@@ -751,7 +752,6 @@ object M3uParser {
         }
     }
 
-    // Uses cached compiled patterns — no per-call compilation
     private fun extractAttribute(line: String, attribute: String): String {
         val (quoted, unquoted) = attributePatterns(attribute)
         val match = quoted.find(line)
@@ -776,7 +776,6 @@ object M3uParser {
         }
     }
 
-    // Uses pre-compiled patterns from companion-level map — no per-call compilation
     private fun extractHeadersFromQueryParams(url: String): Pair<String, Map<String, String>> {
         val headers  = mutableMapOf<String, String>()
         var cleanUrl = url

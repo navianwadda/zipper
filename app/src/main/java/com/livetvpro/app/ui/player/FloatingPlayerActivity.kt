@@ -305,6 +305,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             referer = it.referer,
                             origin = it.origin,
                             userAgent = it.userAgent,
+                            xForwardedFor = it.xForwardedFor,
                             drmScheme = it.drmScheme,
                             drmLicenseUrl = it.drmLicenseUrl
                         )
@@ -653,6 +654,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                         referer = parsed.headers["Referer"] ?: "",
                         origin = parsed.headers["Origin"] ?: "",
                         userAgent = parsed.headers["User-Agent"] ?: "Default",
+                        xForwardedFor = parsed.headers["X-Forwarded-For"],
                         drmScheme = parsed.drmScheme,
                         drmLicenseUrl = parsed.drmLicenseUrl
                     )
@@ -741,6 +743,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                         referer = it.referer,
                         origin = it.origin,
                         userAgent = it.userAgent,
+                        xForwardedFor = it.xForwardedFor,
                         drmScheme = it.drmScheme,
                         drmLicenseUrl = it.drmLicenseUrl
                     )
@@ -899,6 +902,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     referer = it.referer,
                     origin = it.origin,
                     userAgent = it.userAgent,
+                    xForwardedFor = it.xForwardedFor,
                     drmScheme = it.drmScheme,
                     drmLicenseUrl = it.drmLicenseUrl
                 )
@@ -1168,6 +1172,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         link.cookie?.let { if (it.isNotEmpty()) params.add("cookie=$it") }
         link.origin?.let { if (it.isNotEmpty()) params.add("origin=$it") }
         link.userAgent?.let { if (it.isNotEmpty()) params.add("user-agent=$it") }
+        link.xForwardedFor?.let { if (it.isNotEmpty()) params.add("x-forwarded-for=$it") }
         link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
 

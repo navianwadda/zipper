@@ -181,6 +181,7 @@ class CategoryChannelsViewModel @Inject constructor(
                     referer       = channelLink.referer,
                     origin        = channelLink.origin,
                     userAgent     = channelLink.userAgent,
+                    xForwardedFor = channelLink.xForwardedFor,
                     drmScheme     = channelLink.drmScheme,
                     drmLicenseUrl = channelLink.drmLicenseUrl
                 )
@@ -220,6 +221,7 @@ class CategoryChannelsViewModel @Inject constructor(
         link.cookie?.let     { if (it.isNotEmpty()) parts.add("cookie=$it") }
         link.origin?.let     { if (it.isNotEmpty()) parts.add("origin=$it") }
         link.userAgent?.let  { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
+        link.xForwardedFor?.let { if (it.isNotEmpty()) parts.add("X-Forwarded-For=$it") }
         link.drmScheme?.let  { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) parts.add("drmLicense=$it") }
         return if (parts.size > 1) parts.joinToString("|") else parts[0]

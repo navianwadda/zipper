@@ -461,6 +461,20 @@ object M3uParser {
                     currentHeaders["Referer"] = trimmedLine.substringAfter("=").trim()
                 }
 
+                trimmedLine.startsWith("#EXTVLCOPT:http-cookie=") -> {
+                    currentHeaders["Cookie"] = trimmedLine.substringAfter("=").trim()
+                }
+
+                trimmedLine.startsWith("#EXTVLCOPT:http-header-add=") -> {
+                    val raw = trimmedLine.substringAfter("=").trim()
+                    val colonIdx = raw.indexOf(':')
+                    if (colonIdx != -1) {
+                        val key   = raw.substring(0, colonIdx).trim()
+                        val value = raw.substring(colonIdx + 1).trim()
+                        currentHeaders[key] = value
+                    }
+                }
+
                 trimmedLine.startsWith("#EXTHTTP:") -> {
                     try {
                         val jsonPart = trimmedLine.substringAfter("#EXTHTTP:").trim()

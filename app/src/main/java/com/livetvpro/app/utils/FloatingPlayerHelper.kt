@@ -239,15 +239,6 @@ object FloatingPlayerHelper {
 
     fun getInstanceIdForEvent(eventId: String): String? = eventToInstanceMap[eventId]
 
-    /**
-     * Parses a pipe-encoded stream URL into a ChannelLink with all DRM and header
-     * fields correctly populated. Used when an M3U channel has no explicit links list.
-     *
-     * Example input:
-     *   "https:
-     * Produces ChannelLink with url="https:
-     *   drmLicenseUrl="de8045e9:6807bd09"
-     */
     private fun parseLinkFromStreamUrl(streamUrl: String): ChannelLink {
         val pipeIndex = streamUrl.indexOf('|')
         if (pipeIndex == -1) {

@@ -110,6 +110,7 @@ class PlayerViewModel @Inject constructor(
                         referer = channelLink.referer,
                         origin = channelLink.origin,
                         userAgent = channelLink.userAgent,
+                        xForwardedFor = channelLink.xForwardedFor,
                         drmScheme = channelLink.drmScheme,
                         drmLicenseUrl = channelLink.drmLicenseUrl
                     )

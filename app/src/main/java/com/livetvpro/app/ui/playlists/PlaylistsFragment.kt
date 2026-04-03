@@ -30,6 +30,7 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Playlist
 import com.livetvpro.app.databinding.FragmentPlaylistsBinding
 import com.livetvpro.app.ui.adapters.PlaylistAdapter
+import com.livetvpro.app.utils.M3uParser
 import com.livetvpro.app.utils.DeviceUtils
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -300,10 +301,32 @@ class PlaylistsFragment : Fragment() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_playlist, null)
         val titleInput = dialogView.findViewById<EditText>(R.id.input_title)
         val urlInput = dialogView.findViewById<EditText>(R.id.input_url)
+
+        val xtreamHint = android.widget.TextView(requireContext()).apply {
+            text = "✓ Xtream Codes URL detected — will be loaded as M3U playlist"
+            textSize = 12f
+            setTextColor(0xFF4CAF50.toInt())
+            setPadding(16, 4, 16, 0)
+            visibility = android.view.View.GONE
+        }
+        (urlInput.parent as? android.view.ViewGroup)?.addView(xtreamHint)
+
         if (isFile) {
             urlInput.isEnabled = false
             urlInput.setText(fileUri?.toString() ?: "")
+        } else {
+            urlInput.addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: android.text.Editable?) {
+                    val typed = s?.toString()?.trim() ?: ""
+                    xtreamHint.visibility = if (
+                        M3uParser.isXtreamUrl(typed)
+                    ) android.view.View.VISIBLE else android.view.View.GONE
+                }
+            })
         }
+
         val builtDialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle("Add Playlist")
             .setView(dialogView)

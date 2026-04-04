@@ -113,6 +113,11 @@ class ChannelAdapter(
         }
     }
 
+    fun refreshItem(channelId: String) {
+        val position = snapshot().indexOfFirst { it?.id == channelId }
+        if (position != RecyclerView.NO_POSITION) notifyItemChanged(position)
+    }
+
     private class ChannelDiffCallback : DiffUtil.ItemCallback<Channel>() {
         override fun areItemsTheSame(oldItem: Channel, newItem: Channel) = oldItem.id == newItem.id
         override fun areContentsTheSame(oldItem: Channel, newItem: Channel) = oldItem == newItem

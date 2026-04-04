@@ -524,10 +524,8 @@ class PlayerActivity : AppCompatActivity() {
     private fun applyResizeModeForOrientation(isLandscape: Boolean) {
         if (isLandscape) {
             binding.playerView.resizeMode = networkLandscapeResizeMode
-        } else if (contentType == ContentType.NETWORK_STREAM) {
-            binding.playerView.resizeMode = networkPortraitResizeMode
         } else {
-            binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+            binding.playerView.resizeMode = networkPortraitResizeMode
         }
     }
 
@@ -1249,12 +1247,11 @@ class PlayerActivity : AppCompatActivity() {
             else                                     -> AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
 
-        if (isLandscape) networkLandscapeResizeMode = next
-        else networkPortraitResizeMode = next
-
         if (preferencesManager.isRememberAspectRatioEnabled()) {
+            if (isLandscape) networkLandscapeResizeMode = next
+            else networkPortraitResizeMode = next
             if (isLandscape) preferencesManager.setSavedAspectRatio(next)
-            else if (contentType == ContentType.NETWORK_STREAM) preferencesManager.setSavedAspectRatioPortrait(next)
+            else preferencesManager.setSavedAspectRatioPortrait(next)
         }
 
         binding.playerView.resizeMode = next
@@ -2117,10 +2114,8 @@ class PlayerActivity : AppCompatActivity() {
                     if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
                         val savedLandscape = preferencesManager.getSavedAspectRatio()
                         if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
-                        if (contentType == ContentType.NETWORK_STREAM) {
-                            val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
-                            if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
-                        }
+                        val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
+                        if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
                     }
 
                     applyResizeModeForOrientation(

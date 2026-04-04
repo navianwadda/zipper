@@ -8,7 +8,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.livetvpro.app.data.local.dao.ChannelDao
 import com.livetvpro.app.data.local.dao.FavoriteChannelDao
 import com.livetvpro.app.data.local.dao.PlaylistDao
-import com.livetvpro.app.data.local.entity.ChannelConverters
 import com.livetvpro.app.data.local.entity.ChannelEntity
 import com.livetvpro.app.data.local.entity.FavoriteChannelEntity
 import com.livetvpro.app.data.local.entity.FavoriteChannelConverters
@@ -19,7 +18,7 @@ import com.livetvpro.app.data.local.entity.PlaylistEntity
     version = 2,
     exportSchema = false
 )
-@TypeConverters(FavoriteChannelConverters::class, ChannelConverters::class)
+@TypeConverters(FavoriteChannelConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun favoriteChannelDao(): FavoriteChannelDao
     abstract fun playlistDao(): PlaylistDao

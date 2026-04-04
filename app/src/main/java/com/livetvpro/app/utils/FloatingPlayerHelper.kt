@@ -119,7 +119,26 @@ object FloatingPlayerHelper {
 
         if (!hasOverlayPermission(context)) return null
         if (streamUrl.isBlank()) return null
-        if (!FloatingPlayerManager.canAddNewPlayer()) return null
+        if (!FloatingPlayerManager.canAddNewPlayer()) {
+            val lastId = FloatingPlayerManager.getLastPlayerId()
+            if (lastId != null) {
+                FloatingPlayerService.updateFloatingPlayerWithNetworkStream(
+                    context = context,
+                    instanceId = lastId,
+                    streamUrl = streamUrl,
+                    cookie = cookie,
+                    referer = referer,
+                    origin = origin,
+                    drmLicense = drmLicense,
+                    userAgent = userAgent,
+                    drmScheme = drmScheme,
+                    streamName = streamName,
+                    xForwardedFor = xForwardedFor
+                )
+                return lastId
+            }
+            return null
+        }
 
         val instanceId = UUID.randomUUID().toString()
         FloatingPlayerManager.addPlayer(instanceId, streamName, "network_stream")

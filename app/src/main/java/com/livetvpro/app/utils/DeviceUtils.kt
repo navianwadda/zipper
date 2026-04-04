@@ -64,6 +64,12 @@ object DeviceUtils {
         // even on real touch phones, making them incorrectly classified as TV devices.
         if (hasPhysicalTouchscreen()) return false
 
+        // Guard against phones being misclassified as TV when rotated to landscape.
+        // The touchscreen InputDevice check above can miss on some devices at init time
+        // (e.g. when rotated, input devices may not yet be fully reported). Phones have
+        // smallestScreenWidthDp well below 450dp, while real TV boxes are 600dp+.
+        if (context.resources.configuration.smallestScreenWidthDp < 450) return false
+
         // Double-check with UiModeManager — the authoritative TV signal on Android.
         val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
         if (uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION) return true

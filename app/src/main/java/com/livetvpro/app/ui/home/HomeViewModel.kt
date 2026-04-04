@@ -21,7 +21,8 @@ class HomeViewModel @Inject constructor(
     private val _filteredCategories = MutableLiveData<List<Category>>()
     val filteredCategories: LiveData<List<Category>> = _filteredCategories
 
-    private var currentSearchQuery = ""
+    var currentSearchQuery = ""
+        private set
 
     init {
         loadData()

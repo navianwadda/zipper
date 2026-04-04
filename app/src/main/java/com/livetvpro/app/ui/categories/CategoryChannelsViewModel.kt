@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -59,8 +58,8 @@ class CategoryChannelsViewModel @Inject constructor(
 
     val channelsPaged: Flow<PagingData<Channel>> = combine(
         _categoryId,
-        _searchQuery.debounce(200).distinctUntilChanged(),
-        _selectedGroup.distinctUntilChanged()
+        _searchQuery.debounce(200),
+        _selectedGroup
     ) { categoryId, query, group ->
         Triple(categoryId, query, group)
     }

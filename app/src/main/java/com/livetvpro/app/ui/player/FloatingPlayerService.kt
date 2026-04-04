@@ -96,6 +96,7 @@ class FloatingPlayerService : Service() {
         const val ACTION_UPDATE_STREAM = "action_update_stream"
         const val ACTION_HIDE_OTHERS = "action_hide_others"
         const val ACTION_SHOW_ALL = "action_show_all"
+        const val ACTION_UPDATE_NETWORK_STREAM = "action_update_network_stream"
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "floating_player_channel"
 
@@ -209,6 +210,35 @@ class FloatingPlayerService : Service() {
             context.startService(intent)
         }
 
+        fun updateFloatingPlayerWithNetworkStream(
+            context: Context,
+            instanceId: String,
+            streamUrl: String,
+            cookie: String = "",
+            referer: String = "",
+            origin: String = "",
+            drmLicense: String = "",
+            userAgent: String = "Default",
+            drmScheme: String = "clearkey",
+            streamName: String = "Network Stream",
+            xForwardedFor: String = ""
+        ) {
+            val intent = Intent(context, FloatingPlayerService::class.java).apply {
+                action = ACTION_UPDATE_NETWORK_STREAM
+                putExtra(EXTRA_INSTANCE_ID, instanceId)
+                putExtra("STREAM_URL", streamUrl)
+                putExtra("COOKIE", cookie)
+                putExtra("REFERER", referer)
+                putExtra("ORIGIN", origin)
+                putExtra("DRM_LICENSE", drmLicense)
+                putExtra("USER_AGENT", userAgent)
+                putExtra("DRM_SCHEME", drmScheme)
+                putExtra("CHANNEL_NAME", streamName)
+                putExtra("X_FORWARDED_FOR", xForwardedFor)
+            }
+            context.startService(intent)
+        }
+
         fun stopFloatingPlayer(context: Context, instanceId: String) {
             val intent = Intent(context, FloatingPlayerService::class.java).apply {
                 action = ACTION_STOP_INSTANCE
@@ -283,7 +313,22 @@ class FloatingPlayerService : Service() {
                 activeInstances.values.forEach { it.floatingView.visibility = View.VISIBLE }
                 return START_STICKY
             }
-        }
+            ACTION_UPDATE_NETWORK_STREAM -> {
+                val instanceId = intent.getStringExtra(EXTRA_INSTANCE_ID)
+                val streamUrl = intent.getStringExtra("STREAM_URL") ?: ""
+                val cookie = intent.getStringExtra("COOKIE") ?: ""
+                val referer = intent.getStringExtra("REFERER") ?: ""
+                val origin = intent.getStringExtra("ORIGIN") ?: ""
+                val drmLicense = intent.getStringExtra("DRM_LICENSE") ?: ""
+                val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
+                val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
+                val streamName = intent.getStringExtra("CHANNEL_NAME") ?: "Network Stream"
+                val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
+                if (instanceId != null && streamUrl.isNotBlank()) {
+                    updateInstanceStreamWithNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor)
+                }
+                return START_STICKY
+            }
 
         val instanceId = intent?.getStringExtra(EXTRA_INSTANCE_ID) ?: java.util.UUID.randomUUID().toString()
         val isRestoredFromFullscreen = intent?.getBooleanExtra("use_transferred_player", false) == true
@@ -470,13 +515,13 @@ class FloatingPlayerService : Service() {
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
-                .setHandleAudioBecomingNoisy(true)
+                .setHandleAudioBecomingNoisy(false)
                 .setAudioAttributes(
                     androidx.media3.common.AudioAttributes.Builder()
                         .setUsage(C.USAGE_MEDIA)
                         .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                         .build(),
-                    true
+                    false
                 )
                 .build()
             val playerView = floatingView.findViewById<PlayerView>(R.id.player_view)
@@ -824,13 +869,13 @@ class FloatingPlayerService : Service() {
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(nsMediaSourceFactory)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
-                .setHandleAudioBecomingNoisy(true)
+                .setHandleAudioBecomingNoisy(false)
                 .setAudioAttributes(
                     androidx.media3.common.AudioAttributes.Builder()
                         .setUsage(C.USAGE_MEDIA)
                         .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                         .build(),
-                    true
+                    false
                 )
                 .build()
 
@@ -958,13 +1003,13 @@ class FloatingPlayerService : Service() {
                 .setTrackSelector(trackSelector2)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
-                .setHandleAudioBecomingNoisy(true)
+                .setHandleAudioBecomingNoisy(false)
                 .setAudioAttributes(
                     androidx.media3.common.AudioAttributes.Builder()
                         .setUsage(C.USAGE_MEDIA)
                         .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                         .build(),
-                    true
+                    false
                 )
                 .build()
             newPlayer.volume = if (wasMuted) 0f else 1f
@@ -976,6 +1021,108 @@ class FloatingPlayerService : Service() {
             newPlayer.playWhenReady = true
 
             activeInstances[instanceId] = instance.copy(player = newPlayer)
+            val btnPlayPause = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
+            attachPlayerListener(newPlayer, btnPlayPause, instanceId)
+
+            updateNotification()
+
+        } catch (e: Exception) {
+        }
+    }
+
+    private fun updateInstanceStreamWithNetworkStream(
+        instanceId: String,
+        streamUrl: String,
+        cookie: String,
+        referer: String,
+        origin: String,
+        drmLicense: String,
+        userAgent: String,
+        drmScheme: String,
+        streamName: String,
+        xForwardedFor: String
+    ) {
+        val instance = activeInstances[instanceId] ?: return
+
+        try {
+            val headers = mutableMapOf<String, String>()
+            if (cookie.isNotEmpty()) headers["Cookie"] = cookie
+            if (referer.isNotEmpty()) headers["Referer"] = referer
+            if (origin.isNotEmpty()) headers["Origin"] = origin
+            if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
+            val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
+                userAgent else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            headers["User-Agent"] = effectiveUserAgent
+
+            val nsStreamInfo = buildStreamInfoFromDrmFields(streamUrl, headers, drmScheme, drmLicense)
+            val dataSourceFactory = DefaultHttpDataSource.Factory()
+                .setUserAgent(effectiveUserAgent)
+                .setDefaultRequestProperties(headers)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
+                .setAllowCrossProtocolRedirects(true)
+                .setKeepPostFor302Redirects(true)
+            val mediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, dataSourceFactory, headers)
+
+            val titleText = instance.floatingView.findViewById<TextView>(R.id.tv_title)
+            titleText.text = streamName
+
+            val wasMuted = instance.isMuted
+            instance.player.stop()
+            instance.player.release()
+
+            val renderersFactory = DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
+                .build()
+            val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
+                parameters = buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedChannelCountAdaptiveness(true)
+                    .build()
+            }
+            val newPlayer = ExoPlayer.Builder(this)
+                .setRenderersFactory(renderersFactory)
+                .setLoadControl(loadControl)
+                .setTrackSelector(trackSelector)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(false)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    false
+                )
+                .build()
+            newPlayer.volume = if (wasMuted) 0f else 1f
+            instance.playerView.player = newPlayer
+
+            newPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
+            newPlayer.prepare()
+            newPlayer.playWhenReady = true
+
+            activeInstances[instanceId] = instance.copy(
+                player = newPlayer,
+                currentChannel = null,
+                currentEvent = null,
+                isNetworkStream = true,
+                networkStreamUrl = streamUrl,
+                networkStreamName = streamName,
+                networkCookie = cookie,
+                networkReferer = referer,
+                networkOrigin = origin,
+                networkDrmLicense = drmLicense,
+                networkUserAgent = userAgent,
+                networkDrmScheme = drmScheme,
+                networkXForwardedFor = xForwardedFor
+            )
+            val btnPlayPause = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
+            attachPlayerListener(newPlayer, btnPlayPause, instanceId)
 
             updateNotification()
 
@@ -1114,51 +1261,45 @@ class FloatingPlayerService : Service() {
             activeInstances[instanceId]?.player?.seekForward()
         }
 
+        attachPlayerListener(player, btnPlayPause, instanceId)
+
+        setupResizeFunctionality(floatingView, btnResize, params, instanceId)
+        setupDragFunctionality(floatingView, params, playerView, lockOverlay, unlockButton, instanceId)
+    }
+
+    private fun attachPlayerListener(player: ExoPlayer, btnPlayPause: ImageButton?, instanceId: String) {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                val hasError = activeInstances[instanceId]?.player?.playerError != null
+                val instance = activeInstances[instanceId] ?: return
+                if (instance.player !== player) return
+                val hasError = player.playerError != null
                 if (!hasError) {
                     btnPlayPause?.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
                 }
             }
 
-            override fun onPlaybackStateChanged(playbackState: Int) { }
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                val instance = activeInstances[instanceId] ?: return
+                if (instance.player !== player) return
+                val hasError = player.playerError != null
+                if (!hasError) {
+                    val isPlaying = player.isPlaying
+                    when (playbackState) {
+                        Player.STATE_BUFFERING -> btnPlayPause?.setImageResource(R.drawable.ic_pause)
+                        Player.STATE_READY -> btnPlayPause?.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
+                        Player.STATE_ENDED -> btnPlayPause?.setImageResource(R.drawable.ic_play)
+                        else -> {}
+                    }
+                }
+            }
 
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 super.onPlayerError(error)
-
-                val errorMessage = when {
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_TIMEOUT ->
-                        "Connection Failed"
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> when {
-                        error.message?.contains("403") == true -> "Access Denied"
-                        error.message?.contains("404") == true -> "Stream Not Found"
-                        else -> "Playback Error"
-                    }
-                    error.message?.contains("drm", ignoreCase = true) == true ||
-                    error.message?.contains("widevine", ignoreCase = true) == true ||
-                    error.message?.contains("clearkey", ignoreCase = true) == true ||
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DRM_PROVISIONING_FAILED ||
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED ||
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
-                    error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ->
-                        "Stream Error"
-                    error.message?.contains("geo", ignoreCase = true) == true ||
-                    error.message?.contains("region", ignoreCase = true) == true ->
-                        "Not Available"
-                    else -> "Playback Error"
-                }
-
+                val instance = activeInstances[instanceId] ?: return
+                if (instance.player !== player) return
                 btnPlayPause?.setImageResource(R.drawable.ic_error_outline)
-
             }
         })
-
-        setupResizeFunctionality(floatingView, btnResize, params, instanceId)
-        setupDragFunctionality(floatingView, params, playerView, lockOverlay, unlockButton, instanceId)
     }
 
     private fun setupResizeFunctionality(
@@ -1418,13 +1559,13 @@ class FloatingPlayerService : Service() {
                     .setTrackSelector(trackSelector3)
                     .setMediaSourceFactory(mediaSourceFactory)
                     .setWakeMode(C.WAKE_MODE_NETWORK)
-                    .setHandleAudioBecomingNoisy(true)
+                    .setHandleAudioBecomingNoisy(false)
                     .setAudioAttributes(
                         androidx.media3.common.AudioAttributes.Builder()
                             .setUsage(C.USAGE_MEDIA)
                             .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                             .build(),
-                        true
+                        false
                     )
                     .build()
 
@@ -1434,6 +1575,8 @@ class FloatingPlayerService : Service() {
                 newPlayer.playWhenReady = true
 
                 activeInstances[instanceId] = instance.copy(player = newPlayer)
+                val btnPlayPause = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
+                attachPlayerListener(newPlayer, btnPlayPause, instanceId)
             } else {
                 updateInstanceStream(instanceId, instance.currentChannel, instance.currentEvent, 0)
             }

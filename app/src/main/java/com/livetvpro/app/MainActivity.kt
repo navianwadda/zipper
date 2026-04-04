@@ -172,22 +172,38 @@ class MainActivity : AppCompatActivity() {
     private fun handleStatusBarForOrientation() {
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+
+        // Always edge-to-edge — setDecorFitsSystemWindows(true) is ignored on API 36+
+        // where the OS enforces edge-to-edge unconditionally. We compensate by applying
+        // the status bar inset as padding on AppBarLayout instead (see listener below).
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         if (isLandscape) {
-            WindowCompat.setDecorFitsSystemWindows(window, false)
             windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
             windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         } else {
-            WindowCompat.setDecorFitsSystemWindows(window, true)
             windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
             windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-            window.statusBarColor = android.graphics.Color.BLACK
             windowInsetsController.isAppearanceLightStatusBars = false
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
             }
+        }
+
+        // Push the toolbar below the status bar by applying the real inset as top
+        // padding on AppBarLayout. This works on all API levels including API 36+
+        // where setDecorFitsSystemWindows(true) no longer has any effect.
+        val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
+        if (appBarLayout != null) {
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(appBarLayout) { view, insets ->
+                val topInset = if (isLandscape) 0 else insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+                view.setPadding(0, topInset, 0, 0)
+                insets
+            }
+            androidx.core.view.ViewCompat.requestApplyInsets(appBarLayout)
         }
     }
 

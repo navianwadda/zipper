@@ -4,7 +4,9 @@ import android.app.UiModeManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.hardware.input.InputManager
 import android.os.Build
+import android.view.InputDevice
 
 object DeviceUtils {
 
@@ -56,11 +58,11 @@ object DeviceUtils {
     }
 
     private fun isTvHardware(pm: PackageManager, context: Context): Boolean {
-        // Real TVs never have a touchscreen. Some OEM phones incorrectly report
-        // FEATURE_LEANBACK even with required="false" in the manifest, which caused
-        // phones in landscape to get the TV keyboard and TV navigation. Guard against
-        // this by rejecting any device that has a touchscreen.
-        if (pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) return false
+        // Use InputDevice to detect a physical touchscreen — this checks actual hardware
+        // and cannot be fooled by the manifest declaring touchscreen as required="false",
+        // which causes hasSystemFeature(FEATURE_TOUCHSCREEN) to return false on some OEMs
+        // even on real touch phones, making them incorrectly classified as TV devices.
+        if (hasPhysicalTouchscreen()) return false
 
         // Double-check with UiModeManager — the authoritative TV signal on Android.
         val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
@@ -69,6 +71,16 @@ object DeviceUtils {
         return pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
             || pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)
             || pm.hasSystemFeature("amazon.hardware.fire_tv")
+    }
+
+    private fun hasPhysicalTouchscreen(): Boolean {
+        // Check all connected input devices for a touchscreen source.
+        // This is hardware-level and unaffected by manifest uses-feature declarations.
+        return InputDevice.getDeviceIds().any { id ->
+            val device = InputDevice.getDevice(id) ?: return@any false
+            !device.isVirtual &&
+                (device.sources and InputDevice.SOURCE_TOUCHSCREEN) == InputDevice.SOURCE_TOUCHSCREEN
+        }
     }
 
     private fun isWatchHardware(pm: PackageManager): Boolean {

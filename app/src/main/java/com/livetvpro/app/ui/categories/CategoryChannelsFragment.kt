@@ -71,7 +71,19 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     }
     private val NUMPAD_RESET_MS = 2000L
 
-    override fun onSearchQuery(query: String) { viewModel.searchChannels(query) }
+    // Saved scroll position before search so cancel restores it naturally
+    private var savedScrollState: android.os.Parcelable? = null
+
+    override fun onSearchQuery(query: String) {
+        if (query.isBlank() && viewModel.currentSearchQuery.isNotBlank()) {
+            // Cancelling search — snapshot scroll position before list expands
+            savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
+        } else if (query.isNotBlank() && viewModel.currentSearchQuery.isBlank()) {
+            // Starting search — snapshot so cancel can return here
+            savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
+        }
+        viewModel.searchChannels(query)
+    }
     override fun refreshData() { currentCategoryId?.let { viewModel.loadChannels(it) } }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -330,8 +342,11 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 recyclerView.requestFocus()
             }
         } else {
-            searchEditText.setOnFocusChangeListener { _, hasFocus ->
+            val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            searchEditText.setOnFocusChangeListener { view, hasFocus ->
                 clearSearchBtn.visibility = if (hasFocus) View.VISIBLE else View.GONE
+                // Dismiss keyboard when user taps away from the search field
+                if (!hasFocus) imm.hideSoftInputFromWindow(view.windowToken, 0)
             }
             searchEditText.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -347,6 +362,11 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 searchEditText.text.clear()
                 searchEditText.clearFocus()
             }
+            // On open, focus the list not the search field — user taps search only when they want to type
+            dialog.setOnShowListener {
+                recyclerView.requestFocus()
+                imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
+            }
         }
 
         closeButton.setOnClickListener { dialog.dismiss() }
@@ -360,7 +380,15 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
 
     private fun observeViewModel() {
         viewModel.filteredChannels.observe(viewLifecycleOwner) { channels ->
-            channelAdapter.submitList(channels)
+            // Restore scroll after search cancel OR group switch — whichever saved it last
+            val restoreState = savedScrollState
+            channelAdapter.submitList(channels) {
+                // Called after DiffUtil finishes and RecyclerView has drawn the new list
+                if (restoreState != null && restoreState === savedScrollState) {
+                    binding.recyclerViewChannels.layoutManager?.onRestoreInstanceState(restoreState)
+                    savedScrollState = null
+                }
+            }
             if (viewModel.isLoading.value != true && viewModel.error.value == null) {
                 binding.emptyView.visibility = if (channels.isEmpty()) View.VISIBLE else View.GONE
                 binding.recyclerViewChannels.visibility = if (channels.isEmpty()) View.GONE else View.VISIBLE
@@ -396,7 +424,11 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         binding.tabLayoutGroups.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 if (suppressTabListener) return
-                tab?.text?.toString()?.let { groupName -> viewModel.selectGroup(groupName) }
+                tab?.text?.toString()?.let { groupName ->
+                    // Save scroll position before the group filter swaps the list
+                    savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
+                    viewModel.selectGroup(groupName)
+                }
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}

@@ -19,6 +19,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -86,6 +87,9 @@ class NativeDataRepository @Inject constructor(
     private var q3: String = ""
     private var q4: String = ""
 
+    // In-memory cache so getChannels() never re-parses JSON on repeated calls
+    private val channelCache = AtomicReference<List<Channel>?>(null)
+
     init {
         try {
             val cfg = remoteConfigSettings { minimumFetchIntervalInSeconds = if (isDebugBuild()) 0L else 1200L }
@@ -132,7 +136,11 @@ class NativeDataRepository @Inject constructor(
                     val body = resp.body?.string()
                     if (body.isNullOrBlank()) return@withContext q5()
                     val ok = p5(body)
-                    if (ok) { q3 = body; return@withContext true } else return@withContext q5()
+                    if (ok) {
+                        q3 = body
+                        channelCache.set(null) // invalidate cache on new data
+                        return@withContext true
+                    } else return@withContext q5()
                 }
             } catch (e: Exception) { return@withContext q5() }
         }
@@ -144,9 +152,18 @@ class NativeDataRepository @Inject constructor(
         val j = p6(); if (j.isEmpty() || j == "[]") emptyList() else gson.fromJson(j, Array<Category>::class.java).toList()
     } catch (e: Exception) { emptyList() }
 
-    fun getChannels(): List<Channel> = try {
-        val j = p7(); if (j.isEmpty() || j == "[]") emptyList() else gson.fromJson(j, Array<Channel>::class.java).toList()
-    } catch (e: Exception) { emptyList() }
+    fun getChannels(): List<Channel> {
+        channelCache.get()?.let { return it }
+        return try {
+            val j = p7()
+            if (j.isEmpty() || j == "[]") emptyList()
+            else {
+                val parsed = gson.fromJson(j, Array<Channel>::class.java).toList()
+                channelCache.set(parsed)
+                parsed
+            }
+        } catch (e: Exception) { emptyList() }
+    }
 
     fun getLiveEvents(): List<LiveEvent> = try {
         val j = p8(); if (j.isEmpty() || j == "[]") emptyList() else gson.fromJson(j, Array<LiveEvent>::class.java).toList()

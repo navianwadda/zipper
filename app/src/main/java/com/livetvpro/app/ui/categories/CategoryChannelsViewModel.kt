@@ -105,19 +105,15 @@ class CategoryChannelsViewModel @Inject constructor(
                 val playlist = playlistRepository.getPlaylistById(categoryId)
 
                 if (playlist != null) {
-                    if (!channelRepository.isCategorySynced(categoryId)) {
-                        channelRepository.syncPlaylist(
-                            playlistId    = playlist.id,
-                            playlistTitle = playlist.title,
-                            source        = if (playlist.isFile) playlist.filePath else playlist.url,
-                            isFile        = playlist.isFile,
-                            application   = getApplication()
-                        )
-                    }
+                    channelRepository.syncPlaylist(
+                        playlistId    = playlist.id,
+                        playlistTitle = playlist.title,
+                        source        = if (playlist.isFile) playlist.filePath else playlist.url,
+                        isFile        = playlist.isFile,
+                        application   = getApplication()
+                    )
                 } else {
-                    if (!channelRepository.isCategorySynced(categoryId)) {
-                        channelRepository.syncCategory(categoryId)
-                    }
+                    channelRepository.syncCategory(categoryId)
                 }
 
                 _categoryId.value = categoryId

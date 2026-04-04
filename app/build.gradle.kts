@@ -17,8 +17,8 @@ android {
         applicationId = "com.livetvpro.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.5.3"
+        versionCode = 4
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -150,7 +150,11 @@ dependencies {
     val roomVersion = "2.7.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
+    implementation("androidx.room:room-paging:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
+
+    val pagingVersion = "3.3.6"
+    implementation("androidx.paging:paging-runtime-ktx:$pagingVersion")
 
     // Jetpack Compose - Required for PlayerActivity
     val composeBom = platform("androidx.compose:compose-bom:2025.06.01")

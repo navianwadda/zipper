@@ -7,7 +7,7 @@ import com.livetvpro.app.data.local.entity.ChannelEntity
 @Dao
 interface ChannelDao {
 
-    @Query("SELECT * FROM channels WHERE categoryId = :categoryId ORDER BY name ASC")
+    @Query("SELECT * FROM channels WHERE categoryId = :categoryId ORDER BY position ASC")
     suspend fun getChannelsByCategory(categoryId: String): List<ChannelEntity>
 
     @Query("""
@@ -15,8 +15,7 @@ interface ChannelDao {
         WHERE categoryId = :categoryId
           AND (:group = 'All' OR groupTitle = :group)
           AND (:query = '' OR name LIKE '%' || :query || '%')
-        ORDER BY name ASC
-    """)
+        ORDER BY position ASC
     fun getChannelsPaged(
         categoryId: String,
         group: String = "All",

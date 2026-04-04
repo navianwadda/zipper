@@ -67,7 +67,8 @@ class FloatingPlayerService : Service() {
         var networkDrmLicense: String? = null,
         var networkUserAgent: String? = null,
         var networkDrmScheme: String? = null,
-        var networkXForwardedFor: String? = null
+        var networkXForwardedFor: String? = null,
+        var currentLinkIndex: Int = 0
     )
 
     private var windowManager: WindowManager? = null
@@ -205,6 +206,17 @@ class FloatingPlayerService : Service() {
                 action = ACTION_UPDATE_STREAM
                 putExtra(EXTRA_INSTANCE_ID, instanceId)
                 putExtra(EXTRA_CHANNEL, channel)
+                putExtra(EXTRA_LINK_INDEX, linkIndex)
+            }
+            context.startService(intent)
+        }
+
+        fun updateFloatingPlayerWithEvent(context: Context, instanceId: String, channel: Channel, event: com.livetvpro.app.data.models.LiveEvent, linkIndex: Int) {
+            val intent = Intent(context, FloatingPlayerService::class.java).apply {
+                action = ACTION_UPDATE_STREAM
+                putExtra(EXTRA_INSTANCE_ID, instanceId)
+                putExtra(EXTRA_CHANNEL, channel)
+                putExtra(EXTRA_EVENT, event)
                 putExtra(EXTRA_LINK_INDEX, linkIndex)
             }
             context.startService(intent)
@@ -555,7 +567,8 @@ class FloatingPlayerService : Service() {
                 currentChannel = channel,
                 currentEvent = event,
                 lockOverlay = lockOverlay,
-                unlockButton = unlockButton
+                unlockButton = unlockButton,
+                currentLinkIndex = linkIndex
             )
 
             activeInstances[instanceId] = instance
@@ -987,6 +1000,7 @@ class FloatingPlayerService : Service() {
             instance.networkUserAgent = null
             instance.networkDrmScheme = null
             instance.networkXForwardedFor = null
+            instance.currentLinkIndex = linkIndex
 
             val titleText = instance.floatingView.findViewById<TextView>(R.id.tv_title)
             titleText.text = channel?.name ?: event?.title ?: "Unknown"
@@ -1207,6 +1221,7 @@ class FloatingPlayerService : Service() {
                     } else {
                         if (currentChannel != null) putExtra("extra_channel", currentChannel)
                         if (currentEvent != null) putExtra("extra_event", currentEvent)
+                        putExtra("extra_selected_link_index", inst?.currentLinkIndex ?: 0)
                     }
                     putExtra("use_transferred_player", true)
                     putExtra("source_instance_id", instanceId)

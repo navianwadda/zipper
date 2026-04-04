@@ -58,7 +58,6 @@ class PlayerViewModel @Inject constructor(
                 val channels = when {
                     categoryId == "sports_slug" -> nativeDataRepository.getSports()
                     categoryId.isNotEmpty() -> {
-                        // Check if this categoryId belongs to a playlist first
                         val playlist = playlistRepository.getPlaylistById(categoryId)
                         if (playlist != null) {
                             loadChannelsFromPlaylist(playlist)
@@ -115,7 +114,7 @@ class PlayerViewModel @Inject constructor(
                         drmLicenseUrl = channelLink.drmLicenseUrl
                     )
                 }
-                
+
                 val favorite = FavoriteChannel(
                     id = channel.id,
                     name = channel.name,
@@ -132,7 +131,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun loadRandomRelatedChannels(
-        categoryId: String, 
+        categoryId: String,
         currentChannelId: String,
         groupFilter: String? = null
     ) {
@@ -144,7 +143,7 @@ class PlayerViewModel @Inject constructor(
             try {
 
                 val playlist = playlistRepository.getPlaylistById(categoryId)
-                
+
                 val allChannels = if (playlist != null) {
 
                     loadChannelsFromPlaylist(playlist)
@@ -152,29 +151,29 @@ class PlayerViewModel @Inject constructor(
 
                     channelRepository.getChannelsByCategory(categoryId)
                 }
-                
+
 
                 var availableChannels = allChannels.filter { it.id != currentChannelId }
-                
+
 
                 if (!groupFilter.isNullOrEmpty() && groupFilter != "All") {
-                    availableChannels = availableChannels.filter { 
-                        it.groupTitle == groupFilter 
+                    availableChannels = availableChannels.filter {
+                        it.groupTitle == groupFilter
                     }
                 }
-                
+
 
                 if (availableChannels.isEmpty()) {
                     _relatedItems.postValue(emptyList())
                     return@launch
                 }
-                
+
 
                 val targetCount = minOf(9, availableChannels.size)
                 val randomChannels = availableChannels.shuffled().take(targetCount)
-                
+
                 _relatedItems.postValue(randomChannels)
-                
+
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error loading random channels", e)
                 _relatedItems.postValue(emptyList())
@@ -213,23 +212,23 @@ class PlayerViewModel @Inject constructor(
                 }
 
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannelId }
-                val targetCount = 9 
-                
+                val targetCount = 9
+
                 val related = if (currentIndex != -1) {
                     val relatedList = mutableListOf<Channel>()
                     val beforeCount = 4
                     val afterCount = 5
-                    
+
                     val beforeStart = maxOf(0, currentIndex - beforeCount)
                     for (i in beforeStart until currentIndex) {
                         if (allChannels[i].id != currentChannelId) relatedList.add(allChannels[i])
                     }
-                    
+
                     val afterEnd = minOf(allChannels.size - 1, currentIndex + afterCount)
                     for (i in (currentIndex + 1)..afterEnd) {
                         if (allChannels[i].id != currentChannelId) relatedList.add(allChannels[i])
                     }
-                    
+
                     if (relatedList.size < targetCount && availableChannels.size > relatedList.size) {
                         val extra = availableChannels
                             .filter { it !in relatedList }
@@ -241,14 +240,14 @@ class PlayerViewModel @Inject constructor(
                 } else {
                     availableChannels.shuffled().take(targetCount)
                 }
-                
+
                 _relatedItems.postValue(related)
             } catch (e: Exception) {
                 _relatedItems.postValue(emptyList())
             }
         }
     }
-    
+
     fun setRelatedChannels(channels: List<Channel>) {
         _relatedItems.postValue(channels.take(9))
     }
@@ -258,23 +257,23 @@ class PlayerViewModel @Inject constructor(
             try {
                 val allEvents = liveEventRepository.getLiveEvents()
                 val currentTime = System.currentTimeMillis()
-                
+
                 val eventsWithStatus = allEvents.map { event ->
                     event to event.getStatus(currentTime)
                 }
-                
+
                 val liveEvents = eventsWithStatus.filter { (event, status) ->
                     event.id != currentEventId && status == com.livetvpro.app.data.models.EventStatus.LIVE
                 }
-                
+
                 val upcomingEvents = eventsWithStatus.filter { (event, status) ->
                     event.id != currentEventId && status == com.livetvpro.app.data.models.EventStatus.UPCOMING
                 }
-                
+
                 val relatedEvents = (liveEvents.map { it.first } + upcomingEvents.map { it.first }).take(6)
-                
+
                 _relatedLiveEvents.postValue(relatedEvents)
-                
+
             } catch (e: Exception) {
                 _relatedLiveEvents.postValue(emptyList())
             }

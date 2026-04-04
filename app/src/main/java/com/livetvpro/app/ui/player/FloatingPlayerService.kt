@@ -848,7 +848,7 @@ class FloatingPlayerService : Service() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            val nsStreamInfo = buildStreamInfoFromDrmFields(streamUrl, headers, drmScheme, drmLicense)
+            val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
             val nsMediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, nsDataSourceFactory, headers)
 
             val renderersFactory = DefaultRenderersFactory(this)
@@ -1055,7 +1055,7 @@ class FloatingPlayerService : Service() {
                 userAgent else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             headers["User-Agent"] = effectiveUserAgent
 
-            val nsStreamInfo = buildStreamInfoFromDrmFields(streamUrl, headers, drmScheme, drmLicense)
+            val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(effectiveUserAgent)
                 .setDefaultRequestProperties(headers)
@@ -1523,7 +1523,7 @@ class FloatingPlayerService : Service() {
                     userAgent else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
                 headers["User-Agent"] = effectiveUserAgent
 
-                val nsStreamInfo = buildStreamInfoFromDrmFields(streamUrl, headers, drmScheme, drmLicense)
+                val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
                 val dataSourceFactory = DefaultHttpDataSource.Factory()
                     .setUserAgent(effectiveUserAgent)
                     .setDefaultRequestProperties(headers)
@@ -1726,7 +1726,7 @@ class FloatingPlayerService : Service() {
         val pipeIndex = streamUrl.indexOf('|')
         if (pipeIndex == -1) return StreamInfo(streamUrl, mapOf(), null, null, null, null)
 
-        val url = streamUrl.substring(0, pipeIndex).trim()
+        val url = streamUrl.substring(0, pipeIndex).trim().trimEnd('?')
         val parts = buildList {
             for (segment in streamUrl.substring(pipeIndex + 1).split("|")) {
                 val eqIdx = segment.indexOf('=')
@@ -1797,6 +1797,27 @@ class FloatingPlayerService : Service() {
             }
             else -> StreamInfo(url, headers, scheme, null, null, null)
         }
+    }
+
+    private fun resolveNetworkStreamInfo(
+        streamUrl: String,
+        headers: Map<String, String>,
+        drmScheme: String,
+        drmLicense: String
+    ): StreamInfo {
+        val parsed = parseStreamUrl(streamUrl)
+        val mergedHeaders = headers + parsed.headers
+        val resolvedScheme = parsed.drmScheme?.takeIf { it.isNotEmpty() }
+            ?: normalizeDrmScheme(drmScheme).takeIf { it.isNotEmpty() }
+        val explicitInfo = buildStreamInfoFromDrmFields(parsed.url, mergedHeaders, drmScheme, drmLicense)
+        return StreamInfo(
+            url = parsed.url,
+            headers = mergedHeaders,
+            drmScheme = resolvedScheme,
+            drmKeyId = parsed.drmKeyId ?: explicitInfo.drmKeyId,
+            drmKey = parsed.drmKey ?: explicitInfo.drmKey,
+            drmLicenseUrl = parsed.drmLicenseUrl ?: explicitInfo.drmLicenseUrl
+        )
     }
 
     private fun normalizeDrmScheme(scheme: String): String {

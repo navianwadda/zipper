@@ -329,6 +329,7 @@ class FloatingPlayerService : Service() {
                 }
                 return START_STICKY
             }
+        }
 
         val instanceId = intent?.getStringExtra(EXTRA_INSTANCE_ID) ?: java.util.UUID.randomUUID().toString()
         val isRestoredFromFullscreen = intent?.getBooleanExtra("use_transferred_player", false) == true
@@ -1021,8 +1022,8 @@ class FloatingPlayerService : Service() {
             newPlayer.playWhenReady = true
 
             activeInstances[instanceId] = instance.copy(player = newPlayer)
-            val btnPlayPause = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
-            attachPlayerListener(newPlayer, btnPlayPause, instanceId)
+            val btnPlayPause1 = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
+            attachPlayerListener(newPlayer, btnPlayPause1, instanceId)
 
             updateNotification()
 
@@ -1272,24 +1273,19 @@ class FloatingPlayerService : Service() {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 val instance = activeInstances[instanceId] ?: return
                 if (instance.player !== player) return
-                val hasError = player.playerError != null
-                if (!hasError) {
-                    btnPlayPause?.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
-                }
+                if (player.playerError != null) return
+                btnPlayPause?.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 val instance = activeInstances[instanceId] ?: return
                 if (instance.player !== player) return
-                val hasError = player.playerError != null
-                if (!hasError) {
-                    val isPlaying = player.isPlaying
-                    when (playbackState) {
-                        Player.STATE_BUFFERING -> btnPlayPause?.setImageResource(R.drawable.ic_pause)
-                        Player.STATE_READY -> btnPlayPause?.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
-                        Player.STATE_ENDED -> btnPlayPause?.setImageResource(R.drawable.ic_play)
-                        else -> {}
-                    }
+                if (player.playerError != null) return
+                when (playbackState) {
+                    Player.STATE_BUFFERING -> btnPlayPause?.setImageResource(R.drawable.ic_pause)
+                    Player.STATE_READY -> btnPlayPause?.setImageResource(if (player.isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
+                    Player.STATE_ENDED -> btnPlayPause?.setImageResource(R.drawable.ic_play)
+                    else -> {}
                 }
             }
 
@@ -1575,8 +1571,8 @@ class FloatingPlayerService : Service() {
                 newPlayer.playWhenReady = true
 
                 activeInstances[instanceId] = instance.copy(player = newPlayer)
-                val btnPlayPause = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
-                attachPlayerListener(newPlayer, btnPlayPause, instanceId)
+                val btnPlayPause2 = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
+                attachPlayerListener(newPlayer, btnPlayPause2, instanceId)
             } else {
                 updateInstanceStream(instanceId, instance.currentChannel, instance.currentEvent, 0)
             }

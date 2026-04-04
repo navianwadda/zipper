@@ -17,6 +17,7 @@ import com.livetvpro.app.data.models.ChannelLink
 )
 data class ChannelEntity(
     @PrimaryKey val id: String,
+    val position: Int = 0,
     val name: String,
     val logoUrl: String,
     val streamUrl: String,
@@ -47,7 +48,8 @@ data class ChannelEntity(
         startTime    = startTime,
         endTime      = endTime,
         createdAt    = createdAt,
-        updatedAt    = updatedAt
+        updatedAt    = updatedAt,
+        position     = position
     )
 }
 
@@ -55,6 +57,7 @@ fun Channel.toEntity(): ChannelEntity {
     val gson = Gson()
     return ChannelEntity(
         id           = id,
+        position     = position,
         name         = name,
         logoUrl      = logoUrl,
         streamUrl    = streamUrl,

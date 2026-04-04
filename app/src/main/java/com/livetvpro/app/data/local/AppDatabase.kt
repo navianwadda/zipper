@@ -15,7 +15,7 @@ import com.livetvpro.app.data.local.entity.PlaylistEntity
 
 @Database(
     entities = [FavoriteChannelEntity::class, PlaylistEntity::class, ChannelEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(FavoriteChannelConverters::class)
@@ -49,6 +49,11 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_channels_categoryId ON channels(categoryId)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_channels_groupTitle ON channels(groupTitle)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_channels_categoryId_name ON channels(categoryId, name)")
+            }
+        }
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE channels ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

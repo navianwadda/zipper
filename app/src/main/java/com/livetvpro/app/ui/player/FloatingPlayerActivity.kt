@@ -1245,6 +1245,16 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 player = transferredPlayer
                 binding.playerView.player = player
 
+                if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
+                    val savedLandscape = preferencesManager.getSavedAspectRatio()
+                    if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
+                    val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
+                    if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
+                }
+                applyResizeModeForOrientation(
+                    DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                )
+
                 PlayerHolder.clearReferences()
 
                 configurePlayerInteractions()

@@ -32,7 +32,8 @@ data class Channel(
     val startTime: String = "",
     val endTime: String = "",
     val createdAt: String = "",
-    val updatedAt: String = ""
+    val updatedAt: String = "",
+    val position: Int = 0
 ) : Parcelable
 
 @Parcelize

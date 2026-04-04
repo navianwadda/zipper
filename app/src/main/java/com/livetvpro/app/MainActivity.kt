@@ -211,6 +211,9 @@ class MainActivity : AppCompatActivity() {
         super.onConfigurationChanged(newConfig)
         drawerToggle?.onConfigurationChanged(newConfig)
         if (!DeviceUtils.isTvDevice) {
+            if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && isSearchVisible) {
+                hideSearch()
+            }
             handleStatusBarForOrientation()
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
             navHostFragment?.childFragmentManager?.fragments?.firstOrNull()?.onConfigurationChanged(newConfig)
@@ -836,7 +839,18 @@ class MainActivity : AppCompatActivity() {
     private fun setupSearch() {
         phoneBtnSearch?.setOnClickListener { showSearch() }
         phoneSearchView?.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean = true
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                // Dispatch the query to the current fragment and dismiss the keyboard
+                query?.let {
+                    val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+                    val currentFragment = navHostFragment?.childFragmentManager?.fragments?.firstOrNull()
+                    if (currentFragment is SearchableFragment) currentFragment.onSearchQuery(it)
+                }
+                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                phoneSearchView?.windowToken?.let { imm.hideSoftInputFromWindow(it, 0) }
+                phoneSearchView?.clearFocus()
+                return true
+            }
             override fun onQueryTextChange(newText: String?): Boolean {
                 newText?.let { query ->
                     val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment

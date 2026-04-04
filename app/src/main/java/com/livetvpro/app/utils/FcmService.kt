@@ -31,15 +31,11 @@ class FcmService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
 
+        if (message.notification != null) return
+
         try {
-            val title = message.notification?.title
-                ?: message.data["title"]
-                ?: getString(R.string.app_name)
-
-            val body = message.notification?.body
-                ?: message.data["body"]
-                ?: return
-
+            val title = message.data["title"] ?: getString(R.string.app_name)
+            val body = message.data["body"] ?: return
             val url = message.data["url"]
             val priority = message.data["priority"]
 

@@ -977,6 +977,16 @@ class FloatingPlayerService : Service() {
 
             instance.currentChannel = channel
             instance.currentEvent = event
+            instance.isNetworkStream = false
+            instance.networkStreamUrl = null
+            instance.networkStreamName = null
+            instance.networkCookie = null
+            instance.networkReferer = null
+            instance.networkOrigin = null
+            instance.networkDrmLicense = null
+            instance.networkUserAgent = null
+            instance.networkDrmScheme = null
+            instance.networkXForwardedFor = null
 
             val titleText = instance.floatingView.findViewById<TextView>(R.id.tv_title)
             titleText.text = channel?.name ?: event?.title ?: "Unknown"

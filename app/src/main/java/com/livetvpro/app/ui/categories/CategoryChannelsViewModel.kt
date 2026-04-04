@@ -5,8 +5,9 @@ import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ChannelLink
 import com.livetvpro.app.data.models.FavoriteChannel
@@ -14,20 +15,20 @@ import com.livetvpro.app.data.repository.CategoryRepository
 import com.livetvpro.app.data.repository.ChannelRepository
 import com.livetvpro.app.data.repository.FavoritesRepository
 import com.livetvpro.app.data.repository.PlaylistRepository
-import com.livetvpro.app.utils.M3uParser
 import com.livetvpro.app.utils.AndroidRetryViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CategoryChannelsViewModel @Inject constructor(
     application: Application,
@@ -38,11 +39,10 @@ class CategoryChannelsViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle
 ) : AndroidRetryViewModel(application) {
 
-    private val _channels      = MutableStateFlow<List<Channel>>(emptyList())
     private val _searchQuery   = MutableStateFlow("")
     private val _selectedGroup = MutableStateFlow("All")
+    private val _categoryId    = MutableStateFlow<String?>(null)
 
-    /** Read-only snapshot of the current search query for fragment use */
     val currentSearchQuery: String get() = _searchQuery.value
 
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
@@ -57,27 +57,26 @@ class CategoryChannelsViewModel @Inject constructor(
 
     private var lastLoadedCategoryId: String? = null
 
-    val filteredChannels: LiveData<List<Channel>> = combine(
-        _channels,
-        _searchQuery.debounce(150),
-        _selectedGroup
-    ) { list, query, group ->
-        var filtered = list
-
-        if (group != "All") {
-            filtered = filtered.filter { channel ->
-                extractGroupFromChannel(channel) == group
+    val channelsPaged: Flow<PagingData<Channel>> = combine(
+        _categoryId,
+        _searchQuery.debounce(200).distinctUntilChanged(),
+        _selectedGroup.distinctUntilChanged()
+    ) { categoryId, query, group ->
+        Triple(categoryId, query, group)
+    }
+        .distinctUntilChanged()
+        .flatMapLatest { (categoryId, query, group) ->
+            if (categoryId == null) {
+                kotlinx.coroutines.flow.flowOf(PagingData.empty())
+            } else {
+                channelRepository.getChannelsPaged(
+                    categoryId = categoryId,
+                    group      = group,
+                    query      = query
+                )
             }
         }
-
-        if (query.isNotEmpty()) {
-            filtered = filtered.filter { it.name.contains(query, ignoreCase = true) }
-        }
-
-        filtered
-    }
-        .flowOn(Dispatchers.Default)   // heavy filtering stays off the main thread
-        .asLiveData(viewModelScope.coroutineContext)
+        .cachedIn(viewModelScope)
 
     init {
         loadFavoriteCache()
@@ -95,8 +94,7 @@ class CategoryChannelsViewModel @Inject constructor(
         lastLoadedCategoryId?.let { loadChannels(it) }
     }
 
-    override fun onResume() {
-    }
+    override fun onResume() {}
 
     fun loadChannels(categoryId: String) {
         viewModelScope.launch {
@@ -107,62 +105,34 @@ class CategoryChannelsViewModel @Inject constructor(
                 val playlist = playlistRepository.getPlaylistById(categoryId)
 
                 if (playlist != null) {
-                    loadPlaylistChannels(playlist)
+                    if (!channelRepository.isCategorySynced(categoryId)) {
+                        channelRepository.syncPlaylist(
+                            playlistId    = playlist.id,
+                            playlistTitle = playlist.title,
+                            source        = if (playlist.isFile) playlist.filePath else playlist.url,
+                            isFile        = playlist.isFile,
+                            application   = getApplication()
+                        )
+                    }
                 } else {
-                    val channels = channelRepository.getChannelsByCategory(categoryId)
-                    _channels.value = channels
-                    extractAndSetGroups(channels)
-
-                    finishLoading(dataIsEmpty = channels.isEmpty())
+                    if (!channelRepository.isCategorySynced(categoryId)) {
+                        channelRepository.syncCategory(categoryId)
+                    }
                 }
+
+                _categoryId.value = categoryId
+                loadGroups(categoryId)
+                finishLoading(dataIsEmpty = false)
             } catch (e: Exception) {
-                _channels.value = emptyList()
+                _categoryId.value = null
                 finishLoading(dataIsEmpty = true, error = e)
             }
         }
     }
 
-    private suspend fun loadPlaylistChannels(playlist: com.livetvpro.app.data.models.Playlist) {
-        try {
-            val playlistSource = if (playlist.isFile) playlist.filePath else playlist.url
-            val channels = if (playlistSource.startsWith("content://") || playlistSource.startsWith("file://")) {
-                val uri         = Uri.parse(playlistSource)
-                val inputStream = getApplication<Application>().contentResolver.openInputStream(uri)
-                val content     = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
-                val m3uChannels = M3uParser.parseM3uContent(content)
-                M3uParser.convertToChannels(m3uChannels, playlist.id, playlist.title)
-            } else {
-                withContext(Dispatchers.IO) {
-                    val m3uChannels = M3uParser.parseM3uFromUrl(playlistSource)
-                    M3uParser.convertToChannels(m3uChannels, playlist.id, playlist.title)
-                }
-            }
-
-            _channels.value = channels
-            extractAndSetGroups(channels)
-
-            finishLoading(dataIsEmpty = channels.isEmpty())
-        } catch (e: Exception) {
-            _channels.value = emptyList()
-            finishLoading(dataIsEmpty = true, error = e)
-        }
-    }
-
-    private fun extractAndSetGroups(channels: List<Channel>) {
-        val groupsSet = channels
-            .mapNotNull { extractGroupFromChannel(it) }
-            .toSet()
-            .sorted()
-
-        _categoryGroups.value = if (groupsSet.isNotEmpty()) {
-            listOf("All") + groupsSet
-        } else {
-            emptyList()
-        }
-    }
-
-    private fun extractGroupFromChannel(channel: Channel): String? {
-        return channel.groupTitle?.takeIf { it.isNotBlank() }
+    private suspend fun loadGroups(categoryId: String) {
+        val groups = channelRepository.getGroups(categoryId)
+        _categoryGroups.value = if (groups.isNotEmpty()) listOf("All") + groups else emptyList()
     }
 
     fun searchChannels(query: String) {
@@ -172,6 +142,31 @@ class CategoryChannelsViewModel @Inject constructor(
     fun selectGroup(group: String) {
         _selectedGroup.value = group
         _currentGroup.value  = group
+    }
+
+    fun refreshChannels() {
+        val categoryId = lastLoadedCategoryId ?: return
+        viewModelScope.launch {
+            startLoading()
+            try {
+                val playlist = playlistRepository.getPlaylistById(categoryId)
+                if (playlist != null) {
+                    channelRepository.syncPlaylist(
+                        playlistId    = playlist.id,
+                        playlistTitle = playlist.title,
+                        source        = if (playlist.isFile) playlist.filePath else playlist.url,
+                        isFile        = playlist.isFile,
+                        application   = getApplication()
+                    )
+                } else {
+                    channelRepository.syncCategory(categoryId)
+                }
+                loadGroups(categoryId)
+                finishLoading(dataIsEmpty = false)
+            } catch (e: Exception) {
+                finishLoading(dataIsEmpty = true, error = e)
+            }
+        }
     }
 
     fun toggleFavorite(channel: Channel) {
@@ -192,11 +187,8 @@ class CategoryChannelsViewModel @Inject constructor(
 
             val streamUrlToSave = when {
                 channel.streamUrl.isNotEmpty() -> channel.streamUrl
-                !favoriteLinks.isNullOrEmpty() -> {
-                    val firstLink = favoriteLinks.first()
-                    buildStreamUrlFromLink(firstLink)
-                }
-                else -> ""
+                !favoriteLinks.isNullOrEmpty()  -> buildStreamUrlFromLink(favoriteLinks.first())
+                else                            -> ""
             }
 
             val favoriteChannel = FavoriteChannel(
@@ -218,19 +210,17 @@ class CategoryChannelsViewModel @Inject constructor(
     }
 
     private fun buildStreamUrlFromLink(link: ChannelLink): String {
-        val parts = mutableListOf<String>()
-        parts.add(link.url)
-        link.referer?.let    { if (it.isNotEmpty()) parts.add("referer=$it") }
-        link.cookie?.let     { if (it.isNotEmpty()) parts.add("cookie=$it") }
-        link.origin?.let     { if (it.isNotEmpty()) parts.add("origin=$it") }
-        link.userAgent?.let  { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
-        link.xForwardedFor?.let { if (it.isNotEmpty()) parts.add("X-Forwarded-For=$it") }
-        link.drmScheme?.let  { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
-        link.drmLicenseUrl?.let { if (it.isNotEmpty()) parts.add("drmLicense=$it") }
+        val parts = mutableListOf(link.url)
+        link.referer?.let        { if (it.isNotEmpty()) parts.add("referer=$it") }
+        link.cookie?.let         { if (it.isNotEmpty()) parts.add("cookie=$it") }
+        link.origin?.let         { if (it.isNotEmpty()) parts.add("origin=$it") }
+        link.userAgent?.let      { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
+        link.xForwardedFor?.let  { if (it.isNotEmpty()) parts.add("X-Forwarded-For=$it") }
+        link.drmScheme?.let      { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
+        link.drmLicenseUrl?.let  { if (it.isNotEmpty()) parts.add("drmLicense=$it") }
         return if (parts.size > 1) parts.joinToString("|") else parts[0]
     }
 
-    fun isFavorite(channelId: String): Boolean {
-        return _favoriteStatusCache.value.contains(channelId)
-    }
+    fun isFavorite(channelId: String): Boolean =
+        _favoriteStatusCache.value.contains(channelId)
 }

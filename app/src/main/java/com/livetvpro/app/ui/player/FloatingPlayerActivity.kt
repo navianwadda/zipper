@@ -190,6 +190,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             userAgent: String = "Default",
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
+            xForwardedFor: String = "",
             playbackPosition: Long = -1L
         ) {
             val intent = Intent(context, FloatingPlayerActivity::class.java).apply {
@@ -202,6 +203,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 putExtra("DRM_LICENSE", drmLicense)
                 putExtra("USER_AGENT", userAgent)
                 putExtra("DRM_SCHEME", drmScheme)
+                putExtra("X_FORWARDED_FOR", xForwardedFor)
 
                 putExtra("CHANNEL_NAME", streamName)
 
@@ -331,6 +333,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         }
 
         viewModel.relatedItems.observe(this) { channels ->
+            if (contentType != ContentType.CHANNEL) return@observe
             relatedChannels = channels
             if (::relatedChannelsAdapter.isInitialized) {
                 relatedChannelsAdapter.submitList(channels)
@@ -345,16 +348,27 @@ class FloatingPlayerActivity : AppCompatActivity() {
         }
 
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
-            if (contentType == ContentType.EVENT && ::relatedEventsAdapter.isInitialized) {
-                relatedEventsAdapter.updateData(liveEvents)
-                binding.relatedChannelsSection.visibility = if (liveEvents.isEmpty()) {
-                    View.GONE
-                } else {
-                    View.VISIBLE
-                }
-                binding.relatedLoadingProgress.visibility = View.GONE
-                binding.relatedChannelsRecycler.visibility = View.VISIBLE
+            if (contentType != ContentType.EVENT) return@observe
+            if (!::relatedEventsAdapter.isInitialized) {
+                relatedEventsAdapter = LiveEventAdapter(
+                    context = this,
+                    events = emptyList(),
+                    preferencesManager = preferencesManager,
+                    onEventClick = { event, linkIndex ->
+                        switchToEventFromLiveEvent(event, linkIndex)
+                    }
+                )
+                binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.event_span_count))
+                binding.relatedChannelsRecycler.adapter = relatedEventsAdapter
             }
+            relatedEventsAdapter.updateData(liveEvents)
+            binding.relatedChannelsSection.visibility = if (liveEvents.isEmpty()) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
+            binding.relatedLoadingProgress.visibility = View.GONE
+            binding.relatedChannelsRecycler.visibility = View.VISIBLE
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -468,10 +482,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private fun applyResizeModeForOrientation(isLandscape: Boolean) {
         if (isLandscape) {
             binding.playerView.resizeMode = networkLandscapeResizeMode
-        } else if (contentType == ContentType.NETWORK_STREAM) {
-            binding.playerView.resizeMode = networkPortraitResizeMode
         } else {
-            binding.playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+            binding.playerView.resizeMode = networkPortraitResizeMode
         }
     }
 
@@ -643,22 +655,57 @@ class FloatingPlayerActivity : AppCompatActivity() {
             val streamUrlRaw = intent.getStringExtra("STREAM_URL") ?: ""
 
             if (streamUrlRaw.contains("|")) {
-                streamUrl = streamUrlRaw
-
                 val parsed = parseStreamUrl(streamUrlRaw)
-                allEventLinks = listOf(
-                    LiveEventLink(
-                        quality = "Network Stream",
-                        url = parsed.url,
-                        cookie = parsed.headers["Cookie"] ?: "",
-                        referer = parsed.headers["Referer"] ?: "",
-                        origin = parsed.headers["Origin"] ?: "",
-                        userAgent = parsed.headers["User-Agent"] ?: "Default",
-                        xForwardedFor = parsed.headers["X-Forwarded-For"],
-                        drmScheme = parsed.drmScheme,
-                        drmLicenseUrl = parsed.drmLicenseUrl
-                    )
+
+                // If the pipe-encoded URL has no DRM info, fall back to the separate intent extras
+                // (e.g. user entered a pipe URL for headers but set DRM scheme/license separately)
+                val extraDrmScheme = intent.getStringExtra("DRM_SCHEME")?.takeIf { it.isNotBlank() }
+                val extraDrmLicense = intent.getStringExtra("DRM_LICENSE")?.takeIf { it.isNotBlank() }
+                val resolvedDrmScheme = parsed.drmScheme ?: extraDrmScheme
+
+                val resolvedDrmLicenseUrl: String?
+                val resolvedDrmKeyId: String?
+                val resolvedDrmKey: String?
+                if (parsed.drmKeyId != null) {
+                    resolvedDrmLicenseUrl = null
+                    resolvedDrmKeyId = parsed.drmKeyId
+                    resolvedDrmKey = parsed.drmKey
+                } else if (extraDrmLicense != null) {
+                    val colonIdx = extraDrmLicense.indexOf(':')
+                    if (extraDrmLicense.startsWith("http", ignoreCase = true)) {
+                        resolvedDrmLicenseUrl = extraDrmLicense
+                        resolvedDrmKeyId = null
+                        resolvedDrmKey = null
+                    } else if (colonIdx != -1) {
+                        resolvedDrmLicenseUrl = null
+                        resolvedDrmKeyId = extraDrmLicense.substring(0, colonIdx).trim()
+                        resolvedDrmKey = extraDrmLicense.substring(colonIdx + 1).trim()
+                    } else {
+                        resolvedDrmLicenseUrl = extraDrmLicense
+                        resolvedDrmKeyId = null
+                        resolvedDrmKey = null
+                    }
+                } else {
+                    resolvedDrmLicenseUrl = parsed.drmLicenseUrl
+                    resolvedDrmKeyId = null
+                    resolvedDrmKey = null
+                }
+
+                val mergedLink = LiveEventLink(
+                    quality = "Network Stream",
+                    url = parsed.url,
+                    cookie = parsed.headers["Cookie"] ?: "",
+                    referer = parsed.headers["Referer"] ?: "",
+                    origin = parsed.headers["Origin"] ?: "",
+                    userAgent = parsed.headers["User-Agent"] ?: intent.getStringExtra("USER_AGENT") ?: "Default",
+                    xForwardedFor = parsed.headers["X-Forwarded-For"],
+                    drmScheme = resolvedDrmScheme,
+                    drmLicenseUrl = resolvedDrmLicenseUrl
+                        ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } }
                 )
+
+                allEventLinks = listOf(mergedLink)
+                streamUrl = buildStreamUrl(mergedLink)
             } else {
                 val cookie = intent.getStringExtra("COOKIE") ?: ""
                 val referer = intent.getStringExtra("REFERER") ?: ""
@@ -666,6 +713,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 val drmLicense = intent.getStringExtra("DRM_LICENSE") ?: ""
                 val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
+                val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
 
                 allEventLinks = listOf(
                     LiveEventLink(
@@ -675,6 +723,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                         referer = referer,
                         origin = origin,
                         userAgent = userAgent,
+                        xForwardedFor = xForwardedFor.ifEmpty { null },
                         drmScheme = drmScheme,
                         drmLicenseUrl = drmLicense
                     )
@@ -785,7 +834,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 events = emptyList(),
                 preferencesManager = preferencesManager,
                 onEventClick = { event, linkIndex ->
-                    switchToEventFromLiveEvent(event)
+                    switchToEventFromLiveEvent(event, linkIndex)
                 }
             )
 
@@ -932,7 +981,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         switchToChannel(relatedChannel)
     }
 
-    private fun switchToEventFromLiveEvent(newEvent: LiveEvent) {
+    private fun switchToEventFromLiveEvent(newEvent: LiveEvent, linkIndex: Int = 0) {
         try {
             releasePlayer()
 
@@ -945,8 +994,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
             allEventLinks = newEvent.links
 
             if (allEventLinks.isNotEmpty()) {
-                currentLinkIndex = 0
-                streamUrl = allEventLinks.firstOrNull()?.let { buildStreamUrl(it) } ?: ""
+                currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
+                streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
                 currentLinkIndex = 0
                 streamUrl = ""
@@ -1343,10 +1392,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
                         val savedLandscape = preferencesManager.getSavedAspectRatio()
                         if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
-                        if (contentType == ContentType.NETWORK_STREAM) {
-                            val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
-                            if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
-                        }
+                        val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
+                        if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
                     }
 
                     applyResizeModeForOrientation(
@@ -1863,12 +1910,11 @@ class FloatingPlayerActivity : AppCompatActivity() {
             else                                     -> AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
 
-        if (isLandscape) networkLandscapeResizeMode = next
-        else networkPortraitResizeMode = next
-
         if (preferencesManager.isRememberAspectRatioEnabled()) {
+            if (isLandscape) networkLandscapeResizeMode = next
+            else networkPortraitResizeMode = next
             if (isLandscape) preferencesManager.setSavedAspectRatio(next)
-            else if (contentType == ContentType.NETWORK_STREAM) preferencesManager.setSavedAspectRatioPortrait(next)
+            else preferencesManager.setSavedAspectRatioPortrait(next)
         }
 
         binding.playerView.resizeMode = next

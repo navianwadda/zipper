@@ -18,7 +18,12 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.paging.LoadState
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -71,15 +76,12 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     }
     private val NUMPAD_RESET_MS = 2000L
 
-    // Saved scroll position before search so cancel restores it naturally
     private var savedScrollState: android.os.Parcelable? = null
 
     override fun onSearchQuery(query: String) {
         if (query.isBlank() && viewModel.currentSearchQuery.isNotBlank()) {
-            // Cancelling search — snapshot scroll position before list expands
             savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
         } else if (query.isNotBlank() && viewModel.currentSearchQuery.isBlank()) {
-            // Starting search — snapshot so cancel can return here
             savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
         }
         viewModel.searchChannels(query)
@@ -138,9 +140,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         } else {
             binding.swipeRefresh.isEnabled = true
         }
-        if (viewModel.filteredChannels.value.isNullOrEmpty()) {
-            currentCategoryId?.let { viewModel.loadChannels(it) }
-        }
+        currentCategoryId?.let { viewModel.loadChannels(it) }
         if (DeviceUtils.isTvDevice) {
             setupTvNumpadSearch()
         }
@@ -345,7 +345,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
             val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
             searchEditText.setOnFocusChangeListener { view, hasFocus ->
                 clearSearchBtn.visibility = if (hasFocus) View.VISIBLE else View.GONE
-                // Dismiss keyboard when user taps away from the search field
                 if (!hasFocus) imm.hideSoftInputFromWindow(view.windowToken, 0)
             }
             searchEditText.addTextChangedListener(object : TextWatcher {
@@ -362,7 +361,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 searchEditText.text.clear()
                 searchEditText.clearFocus()
             }
-            // On open, focus the list not the search field — user taps search only when they want to type
             dialog.setOnShowListener {
                 recyclerView.requestFocus()
                 imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
@@ -379,29 +377,42 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     }
 
     private fun observeViewModel() {
-        viewModel.filteredChannels.observe(viewLifecycleOwner) { channels ->
-            // Restore scroll after search cancel OR group switch — whichever saved it last
-            val restoreState = savedScrollState
-            channelAdapter.submitList(channels) {
-                // Called after DiffUtil finishes and RecyclerView has drawn the new list
-                if (restoreState != null && restoreState === savedScrollState) {
-                    binding.recyclerViewChannels.layoutManager?.onRestoreInstanceState(restoreState)
-                    savedScrollState = null
-                }
-            }
-            if (viewModel.isLoading.value != true && viewModel.error.value == null) {
-                binding.emptyView.visibility = if (channels.isEmpty()) View.VISIBLE else View.GONE
-                binding.recyclerViewChannels.visibility = if (channels.isEmpty()) View.GONE else View.VISIBLE
-            }
-            if (DeviceUtils.isTvDevice && channels.isNotEmpty()) {
-                binding.recyclerViewChannels.post {
-                    binding.recyclerViewChannels
-                        .findViewHolderForAdapterPosition(0)
-                        ?.itemView
-                        ?.requestFocus()
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.channelsPaged.collectLatest { pagingData ->
+                    val restoreState = savedScrollState
+                    channelAdapter.submitData(pagingData)
+                    if (restoreState != null) {
+                        binding.recyclerViewChannels.layoutManager
+                            ?.onRestoreInstanceState(restoreState)
+                        savedScrollState = null
+                    }
                 }
             }
         }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                channelAdapter.loadStateFlow.collectLatest { loadStates ->
+                    val isEmpty = channelAdapter.itemCount == 0 &&
+                        loadStates.refresh is LoadState.NotLoading
+                    if (viewModel.isLoading.value != true && viewModel.error.value == null) {
+                        binding.emptyView.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                        binding.recyclerViewChannels.visibility =
+                            if (isEmpty) View.GONE else View.VISIBLE
+                    }
+                    if (DeviceUtils.isTvDevice && channelAdapter.itemCount > 0) {
+                        binding.recyclerViewChannels.post {
+                            binding.recyclerViewChannels
+                                .findViewHolderForAdapterPosition(0)
+                                ?.itemView
+                                ?.requestFocus()
+                        }
+                    }
+                }
+            }
+        }
+
         viewModel.categoryGroups.observe(viewLifecycleOwner) { groups ->
             val hasGroups = groups.isNotEmpty()
             binding.groupsHeader.visibility = if (hasGroups) View.VISIBLE else View.GONE
@@ -425,7 +436,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 if (suppressTabListener) return
                 tab?.text?.toString()?.let { groupName ->
-                    // Save scroll position before the group filter swaps the list
                     savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
                     viewModel.selectGroup(groupName)
                 }

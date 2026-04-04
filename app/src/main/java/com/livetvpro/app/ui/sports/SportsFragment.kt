@@ -50,7 +50,8 @@ class SportsViewModel @Inject constructor(
     private val _filteredChannels = MutableLiveData<List<Channel>>()
     val filteredChannels: LiveData<List<Channel>> = _filteredChannels
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
-    private var currentQuery: String = ""
+    var currentQuery: String = ""
+        private set
 
     init {
         loadData()
@@ -164,7 +165,17 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
     private var lastUniqueId: String? = null
     @Inject lateinit var preferencesManager: PreferencesManager
 
-    override fun onSearchQuery(query: String) { viewModel.searchSports(query) }
+    // Saved scroll position before search so cancel restores it naturally
+    private var savedScrollState: android.os.Parcelable? = null
+
+    override fun onSearchQuery(query: String) {
+        if (query.isBlank() && viewModel.currentQuery.isNotBlank()) {
+            savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
+        } else if (query.isNotBlank() && viewModel.currentQuery.isBlank()) {
+            savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
+        }
+        viewModel.searchSports(query)
+    }
     override fun refreshData() { viewModel.refresh() }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -313,7 +324,13 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
             emptyView = binding.emptyView
         )
         viewModel.filteredChannels.observe(viewLifecycleOwner) { channels ->
-            channelAdapter.submitList(channels)
+            val restoreState = if (viewModel.currentQuery.isBlank()) savedScrollState else null
+            channelAdapter.submitList(channels) {
+                if (restoreState != null) {
+                    binding.recyclerViewChannels.layoutManager?.onRestoreInstanceState(restoreState)
+                    savedScrollState = null
+                }
+            }
             if (viewModel.isLoading.value != true && viewModel.error.value == null) {
                 binding.emptyView.visibility = if (channels.isEmpty()) View.VISIBLE else View.GONE
                 binding.recyclerViewChannels.visibility = if (channels.isEmpty()) View.GONE else View.VISIBLE

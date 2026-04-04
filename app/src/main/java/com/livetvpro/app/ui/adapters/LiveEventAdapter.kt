@@ -36,7 +36,7 @@ class LiveEventAdapter(
     private val onEventInteraction: ((LiveEvent, () -> Unit) -> Boolean)? = null
 ) : RecyclerView.Adapter<LiveEventAdapter.EventViewHolder>() {
 
-    // Must use Locale.US — Locale.getDefault() can break date parsing on non-English locales
+
     private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("UTC")
     }
@@ -353,6 +353,7 @@ class LiveEventAdapter(
                             referer = liveEventLink.referer,
                             origin = liveEventLink.origin,
                             userAgent = liveEventLink.userAgent,
+                            xForwardedFor = liveEventLink.xForwardedFor,
                             drmScheme = liveEventLink.drmScheme,
                             drmLicenseUrl = liveEventLink.drmLicenseUrl
                         )

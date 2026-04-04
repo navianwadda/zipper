@@ -894,7 +894,7 @@ object M3uParser {
         categoryId: String,
         categoryName: String
     ): List<Channel> {
-        return m3uChannels.map { m3u ->
+        return m3uChannels.mapIndexed { index, m3u ->
             val metaUrl = buildStreamUrlWithMetadata(m3u)
             Channel(
                 id           = generateChannelId(m3u.streamUrl, m3u.name),
@@ -903,7 +903,8 @@ object M3uParser {
                 streamUrl    = metaUrl,
                 categoryId   = categoryId,
                 categoryName = categoryName,
-                groupTitle   = m3u.groupTitle
+                groupTitle   = m3u.groupTitle,
+                position     = index
             )
         }
     }

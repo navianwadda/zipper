@@ -32,6 +32,8 @@ import com.livetvpro.app.utils.RetryHandler
 import com.livetvpro.app.utils.Refreshable
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.utils.FloatingPlayerHelper
+import androidx.lifecycle.lifecycleScope
+import androidx.paging.PagingData
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -165,7 +167,6 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
     private var lastUniqueId: String? = null
     @Inject lateinit var preferencesManager: PreferencesManager
 
-    // Saved scroll position before search so cancel restores it naturally
     private var savedScrollState: android.os.Parcelable? = null
 
     override fun onSearchQuery(query: String) {
@@ -325,7 +326,8 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
         )
         viewModel.filteredChannels.observe(viewLifecycleOwner) { channels ->
             val restoreState = if (viewModel.currentQuery.isBlank()) savedScrollState else null
-            channelAdapter.submitList(channels) {
+            lifecycleScope.launch {
+                channelAdapter.submitData(PagingData.from(channels))
                 if (restoreState != null) {
                     binding.recyclerViewChannels.layoutManager?.onRestoreInstanceState(restoreState)
                     savedScrollState = null

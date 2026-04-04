@@ -41,7 +41,19 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
 
-    override fun onSearchQuery(query: String) { viewModel.searchCategories(query) }
+    // Saved scroll position before search so cancel restores it naturally
+    private var savedScrollState: android.os.Parcelable? = null
+
+    override fun onSearchQuery(query: String) {
+        if (query.isBlank() && viewModel.currentSearchQuery.isNotBlank()) {
+            // Cancelling search — save scroll state before the list expands
+            savedScrollState = binding.recyclerViewCategories.layoutManager?.onSaveInstanceState()
+        } else if (query.isNotBlank() && viewModel.currentSearchQuery.isBlank()) {
+            // Starting search — save scroll state so cancel can return here
+            savedScrollState = binding.recyclerViewCategories.layoutManager?.onSaveInstanceState()
+        }
+        viewModel.searchCategories(query)
+    }
     override fun refreshData() { viewModel.refresh() }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -147,7 +159,14 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
             emptyView = binding.emptyView
         )
         viewModel.filteredCategories.observe(viewLifecycleOwner) { categories ->
-            categoryAdapter.submitList(categories)
+            val restoreState = if (viewModel.currentSearchQuery.isBlank()) savedScrollState else null
+            categoryAdapter.submitList(categories) {
+                // Called after DiffUtil finishes and RecyclerView has drawn the new list
+                if (restoreState != null) {
+                    binding.recyclerViewCategories.layoutManager?.onRestoreInstanceState(restoreState)
+                    savedScrollState = null
+                }
+            }
             if (viewModel.isLoading.value != true && viewModel.error.value == null) {
                 binding.emptyView.visibility = if (categories.isEmpty()) View.VISIBLE else View.GONE
                 binding.recyclerViewCategories.visibility = if (categories.isEmpty()) View.GONE else View.VISIBLE

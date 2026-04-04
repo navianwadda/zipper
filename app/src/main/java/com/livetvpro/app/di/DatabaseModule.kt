@@ -3,6 +3,7 @@ package com.livetvpro.app.di
 import android.content.Context
 import androidx.room.Room
 import com.livetvpro.app.data.local.AppDatabase
+import com.livetvpro.app.data.local.dao.ChannelDao
 import com.livetvpro.app.data.local.dao.FavoriteChannelDao
 import com.livetvpro.app.data.local.dao.PlaylistDao
 import dagger.Module
@@ -24,19 +25,22 @@ object DatabaseModule {
             AppDatabase::class.java,
             "live_tv_pro_database"
         )
-            .fallbackToDestructiveMigration()
+            .addMigrations(AppDatabase.MIGRATION_1_2)
             .build()
     }
 
     @Provides
     @Singleton
-    fun provideFavoriteChannelDao(database: AppDatabase): FavoriteChannelDao {
-        return database.favoriteChannelDao()
-    }
+    fun provideFavoriteChannelDao(database: AppDatabase): FavoriteChannelDao =
+        database.favoriteChannelDao()
 
     @Provides
     @Singleton
-    fun providePlaylistDao(database: AppDatabase): PlaylistDao {
-        return database.playlistDao()
-    }
+    fun providePlaylistDao(database: AppDatabase): PlaylistDao =
+        database.playlistDao()
+
+    @Provides
+    @Singleton
+    fun provideChannelDao(database: AppDatabase): ChannelDao =
+        database.channelDao()
 }

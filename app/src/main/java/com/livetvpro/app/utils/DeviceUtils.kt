@@ -1,7 +1,9 @@
 package com.livetvpro.app.utils
 
+import android.app.UiModeManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 
 object DeviceUtils {
@@ -36,7 +38,7 @@ object DeviceUtils {
         val pm = context.packageManager
 
         deviceType = when {
-            isTvHardware(pm)         -> DeviceType.TV
+            isTvHardware(pm, context) -> DeviceType.TV
             isWatchHardware(pm)      -> DeviceType.WATCH
             isAutomotiveHardware(pm) -> DeviceType.AUTOMOTIVE
             isWsaDesktop()           -> DeviceType.DESKTOP
@@ -53,7 +55,17 @@ object DeviceUtils {
         }
     }
 
-    private fun isTvHardware(pm: PackageManager): Boolean {
+    private fun isTvHardware(pm: PackageManager, context: Context): Boolean {
+        // Real TVs never have a touchscreen. Some OEM phones incorrectly report
+        // FEATURE_LEANBACK even with required="false" in the manifest, which caused
+        // phones in landscape to get the TV keyboard and TV navigation. Guard against
+        // this by rejecting any device that has a touchscreen.
+        if (pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) return false
+
+        // Double-check with UiModeManager — the authoritative TV signal on Android.
+        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+        if (uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION) return true
+
         return pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
             || pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)
             || pm.hasSystemFeature("amazon.hardware.fire_tv")

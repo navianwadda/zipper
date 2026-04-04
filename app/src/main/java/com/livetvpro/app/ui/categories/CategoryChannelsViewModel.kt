@@ -42,6 +42,9 @@ class CategoryChannelsViewModel @Inject constructor(
     private val _searchQuery   = MutableStateFlow("")
     private val _selectedGroup = MutableStateFlow("All")
 
+    /** Read-only snapshot of the current search query for fragment use */
+    val currentSearchQuery: String get() = _searchQuery.value
+
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
 
     val categoryName: String = savedStateHandle.get<String>("categoryName") ?: "Channels"

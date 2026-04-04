@@ -657,8 +657,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             if (streamUrlRaw.contains("|")) {
                 val parsed = parseStreamUrl(streamUrlRaw)
 
-                // If the pipe-encoded URL has no DRM info, fall back to the separate intent extras
-                // (e.g. user entered a pipe URL for headers but set DRM scheme/license separately)
+
                 val extraDrmScheme = intent.getStringExtra("DRM_SCHEME")?.takeIf { it.isNotBlank() }
                 val extraDrmLicense = intent.getStringExtra("DRM_LICENSE")?.takeIf { it.isNotBlank() }
                 val resolvedDrmScheme = parsed.drmScheme ?: extraDrmScheme

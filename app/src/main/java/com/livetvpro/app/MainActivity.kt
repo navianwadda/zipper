@@ -409,6 +409,7 @@ class MainActivity : AppCompatActivity() {
             if (isTopLevel) {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 drawerToggle?.isDrawerIndicatorEnabled = true
+                drawerToggle?.syncState()
                 animateNavigationIcon(0f)
                 tvToolbar?.setNavigationOnClickListener {
                     if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
@@ -419,8 +420,8 @@ class MainActivity : AppCompatActivity() {
                 }
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                drawerToggle?.isDrawerIndicatorEnabled = true
-                animateNavigationIcon(1f)
+                drawerToggle?.isDrawerIndicatorEnabled = false
+                tvToolbar?.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
                 tvToolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
 
@@ -703,6 +704,7 @@ class MainActivity : AppCompatActivity() {
             if (isTopLevel) {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 drawerToggle?.isDrawerIndicatorEnabled = true
+                drawerToggle?.syncState()
                 animateNavigationIcon(0f)
                 toolbar?.setNavigationOnClickListener {
                     if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
@@ -714,8 +716,8 @@ class MainActivity : AppCompatActivity() {
                 bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                drawerToggle?.isDrawerIndicatorEnabled = true
-                animateNavigationIcon(1f)
+                drawerToggle?.isDrawerIndicatorEnabled = false
+                toolbar?.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
                 toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
 
@@ -936,7 +938,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
-        drawerToggle?.syncState()
+        if (drawerToggle?.isDrawerIndicatorEnabled == true) {
+            drawerToggle?.syncState()
+        }
     }
 
     private fun navigateAfterDrawerClose(

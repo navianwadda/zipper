@@ -55,6 +55,9 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     private var eventAdapter: LiveEventAdapter? = null
     private var categoryAdapter: EventCategoryAdapter? = null
 
+    // Saved scroll position before search so cancel restores it naturally
+    private var savedScrollState: android.os.Parcelable? = null
+
     private val updateHandler = Handler(Looper.getMainLooper())
     private val updateRunnable = object : Runnable {
         override fun run() {
@@ -68,6 +71,13 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     }
 
     override fun onSearchQuery(query: String) {
+        if (query.isBlank() && viewModel.pendingSearchQuery.isNotBlank()) {
+            // Cancelling search — snapshot scroll position before list expands
+            savedScrollState = binding.recyclerViewEvents.layoutManager?.onSaveInstanceState()
+        } else if (query.isNotBlank() && viewModel.pendingSearchQuery.isBlank()) {
+            // Starting search — snapshot so cancel can return here
+            savedScrollState = binding.recyclerViewEvents.layoutManager?.onSaveInstanceState()
+        }
         viewModel.searchEvents(query)
     }
 
@@ -297,8 +307,15 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
             categoryAdapter?.submitList(categories)
         }
         viewModel.filteredEvents.observe(viewLifecycleOwner) { events ->
+            val restoreState = if (viewModel.pendingSearchQuery.isBlank()) savedScrollState else null
             eventAdapter?.updateData(events)
-            binding.recyclerViewEvents.scrollToPosition(0)
+            if (restoreState != null) {
+                // Post so the RecyclerView has re-laid-out after updateData's dispatchUpdatesTo
+                binding.recyclerViewEvents.post {
+                    binding.recyclerViewEvents.layoutManager?.onRestoreInstanceState(restoreState)
+                    savedScrollState = null
+                }
+            }
         }
     }
 

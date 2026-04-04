@@ -16,6 +16,7 @@ interface ChannelDao {
           AND (:group = 'All' OR groupTitle = :group)
           AND (:query = '' OR name LIKE '%' || :query || '%')
         ORDER BY position ASC
+    """)
     fun getChannelsPaged(
         categoryId: String,
         group: String = "All",

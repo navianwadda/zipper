@@ -2387,10 +2387,8 @@ class PlayerActivity : AppCompatActivity() {
                 return null
             }
 
-            // Pre-encode our key as base64url (no padding) for JWK responses
             val keyBase64 = android.util.Base64.encodeToString(
                 keyBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            // Also encode our keyId as a fallback if the manifest sends no kids
             val keyIdBase64 = android.util.Base64.encodeToString(
                 keyIdBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
 
@@ -2401,7 +2399,7 @@ class PlayerActivity : AppCompatActivity() {
                 "AdaptiveClearKey ready — key(b64)=$keyBase64 fallbackKid(b64)=$keyIdBase64")
 
             DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
                 .setPlayClearSamplesWithoutKeys(false)
                 .build(adaptiveCallback)

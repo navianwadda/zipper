@@ -3,9 +3,7 @@ package com.livetvpro.app.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverter
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ChannelLink
 
@@ -51,21 +49,6 @@ data class ChannelEntity(
         createdAt    = createdAt,
         updatedAt    = updatedAt
     )
-}
-
-class ChannelConverters {
-    private val gson = Gson()
-
-    @TypeConverter
-    fun fromLinksList(links: List<ChannelLink>?): String? =
-        if (links == null) null else gson.toJson(links)
-
-    @TypeConverter
-    fun toLinksList(json: String?): List<ChannelLink>? {
-        if (json == null) return null
-        val type = object : TypeToken<List<ChannelLink>>() {}.type
-        return gson.fromJson(json, type)
-    }
 }
 
 fun Channel.toEntity(): ChannelEntity {

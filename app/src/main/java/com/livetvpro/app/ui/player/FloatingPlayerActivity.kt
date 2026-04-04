@@ -916,6 +916,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
         setupPlayer()
         setupLinksUI()
+        setupRelatedChannels()
 
         binding.relatedLoadingProgress.visibility = View.VISIBLE
         binding.relatedChannelsRecycler.visibility = View.GONE
@@ -933,9 +934,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
     private fun switchToEventFromLiveEvent(newEvent: LiveEvent) {
         try {
-            if (::relatedEventsAdapter.isInitialized) {
-            }
-
             releasePlayer()
 
             eventData = newEvent
@@ -956,6 +954,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
             setupPlayer()
             setupLinksUI()
+            setupRelatedChannels()
 
             binding.relatedLoadingProgress.visibility = View.VISIBLE
             binding.relatedChannelsRecycler.visibility = View.GONE
@@ -1308,8 +1307,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 else -> null
             }
             val mediaSourceFactory = if (clearKeyMgr != null) {
-                // Use provider — NOT DrmConfiguration on MediaItem — so ExoPlayer skips UUID
-                // matching and our manager handles GuardEncType=2 Widevine PSSH boxes correctly.
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(dataSourceFactory)
                     .setDrmSessionManagerProvider { clearKeyMgr }
@@ -1394,8 +1391,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     }
 
                     if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
-                        // Do NOT set DrmConfiguration — provider handles UUID matching.
-                        // Setting it would re-enable UUID filtering and break GuardEncType=2.
                     } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
                         && streamInfo.drmLicenseUrl != null) {
                         val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
@@ -1557,10 +1552,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
         binding.errorView.visibility = View.VISIBLE
     }
 
-    // ── ClearKey: inline hex key+keyId ────────────────────────────────────────
-    // Adaptive callback echoes back the actual PSSH kid(s) ExoPlayer finds in
-    // the manifest, mapping each one to our content key. This is the correct
-    // approach for GuardEncType=2 DASH streams (Widevine PSSH + ClearKey keys).
     private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
             val keyIdBytes = hexToBytes(keyIdHex)
@@ -1576,7 +1567,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
         } catch (e: Exception) { null }
     }
 
-    // ── ClearKey: inline JWK JSON ─────────────────────────────────────────────
     private fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
         return try {
             DefaultDrmSessionManager.Builder()
@@ -1587,7 +1577,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
         } catch (e: Exception) { null }
     }
 
-    // ── ClearKey: remote license server ──────────────────────────────────────
     private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
             val factory = DefaultHttpDataSource.Factory()
@@ -1605,9 +1594,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
         } catch (e: Exception) { null }
     }
 
-    // ── Adaptive ClearKey callback ────────────────────────────────────────────
-    // Reads the EME license request body, extracts all kid(s) ExoPlayer found in
-    // the PSSH, and maps each one to our single content key in the JWK response.
     private fun buildAdaptiveClearKeyCallback(
         keyBase64: String,
         fallbackKidBase64: String

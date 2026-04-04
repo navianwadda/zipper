@@ -238,7 +238,7 @@ class PlayerActivity : AppCompatActivity() {
 
         when {
             newChannel != null -> switchToChannel(newChannel, linkIndex)
-            newEvent != null   -> switchToEventFromLiveEvent(newEvent)
+            newEvent != null   -> switchToEventFromLiveEvent(newEvent, linkIndex)
         }
     }
 
@@ -409,8 +409,8 @@ class PlayerActivity : AppCompatActivity() {
                     context = this,
                     events = emptyList(),
                     preferencesManager = preferencesManager,
-                    onEventClick = { event, _ ->
-                        switchToEventFromLiveEvent(event)
+                    onEventClick = { event, idx ->
+                        switchToEventFromLiveEvent(event, idx)
                     }
                 )
             }
@@ -1551,7 +1551,7 @@ class PlayerActivity : AppCompatActivity() {
                 events = emptyList(),
                 preferencesManager = preferencesManager,
                 onEventClick = { event, linkIndex ->
-                    switchToEventFromLiveEvent(event)
+                    switchToEventFromLiveEvent(event, linkIndex)
                 }
             )
 
@@ -1718,7 +1718,7 @@ class PlayerActivity : AppCompatActivity() {
         switchToChannel(relatedChannel)
     }
 
-    private fun switchToEventFromLiveEvent(newEvent: LiveEvent) {
+    private fun switchToEventFromLiveEvent(newEvent: LiveEvent, linkIndex: Int = 0) {
         try {
             releasePlayer()
 
@@ -1731,8 +1731,8 @@ class PlayerActivity : AppCompatActivity() {
             allEventLinks = newEvent.links
 
             if (allEventLinks.isNotEmpty()) {
-                currentLinkIndex = 0
-                streamUrl = allEventLinks.firstOrNull()?.let { buildStreamUrl(it) } ?: ""
+                currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
+                streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
                 currentLinkIndex = 0
                 streamUrl = ""
@@ -1746,8 +1746,8 @@ class PlayerActivity : AppCompatActivity() {
                     context = this,
                     events = emptyList(),
                     preferencesManager = preferencesManager,
-                    onEventClick = { event, _ ->
-                        switchToEventFromLiveEvent(event)
+                    onEventClick = { event, idx ->
+                        switchToEventFromLiveEvent(event, idx)
                     }
                 )
             }

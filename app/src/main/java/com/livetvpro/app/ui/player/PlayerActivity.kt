@@ -121,6 +121,8 @@ class PlayerActivity : AppCompatActivity() {
     private var resizeModesRestoredFromState = false
 
     private var pipReceiver: BroadcastReceiver? = null
+    private var screenOffReceiver: BroadcastReceiver? = null
+    private var isScreenOff = false
     private var wasLockedBeforePip = false
     private var settingsDialog: com.livetvpro.app.ui.player.settings.PlayerSettingsDialog? = null
     private var isShowingSettingsDialog = false
@@ -650,10 +652,24 @@ class PlayerActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isPipSupported) {
             setPictureInPictureParams(updatePipParams())
         }
+        screenOffReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                when (intent?.action) {
+                    Intent.ACTION_SCREEN_OFF -> isScreenOff = true
+                    Intent.ACTION_SCREEN_ON  -> isScreenOff = false
+                }
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
+        registerReceiver(screenOffReceiver, filter)
     }
 
     override fun onResume() {
         super.onResume()
+        isScreenOff = false
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         applyOrientationSettings(isLandscape)
 
@@ -1735,11 +1751,15 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        screenOffReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+            screenOffReceiver = null
+        }
         if (isInPipMode) {
+            if (isScreenOff) return
             if (isFinishing) {
                 finish()
             } else {
-
                 releasePlayer()
                 finish()
             }

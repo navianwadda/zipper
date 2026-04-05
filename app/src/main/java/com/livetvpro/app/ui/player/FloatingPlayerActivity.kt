@@ -1377,7 +1377,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
+                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
                 .build()
             player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)

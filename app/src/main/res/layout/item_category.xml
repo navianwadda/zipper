@@ -37,7 +37,7 @@
                 app:cardCornerRadius="44dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@android:color/transparent">
+                app:cardBackgroundColor="#80FFFFFF">
 
                 <FrameLayout
                     android:id="@+id/logo_container"

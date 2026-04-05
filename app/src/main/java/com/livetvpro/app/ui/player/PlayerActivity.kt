@@ -348,7 +348,6 @@ class PlayerActivity : AppCompatActivity() {
         viewModel.channelListItems.observe(this) { items ->
             if (items.isNullOrEmpty() || contentType != ContentType.CHANNEL) return@observe
 
-
             val pendingNum = pendingChannelNumber
             if (pendingNum != -1) {
                 pendingChannelNumber = -1
@@ -361,12 +360,10 @@ class PlayerActivity : AppCompatActivity() {
                     channelNumberHandler.removeCallbacks(overlayHideRunnable)
                     channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
                 } else {
-
                     binding.channelNumberOverlay?.visibility = View.GONE
                 }
                 return@observe
             }
-
 
             val direction = pendingChannelDirection
             if (direction != 0) {
@@ -429,7 +426,6 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-
         }
     }
 
@@ -689,7 +685,6 @@ class PlayerActivity : AppCompatActivity() {
         newConfig: Configuration
     ) {
         if (!isInPictureInPictureMode) {
-
             pipReceiver?.let {
                 unregisterReceiver(it)
                 pipReceiver = null
@@ -854,7 +849,6 @@ class PlayerActivity : AppCompatActivity() {
                 when {
                     contentType != ContentType.CHANNEL -> {  }
 
-
                     index != -1 && !items.isNullOrEmpty() && index in items.indices -> {
                         pendingChannelDirection = 0
                         val targetChannel = items[index]
@@ -862,7 +856,6 @@ class PlayerActivity : AppCompatActivity() {
                         channelNumberHandler.removeCallbacks(overlayHideRunnable)
                         channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
                     }
-
 
                     index == -1 && !items.isNullOrEmpty() && pendingChannelDirection != 0 -> {
                         val dir = pendingChannelDirection
@@ -877,7 +870,6 @@ class PlayerActivity : AppCompatActivity() {
                         channelNumberHandler.removeCallbacks(overlayHideRunnable)
                         channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
                     }
-
 
                     items.isNullOrEmpty() -> {
                         pendingChannelDirection = direction
@@ -1076,7 +1068,6 @@ class PlayerActivity : AppCompatActivity() {
         }
         val items = viewModel.channelListItems.value
         if (items.isNullOrEmpty()) {
-
             pendingChannelNumber = number
             showChannelOverlay("...", null)
             viewModel.loadAllChannelsForList(
@@ -1296,7 +1287,6 @@ class PlayerActivity : AppCompatActivity() {
             contentName = uri.lastPathSegment ?: "Stream"
             contentId = "external_${System.currentTimeMillis()}"
 
-
             val rawUriString = uri.toString()
             val decodedUriString = android.net.Uri.decode(rawUriString)
             streamUrl = decodedUriString
@@ -1336,7 +1326,6 @@ class PlayerActivity : AppCompatActivity() {
 
                 val parsed = parseStreamUrl(streamUrlRaw)
 
-
                 val extraDrmScheme = intent.getStringExtra("DRM_SCHEME")?.takeIf { it.isNotBlank() }
                 val extraDrmLicense = intent.getStringExtra("DRM_LICENSE")?.takeIf { it.isNotBlank() }
                 val resolvedDrmScheme = parsed.drmScheme ?: extraDrmScheme
@@ -1367,7 +1356,6 @@ class PlayerActivity : AppCompatActivity() {
                     resolvedDrmKeyId = null
                     resolvedDrmKey = null
                 }
-
 
                 val mergedLink = LiveEventLink(
                     quality = "Network Stream",
@@ -1469,8 +1457,6 @@ class PlayerActivity : AppCompatActivity() {
 
                 streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
-
-
                 streamUrl = channel.streamUrl
                 allEventLinks = emptyList()
             }
@@ -1890,7 +1876,6 @@ class PlayerActivity : AppCompatActivity() {
         return url
     }
 
-
     private fun setupPlayer() {
         if (player != null) return
         binding.errorView.visibility = View.GONE
@@ -1903,14 +1888,12 @@ class PlayerActivity : AppCompatActivity() {
                 ?.setOnClickListener { retryPlayback() }
         }
 
-
         trackSelector = DefaultTrackSelector(this).apply {
             parameters = buildUponParameters()
                 .setAllowVideoMixedMimeTypeAdaptiveness(true)
                 .setAllowAudioMixedMimeTypeAdaptiveness(true)
                 .setAllowAudioMixedChannelCountAdaptiveness(true)
                 .clearVideoSizeConstraints()
-
                 .setTunnelingEnabled(DeviceUtils.isTvDevice)
                 .build()
         }
@@ -1922,7 +1905,6 @@ class PlayerActivity : AppCompatActivity() {
                 showError("Invalid stream URL")
                 return
             }
-
 
             val headers = streamInfo.headers.toMutableMap()
             if (!headers.containsKey("User-Agent")) {
@@ -1937,7 +1919,6 @@ class PlayerActivity : AppCompatActivity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-
             val clearKeyBranch = when {
                 streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> "inline-hex"
                 streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> "jwk-inline"
@@ -1945,7 +1926,6 @@ class PlayerActivity : AppCompatActivity() {
                 streamInfo.drmScheme == "clearkey" -> "none(no-key-material)"
                 else -> "none(scheme=${streamInfo.drmScheme})"
             }
-
 
             val clearKeyMgr: DefaultDrmSessionManager? = when {
                 streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
@@ -1963,20 +1943,14 @@ class PlayerActivity : AppCompatActivity() {
                 else -> null
             }
 
-
             val mediaSourceFactory = if (clearKeyMgr != null) {
-
-
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(baseDataSourceFactory)
                     .setDrmSessionManagerProvider { clearKeyMgr }
             } else {
-
-
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(baseDataSourceFactory)
             }
-
 
             val renderersFactory = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
@@ -2022,10 +1996,8 @@ class PlayerActivity : AppCompatActivity() {
                     )
                     binding.playerView.hideController()
 
-
                     val uri = android.net.Uri.parse(streamInfo.url)
                     val mediaItemBuilder = MediaItem.Builder().setUri(uri)
-
 
                     val urlLower = streamInfo.url.lowercase()
                     when {
@@ -2060,14 +2032,13 @@ class PlayerActivity : AppCompatActivity() {
                     }
 
                     when {
-
-
                         streamInfo.drmScheme == "clearkey" && clearKeyMgr != null -> {
+                            mediaItemBuilder.setDrmConfiguration(
+                                MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID).build()
+                            )
                         }
 
-
                         streamInfo.drmScheme == "widevine" && streamInfo.drmLicenseUrl != null -> {
-
                             val licenseHeaders = headers.filter { (k, _) ->
                                 k.lowercase() !in setOf("referer", "origin")
                             }
@@ -2075,14 +2046,11 @@ class PlayerActivity : AppCompatActivity() {
                                 MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
                                     .setLicenseUri(streamInfo.drmLicenseUrl)
                                     .setLicenseRequestHeaders(licenseHeaders)
-
                                     .setForceDefaultLicenseUri(true)
-
                                     .setMultiSession(false)
                                     .build()
                             )
                         }
-
 
                         streamInfo.drmScheme == "playready" && streamInfo.drmLicenseUrl != null -> {
                             val licenseHeaders = headers.filter { (k, _) ->
@@ -2106,7 +2074,6 @@ class PlayerActivity : AppCompatActivity() {
                     exo.setMediaItem(mediaItem)
                     exo.prepare()
                     exo.playWhenReady = true
-
 
                     playerListener = object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -2232,7 +2199,6 @@ class PlayerActivity : AppCompatActivity() {
         binding.errorView.visibility = View.VISIBLE
     }
 
-
     private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
             val keyIdBytes = hexToBytes(keyIdHex)
@@ -2240,7 +2206,6 @@ class PlayerActivity : AppCompatActivity() {
             if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) {
                 return null
             }
-
 
             val keyBase64 = android.util.Base64.encodeToString(
                 keyBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
@@ -2260,7 +2225,6 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-
     private fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
         return try {
             val drmCallback = LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8))
@@ -2273,7 +2237,6 @@ class PlayerActivity : AppCompatActivity() {
             null
         }
     }
-
 
     private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
         return try {
@@ -2296,7 +2259,6 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-
     private fun buildAdaptiveClearKeyCallback(
         keyBase64: String,
         fallbackKidBase64: String,
@@ -2317,20 +2279,17 @@ class PlayerActivity : AppCompatActivity() {
                 return try {
                     val requestBody = String(request.data, Charsets.UTF_8)
 
-
                     val requestedKids = mutableListOf<String>()
                     Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(requestBody)?.let { match ->
                         Regex(""""([A-Za-z0-9+/=_-]+)"""").findAll(match.groupValues[1])
                             .forEach { requestedKids.add(it.groupValues[1]) }
                     }
 
-                    // Map every manifest kid → our content decryption key
                     val keyEntries = if (requestedKids.isNotEmpty()) {
                         requestedKids.joinToString(",") { kid ->
                             """{"kty":"oct","k":"$keyBase64","kid":"$kid"}"""
                         }
                     } else {
-                        // No kids in request — fall back to the kid from the stream URL
                         """{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}"""
                     }
 
@@ -2339,7 +2298,6 @@ class PlayerActivity : AppCompatActivity() {
                     androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
                         jwkResponse.toByteArray(Charsets.UTF_8))
                 } catch (e: Exception) {
-                    // Last-resort fallback: single entry with our fallback kid
                     val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}],"type":"temporary"}"""
                     androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
                         fallback.toByteArray(Charsets.UTF_8))
@@ -2348,9 +2306,6 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Hex utility
-    // ─────────────────────────────────────────────────────────────────────────
     private fun hexToBytes(hex: String): ByteArray {
         return try {
             val clean = hex.replace(" ", "").replace("-", "").lowercase()

@@ -1964,10 +1964,10 @@ class PlayerActivity : AppCompatActivity() {
 
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                     5_000,
-                     30_000,
-                     1_500,
-                     3_000
+                    15_000,
+                    50_000,
+                    3_000,
+                    6_000
                 )
                 .build()
 

@@ -513,7 +513,7 @@ class FloatingPlayerService : Service() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
+                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
                 .build()
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
@@ -868,7 +868,7 @@ class FloatingPlayerService : Service() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
+                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
                 .build()
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
@@ -1013,7 +1013,7 @@ class FloatingPlayerService : Service() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
             val loadControl2 = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
+                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
                 .build()
             val trackSelector2 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
@@ -1100,7 +1100,7 @@ class FloatingPlayerService : Service() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
+                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
                 .build()
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
@@ -1565,7 +1565,7 @@ class FloatingPlayerService : Service() {
                     .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                     .setEnableDecoderFallback(true)
                 val loadControl3 = DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(5_000, 30_000, 1_500, 3_000)
+                    .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
                     .build()
                 val trackSelector3 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                     parameters = buildUponParameters()

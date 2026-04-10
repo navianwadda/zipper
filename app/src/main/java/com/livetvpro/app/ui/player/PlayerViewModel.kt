@@ -62,7 +62,6 @@ class PlayerViewModel @Inject constructor(
                         if (cached.isNotEmpty()) {
                             val playlist = playlistRepository.getPlaylistById(categoryId)
                             if (playlist != null) {
-                                val app = getApplication()
                                 viewModelScope.launch {
                                     try {
                                         channelRepository.syncPlaylist(
@@ -70,7 +69,7 @@ class PlayerViewModel @Inject constructor(
                                             playlistTitle = playlist.title,
                                             source        = if (playlist.isFile) playlist.filePath else playlist.url,
                                             isFile        = playlist.isFile,
-                                            application   = app
+                                            application   = application
                                         )
                                     } catch (e: Exception) {}
                                 }
@@ -166,7 +165,6 @@ class PlayerViewModel @Inject constructor(
                 val allChannels = if (cached.isNotEmpty()) {
                     val playlist = playlistRepository.getPlaylistById(categoryId)
                     if (playlist != null) {
-                        val app = getApplication()
                         viewModelScope.launch {
                             try {
                                 channelRepository.syncPlaylist(
@@ -174,7 +172,7 @@ class PlayerViewModel @Inject constructor(
                                     playlistTitle = playlist.title,
                                     source        = if (playlist.isFile) playlist.filePath else playlist.url,
                                     isFile        = playlist.isFile,
-                                    application   = app
+                                    application   = application
                                 )
                             } catch (e: Exception) {}
                         }

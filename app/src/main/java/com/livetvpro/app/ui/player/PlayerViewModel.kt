@@ -52,6 +52,8 @@ class PlayerViewModel @Inject constructor(
     private val _channelListItems = MutableLiveData<List<Channel>>(emptyList())
     val channelListItems: LiveData<List<Channel>> = _channelListItems
 
+    private val syncedPlaylistIds = mutableSetOf<String>()
+
     fun loadAllChannelsForList(categoryId: String) {
         viewModelScope.launch {
             try {
@@ -61,7 +63,8 @@ class PlayerViewModel @Inject constructor(
                         val cached = channelRepository.getChannelsByCategory(categoryId)
                         if (cached.isNotEmpty()) {
                             val playlist = playlistRepository.getPlaylistById(categoryId)
-                            if (playlist != null) {
+                            if (playlist != null && !syncedPlaylistIds.contains(categoryId)) {
+                                syncedPlaylistIds.add(categoryId)
                                 viewModelScope.launch {
                                     try {
                                         channelRepository.syncPlaylist(
@@ -164,7 +167,8 @@ class PlayerViewModel @Inject constructor(
                 val cached = channelRepository.getChannelsByCategory(categoryId)
                 val allChannels = if (cached.isNotEmpty()) {
                     val playlist = playlistRepository.getPlaylistById(categoryId)
-                    if (playlist != null) {
+                    if (playlist != null && !syncedPlaylistIds.contains(categoryId)) {
+                        syncedPlaylistIds.add(categoryId)
                         viewModelScope.launch {
                             try {
                                 channelRepository.syncPlaylist(

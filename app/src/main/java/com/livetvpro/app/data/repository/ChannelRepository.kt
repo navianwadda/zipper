@@ -24,6 +24,7 @@ class ChannelRepository @Inject constructor(
     companion object {
         private const val PAGE_SIZE = 50
         private const val INSERT_CHUNK = 500
+        private val gson = com.google.gson.Gson()
     }
 
     fun getChannelsPaged(
@@ -46,7 +47,7 @@ class ChannelRepository @Inject constructor(
     ).flow.map { pagingData ->
         pagingData.map { entity ->
             val links = entity.linksJson?.let {
-                com.google.gson.Gson().fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
+                gson.fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
             }
             entity.toChannel(links)
         }
@@ -55,7 +56,7 @@ class ChannelRepository @Inject constructor(
     suspend fun getChannelsByCategory(categoryId: String): List<Channel> =
         channelDao.getChannelsByCategory(categoryId).map { entity ->
             val links = entity.linksJson?.let {
-                com.google.gson.Gson().fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
+                gson.fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
             }
             entity.toChannel(links)
         }
@@ -75,10 +76,7 @@ class ChannelRepository @Inject constructor(
 
         val category = categoryRepository.getCategories().find { it.id == categoryId }
         if (category?.m3uUrl != null && category.m3uUrl.isNotEmpty()) {
-            val raw = M3uParser.parseM3uFromUrl(category.m3uUrl)
-            M3uParser.convertToChannels(raw, categoryId, category.name)
-                .chunked(INSERT_CHUNK)
-                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+            streamInsertM3u(category.m3uUrl, categoryId, category.name)
         }
     }
 
@@ -89,21 +87,26 @@ class ChannelRepository @Inject constructor(
         isFile: Boolean,
         application: android.app.Application
     ) = withContext(Dispatchers.IO) {
-        val channels = if (isFile) {
+        channelDao.deleteByCategory(playlistId)
+
+        if (isFile) {
             val uri = android.net.Uri.parse(source)
             val content = application.contentResolver.openInputStream(uri)
                 ?.bufferedReader()?.use { it.readText() } ?: return@withContext
             val parsed = M3uParser.parseM3uContent(content)
             M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
+                .chunked(INSERT_CHUNK)
+                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
         } else {
-            val raw = M3uParser.parseM3uFromUrl(source)
-            M3uParser.convertToChannels(raw, playlistId, playlistTitle)
+            streamInsertM3u(source, playlistId, playlistTitle)
         }
+    }
 
-        channelDao.deleteByCategory(playlistId)
-        channels.chunked(INSERT_CHUNK).forEach { chunk ->
-            channelDao.insertAll(chunk.map { it.toEntity() })
-        }
+    private suspend fun streamInsertM3u(url: String, categoryId: String, categoryName: String) {
+        val raw = M3uParser.parseM3uFromUrl(url)
+        M3uParser.convertToChannels(raw, categoryId, categoryName)
+            .chunked(INSERT_CHUNK)
+            .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
     }
 
     suspend fun isCategorySynced(categoryId: String): Boolean =

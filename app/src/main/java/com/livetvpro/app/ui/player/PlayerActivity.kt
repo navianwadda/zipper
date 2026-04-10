@@ -1298,10 +1298,9 @@ class PlayerActivity : AppCompatActivity() {
 
 
             val rawUriString = uri.toString()
-            val decodedUriString = android.net.Uri.decode(rawUriString)
-            streamUrl = decodedUriString
+            streamUrl = rawUriString
 
-            val parsed = parseStreamUrl(decodedUriString)
+            val parsed = parseStreamUrl(rawUriString)
 
             allEventLinks = listOf(
                 com.livetvpro.app.data.models.LiveEventLink(
@@ -1964,18 +1963,8 @@ class PlayerActivity : AppCompatActivity() {
             }
 
 
-            val mediaSourceFactory = if (clearKeyMgr != null) {
-
-
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(baseDataSourceFactory)
-                    .setDrmSessionManagerProvider { clearKeyMgr }
-            } else {
-
-
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(baseDataSourceFactory)
-            }
+            val mediaSourceFactory = DefaultMediaSourceFactory(this)
+                .setDataSourceFactory(baseDataSourceFactory)
 
 
             val renderersFactory = DefaultRenderersFactory(this)
@@ -1991,11 +1980,17 @@ class PlayerActivity : AppCompatActivity() {
                 )
                 .build()
 
+            val resolvedMediaSourceFactory = if (clearKeyMgr != null) {
+                mediaSourceFactory.setDrmSessionManagerProvider { clearKeyMgr }
+            } else {
+                mediaSourceFactory
+            }
+
             player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
                 .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector!!)
-                .setMediaSourceFactory(mediaSourceFactory)
+                .setMediaSourceFactory(resolvedMediaSourceFactory)
                 .setSeekBackIncrementMs(skipMs)
                 .setSeekForwardIncrementMs(skipMs)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -2063,6 +2058,11 @@ class PlayerActivity : AppCompatActivity() {
 
 
                         streamInfo.drmScheme == "clearkey" && clearKeyMgr != null -> {
+                            mediaItemBuilder.setDrmConfiguration(
+                                MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
+                                    .setMultiSession(false)
+                                    .build()
+                            )
                         }
 
 

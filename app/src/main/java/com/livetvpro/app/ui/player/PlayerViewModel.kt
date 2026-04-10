@@ -60,7 +60,6 @@ class PlayerViewModel @Inject constructor(
                     categoryId.isNotEmpty() -> {
                         val cached = channelRepository.getChannelsByCategory(categoryId)
                         if (cached.isNotEmpty()) {
-                            // Return cache immediately, then re-sync in background (URL or file may have changed)
                             val playlist = playlistRepository.getPlaylistById(categoryId)
                             if (playlist != null) {
                                 viewModelScope.launch {
@@ -72,7 +71,7 @@ class PlayerViewModel @Inject constructor(
                                             isFile        = playlist.isFile,
                                             application   = getApplication()
                                         )
-                                    } catch (e: Exception) { /* silent, cache still valid */ }
+                                    } catch (e: Exception) {}
                                 }
                             }
                             cached
@@ -164,7 +163,6 @@ class PlayerViewModel @Inject constructor(
 
                 val cached = channelRepository.getChannelsByCategory(categoryId)
                 val allChannels = if (cached.isNotEmpty()) {
-                    // Return cache immediately, then re-sync in background (URL or file may have changed)
                     val playlist = playlistRepository.getPlaylistById(categoryId)
                     if (playlist != null) {
                         viewModelScope.launch {
@@ -176,7 +174,7 @@ class PlayerViewModel @Inject constructor(
                                     isFile        = playlist.isFile,
                                     application   = getApplication()
                                 )
-                            } catch (e: Exception) { /* silent, cache still valid */ }
+                            } catch (e: Exception) {}
                         }
                     }
                     cached

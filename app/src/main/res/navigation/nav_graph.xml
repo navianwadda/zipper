@@ -10,53 +10,25 @@
         android:label="Home">
         <action
             android:id="@+id/action_home_to_category"
-            app:destination="@id/categoryChannelsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/categoryChannelsFragment" />
         <action
             android:id="@+id/action_home_to_favorites"
-            app:destination="@id/favoritesFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/favoritesFragment" />
         <action
             android:id="@+id/action_home_to_live"
-            app:destination="@id/liveEventsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/liveEventsFragment" />
         <action
             android:id="@+id/action_home_to_sports"
-            app:destination="@id/sportsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/sportsFragment" />
         <action
             android:id="@+id/action_home_to_network_stream"
-            app:destination="@id/networkStreamFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/networkStreamFragment" />
         <action
             android:id="@+id/action_home_to_contact"
-            app:destination="@id/contactFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/contactFragment" />
         <action
             android:id="@+id/action_home_to_playlists"
-            app:destination="@id/playlistsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/playlistsFragment" />
     </fragment>
 
     <fragment
@@ -71,20 +43,12 @@
             app:argType="string" />
         <action
             android:id="@+id/action_category_to_favorites"
-            app:destination="@id/favoritesFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/favoritesFragment" />
         <action
             android:id="@+id/action_category_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_left"
-            app:exitAnim="@anim/slide_out_right"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
     </fragment>
 
     <fragment
@@ -95,25 +59,13 @@
             android:id="@+id/action_favorites_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_left"
-            app:exitAnim="@anim/slide_out_right"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_favorites_to_live"
-            app:destination="@id/liveEventsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/liveEventsFragment" />
         <action
             android:id="@+id/action_favorites_to_sports"
-            app:destination="@id/sportsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/sportsFragment" />
     </fragment>
 
     <fragment
@@ -122,27 +74,15 @@
         android:label="Live Events">
         <action
             android:id="@+id/action_live_to_favorites"
-            app:destination="@id/favoritesFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/favoritesFragment" />
         <action
             android:id="@+id/action_live_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_live_to_sports"
-            app:destination="@id/sportsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/sportsFragment" />
     </fragment>
 
     <fragment
@@ -153,25 +93,13 @@
             android:id="@+id/action_sports_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_sports_to_favorites"
-            app:destination="@id/favoritesFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/favoritesFragment" />
         <action
             android:id="@+id/action_sports_to_live"
-            app:destination="@id/liveEventsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/liveEventsFragment" />
     </fragment>
 
     <fragment
@@ -182,25 +110,13 @@
             android:id="@+id/action_contact_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_left"
-            app:exitAnim="@anim/slide_out_right"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_contact_to_favorites"
-            app:destination="@id/favoritesFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/favoritesFragment" />
         <action
             android:id="@+id/action_contact_to_live"
-            app:destination="@id/liveEventsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/liveEventsFragment" />
     </fragment>
 
     <fragment
@@ -211,11 +127,7 @@
             android:id="@+id/action_network_stream_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_left"
-            app:exitAnim="@anim/slide_out_right"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
     </fragment>
 
     <fragment
@@ -226,18 +138,10 @@
             android:id="@+id/action_playlists_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_left"
-            app:exitAnim="@anim/slide_out_right"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_playlists_to_category"
-            app:destination="@id/categoryChannelsFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:destination="@id/categoryChannelsFragment" />
     </fragment>
 
     <fragment
@@ -248,11 +152,7 @@
             android:id="@+id/action_cricket_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_left"
-            app:exitAnim="@anim/slide_out_right"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
     </fragment>
 
     <fragment
@@ -263,11 +163,7 @@
             android:id="@+id/action_football_to_home"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:enterAnim="@anim/slide_in_left"
-            app:exitAnim="@anim/slide_out_right"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
+            app:popUpToInclusive="false" />
     </fragment>
 
     <fragment

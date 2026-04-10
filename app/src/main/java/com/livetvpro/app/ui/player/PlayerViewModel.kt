@@ -58,11 +58,31 @@ class PlayerViewModel @Inject constructor(
                 val channels = when {
                     categoryId == "sports_slug" -> nativeDataRepository.getSports()
                     categoryId.isNotEmpty() -> {
-                        val playlist = playlistRepository.getPlaylistById(categoryId)
-                        if (playlist != null) {
-                            loadChannelsFromPlaylist(playlist)
+                        val cached = channelRepository.getChannelsByCategory(categoryId)
+                        if (cached.isNotEmpty()) {
+                            // Return cache immediately, then re-sync in background (URL or file may have changed)
+                            val playlist = playlistRepository.getPlaylistById(categoryId)
+                            if (playlist != null) {
+                                viewModelScope.launch {
+                                    try {
+                                        channelRepository.syncPlaylist(
+                                            playlistId    = playlist.id,
+                                            playlistTitle = playlist.title,
+                                            source        = if (playlist.isFile) playlist.filePath else playlist.url,
+                                            isFile        = playlist.isFile,
+                                            application   = getApplication()
+                                        )
+                                    } catch (e: Exception) { /* silent, cache still valid */ }
+                                }
+                            }
+                            cached
                         } else {
-                            channelRepository.getChannelsByCategory(categoryId)
+                            val playlist = playlistRepository.getPlaylistById(categoryId)
+                            if (playlist != null) {
+                                loadChannelsFromPlaylist(playlist)
+                            } else {
+                                channelRepository.getChannelsByCategory(categoryId)
+                            }
                         }
                     }
                     else -> withContext(Dispatchers.IO) { nativeDataRepository.getChannels() }
@@ -142,14 +162,31 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             try {
 
-                val playlist = playlistRepository.getPlaylistById(categoryId)
-
-                val allChannels = if (playlist != null) {
-
-                    loadChannelsFromPlaylist(playlist)
+                val cached = channelRepository.getChannelsByCategory(categoryId)
+                val allChannels = if (cached.isNotEmpty()) {
+                    // Return cache immediately, then re-sync in background (URL or file may have changed)
+                    val playlist = playlistRepository.getPlaylistById(categoryId)
+                    if (playlist != null) {
+                        viewModelScope.launch {
+                            try {
+                                channelRepository.syncPlaylist(
+                                    playlistId    = playlist.id,
+                                    playlistTitle = playlist.title,
+                                    source        = if (playlist.isFile) playlist.filePath else playlist.url,
+                                    isFile        = playlist.isFile,
+                                    application   = getApplication()
+                                )
+                            } catch (e: Exception) { /* silent, cache still valid */ }
+                        }
+                    }
+                    cached
                 } else {
-
-                    channelRepository.getChannelsByCategory(categoryId)
+                    val playlist = playlistRepository.getPlaylistById(categoryId)
+                    if (playlist != null) {
+                        loadChannelsFromPlaylist(playlist)
+                    } else {
+                        channelRepository.getChannelsByCategory(categoryId)
+                    }
                 }
 
 

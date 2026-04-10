@@ -86,26 +86,21 @@ class ChannelRepository @Inject constructor(
         isFile: Boolean,
         application: android.app.Application
     ) = withContext(Dispatchers.IO) {
-        channelDao.deleteByCategory(playlistId)
-
-        if (isFile) {
+        val channels = if (isFile) {
             val uri = android.net.Uri.parse(source)
             val content = application.contentResolver.openInputStream(uri)
                 ?.bufferedReader()?.use { it.readText() } ?: return@withContext
             val parsed = M3uParser.parseM3uContent(content)
             M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
-                .chunked(INSERT_CHUNK)
-                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
         } else {
-            streamInsertM3u(source, playlistId, playlistTitle)
+            val raw = M3uParser.parseM3uFromUrl(source)
+            M3uParser.convertToChannels(raw, playlistId, playlistTitle)
         }
-    }
 
-    private suspend fun streamInsertM3u(url: String, categoryId: String, categoryName: String) {
-        val raw = M3uParser.parseM3uFromUrl(url)
-        M3uParser.convertToChannels(raw, categoryId, categoryName)
-            .chunked(INSERT_CHUNK)
-            .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+        channelDao.deleteByCategory(playlistId)
+        channels.chunked(INSERT_CHUNK).forEach { chunk ->
+            channelDao.insertAll(chunk.map { it.toEntity() })
+        }
     }
 
     suspend fun isCategorySynced(categoryId: String): Boolean =

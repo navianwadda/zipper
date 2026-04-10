@@ -75,7 +75,10 @@ class ChannelRepository @Inject constructor(
 
         val category = categoryRepository.getCategories().find { it.id == categoryId }
         if (category?.m3uUrl != null && category.m3uUrl.isNotEmpty()) {
-            streamInsertM3u(category.m3uUrl, categoryId, category.name)
+            val raw = M3uParser.parseM3uFromUrl(category.m3uUrl)
+            M3uParser.convertToChannels(raw, categoryId, category.name)
+                .chunked(INSERT_CHUNK)
+                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
         }
     }
 

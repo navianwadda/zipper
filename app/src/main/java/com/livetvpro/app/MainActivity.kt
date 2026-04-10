@@ -284,6 +284,10 @@ class MainActivity : AppCompatActivity() {
             val navOptions = NavOptions.Builder()
                 .setPopUpTo(navController.graph.startDestinationId, false)
                 .setLaunchSingleTop(true)
+                .setEnterAnim(R.anim.fade_in)
+                .setExitAnim(R.anim.fade_out)
+                .setPopEnterAnim(R.anim.fade_in)
+                .setPopExitAnim(R.anim.fade_out)
                 .build()
             navController.navigate(destinationId, null, navOptions)
         }
@@ -372,7 +376,13 @@ class MainActivity : AppCompatActivity() {
                 R.id.deviceIdFragment -> {
                     val destId = menuItem.itemId
                     navigateAfterDrawerClose(drawerLayout, GravityCompat.START) {
-                        navController.navigate(destId)
+                        val slideNavOptions = NavOptions.Builder()
+                            .setEnterAnim(R.anim.slide_in_right)
+                            .setExitAnim(R.anim.slide_out_left)
+                            .setPopEnterAnim(R.anim.slide_in_left)
+                            .setPopExitAnim(R.anim.slide_out_right)
+                            .build()
+                        navController.navigate(destId, null, slideNavOptions)
                     }
                     true
                 }
@@ -420,8 +430,10 @@ class MainActivity : AppCompatActivity() {
                 }
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                drawerToggle?.isDrawerIndicatorEnabled = false
-                tvToolbar?.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
+                // Keep drawer indicator enabled so DrawerArrowDrawable animates hamburger → back
+                drawerToggle?.isDrawerIndicatorEnabled = true
+                drawerToggle?.syncState()
+                animateNavigationIcon(1f)
                 tvToolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
 
@@ -574,6 +586,10 @@ class MainActivity : AppCompatActivity() {
                     .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
                     .setLaunchSingleTop(true)
                     .setRestoreState(true)
+                    .setEnterAnim(R.anim.fade_in)
+                    .setExitAnim(R.anim.fade_out)
+                    .setPopEnterAnim(R.anim.fade_in)
+                    .setPopExitAnim(R.anim.fade_out)
                     .build()
                 navController.navigate(destinationId, null, navOptions)
             }
@@ -639,7 +655,13 @@ class MainActivity : AppCompatActivity() {
                 R.id.deviceIdFragment -> {
                     val destId = menuItem.itemId
                     navigateAfterDrawerClose(drawerLayout, GravityCompat.START) {
-                        navController.navigate(destId)
+                        val slideNavOptions = NavOptions.Builder()
+                            .setEnterAnim(R.anim.slide_in_right)
+                            .setExitAnim(R.anim.slide_out_left)
+                            .setPopEnterAnim(R.anim.slide_in_left)
+                            .setPopExitAnim(R.anim.slide_out_right)
+                            .build()
+                        navController.navigate(destId, null, slideNavOptions)
                     }
                     true
                 }
@@ -716,8 +738,10 @@ class MainActivity : AppCompatActivity() {
                 bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                drawerToggle?.isDrawerIndicatorEnabled = false
-                toolbar?.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
+                // Keep using DrawerArrowDrawable so we can animate hamburger → back arrow
+                drawerToggle?.isDrawerIndicatorEnabled = true
+                drawerToggle?.syncState()
+                animateNavigationIcon(1f)
                 toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
 
@@ -726,7 +750,13 @@ class MainActivity : AppCompatActivity() {
 
         btnFavorites?.setOnClickListener {
             if (navController.currentDestination?.id != R.id.favoritesFragment) {
-                navController.navigate(R.id.favoritesFragment)
+                val slideNavOptions = NavOptions.Builder()
+                    .setEnterAnim(R.anim.slide_in_right)
+                    .setExitAnim(R.anim.slide_out_left)
+                    .setPopEnterAnim(R.anim.slide_in_left)
+                    .setPopExitAnim(R.anim.slide_out_right)
+                    .build()
+                navController.navigate(R.id.favoritesFragment, null, slideNavOptions)
             }
         }
 

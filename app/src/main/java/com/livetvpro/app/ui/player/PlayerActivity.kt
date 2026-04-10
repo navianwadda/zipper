@@ -1298,9 +1298,10 @@ class PlayerActivity : AppCompatActivity() {
 
 
             val rawUriString = uri.toString()
-            streamUrl = rawUriString
+            val decodedUriString = android.net.Uri.decode(rawUriString)
+            streamUrl = decodedUriString
 
-            val parsed = parseStreamUrl(rawUriString)
+            val parsed = parseStreamUrl(decodedUriString)
 
             allEventLinks = listOf(
                 com.livetvpro.app.data.models.LiveEventLink(
@@ -1924,32 +1925,8 @@ class PlayerActivity : AppCompatActivity() {
 
 
             val headers = streamInfo.headers.toMutableMap()
-
-            try {
-                val parsedUri = android.net.Uri.parse(streamInfo.url)
-                val host = parsedUri.scheme + "://" + parsedUri.host
-
-                if (!headers.containsKey("Origin")) {
-                    headers["Origin"] = host
-                }
-                if (!headers.containsKey("Referer")) {
-                    headers["Referer"] = "$host/"
-                }
-
-                if (!headers.containsKey("X-Forwarded-For")) {
-                    val accountInfo = parsedUri.getQueryParameter("accountinfo")
-                    if (accountInfo != null) {
-                        val ipRegex = Regex("""(\d{1,3}(?:\.\d{1,3}){3})""")
-                        val ipMatch = ipRegex.find(accountInfo)
-                        if (ipMatch != null) {
-                            headers["X-Forwarded-For"] = ipMatch.value
-                        }
-                    }
-                }
-            } catch (_: Exception) {}
-
             if (!headers.containsKey("User-Agent")) {
-                headers["User-Agent"] = "Mozilla/5.0 (Linux; Android 10; MAG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             }
 
             val baseDataSourceFactory = DefaultHttpDataSource.Factory()
@@ -1971,24 +1948,34 @@ class PlayerActivity : AppCompatActivity() {
 
 
             val clearKeyMgr: DefaultDrmSessionManager? = when {
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
-                    buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
-                    buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
-                    buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
+                    val mgr = buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                    mgr
+                }
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
+                    val mgr = buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
+                    mgr
+                }
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
+                    val mgr = buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
+                    mgr
+                }
                 else -> null
             }
 
-            val widevineInlineMgr: DefaultDrmSessionManager? = when {
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
-                    buildWidevineInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                else -> null
+
+            val mediaSourceFactory = if (clearKeyMgr != null) {
+
+
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(baseDataSourceFactory)
+                    .setDrmSessionManagerProvider { clearKeyMgr }
+            } else {
+
+
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(baseDataSourceFactory)
             }
-
-
-            val mediaSourceFactory = DefaultMediaSourceFactory(this)
-                .setDataSourceFactory(baseDataSourceFactory)
 
 
             val renderersFactory = DefaultRenderersFactory(this)
@@ -2004,39 +1991,11 @@ class PlayerActivity : AppCompatActivity() {
                 )
                 .build()
 
-            val resolvedMediaSourceFactory = if (clearKeyMgr != null || widevineInlineMgr != null) {
-                mediaSourceFactory.setDrmSessionManagerProvider { _ ->
-                    if (clearKeyMgr != null && widevineInlineMgr != null) {
-                        object : androidx.media3.exoplayer.drm.DrmSessionManager {
-                            override fun acquireSession(
-                                eventDispatcher: androidx.media3.exoplayer.drm.DrmSessionEventListener.EventDispatcher?,
-                                format: androidx.media3.common.Format
-                            ): androidx.media3.exoplayer.drm.DrmSession {
-                                val uuid = format.drmInitData?.schemeType?.let {
-                                    androidx.media3.common.util.Util.getDrmUuid(it)
-                                }
-                                val mgr = if (uuid == C.WIDEVINE_UUID) widevineInlineMgr else clearKeyMgr
-                                return mgr.acquireSession(eventDispatcher, format)
-                            }
-                            override fun canAcquireSession(format: androidx.media3.common.Format): Boolean {
-                                return clearKeyMgr.canAcquireSession(format) || widevineInlineMgr.canAcquireSession(format)
-                            }
-                            override fun prepare() { clearKeyMgr.prepare(); widevineInlineMgr.prepare() }
-                            override fun release() { clearKeyMgr.release(); widevineInlineMgr.release() }
-                        }
-                    } else {
-                        clearKeyMgr ?: widevineInlineMgr!!
-                    }
-                }
-            } else {
-                mediaSourceFactory
-            }
-
             player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
                 .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector!!)
-                .setMediaSourceFactory(resolvedMediaSourceFactory)
+                .setMediaSourceFactory(mediaSourceFactory)
                 .setSeekBackIncrementMs(skipMs)
                 .setSeekForwardIncrementMs(skipMs)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -2104,11 +2063,6 @@ class PlayerActivity : AppCompatActivity() {
 
 
                         streamInfo.drmScheme == "clearkey" && clearKeyMgr != null -> {
-                            mediaItemBuilder.setDrmConfiguration(
-                                MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
-                                    .setMultiSession(false)
-                                    .build()
-                            )
                         }
 
 
@@ -2276,30 +2230,6 @@ class PlayerActivity : AppCompatActivity() {
             binding.errorView.layoutParams = layoutParams
         }
         binding.errorView.visibility = View.VISIBLE
-    }
-
-
-    private fun buildWidevineInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
-        return try {
-            val keyIdBytes = hexToBytes(keyIdHex)
-            val keyBytes = hexToBytes(keyHex)
-            if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) return null
-
-            val keyBase64 = android.util.Base64.encodeToString(
-                keyBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val keyIdBase64 = android.util.Base64.encodeToString(
-                keyIdBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-
-            val adaptiveCallback = buildAdaptiveClearKeyCallback(keyBase64, keyIdBase64, "Widevine-InlineHex")
-
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
-                .build(adaptiveCallback)
-        } catch (e: Exception) {
-            null
-        }
     }
 
 

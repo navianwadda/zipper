@@ -1947,18 +1947,18 @@ class PlayerActivity : AppCompatActivity() {
 
 
             val clearKeyMgr: DefaultDrmSessionManager? = when {
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
-                    val mgr = buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                    mgr
-                }
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
-                    val mgr = buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
-                    mgr
-                }
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
-                    val mgr = buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
-                    mgr
-                }
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
+                    buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
+                    buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
+                    buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
+                else -> null
+            }
+
+            val widevineInlineMgr: DefaultDrmSessionManager? = when {
+                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
+                    buildWidevineInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
                 else -> null
             }
 
@@ -1980,8 +1980,16 @@ class PlayerActivity : AppCompatActivity() {
                 )
                 .build()
 
-            val resolvedMediaSourceFactory = if (clearKeyMgr != null) {
-                mediaSourceFactory.setDrmSessionManagerProvider { clearKeyMgr }
+            val resolvedMediaSourceFactory = if (clearKeyMgr != null || widevineInlineMgr != null) {
+                mediaSourceFactory.setDrmSessionManagerProvider { mediaItem ->
+                    val uuid = mediaItem.localConfiguration?.drmConfiguration?.scheme
+                    when {
+                        uuid == C.WIDEVINE_UUID && widevineInlineMgr != null -> widevineInlineMgr
+                        uuid == C.CLEARKEY_UUID && clearKeyMgr != null -> clearKeyMgr
+                        widevineInlineMgr != null -> widevineInlineMgr
+                        else -> clearKeyMgr!!
+                    }
+                }
             } else {
                 mediaSourceFactory
             }
@@ -2058,8 +2066,9 @@ class PlayerActivity : AppCompatActivity() {
 
 
                         streamInfo.drmScheme == "clearkey" && clearKeyMgr != null -> {
+                            val drmUuid = if (widevineInlineMgr != null) C.WIDEVINE_UUID else C.CLEARKEY_UUID
                             mediaItemBuilder.setDrmConfiguration(
-                                MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
+                                MediaItem.DrmConfiguration.Builder(drmUuid)
                                     .setMultiSession(false)
                                     .build()
                             )
@@ -2230,6 +2239,30 @@ class PlayerActivity : AppCompatActivity() {
             binding.errorView.layoutParams = layoutParams
         }
         binding.errorView.visibility = View.VISIBLE
+    }
+
+
+    private fun buildWidevineInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
+        return try {
+            val keyIdBytes = hexToBytes(keyIdHex)
+            val keyBytes = hexToBytes(keyHex)
+            if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) return null
+
+            val keyBase64 = android.util.Base64.encodeToString(
+                keyBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+            val keyIdBase64 = android.util.Base64.encodeToString(
+                keyIdBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+
+            val adaptiveCallback = buildAdaptiveClearKeyCallback(keyBase64, keyIdBase64, "Widevine-InlineHex")
+
+            DefaultDrmSessionManager.Builder()
+                .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setMultiSession(false)
+                .setPlayClearSamplesWithoutKeys(false)
+                .build(adaptiveCallback)
+        } catch (e: Exception) {
+            null
+        }
     }
 
 

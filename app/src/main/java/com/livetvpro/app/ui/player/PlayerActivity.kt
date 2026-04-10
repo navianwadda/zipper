@@ -1924,8 +1924,32 @@ class PlayerActivity : AppCompatActivity() {
 
 
             val headers = streamInfo.headers.toMutableMap()
+
+            try {
+                val parsedUri = android.net.Uri.parse(streamInfo.url)
+                val host = parsedUri.scheme + "://" + parsedUri.host
+
+                if (!headers.containsKey("Origin")) {
+                    headers["Origin"] = host
+                }
+                if (!headers.containsKey("Referer")) {
+                    headers["Referer"] = "$host/"
+                }
+
+                if (!headers.containsKey("X-Forwarded-For")) {
+                    val accountInfo = parsedUri.getQueryParameter("accountinfo")
+                    if (accountInfo != null) {
+                        val ipRegex = Regex("""(\d{1,3}(?:\.\d{1,3}){3})""")
+                        val ipMatch = ipRegex.find(accountInfo)
+                        if (ipMatch != null) {
+                            headers["X-Forwarded-For"] = ipMatch.value
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+
             if (!headers.containsKey("User-Agent")) {
-                headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                headers["User-Agent"] = "Mozilla/5.0 (Linux; Android 10; MAG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
             }
 
             val baseDataSourceFactory = DefaultHttpDataSource.Factory()
@@ -1981,13 +2005,27 @@ class PlayerActivity : AppCompatActivity() {
                 .build()
 
             val resolvedMediaSourceFactory = if (clearKeyMgr != null || widevineInlineMgr != null) {
-                mediaSourceFactory.setDrmSessionManagerProvider { mediaItem ->
-                    val uuid = mediaItem.localConfiguration?.drmConfiguration?.scheme
-                    when {
-                        uuid == C.WIDEVINE_UUID && widevineInlineMgr != null -> widevineInlineMgr
-                        uuid == C.CLEARKEY_UUID && clearKeyMgr != null -> clearKeyMgr
-                        widevineInlineMgr != null -> widevineInlineMgr
-                        else -> clearKeyMgr!!
+                mediaSourceFactory.setDrmSessionManagerProvider { _ ->
+                    if (clearKeyMgr != null && widevineInlineMgr != null) {
+                        object : androidx.media3.exoplayer.drm.DrmSessionManager {
+                            override fun acquireSession(
+                                eventDispatcher: androidx.media3.exoplayer.drm.DrmSessionEventListener.EventDispatcher?,
+                                format: androidx.media3.common.Format
+                            ): androidx.media3.exoplayer.drm.DrmSession {
+                                val uuid = format.drmInitData?.schemeType?.let {
+                                    androidx.media3.common.util.Util.getDrmUuid(it)
+                                }
+                                val mgr = if (uuid == C.WIDEVINE_UUID) widevineInlineMgr else clearKeyMgr
+                                return mgr.acquireSession(eventDispatcher, format)
+                            }
+                            override fun canAcquireSession(format: androidx.media3.common.Format): Boolean {
+                                return clearKeyMgr.canAcquireSession(format) || widevineInlineMgr.canAcquireSession(format)
+                            }
+                            override fun prepare() { clearKeyMgr.prepare(); widevineInlineMgr.prepare() }
+                            override fun release() { clearKeyMgr.release(); widevineInlineMgr.release() }
+                        }
+                    } else {
+                        clearKeyMgr ?: widevineInlineMgr!!
                     }
                 }
             } else {
@@ -2066,9 +2104,8 @@ class PlayerActivity : AppCompatActivity() {
 
 
                         streamInfo.drmScheme == "clearkey" && clearKeyMgr != null -> {
-                            val drmUuid = if (widevineInlineMgr != null) C.WIDEVINE_UUID else C.CLEARKEY_UUID
                             mediaItemBuilder.setDrmConfiguration(
-                                MediaItem.DrmConfiguration.Builder(drmUuid)
+                                MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
                                     .setMultiSession(false)
                                     .build()
                             )

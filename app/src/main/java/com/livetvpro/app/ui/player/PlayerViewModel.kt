@@ -52,39 +52,21 @@ class PlayerViewModel @Inject constructor(
     private val _channelListItems = MutableLiveData<List<Channel>>(emptyList())
     val channelListItems: LiveData<List<Channel>> = _channelListItems
 
-    private val syncedPlaylistIds = mutableSetOf<String>()
-
     fun loadAllChannelsForList(categoryId: String) {
         viewModelScope.launch {
             try {
                 val channels = when {
                     categoryId == "sports_slug" -> nativeDataRepository.getSports()
                     categoryId.isNotEmpty() -> {
+                        
                         val cached = channelRepository.getChannelsByCategory(categoryId)
                         if (cached.isNotEmpty()) {
-                            val playlist = playlistRepository.getPlaylistById(categoryId)
-                            if (playlist != null && !syncedPlaylistIds.contains(categoryId)) {
-                                syncedPlaylistIds.add(categoryId)
-                                viewModelScope.launch {
-                                    try {
-                                        channelRepository.syncPlaylist(
-                                            playlistId    = playlist.id,
-                                            playlistTitle = playlist.title,
-                                            source        = if (playlist.isFile) playlist.filePath else playlist.url,
-                                            isFile        = playlist.isFile,
-                                            application   = application
-                                        )
-                                    } catch (e: Exception) {}
-                                }
-                            }
                             cached
                         } else {
+                            
                             val playlist = playlistRepository.getPlaylistById(categoryId)
-                            if (playlist != null) {
-                                loadChannelsFromPlaylist(playlist)
-                            } else {
-                                channelRepository.getChannelsByCategory(categoryId)
-                            }
+                            if (playlist != null) loadChannelsFromPlaylist(playlist)
+                            else channelRepository.getChannelsByCategory(categoryId)
                         }
                     }
                     else -> withContext(Dispatchers.IO) { nativeDataRepository.getChannels() }
@@ -163,37 +145,15 @@ class PlayerViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-
-                val cached = channelRepository.getChannelsByCategory(categoryId)
-                val allChannels = if (cached.isNotEmpty()) {
+                
+                var allChannels = channelRepository.getChannelsByCategory(categoryId)
+                if (allChannels.isEmpty()) {
+                    
                     val playlist = playlistRepository.getPlaylistById(categoryId)
-                    if (playlist != null && !syncedPlaylistIds.contains(categoryId)) {
-                        syncedPlaylistIds.add(categoryId)
-                        viewModelScope.launch {
-                            try {
-                                channelRepository.syncPlaylist(
-                                    playlistId    = playlist.id,
-                                    playlistTitle = playlist.title,
-                                    source        = if (playlist.isFile) playlist.filePath else playlist.url,
-                                    isFile        = playlist.isFile,
-                                    application   = application
-                                )
-                            } catch (e: Exception) {}
-                        }
-                    }
-                    cached
-                } else {
-                    val playlist = playlistRepository.getPlaylistById(categoryId)
-                    if (playlist != null) {
-                        loadChannelsFromPlaylist(playlist)
-                    } else {
-                        channelRepository.getChannelsByCategory(categoryId)
-                    }
+                    if (playlist != null) allChannels = loadChannelsFromPlaylist(playlist)
                 }
 
-
                 var availableChannels = allChannels.filter { it.id != currentChannelId }
-
 
                 if (!groupFilter.isNullOrEmpty() && groupFilter != "All") {
                     availableChannels = availableChannels.filter {
@@ -201,12 +161,10 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
 
-
                 if (availableChannels.isEmpty()) {
                     _relatedItems.postValue(emptyList())
                     return@launch
                 }
-
 
                 val targetCount = minOf(9, availableChannels.size)
                 val randomChannels = availableChannels.shuffled().take(targetCount)

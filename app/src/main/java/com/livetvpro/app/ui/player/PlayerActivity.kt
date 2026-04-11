@@ -1565,6 +1565,11 @@ class PlayerActivity : AppCompatActivity() {
         })
 
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        if (isInPipMode) {
+            binding.linksSection.visibility = View.GONE
+            landscapeLinksRecycler?.visibility = View.GONE
+            return
+        }
         if (allEventLinks.size > 1) {
             if (isLandscape) {
                 binding.linksSection.visibility = View.GONE
@@ -1586,6 +1591,12 @@ class PlayerActivity : AppCompatActivity() {
     private fun updateLinksForOrientation(isLandscape: Boolean) {
         if (!::linkChipAdapter.isInitialized) return
         val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
+
+        if (isInPipMode) {
+            binding.linksSection.visibility = View.GONE
+            landscapeLinksRecycler?.visibility = View.GONE
+            return
+        }
 
         if (allEventLinks.size > 1) {
             if (isLandscape) {

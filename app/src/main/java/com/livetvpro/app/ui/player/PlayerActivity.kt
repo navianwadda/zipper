@@ -731,6 +731,8 @@ class PlayerActivity : AppCompatActivity() {
 
         controlsState.hide()
         binding.playerControlsCompose.visibility = View.GONE
+        binding.linksSection.visibility = View.GONE
+        binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)?.visibility = View.GONE
 
         val pipParams = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
         pipParams.dimensionRatio = null
@@ -783,6 +785,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         binding.playerView.useController = false
+        updateLinksForOrientation(isLandscape)
     }
 
     @SuppressLint("NewApi")

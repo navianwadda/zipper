@@ -797,7 +797,7 @@ class MainActivity : AppCompatActivity() {
             else                                                                        -> rbSeeksOnly.isChecked = true
         }
 
-        val dialog = MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog)
             .setView(view)
             .create()
 

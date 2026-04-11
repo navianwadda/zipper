@@ -2605,8 +2605,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         when (centerMode) {
-            com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY,
-            com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_AND_NAV -> {
+            com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY -> {
                 actions.add(RemoteAction(
                     Icon.createWithResource(context, R.drawable.ic_skip_prev_channel),
                     "Previous", "Previous channel",

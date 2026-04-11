@@ -79,7 +79,7 @@ class FloatingPlayerService : Service() {
     @javax.inject.Inject
     lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
 
-    private fun getMinWidth() = dpToPx(240)
+    private fun getMinWidth() = dpToPx(280)
     private fun getMaxWidth() = dpToPx(400)
     private fun getMinHeight() = getMinWidth() * 9 / 16
     private fun getMaxHeight() = getMaxWidth() * 9 / 16

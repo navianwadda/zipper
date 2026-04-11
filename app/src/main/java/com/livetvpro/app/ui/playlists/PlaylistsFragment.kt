@@ -309,16 +309,24 @@ class PlaylistsFragment : Fragment() {
         val builtDialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle("Add Playlist")
             .setView(dialogView)
-            .setPositiveButton("Add") { dialog, _ ->
+            .setPositiveButton("Add", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        suppressKeyboardForTv(builtDialog, titleInput, urlInput)
+        builtDialog.show()
+        builtDialog.getButton(DialogInterface.BUTTON_POSITIVE)?.apply {
+            requestFocus()
+            setOnClickListener {
                 val title = titleInput.text.toString().trim()
                 val url = urlInput.text.toString().trim()
                 if (title.isEmpty()) {
                     Toast.makeText(requireContext(), "Title is required", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
+                    return@setOnClickListener
                 }
                 if (!isFile && url.isEmpty()) {
                     Toast.makeText(requireContext(), "URL is required", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
+                    return@setOnClickListener
                 }
                 if (isFile && fileUri != null) {
                     try {
@@ -328,14 +336,9 @@ class PlaylistsFragment : Fragment() {
                 } else {
                     viewModel.addPlaylist(title, url, false, "")
                 }
-                dialog.dismiss()
+                builtDialog.dismiss()
             }
-            .setNegativeButton("Cancel", null)
-            .create()
-
-        suppressKeyboardForTv(builtDialog, titleInput, urlInput)
-        builtDialog.show()
-        builtDialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
+        }
     }
 
     private fun showEditPlaylistDialog(playlist: Playlist) {
@@ -352,24 +355,7 @@ class PlaylistsFragment : Fragment() {
         val builtDialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle("Update Playlist Details")
             .setView(dialogView)
-            .setPositiveButton("Update") { dialog, _ ->
-                val newTitle = titleInput.text.toString().trim()
-                val newUrl = urlInput.text.toString().trim()
-                if (newTitle.isEmpty()) {
-                    Toast.makeText(requireContext(), "Title is required", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                if (!playlist.isFile && newUrl.isEmpty()) {
-                    Toast.makeText(requireContext(), "URL is required", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                val updatedPlaylist = playlist.copy(
-                    title = newTitle,
-                    url = if (!playlist.isFile) newUrl else playlist.url
-                )
-                viewModel.updatePlaylist(updatedPlaylist)
-                dialog.dismiss()
-            }
+            .setPositiveButton("Update", null)
             .setNeutralButton("Delete") { dialog, _ ->
                 dialog.dismiss()
                 showDeleteConfirmationDialog(playlist)
@@ -379,7 +365,27 @@ class PlaylistsFragment : Fragment() {
 
         suppressKeyboardForTv(builtDialog, titleInput, urlInput)
         builtDialog.show()
-        builtDialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
+        builtDialog.getButton(DialogInterface.BUTTON_POSITIVE)?.apply {
+            requestFocus()
+            setOnClickListener {
+                val newTitle = titleInput.text.toString().trim()
+                val newUrl = urlInput.text.toString().trim()
+                if (newTitle.isEmpty()) {
+                    Toast.makeText(requireContext(), "Title is required", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (!playlist.isFile && newUrl.isEmpty()) {
+                    Toast.makeText(requireContext(), "URL is required", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                val updatedPlaylist = playlist.copy(
+                    title = newTitle,
+                    url = if (!playlist.isFile) newUrl else playlist.url
+                )
+                viewModel.updatePlaylist(updatedPlaylist)
+                builtDialog.dismiss()
+            }
+        }
     }
 
     private fun showDeleteConfirmationDialog(playlist: Playlist) {

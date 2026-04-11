@@ -781,11 +781,21 @@ class MainActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.dialog_save_states, null)
         val switchAspectRatio = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_remember_aspect_ratio)
         val switchLowestQuality = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_force_lowest_quality)
+        val rgCenterControls = view.findViewById<android.widget.RadioGroup>(R.id.rg_center_controls)
+        val rbSeeksOnly = view.findViewById<android.widget.RadioButton>(R.id.rb_seeks_only)
+        val rbSeeksAndNav = view.findViewById<android.widget.RadioButton>(R.id.rb_seeks_and_nav)
+        val rbNavOnly = view.findViewById<android.widget.RadioButton>(R.id.rb_nav_only)
         val btnCancel = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_states_cancel)
         val btnApply = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_states_apply)
 
         switchAspectRatio.isChecked = preferencesManager.isRememberAspectRatioEnabled()
         switchLowestQuality.isChecked = preferencesManager.isForceLowestQualityEnabled()
+
+        when (preferencesManager.getCenterControlsMode()) {
+            com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_AND_NAV -> rbSeeksAndNav.isChecked = true
+            com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY      -> rbNavOnly.isChecked = true
+            else                                                                        -> rbSeeksOnly.isChecked = true
+        }
 
         val dialog = MaterialAlertDialogBuilder(this)
             .setView(view)
@@ -795,6 +805,12 @@ class MainActivity : AppCompatActivity() {
         btnApply.setOnClickListener {
             preferencesManager.setRememberAspectRatioEnabled(switchAspectRatio.isChecked)
             preferencesManager.setForceLowestQualityEnabled(switchLowestQuality.isChecked)
+            val mode = when (rgCenterControls.checkedRadioButtonId) {
+                R.id.rb_seeks_and_nav -> com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_AND_NAV
+                R.id.rb_nav_only      -> com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY
+                else                  -> com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_ONLY
+            }
+            preferencesManager.setCenterControlsMode(mode)
             dialog.dismiss()
         }
 

@@ -134,31 +134,23 @@
 
         </LinearLayout>
 
-        <RelativeLayout
+        <LinearLayout
             android:id="@+id/bottom_buttons_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-            <ImageButton
-                android:id="@+id/btn_resize"
+            <Space
                 android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:src="@drawable/ic_resize"
-                android:background="@drawable/ripple_square_white"
-                android:tint="@android:color/white"
-                android:scaleType="fitCenter"
-                android:contentDescription="Resize"
-                android:padding="6dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true" />
+                android:layout_height="32dp" />
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_centerInParent="true"
-                android:layout_marginEnd="40dp">
+                android:gravity="center">
 
                 <ImageButton
                     android:id="@+id/btn_prev_channel"
@@ -225,7 +217,18 @@
 
             </LinearLayout>
 
-        </RelativeLayout>
+            <ImageButton
+                android:id="@+id/btn_resize"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_resize"
+                android:background="@drawable/ripple_square_white"
+                android:tint="@android:color/white"
+                android:scaleType="fitCenter"
+                android:contentDescription="Resize"
+                android:padding="6dp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

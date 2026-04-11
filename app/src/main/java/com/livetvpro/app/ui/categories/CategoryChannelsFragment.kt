@@ -253,11 +253,13 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     }
 
     private fun launchPlayer(channel: Channel, linkIndex: Int) {
+        val channelList = ArrayList(channelAdapter.snapshot().items)
         if (DeviceUtils.isTvDevice) {
             PlayerActivity.startWithChannel(
                 requireContext(), channel, linkIndex,
                 categoryId = currentCategoryId,
-                selectedGroup = viewModel.currentGroup.value
+                selectedGroup = viewModel.currentGroup.value,
+                channelList = channelList
             )
             return
         }
@@ -268,24 +270,27 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 PlayerActivity.startWithChannel(
                     requireContext(), channel, linkIndex,
                     categoryId = currentCategoryId,
-                    selectedGroup = viewModel.currentGroup.value
+                    selectedGroup = viewModel.currentGroup.value,
+                    channelList = channelList
                 )
                 return
             }
             try {
-                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, channelList = ArrayList(channelAdapter.snapshot().items))
+                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, channelList = channelList)
             } catch (_: Exception) {
                 PlayerActivity.startWithChannel(
                     requireContext(), channel, linkIndex,
                     categoryId = currentCategoryId,
-                    selectedGroup = viewModel.currentGroup.value
+                    selectedGroup = viewModel.currentGroup.value,
+                    channelList = channelList
                 )
             }
         } else {
             PlayerActivity.startWithChannel(
                 requireContext(), channel, linkIndex,
                 categoryId = currentCategoryId,
-                selectedGroup = viewModel.currentGroup.value
+                selectedGroup = viewModel.currentGroup.value,
+                channelList = channelList
             )
         }
     }

@@ -68,7 +68,8 @@ class FloatingPlayerService : Service() {
         var networkUserAgent: String? = null,
         var networkDrmScheme: String? = null,
         var networkXForwardedFor: String? = null,
-        var currentLinkIndex: Int = 0
+        var currentLinkIndex: Int = 0,
+        var channelList: List<Channel>? = null
     )
 
     private var windowManager: WindowManager? = null
@@ -86,6 +87,7 @@ class FloatingPlayerService : Service() {
     companion object {
         const val EXTRA_CHANNEL = "extra_channel"
         const val EXTRA_EVENT = "extra_event"
+        const val EXTRA_CHANNEL_LIST = "extra_channel_list"
         const val EXTRA_STREAM_URL = "extra_stream_url"
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_PLAYBACK_POSITION = "extra_playback_position"
@@ -130,7 +132,8 @@ class FloatingPlayerService : Service() {
             instanceId: String,
             channel: Channel? = null,
             event: com.livetvpro.app.data.models.LiveEvent? = null,
-            linkIndex: Int = 0
+            linkIndex: Int = 0,
+            channelList: ArrayList<Channel>? = null
         ): Boolean {
             try {
                 if (channel == null && event == null) return false
@@ -144,6 +147,7 @@ class FloatingPlayerService : Service() {
                     putExtra(EXTRA_TITLE, title)
                     putExtra(EXTRA_PLAYBACK_POSITION, 0L)
                     putExtra(EXTRA_LINK_INDEX, linkIndex)
+                    if (channelList != null) putParcelableArrayListExtra(EXTRA_CHANNEL_LIST, channelList)
                 }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -388,6 +392,13 @@ class FloatingPlayerService : Service() {
             intent?.getParcelableExtra(EXTRA_EVENT)
         }
 
+        val parsedChannelList: List<Channel>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST, Channel::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent?.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST)
+        }
+
         val linkIndex = intent?.getIntExtra(EXTRA_LINK_INDEX, 0) ?: 0
         val playbackPosition = intent?.getLongExtra(EXTRA_PLAYBACK_POSITION, 0L) ?: 0L
         val restorePosition = intent?.getBooleanExtra(EXTRA_RESTORE_POSITION, false) ?: false
@@ -395,9 +406,9 @@ class FloatingPlayerService : Service() {
 
         if (channel != null || event != null) {
             if (useTransferredPlayer) {
-                createFloatingPlayerInstanceFromTransfer(instanceId, channel, event, restorePosition)
+                createFloatingPlayerInstanceFromTransfer(instanceId, channel, event, restorePosition, parsedChannelList)
             } else {
-                createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition)
+                createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition, parsedChannelList)
             }
             updateNotification()
         }
@@ -411,7 +422,8 @@ class FloatingPlayerService : Service() {
         event: com.livetvpro.app.data.models.LiveEvent? = null,
         linkIndex: Int,
         playbackPosition: Long,
-        restorePosition: Boolean = false
+        restorePosition: Boolean = false,
+        channelList: List<Channel>? = null
     ) {
         try {
             val streamUrl = when {
@@ -568,7 +580,8 @@ class FloatingPlayerService : Service() {
                 currentEvent = event,
                 lockOverlay = lockOverlay,
                 unlockButton = unlockButton,
-                currentLinkIndex = linkIndex
+                currentLinkIndex = linkIndex,
+                channelList = channelList
             )
 
             activeInstances[instanceId] = instance
@@ -586,12 +599,13 @@ class FloatingPlayerService : Service() {
         instanceId: String,
         channel: Channel? = null,
         event: com.livetvpro.app.data.models.LiveEvent? = null,
-        restorePosition: Boolean
+        restorePosition: Boolean,
+        channelList: List<Channel>? = null
     ) {
         try {
             val transferredPlayer = PlayerHolder.player
             if (transferredPlayer == null) {
-                createFloatingPlayerInstance(instanceId, channel, event, 0, 0L, restorePosition)
+                createFloatingPlayerInstance(instanceId, channel, event, 0, 0L, restorePosition, channelList)
                 return
             }
 
@@ -661,7 +675,8 @@ class FloatingPlayerService : Service() {
                 currentChannel = channel,
                 currentEvent = event,
                 lockOverlay = lockOverlay,
-                unlockButton = unlockButton
+                unlockButton = unlockButton,
+                channelList = channelList
             )
             activeInstances[instanceId] = instance
 
@@ -1173,7 +1188,20 @@ class FloatingPlayerService : Service() {
         val btnPlayPause = playerView.findViewById<ImageButton>(R.id.btn_play_pause)
         val btnSeekBack = playerView.findViewById<ImageButton>(R.id.btn_seek_back)
         val btnSeekForward = playerView.findViewById<ImageButton>(R.id.btn_seek_forward)
+        val btnPrevChannel = playerView.findViewById<ImageButton>(R.id.btn_prev_channel)
+        val btnNextChannel = playerView.findViewById<ImageButton>(R.id.btn_next_channel)
         val btnResize = floatingView.findViewById<ImageButton>(R.id.btn_resize)
+
+        // Apply center controls mode visibility
+        val centerMode = preferencesManager.getCenterControlsMode()
+        val showSeeks = centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_ONLY ||
+                        centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_AND_NAV
+        val showNav   = centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_AND_NAV ||
+                        centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY
+        btnSeekBack?.visibility    = if (showSeeks) View.VISIBLE else View.GONE
+        btnSeekForward?.visibility = if (showSeeks) View.VISIBLE else View.GONE
+        btnPrevChannel?.visibility = if (showNav) View.VISIBLE else View.GONE
+        btnNextChannel?.visibility = if (showNav) View.VISIBLE else View.GONE
 
         btnClose?.setOnClickListener {
             stopInstance(instanceId)
@@ -1285,6 +1313,50 @@ class FloatingPlayerService : Service() {
 
         btnSeekForward?.setOnClickListener {
             activeInstances[instanceId]?.player?.seekForward()
+        }
+
+        btnPrevChannel?.setOnClickListener {
+            val instance = activeInstances[instanceId] ?: return@setOnClickListener
+            val currentChannel = instance.currentChannel ?: return@setOnClickListener
+            val allChannels = instance.channelList
+            if (!allChannels.isNullOrEmpty()) {
+                val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
+                val prevIndex = (currentIndex - 1).coerceAtLeast(0)
+                if (prevIndex != currentIndex) {
+                    val prevChannel = allChannels[prevIndex]
+                    instance.currentChannel = prevChannel
+                    val link = prevChannel.links?.firstOrNull()
+                    val url = link?.url ?: return@setOnClickListener
+                    val mediaItem = androidx.media3.common.MediaItem.fromUri(url)
+                    instance.player.setMediaItem(mediaItem)
+                    instance.player.prepare()
+                    instance.player.play()
+                    val tvTitle = playerView.findViewById<android.widget.TextView>(R.id.tv_title)
+                    tvTitle?.text = prevChannel.name
+                }
+            }
+        }
+
+        btnNextChannel?.setOnClickListener {
+            val instance = activeInstances[instanceId] ?: return@setOnClickListener
+            val currentChannel = instance.currentChannel ?: return@setOnClickListener
+            val allChannels = instance.channelList
+            if (!allChannels.isNullOrEmpty()) {
+                val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
+                val nextIndex = (currentIndex + 1).coerceAtMost(allChannels.size - 1)
+                if (nextIndex != currentIndex) {
+                    val nextChannel = allChannels[nextIndex]
+                    instance.currentChannel = nextChannel
+                    val link = nextChannel.links?.firstOrNull()
+                    val url = link?.url ?: return@setOnClickListener
+                    val mediaItem = androidx.media3.common.MediaItem.fromUri(url)
+                    instance.player.setMediaItem(mediaItem)
+                    instance.player.prepare()
+                    instance.player.play()
+                    val tvTitle = playerView.findViewById<android.widget.TextView>(R.id.tv_title)
+                    tvTitle?.text = nextChannel.name
+                }
+            }
         }
 
         attachPlayerListener(player, btnPlayPause, instanceId)

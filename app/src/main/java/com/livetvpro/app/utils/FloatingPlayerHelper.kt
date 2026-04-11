@@ -60,7 +60,7 @@ object FloatingPlayerHelper {
         val existingInstanceId = eventToInstanceMap[actualEventId]
 
         if (existingInstanceId != null && FloatingPlayerManager.hasPlayer(existingInstanceId)) {
-            updateFloatingPlayer(context, existingInstanceId, resolvedChannel, linkIndex)
+            updateFloatingPlayer(context, existingInstanceId, resolvedChannel, linkIndex, channelList)
         } else if (FloatingPlayerManager.canAddNewPlayer()) {
             createNewFloatingPlayer(context, channel = resolvedChannel, linkIndex = linkIndex, eventId = actualEventId, channelList = channelList)
         } else {
@@ -69,7 +69,7 @@ object FloatingPlayerHelper {
                 val oldEventKey = eventToInstanceMap.entries.find { it.value == lastId }?.key
                 if (oldEventKey != null) eventToInstanceMap.remove(oldEventKey)
                 eventToInstanceMap[actualEventId] = lastId
-                updateFloatingPlayer(context, lastId, resolvedChannel, linkIndex)
+                updateFloatingPlayer(context, lastId, resolvedChannel, linkIndex, channelList)
             }
         }
     }
@@ -170,7 +170,7 @@ object FloatingPlayerHelper {
         }
     }
 
-    private fun updateFloatingPlayer(context: Context, instanceId: String, channel: Channel, linkIndex: Int) {
+    private fun updateFloatingPlayer(context: Context, instanceId: String, channel: Channel, linkIndex: Int, channelList: ArrayList<Channel>? = null) {
         try {
             val resolvedChannel = if (channel.links.isNullOrEmpty()) {
                 if (channel.streamUrl.isBlank()) return
@@ -178,7 +178,7 @@ object FloatingPlayerHelper {
             } else {
                 channel
             }
-            FloatingPlayerService.updateFloatingPlayer(context, instanceId, resolvedChannel, linkIndex)
+            FloatingPlayerService.updateFloatingPlayer(context, instanceId, resolvedChannel, linkIndex, channelList)
         } catch (e: Exception) {
 
         }

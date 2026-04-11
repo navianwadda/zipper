@@ -41,7 +41,7 @@ object FloatingPlayerHelper {
         }
     }
 
-    fun launchFloatingPlayer(context: Context, channel: Channel, linkIndex: Int = 0, eventId: String? = null, isSports: Boolean = false) {
+    fun launchFloatingPlayer(context: Context, channel: Channel, linkIndex: Int = 0, eventId: String? = null, isSports: Boolean = false, channelList: ArrayList<Channel>? = null) {
         if (DeviceUtils.isTvDevice) {
             FloatingPlayerActivity.startWithChannel(context, channel, linkIndex, isSports = isSports)
             return
@@ -62,7 +62,7 @@ object FloatingPlayerHelper {
         if (existingInstanceId != null && FloatingPlayerManager.hasPlayer(existingInstanceId)) {
             updateFloatingPlayer(context, existingInstanceId, resolvedChannel, linkIndex)
         } else if (FloatingPlayerManager.canAddNewPlayer()) {
-            createNewFloatingPlayer(context, channel = resolvedChannel, linkIndex = linkIndex, eventId = actualEventId)
+            createNewFloatingPlayer(context, channel = resolvedChannel, linkIndex = linkIndex, eventId = actualEventId, channelList = channelList)
         } else {
             val lastId = FloatingPlayerManager.getLastPlayerId()
             if (lastId != null) {
@@ -203,7 +203,8 @@ object FloatingPlayerHelper {
         channel: Channel? = null,
         event: LiveEvent? = null,
         linkIndex: Int = 0,
-        eventId: String? = null
+        eventId: String? = null,
+        channelList: ArrayList<Channel>? = null
     ): String? {
         if (!FloatingPlayerManager.canAddNewPlayer()) return null
         if (!hasOverlayPermission(context)) {
@@ -224,7 +225,7 @@ object FloatingPlayerHelper {
         }
 
         return try {
-            val started = FloatingPlayerService.startFloatingPlayer(context, instanceId, channel, event, linkIndex)
+            val started = FloatingPlayerService.startFloatingPlayer(context, instanceId, channel, event, linkIndex, channelList)
             if (started) {
                 createdInstances.add(instanceId)
                 instanceId

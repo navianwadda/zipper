@@ -1343,7 +1343,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
             val headers = streamInfo.headers.toMutableMap()
             if (!headers.containsKey("User-Agent")) {
-                headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                headers["User-Agent"] = "okhttp/4.12.0"
             }
 
             val dataSourceFactory = DefaultHttpDataSource.Factory()

@@ -43,7 +43,7 @@ object FloatingPlayerHelper {
 
     fun launchFloatingPlayer(context: Context, channel: Channel, linkIndex: Int = 0, eventId: String? = null, isSports: Boolean = false, channelList: ArrayList<Channel>? = null) {
         if (DeviceUtils.isTvDevice) {
-            FloatingPlayerActivity.startWithChannel(context, channel, linkIndex, isSports = isSports)
+            FloatingPlayerActivity.startWithChannel(context, channel, linkIndex, categoryId = channel.categoryId.takeIf { it.isNotEmpty() }, isSports = isSports, channelList = channelList)
             return
         }
 

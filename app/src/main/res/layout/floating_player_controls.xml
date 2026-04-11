@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Unified controller layout with BOTH top and bottom controls managed by ExoPlayer -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Top Controls Container -->
     <LinearLayout
         android:id="@+id/top_controls_container"
         android:layout_width="match_parent"
@@ -77,7 +75,6 @@
 
     </LinearLayout>
 
-    <!-- Bottom Controls Container -->
     <LinearLayout
         android:id="@+id/bottom_controls_container"
         android:layout_width="match_parent"
@@ -90,7 +87,6 @@
         android:paddingStart="12dp"
         android:paddingEnd="12dp">
 
-        <!-- Seekbar with Times - ExoPlayer handles these automatically -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -98,7 +94,6 @@
             android:gravity="center_vertical"
             android:layout_marginBottom="8dp">
 
-            <!-- Current Time - ExoPlayer updates this automatically -->
             <TextView
                 android:id="@+id/exo_position"
                 style="@android:style/TextAppearance.StatusBar.EventContent.Title"
@@ -111,7 +106,6 @@
                 android:includeFontPadding="false"
                 android:layout_marginEnd="6dp" />
 
-            <!-- Seekbar - ExoPlayer handles seeking automatically -->
             <androidx.media3.ui.DefaultTimeBar
                 android:id="@+id/exo_progress"
                 android:layout_width="0dp"
@@ -126,7 +120,6 @@
                 app:scrubber_enabled_size="10dp"
                 app:scrubber_disabled_size="0dp" />
 
-            <!-- Duration/Total Time - ExoPlayer updates this automatically -->
             <TextView
                 android:id="@+id/exo_duration"
                 style="@android:style/TextAppearance.StatusBar.EventContent.Title"
@@ -141,7 +134,6 @@
 
         </LinearLayout>
 
-        <!-- Playback Buttons Container -->
         <RelativeLayout
             android:id="@+id/bottom_buttons_container"
             android:layout_width="match_parent"
@@ -165,9 +157,9 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center"
-                android:layout_centerInParent="true">
+                android:layout_centerInParent="true"
+                android:layout_marginEnd="40dp">
 
-                <!-- Prev channel button (shown in modes 1 and 2) -->
                 <ImageButton
                     android:id="@+id/btn_prev_channel"
                     android:layout_width="28dp"
@@ -181,7 +173,6 @@
                     android:layout_marginEnd="8dp"
                     android:visibility="gone" />
 
-                <!-- Seek back button (shown in modes 0 and 1) -->
                 <ImageButton
                     android:id="@+id/btn_seek_back"
                     android:layout_width="32dp"
@@ -207,7 +198,6 @@
                     android:contentDescription="Play/Pause"
                     android:padding="8dp" />
 
-                <!-- Seek forward button (shown in modes 0 and 1) -->
                 <ImageButton
                     android:id="@+id/btn_seek_forward"
                     android:layout_width="32dp"
@@ -220,7 +210,6 @@
                     android:padding="6dp"
                     android:layout_marginStart="8dp" />
 
-                <!-- Next channel button (shown in modes 1 and 2) -->
                 <ImageButton
                     android:id="@+id/btn_next_channel"
                     android:layout_width="28dp"

@@ -161,6 +161,21 @@
                 android:orientation="horizontal"
                 android:gravity="center">
 
+                <!-- Prev channel button (shown in modes 1 and 2) -->
+                <ImageButton
+                    android:id="@+id/btn_prev_channel"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_skip_back"
+                    android:background="@drawable/ripple_square_white"
+                    android:tint="@android:color/white"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Previous channel"
+                    android:padding="5dp"
+                    android:layout_marginEnd="8dp"
+                    android:visibility="gone" />
+
+                <!-- Seek back button (shown in modes 0 and 1) -->
                 <ImageButton
                     android:id="@+id/btn_seek_back"
                     android:layout_width="32dp"
@@ -185,6 +200,7 @@
                     android:contentDescription="Play/Pause"
                     android:padding="8dp" />
 
+                <!-- Seek forward button (shown in modes 0 and 1) -->
                 <ImageButton
                     android:id="@+id/btn_seek_forward"
                     android:layout_width="32dp"
@@ -195,6 +211,20 @@
                     android:scaleType="fitCenter"
                     android:contentDescription="Forward"
                     android:padding="6dp" />
+
+                <!-- Next channel button (shown in modes 1 and 2) -->
+                <ImageButton
+                    android:id="@+id/btn_next_channel"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_skip_forward"
+                    android:background="@drawable/ripple_square_white"
+                    android:tint="@android:color/white"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Next channel"
+                    android:padding="5dp"
+                    android:layout_marginStart="8dp"
+                    android:visibility="gone" />
 
             </LinearLayout>
 

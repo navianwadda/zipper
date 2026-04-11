@@ -42,6 +42,11 @@ import java.util.UUID
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import kotlin.math.abs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @dagger.hilt.android.AndroidEntryPoint
 class FloatingPlayerService : Service() {
@@ -1321,9 +1326,9 @@ class FloatingPlayerService : Service() {
         btnPrevChannel?.setOnClickListener {
             val instance = activeInstances[instanceId] ?: return@setOnClickListener
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
-            kotlinx.coroutines.MainScope().launch {
+            CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
-                    ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    ?: withContext(Dispatchers.IO) {
                         channelRepository.getChannelsByCategory(currentChannel.categoryId)
                     }.also { if (it.isNotEmpty()) instance.channelList = it }
                 if (allChannels.isEmpty()) return@launch
@@ -1344,9 +1349,9 @@ class FloatingPlayerService : Service() {
         btnNextChannel?.setOnClickListener {
             val instance = activeInstances[instanceId] ?: return@setOnClickListener
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
-            kotlinx.coroutines.MainScope().launch {
+            CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
-                    ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    ?: withContext(Dispatchers.IO) {
                         channelRepository.getChannelsByCategory(currentChannel.categoryId)
                     }.also { if (it.isNotEmpty()) instance.channelList = it }
                 if (allChannels.isEmpty()) return@launch

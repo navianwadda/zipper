@@ -291,7 +291,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                 return
             }
             try {
-                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, isSports = true)
+                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, isSports = true, channelList = ArrayList(channelAdapter.snapshot().items))
             } catch (e: Exception) {
                 PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true)
             }

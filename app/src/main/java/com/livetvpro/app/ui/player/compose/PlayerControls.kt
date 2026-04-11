@@ -568,7 +568,7 @@ private fun PlayerControlsContent(
                     if (showNav) {
                         PlayerIconButton(
                             onClick            = { onPrevClick(); onInteraction() },
-                            iconRes            = R.drawable.ic_skip_back,
+                            iconRes            = R.drawable.ic_skip_prev_channel,
                             contentDescription = "Previous channel",
                             size               = 40,
                             modifier           = Modifier.padding(end = 12.dp),
@@ -615,7 +615,7 @@ private fun PlayerControlsContent(
                     if (showNav) {
                         PlayerIconButton(
                             onClick            = { onNextClick(); onInteraction() },
-                            iconRes            = R.drawable.ic_skip_forward,
+                            iconRes            = R.drawable.ic_skip_next_channel,
                             contentDescription = "Next channel",
                             size               = 40,
                             modifier           = Modifier.padding(end = if (!showSeeks) 12.dp else 0.dp),

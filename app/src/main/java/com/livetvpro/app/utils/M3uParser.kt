@@ -93,6 +93,15 @@ object M3uParser {
         } catch (_: Exception) { url }
     }
 
+    private val USER_AGENT_FALLBACKS = listOf(
+        "okhttp/4.12.0",
+        "VLC/3.0.21 LibVLC/3.0.21",
+        "Kodi/20.4 (Android; Android 13)",
+        "TiviMate/4.7.0 (Android 13)",
+        "IPTV Smarters Pro",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    )
+
     suspend fun parseM3uFromUrl(m3uUrl: String): List<M3uChannel> {
         val trimmedUrl = if (isXtreamUrl(m3uUrl.trim())) {
             normalizeXtreamUrl(m3uUrl.trim())
@@ -106,13 +115,34 @@ object M3uParser {
 
         android.util.Log.d("M3uParser", "Fetching playlist from: $trimmedUrl")
 
+        var lastException: java.io.IOException? = null
+
+        for (userAgent in USER_AGENT_FALLBACKS) {
+            android.util.Log.d("M3uParser", "Trying User-Agent: $userAgent")
+            try {
+                val result = fetchWithUserAgent(trimmedUrl, userAgent)
+                if (result != null) return result
+            } catch (e: java.io.IOException) {
+                if (e.message?.contains("401") == true ||
+                    e.message?.contains("404") == true ||
+                    e.message?.startsWith("HTTP 5") == true) {
+                    throw e
+                }
+                lastException = e
+            }
+        }
+
+        throw lastException ?: java.io.IOException("All User-Agent attempts failed")
+    }
+
+    private fun fetchWithUserAgent(trimmedUrl: String, userAgent: String): List<M3uChannel>? {
         val url = URL(trimmedUrl)
         val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
         connection.connectTimeout = 30000
         connection.readTimeout = 30000
 
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        connection.setRequestProperty("User-Agent", userAgent)
         connection.setRequestProperty("Accept", "*/*")
         connection.setRequestProperty("Accept-Language", "en-GB,en-US;q=0.9,en;q=0.8")
         connection.setRequestProperty("Connection", "keep-alive")
@@ -121,7 +151,13 @@ object M3uParser {
         HttpURLConnection.setFollowRedirects(true)
 
         val responseCode = connection.responseCode
-        android.util.Log.d("M3uParser", "Response code: $responseCode")
+        android.util.Log.d("M3uParser", "Response code: $responseCode (UA: $userAgent)")
+
+        if (responseCode == HttpURLConnection.HTTP_FORBIDDEN) {
+            android.util.Log.w("M3uParser", "403 blocked with UA: $userAgent — trying next")
+            connection.disconnect()
+            return null
+        }
 
         if (responseCode == HttpURLConnection.HTTP_OK) {
             val contentType = connection.contentType
@@ -171,7 +207,7 @@ object M3uParser {
             }
 
             val channels = parseM3uContent(content)
-            android.util.Log.d("M3uParser", "Successfully parsed ${channels.size} channels")
+            android.util.Log.d("M3uParser", "Successfully parsed ${channels.size} channels (UA: $userAgent)")
 
             if (channels.isEmpty()) {
                 android.util.Log.w("M3uParser", "No channels found in playlist")
@@ -182,10 +218,6 @@ object M3uParser {
         } else if (responseCode == HttpURLConnection.HTTP_UNAUTHORIZED) {
             android.util.Log.e("M3uParser", "Authentication failed (401). Check username/password in URL")
             throw java.io.IOException("HTTP 401: Authentication failed")
-
-        } else if (responseCode == HttpURLConnection.HTTP_FORBIDDEN) {
-            android.util.Log.e("M3uParser", "Access forbidden (403). Server denied access")
-            throw java.io.IOException("HTTP 403: Access denied")
 
         } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
             android.util.Log.e("M3uParser", "Playlist not found (404). Check URL path")

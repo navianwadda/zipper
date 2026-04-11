@@ -129,6 +129,7 @@ fun PlayerControls(
     showAspectRatioButton: Boolean,
     isLandscape: Boolean,
     isTvMode: Boolean = false,
+    centerControlsMode: Int = 0,
     onBackClick: () -> Unit,
     onPipClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -138,6 +139,8 @@ fun PlayerControls(
     onSeek: (Long) -> Unit,
     onRewindClick: () -> Unit,
     onForwardClick: () -> Unit,
+    onPrevClick: () -> Unit = {},
+    onNextClick: () -> Unit = {},
     onAspectRatioClick: () -> Unit,
     onFullscreenClick: () -> Unit,
     onChannelListClick: () -> Unit = {},
@@ -260,6 +263,7 @@ fun PlayerControls(
                 showAspectRatioButton  = showAspectRatioButton,
                 isLandscape            = isLandscape,
                 isTvMode               = isTvMode,
+                centerControlsMode     = centerControlsMode,
                 onBackClick            = onBackClick,
                 onPipClick             = onPipClick,
                 onSettingsClick        = onSettingsClick,
@@ -269,6 +273,8 @@ fun PlayerControls(
                 onSeek                 = onSeek,
                 onRewindClick          = onRewindClick,
                 onForwardClick         = onForwardClick,
+                onPrevClick            = onPrevClick,
+                onNextClick            = onNextClick,
                 onAspectRatioClick     = onAspectRatioClick,
                 onFullscreenClick      = onFullscreenClick,
                 onChannelListClick     = onChannelListClick,
@@ -369,6 +375,7 @@ private fun PlayerControlsContent(
     showAspectRatioButton: Boolean,
     isLandscape: Boolean,
     isTvMode: Boolean,
+    centerControlsMode: Int = 0,
     onBackClick: () -> Unit,
     onPipClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -378,6 +385,8 @@ private fun PlayerControlsContent(
     onSeek: (Long) -> Unit,
     onRewindClick: () -> Unit,
     onForwardClick: () -> Unit,
+    onPrevClick: () -> Unit = {},
+    onNextClick: () -> Unit = {},
     onAspectRatioClick: () -> Unit,
     onFullscreenClick: () -> Unit,
     onChannelListClick: () -> Unit,
@@ -534,6 +543,7 @@ private fun PlayerControlsContent(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment     = Alignment.CenterVertically,
                 ) {
+                    // Left slot: aspect ratio (or spacer)
                     if (showAspectRatioButton) {
                         PlayerIconButton(
                             onClick            = { onAspectRatioClick(); onInteraction() },
@@ -541,20 +551,41 @@ private fun PlayerControlsContent(
                             contentDescription = "Aspect ratio",
                             size               = 40,
                             modifier           = Modifier.padding(end = 12.dp),
-                        isTvMode           = isTvMode,
+                            isTvMode           = isTvMode,
                         )
                     } else {
                         Spacer(modifier = Modifier.width(52.dp))
                     }
 
-                    PlayerIconButton(
-                        onClick            = { onRewindClick(); onInteraction() },
-                        iconRes            = R.drawable.ic_skip_backward,
-                        contentDescription = "Rewind 10 seconds",
-                        size               = 48,
-                        modifier           = Modifier.padding(end = 16.dp),
-                    isTvMode           = isTvMode,
-                    )
+                    // Center group — mode-controlled
+                    // MODE 0: Seeks only (rewind | play | forward)
+                    // MODE 1: Seeks + Nav (prev | rewind | play | forward | next)
+                    // MODE 2: Nav only   (prev | play | next)
+
+                    val showSeeks = centerControlsMode == 0 || centerControlsMode == 1
+                    val showNav   = centerControlsMode == 1 || centerControlsMode == 2
+
+                    if (showNav) {
+                        PlayerIconButton(
+                            onClick            = { onPrevClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_skip_back,
+                            contentDescription = "Previous channel",
+                            size               = 40,
+                            modifier           = Modifier.padding(end = 12.dp),
+                            isTvMode           = isTvMode,
+                        )
+                    }
+
+                    if (showSeeks) {
+                        PlayerIconButton(
+                            onClick            = { onRewindClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_skip_backward,
+                            contentDescription = "Rewind 10 seconds",
+                            size               = 48,
+                            modifier           = Modifier.padding(end = 16.dp),
+                            isTvMode           = isTvMode,
+                        )
+                    }
 
                     PlayerIconButton(
                         onClick            = { onPlayPauseClick(); onInteraction() },
@@ -562,20 +593,37 @@ private fun PlayerControlsContent(
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         size               = 64,
                         modifier           = Modifier
-                            .padding(end = 16.dp)
+                            .padding(
+                                start = if (showSeeks) 0.dp else if (showNav) 12.dp else 0.dp,
+                                end   = if (showSeeks) 16.dp else if (showNav) 12.dp else 16.dp,
+                            )
                             .focusRequester(playPauseFocusRequester),
-                    isTvMode           = isTvMode,
+                        isTvMode           = isTvMode,
                     )
 
-                    PlayerIconButton(
-                        onClick            = { onForwardClick(); onInteraction() },
-                        iconRes            = R.drawable.ic_skip_forward,
-                        contentDescription = "Forward 10 seconds",
-                        size               = 48,
-                        modifier           = Modifier.padding(end = 12.dp),
-                    isTvMode           = isTvMode,
-                    )
+                    if (showSeeks) {
+                        PlayerIconButton(
+                            onClick            = { onForwardClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_skip_forward,
+                            contentDescription = "Forward 10 seconds",
+                            size               = 48,
+                            modifier           = Modifier.padding(end = if (showNav) 12.dp else 12.dp),
+                            isTvMode           = isTvMode,
+                        )
+                    }
 
+                    if (showNav) {
+                        PlayerIconButton(
+                            onClick            = { onNextClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_skip_forward,
+                            contentDescription = "Next channel",
+                            size               = 40,
+                            modifier           = Modifier.padding(end = if (!showSeeks) 12.dp else 0.dp),
+                            isTvMode           = isTvMode,
+                        )
+                    }
+
+                    // Right slot: channel list or fullscreen
                     if (isTvMode) {
                         if (isChannelListAvailable) {
                             PlayerIconButton(
@@ -583,7 +631,7 @@ private fun PlayerControlsContent(
                                 iconRes            = R.drawable.ic_list,
                                 contentDescription = "Channel list",
                                 size               = 40,
-                            isTvMode           = isTvMode,
+                                isTvMode           = isTvMode,
                             )
                         } else {
                             Spacer(modifier = Modifier.width(40.dp))
@@ -596,7 +644,7 @@ private fun PlayerControlsContent(
                                 contentDescription = "Channel list",
                                 size               = 48,
                                 modifier           = Modifier.padding(end = 4.dp),
-                            isTvMode           = isTvMode,
+                                isTvMode           = isTvMode,
                             )
                         }
                         PlayerIconButton(
@@ -605,7 +653,7 @@ private fun PlayerControlsContent(
                                                  else R.drawable.ic_fullscreen,
                             contentDescription = "Toggle fullscreen",
                             size               = 40,
-                        isTvMode           = isTvMode,
+                            isTvMode           = isTvMode,
                         )
                     }
                 }

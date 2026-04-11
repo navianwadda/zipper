@@ -141,16 +141,13 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <Space
-                android:layout_width="32dp"
-                android:layout_height="32dp" />
-
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="horizontal"
-                android:gravity="center">
+                android:gravity="center"
+                android:paddingEnd="32dp">
 
                 <ImageButton
                     android:id="@+id/btn_prev_channel"

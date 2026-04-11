@@ -273,7 +273,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 return
             }
             try {
-                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex)
+                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, channelList = ArrayList(channelAdapter.snapshot().items))
             } catch (_: Exception) {
                 PlayerActivity.startWithChannel(
                     requireContext(), channel, linkIndex,

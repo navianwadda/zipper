@@ -79,6 +79,12 @@ class FloatingPlayerService : Service() {
     @javax.inject.Inject
     lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
 
+    @javax.inject.Inject
+    lateinit var channelRepository: com.livetvpro.app.data.repository.ChannelRepository
+
+    @javax.inject.Inject
+    lateinit var channelRepository: com.livetvpro.app.data.repository.ChannelRepository
+
     private fun getMinWidth() = dpToPx(280)
     private fun getMaxWidth() = dpToPx(400)
     private fun getMinHeight() = getMinWidth() * 9 / 16
@@ -1318,21 +1324,21 @@ class FloatingPlayerService : Service() {
         btnPrevChannel?.setOnClickListener {
             val instance = activeInstances[instanceId] ?: return@setOnClickListener
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
-            val allChannels = instance.channelList
-            if (!allChannels.isNullOrEmpty()) {
+            kotlinx.coroutines.MainScope().launch {
+                val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
+                    ?: channelRepository.getChannelsByCategory(currentChannel.categoryId)
+                        .also { if (it.isNotEmpty()) instance.channelList = it }
+                if (allChannels.isEmpty()) return@launch
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
                 val prevIndex = (currentIndex - 1).coerceAtLeast(0)
                 if (prevIndex != currentIndex) {
                     val prevChannel = allChannels[prevIndex]
                     instance.currentChannel = prevChannel
-                    val link = prevChannel.links?.firstOrNull()
-                    val url = link?.url ?: return@setOnClickListener
-                    val mediaItem = androidx.media3.common.MediaItem.fromUri(url)
-                    instance.player.setMediaItem(mediaItem)
+                    val url = prevChannel.links?.firstOrNull()?.url ?: return@launch
+                    instance.player.setMediaItem(androidx.media3.common.MediaItem.fromUri(url))
                     instance.player.prepare()
                     instance.player.play()
-                    val tvTitle = playerView.findViewById<android.widget.TextView>(R.id.tv_title)
-                    tvTitle?.text = prevChannel.name
+                    playerView.findViewById<android.widget.TextView>(R.id.tv_title)?.text = prevChannel.name
                 }
             }
         }
@@ -1340,21 +1346,21 @@ class FloatingPlayerService : Service() {
         btnNextChannel?.setOnClickListener {
             val instance = activeInstances[instanceId] ?: return@setOnClickListener
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
-            val allChannels = instance.channelList
-            if (!allChannels.isNullOrEmpty()) {
+            kotlinx.coroutines.MainScope().launch {
+                val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
+                    ?: channelRepository.getChannelsByCategory(currentChannel.categoryId)
+                        .also { if (it.isNotEmpty()) instance.channelList = it }
+                if (allChannels.isEmpty()) return@launch
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
                 val nextIndex = (currentIndex + 1).coerceAtMost(allChannels.size - 1)
                 if (nextIndex != currentIndex) {
                     val nextChannel = allChannels[nextIndex]
                     instance.currentChannel = nextChannel
-                    val link = nextChannel.links?.firstOrNull()
-                    val url = link?.url ?: return@setOnClickListener
-                    val mediaItem = androidx.media3.common.MediaItem.fromUri(url)
-                    instance.player.setMediaItem(mediaItem)
+                    val url = nextChannel.links?.firstOrNull()?.url ?: return@launch
+                    instance.player.setMediaItem(androidx.media3.common.MediaItem.fromUri(url))
                     instance.player.prepare()
                     instance.player.play()
-                    val tvTitle = playerView.findViewById<android.widget.TextView>(R.id.tv_title)
-                    tvTitle?.text = nextChannel.name
+                    playerView.findViewById<android.widget.TextView>(R.id.tv_title)?.text = nextChannel.name
                 }
             }
         }

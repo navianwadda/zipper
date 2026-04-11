@@ -188,7 +188,8 @@
                 android:text="Seeks only"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
-                android:paddingStart="8dp" />
+                android:paddingStart="8dp"
+                app:buttonTint="@color/accent" />
 
             <com.google.android.material.radiobutton.MaterialRadioButton
                 android:id="@+id/rb_seeks_and_nav"
@@ -198,7 +199,8 @@
                 android:text="Seeks + Prev/Next channel"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
-                android:paddingStart="8dp" />
+                android:paddingStart="8dp"
+                app:buttonTint="@color/accent" />
 
             <com.google.android.material.radiobutton.MaterialRadioButton
                 android:id="@+id/rb_nav_only"
@@ -208,7 +210,8 @@
                 android:text="Prev/Next channel only"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
-                android:paddingStart="8dp" />
+                android:paddingStart="8dp"
+                app:buttonTint="@color/accent" />
 
         </RadioGroup>
 

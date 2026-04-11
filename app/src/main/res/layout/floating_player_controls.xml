@@ -142,24 +142,30 @@
         </LinearLayout>
 
         <!-- Playback Buttons Container -->
-        <LinearLayout
+        <RelativeLayout
             android:id="@+id/bottom_buttons_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:layout_height="wrap_content">
 
-            <!-- Centered Play Controls Group -->
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+            <ImageButton
+                android:id="@+id/btn_resize"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_resize"
+                android:background="@drawable/ripple_square_white"
+                android:tint="@android:color/white"
+                android:scaleType="fitCenter"
+                android:contentDescription="Resize"
+                android:padding="6dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center">
+                android:gravity="center"
+                android:layout_centerInParent="true">
 
                 <!-- Prev channel button (shown in modes 1 and 2) -->
                 <ImageButton
@@ -228,18 +234,7 @@
 
             </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/btn_resize"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:src="@drawable/ic_resize"
-                android:background="@drawable/ripple_square_white"
-                android:tint="@android:color/white"
-                android:scaleType="fitCenter"
-                android:contentDescription="Resize"
-                android:padding="6dp" />
-
-        </LinearLayout>
+        </RelativeLayout>
 
     </LinearLayout>
 

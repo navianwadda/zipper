@@ -213,12 +213,13 @@ class FloatingPlayerService : Service() {
             }
         }
 
-        fun updateFloatingPlayer(context: Context, instanceId: String, channel: Channel, linkIndex: Int) {
+        fun updateFloatingPlayer(context: Context, instanceId: String, channel: Channel, linkIndex: Int, channelList: ArrayList<Channel>? = null) {
             val intent = Intent(context, FloatingPlayerService::class.java).apply {
                 action = ACTION_UPDATE_STREAM
                 putExtra(EXTRA_INSTANCE_ID, instanceId)
                 putExtra(EXTRA_CHANNEL, channel)
                 putExtra(EXTRA_LINK_INDEX, linkIndex)
+                if (channelList != null) putParcelableArrayListExtra(EXTRA_CHANNEL_LIST, channelList)
             }
             context.startService(intent)
         }
@@ -321,7 +322,16 @@ class FloatingPlayerService : Service() {
                     intent.getParcelableExtra<com.livetvpro.app.data.models.LiveEvent>(EXTRA_EVENT)
                 }
                 val linkIndex = intent.getIntExtra(EXTRA_LINK_INDEX, 0)
+                val updatedChannelList: List<Channel>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST, Channel::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST)
+                }
                 if (instanceId != null && (channel != null || event != null)) {
+                    if (updatedChannelList != null) {
+                        activeInstances[instanceId]?.channelList = updatedChannelList
+                    }
                     updateInstanceStream(instanceId, channel, event, linkIndex)
                 }
                 return START_STICKY
@@ -1335,13 +1345,7 @@ class FloatingPlayerService : Service() {
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
                 val prevIndex = (currentIndex - 1).coerceAtLeast(0)
                 if (prevIndex != currentIndex) {
-                    val prevChannel = allChannels[prevIndex]
-                    instance.currentChannel = prevChannel
-                    val url = prevChannel.links?.firstOrNull()?.url ?: return@launch
-                    instance.player.setMediaItem(androidx.media3.common.MediaItem.fromUri(url))
-                    instance.player.prepare()
-                    instance.player.play()
-                    playerView.findViewById<android.widget.TextView>(R.id.tv_title)?.text = prevChannel.name
+                    updateInstanceStream(instanceId, allChannels[prevIndex], null, 0)
                 }
             }
         }
@@ -1358,13 +1362,7 @@ class FloatingPlayerService : Service() {
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
                 val nextIndex = (currentIndex + 1).coerceAtMost(allChannels.size - 1)
                 if (nextIndex != currentIndex) {
-                    val nextChannel = allChannels[nextIndex]
-                    instance.currentChannel = nextChannel
-                    val url = nextChannel.links?.firstOrNull()?.url ?: return@launch
-                    instance.player.setMediaItem(androidx.media3.common.MediaItem.fromUri(url))
-                    instance.player.prepare()
-                    instance.player.play()
-                    playerView.findViewById<android.widget.TextView>(R.id.tv_title)?.text = nextChannel.name
+                    updateInstanceStream(instanceId, allChannels[nextIndex], null, 0)
                 }
             }
         }

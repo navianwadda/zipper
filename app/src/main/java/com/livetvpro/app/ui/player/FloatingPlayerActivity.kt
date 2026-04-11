@@ -152,14 +152,16 @@ class FloatingPlayerActivity : AppCompatActivity() {
         private const val EXTRA_CATEGORY_ID = "extra_category_id"
         private const val EXTRA_SELECTED_GROUP = "extra_selected_group"
         private const val EXTRA_IS_SPORTS = "extra_is_sports"
+        private const val EXTRA_CHANNEL_LIST = "extra_channel_list"
 
-        fun startWithChannel(context: Context, channel: Channel, linkIndex: Int = -1, categoryId: String? = null, selectedGroup: String? = null, isSports: Boolean = false) {
+        fun startWithChannel(context: Context, channel: Channel, linkIndex: Int = -1, categoryId: String? = null, selectedGroup: String? = null, isSports: Boolean = false, channelList: ArrayList<Channel>? = null) {
             val intent = Intent(context, FloatingPlayerActivity::class.java).apply {
                 putExtra(EXTRA_CHANNEL, channel as Parcelable)
                 putExtra(EXTRA_SELECTED_LINK_INDEX, linkIndex)
                 categoryId?.let { putExtra(EXTRA_CATEGORY_ID, it) }
                 selectedGroup?.let { putExtra(EXTRA_SELECTED_GROUP, it) }
                 putExtra(EXTRA_IS_SPORTS, isSports)
+                channelList?.let { putParcelableArrayListExtra(EXTRA_CHANNEL_LIST, it) }
                 addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
             }
             context.startActivity(intent)
@@ -255,7 +257,17 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
         if (contentType == ContentType.CHANNEL && contentId.isNotEmpty()) {
             viewModel.refreshChannelData(contentId)
-            viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
+            val passedChannelList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST, Channel::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST)
+            }
+            if (!passedChannelList.isNullOrEmpty()) {
+                viewModel.setChannelList(passedChannelList)
+            } else {
+                viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
+            }
         }
 
         applyOrientationSettings(isLandscape)
@@ -656,8 +668,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
             if (streamUrlRaw.contains("|")) {
                 val parsed = parseStreamUrl(streamUrlRaw)
-
-
                 val extraDrmScheme = intent.getStringExtra("DRM_SCHEME")?.takeIf { it.isNotBlank() }
                 val extraDrmLicense = intent.getStringExtra("DRM_LICENSE")?.takeIf { it.isNotBlank() }
                 val resolvedDrmScheme = parsed.drmScheme ?: extraDrmScheme
@@ -1694,8 +1704,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
             clean.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
         } catch (e: Exception) { ByteArray(0) }
     }
-
-
     private fun toggleMute() {
         player?.let {
             isMuted = !isMuted

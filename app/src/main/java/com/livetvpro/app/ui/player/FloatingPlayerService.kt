@@ -82,9 +82,6 @@ class FloatingPlayerService : Service() {
     @javax.inject.Inject
     lateinit var channelRepository: com.livetvpro.app.data.repository.ChannelRepository
 
-    @javax.inject.Inject
-    lateinit var channelRepository: com.livetvpro.app.data.repository.ChannelRepository
-
     private fun getMinWidth() = dpToPx(280)
     private fun getMaxWidth() = dpToPx(400)
     private fun getMinHeight() = getMinWidth() * 9 / 16
@@ -1326,8 +1323,9 @@ class FloatingPlayerService : Service() {
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
             kotlinx.coroutines.MainScope().launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
-                    ?: channelRepository.getChannelsByCategory(currentChannel.categoryId)
-                        .also { if (it.isNotEmpty()) instance.channelList = it }
+                    ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        channelRepository.getChannelsByCategory(currentChannel.categoryId)
+                    }.also { if (it.isNotEmpty()) instance.channelList = it }
                 if (allChannels.isEmpty()) return@launch
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
                 val prevIndex = (currentIndex - 1).coerceAtLeast(0)
@@ -1348,8 +1346,9 @@ class FloatingPlayerService : Service() {
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
             kotlinx.coroutines.MainScope().launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
-                    ?: channelRepository.getChannelsByCategory(currentChannel.categoryId)
-                        .also { if (it.isNotEmpty()) instance.channelList = it }
+                    ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        channelRepository.getChannelsByCategory(currentChannel.categoryId)
+                    }.also { if (it.isNotEmpty()) instance.channelList = it }
                 if (allChannels.isEmpty()) return@launch
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
                 val nextIndex = (currentIndex + 1).coerceAtMost(allChannels.size - 1)

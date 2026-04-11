@@ -498,7 +498,7 @@ class FloatingPlayerService : Service() {
             val actualUrl = parsedStream.url
             val headers = parsedStream.headers.toMutableMap()
             if (!headers.containsKey("User-Agent")) {
-                headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                headers["User-Agent"] = "okhttp/4.12.0"
             }
             val effectiveStreamInfo = parsedStream
             val dataSourceFactory = DefaultHttpDataSource.Factory()
@@ -850,7 +850,7 @@ class FloatingPlayerService : Service() {
             if (origin.isNotEmpty()) headers["Origin"] = origin
             if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                userAgent else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                userAgent else "okhttp/4.12.0"
             headers["User-Agent"] = effectiveUserAgent
 
             val nsDataSourceFactory = DefaultHttpDataSource.Factory()
@@ -976,7 +976,7 @@ class FloatingPlayerService : Service() {
             val parsedStream = parseStreamUrl(resolvedPipeUrl)
             val headers = parsedStream.headers.toMutableMap()
             if (!headers.containsKey("User-Agent")) {
-                headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                headers["User-Agent"] = "okhttp/4.12.0"
             }
 
             val dataSourceFactory = DefaultHttpDataSource.Factory()
@@ -1076,7 +1076,7 @@ class FloatingPlayerService : Service() {
             if (origin.isNotEmpty()) headers["Origin"] = origin
             if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                userAgent else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                userAgent else "okhttp/4.12.0"
             headers["User-Agent"] = effectiveUserAgent
 
             val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
@@ -1545,7 +1545,7 @@ class FloatingPlayerService : Service() {
                 if (origin.isNotEmpty()) headers["Origin"] = origin
                 if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
                 val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                    userAgent else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    userAgent else "okhttp/4.12.0"
                 headers["User-Agent"] = effectiveUserAgent
 
                 val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)

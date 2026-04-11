@@ -2604,33 +2604,33 @@ class PlayerActivity : AppCompatActivity() {
             )
         }
 
-        when (centerMode) {
-            com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY -> {
-                actions.add(RemoteAction(
-                    Icon.createWithResource(context, R.drawable.ic_skip_prev_channel),
-                    "Previous", "Previous channel",
-                    makePendingIntent(CONTROL_TYPE_PREV_CHANNEL, CONTROL_TYPE_PREV_CHANNEL)
-                ))
-                actions.add(playPauseAction)
-                actions.add(RemoteAction(
-                    Icon.createWithResource(context, R.drawable.ic_skip_next_channel),
-                    "Next", "Next channel",
-                    makePendingIntent(CONTROL_TYPE_NEXT_CHANNEL, CONTROL_TYPE_NEXT_CHANNEL)
-                ))
-            }
-            else -> {
-                actions.add(RemoteAction(
-                    Icon.createWithResource(context, R.drawable.ic_skip_backward),
-                    "Rewind", "Rewind 10s",
-                    makePendingIntent(CONTROL_TYPE_REWIND, CONTROL_TYPE_REWIND)
-                ))
-                actions.add(playPauseAction)
-                actions.add(RemoteAction(
-                    Icon.createWithResource(context, R.drawable.ic_skip_forward),
-                    "Forward", "Forward 10s",
-                    makePendingIntent(CONTROL_TYPE_FORWARD, CONTROL_TYPE_FORWARD)
-                ))
-            }
+        val showNav = centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY
+                && contentType == ContentType.CHANNEL
+
+        if (showNav) {
+            actions.add(RemoteAction(
+                Icon.createWithResource(context, R.drawable.ic_skip_prev_channel),
+                "Previous", "Previous channel",
+                makePendingIntent(CONTROL_TYPE_PREV_CHANNEL, CONTROL_TYPE_PREV_CHANNEL)
+            ))
+            actions.add(playPauseAction)
+            actions.add(RemoteAction(
+                Icon.createWithResource(context, R.drawable.ic_skip_next_channel),
+                "Next", "Next channel",
+                makePendingIntent(CONTROL_TYPE_NEXT_CHANNEL, CONTROL_TYPE_NEXT_CHANNEL)
+            ))
+        } else {
+            actions.add(RemoteAction(
+                Icon.createWithResource(context, R.drawable.ic_skip_backward),
+                "Rewind", "Rewind 10s",
+                makePendingIntent(CONTROL_TYPE_REWIND, CONTROL_TYPE_REWIND)
+            ))
+            actions.add(playPauseAction)
+            actions.add(RemoteAction(
+                Icon.createWithResource(context, R.drawable.ic_skip_forward),
+                "Forward", "Forward 10s",
+                makePendingIntent(CONTROL_TYPE_FORWARD, CONTROL_TYPE_FORWARD)
+            ))
         }
 
         return actions

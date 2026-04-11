@@ -25,8 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-
-
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val application: Application,
@@ -76,6 +74,10 @@ class PlayerViewModel @Inject constructor(
                 _channelListItems.postValue(emptyList())
             }
         }
+    }
+
+    fun setChannelList(channels: List<Channel>) {
+        _channelListItems.postValue(channels)
     }
 
     fun refreshChannelData(channelId: String) {
@@ -177,8 +179,6 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
-
-
     fun loadRandomRelatedSports(currentChannelId: String) {
         viewModelScope.launch {
             try {
@@ -195,8 +195,6 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
-
-
     fun loadRelatedChannels(categoryId: String, currentChannelId: String) {
         viewModelScope.launch {
             try {

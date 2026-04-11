@@ -1759,6 +1759,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             showAspectRatioButton = true,
                             isLandscape = isLandscape,
                             isTvMode = DeviceUtils.isTvDevice,
+                            centerControlsMode = preferencesManager.getCenterControlsMode(),
                             isChannelListAvailable = isChannelListAvailable,
                             onBackClick = { finish() },
                             onPipClick = {
@@ -1858,6 +1859,26 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                         it.seekTo(it.duration)
                                     } else {
                                         it.seekTo(newPosition)
+                                    }
+                                }
+                            },
+                            onPrevClick = {
+                                if (contentType == ContentType.CHANNEL) {
+                                    val items = viewModel.channelListItems.value
+                                    if (!items.isNullOrEmpty()) {
+                                        val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                                        val prevIndex = (currentIndex - 1).coerceAtLeast(0)
+                                        if (prevIndex != currentIndex) switchToChannel(items[prevIndex])
+                                    }
+                                }
+                            },
+                            onNextClick = {
+                                if (contentType == ContentType.CHANNEL) {
+                                    val items = viewModel.channelListItems.value
+                                    if (!items.isNullOrEmpty()) {
+                                        val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                                        val nextIndex = (currentIndex + 1).coerceAtMost(items.size - 1)
+                                        if (nextIndex != currentIndex) switchToChannel(items[nextIndex])
                                     }
                                 }
                             },

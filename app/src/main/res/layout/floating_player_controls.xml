@@ -166,7 +166,7 @@
                     android:id="@+id/btn_prev_channel"
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:src="@drawable/ic_skip_back"
+                    android:src="@drawable/ic_skip_prev_channel"
                     android:background="@drawable/ripple_square_white"
                     android:tint="@android:color/white"
                     android:scaleType="fitCenter"
@@ -217,7 +217,7 @@
                     android:id="@+id/btn_next_channel"
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:src="@drawable/ic_skip_forward"
+                    android:src="@drawable/ic_skip_next_channel"
                     android:background="@drawable/ripple_square_white"
                     android:tint="@android:color/white"
                     android:scaleType="fitCenter"
@@ -227,11 +227,6 @@
                     android:visibility="gone" />
 
             </LinearLayout>
-
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
 
             <ImageButton
                 android:id="@+id/btn_resize"

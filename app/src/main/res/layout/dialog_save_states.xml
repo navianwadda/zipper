@@ -180,7 +180,7 @@
             android:layout_marginTop="12dp"
             android:orientation="vertical">
 
-            <RadioButton
+            <com.google.android.material.radiobutton.MaterialRadioButton
                 android:id="@+id/rb_seeks_only"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
@@ -188,10 +188,9 @@
                 android:text="Seeks only"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
-                android:buttonTint="@color/radio_button_tint"
                 android:paddingStart="8dp" />
 
-            <RadioButton
+            <com.google.android.material.radiobutton.MaterialRadioButton
                 android:id="@+id/rb_seeks_and_nav"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
@@ -199,10 +198,9 @@
                 android:text="Seeks + Prev/Next channel"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
-                android:buttonTint="@color/radio_button_tint"
                 android:paddingStart="8dp" />
 
-            <RadioButton
+            <com.google.android.material.radiobutton.MaterialRadioButton
                 android:id="@+id/rb_nav_only"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
@@ -210,7 +208,6 @@
                 android:text="Prev/Next channel only"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
-                android:buttonTint="@color/radio_button_tint"
                 android:paddingStart="8dp" />
 
         </RadioGroup>

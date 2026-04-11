@@ -191,7 +191,8 @@
                     android:tint="@android:color/white"
                     android:scaleType="fitCenter"
                     android:contentDescription="Rewind"
-                    android:padding="6dp" />
+                    android:padding="6dp"
+                    android:layout_marginEnd="8dp" />
 
                 <ImageButton
                     android:id="@+id/btn_play_pause"
@@ -216,7 +217,8 @@
                     android:tint="@android:color/white"
                     android:scaleType="fitCenter"
                     android:contentDescription="Forward"
-                    android:padding="6dp" />
+                    android:padding="6dp"
+                    android:layout_marginStart="8dp" />
 
                 <!-- Next channel button (shown in modes 1 and 2) -->
                 <ImageButton

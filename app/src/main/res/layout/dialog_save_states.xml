@@ -151,6 +151,77 @@
             android:background="?attr/colorOnSurface"
             android:alpha="0.1" />
 
+        <!-- Center Controls Mode -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:fontFamily="@font/bergen_sans"
+            android:text="Center Controls Mode"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:alpha="0.6"
+            android:fontFamily="@font/bergen_sans"
+            android:text="Choose what appears in the center of the player controls. Only one option can be active."
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="12sp"
+            android:lineSpacingExtra="1dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_center_controls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rb_seeks_only"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:fontFamily="@font/bergen_sans"
+                android:text="Seeks only"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="14sp"
+                android:buttonTint="@color/accent"
+                android:paddingStart="8dp" />
+
+            <RadioButton
+                android:id="@+id/rb_seeks_and_nav"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:fontFamily="@font/bergen_sans"
+                android:text="Seeks + Prev/Next channel"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="14sp"
+                android:buttonTint="@color/accent"
+                android:paddingStart="8dp" />
+
+            <RadioButton
+                android:id="@+id/rb_nav_only"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:fontFamily="@font/bergen_sans"
+                android:text="Prev/Next channel only"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="14sp"
+                android:buttonTint="@color/accent"
+                android:paddingStart="8dp" />
+
+        </RadioGroup>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="8dp"
+            android:background="?attr/colorOnSurface"
+            android:alpha="0.1" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

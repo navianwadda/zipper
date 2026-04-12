@@ -90,6 +90,9 @@ class FloatingPlayerService : Service() {
     @javax.inject.Inject
     lateinit var channelRepository: com.livetvpro.app.data.repository.ChannelRepository
 
+    @javax.inject.Inject
+    lateinit var categoryRepository: com.livetvpro.app.data.repository.CategoryRepository
+
     private fun getMinWidth() = dpToPx(280)
     private fun getMaxWidth() = dpToPx(400)
     private fun getMinHeight() = getMinWidth() * 9 / 16
@@ -1222,10 +1225,12 @@ class FloatingPlayerService : Service() {
 
         // Apply center controls mode visibility
         val centerMode = preferencesManager.getCenterControlsMode()
+        val isNetworkStream = (channel == null && event == null)
         val showSeeks = centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_ONLY ||
                         centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_AND_NAV
-        val showNav   = centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_AND_NAV ||
-                        centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY
+        val showNav   = !isNetworkStream && (
+                        centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_AND_NAV ||
+                        centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_NAV_ONLY)
         btnSeekBack?.visibility    = if (showSeeks) View.VISIBLE else View.GONE
         btnSeekForward?.visibility = if (showSeeks) View.VISIBLE else View.GONE
         btnPrevChannel?.visibility = if (showNav) View.VISIBLE else View.GONE
@@ -1353,7 +1358,11 @@ class FloatingPlayerService : Service() {
             serviceScope.launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
                     ?: withContext(Dispatchers.IO) {
-                        channelRepository.getChannelsByCategory(currentChannel.categoryId)
+                        if (instance.isSports) {
+                            categoryRepository.getSports()
+                        } else {
+                            channelRepository.getChannelsByCategory(currentChannel.categoryId)
+                        }
                     }.also { if (it.isNotEmpty()) instance.channelList = it }
                 if (allChannels.isEmpty()) return@launch
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0
@@ -1370,7 +1379,11 @@ class FloatingPlayerService : Service() {
             serviceScope.launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
                     ?: withContext(Dispatchers.IO) {
-                        channelRepository.getChannelsByCategory(currentChannel.categoryId)
+                        if (instance.isSports) {
+                            categoryRepository.getSports()
+                        } else {
+                            channelRepository.getChannelsByCategory(currentChannel.categoryId)
+                        }
                     }.also { if (it.isNotEmpty()) instance.channelList = it }
                 if (allChannels.isEmpty()) return@launch
                 val currentIndex = allChannels.indexOfFirst { it.id == currentChannel.id }.takeIf { it != -1 } ?: 0

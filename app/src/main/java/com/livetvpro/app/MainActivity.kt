@@ -570,7 +570,15 @@ class MainActivity : AppCompatActivity() {
         val activeColor = android.content.res.ColorStateList.valueOf(0xFFEF4444.toInt())
         val inactiveColor = android.content.res.ColorStateList.valueOf(0xFF666666.toInt())
 
+        val tabOrder = listOf(R.id.liveEventsFragment, R.id.homeFragment, R.id.sportsFragment)
+        var currentNavDestId = navController.graph.startDestinationId
+
         fun updateCustomNav(selectedDestId: Int) {
+            val currentIndex = tabOrder.indexOf(currentNavDestId).takeIf { it >= 0 } ?: 0
+            val targetIndex = tabOrder.indexOf(selectedDestId).takeIf { it >= 0 } ?: 0
+            val goingRight = targetIndex > currentIndex
+            currentNavDestId = selectedDestId
+
             val items = listOf(
                 Triple(navLiveEvents, navIconLive, navLabelLive) to R.id.liveEventsFragment,
                 Triple(navCategories, navIconCategories, navLabelCategories) to R.id.homeFragment,
@@ -581,11 +589,31 @@ class MainActivity : AppCompatActivity() {
                 if (destId == selectedDestId) {
                     container?.background = pillDrawable
                     icon?.imageTintList = activeColor
+                    // Slide label in from direction of travel
+                    label?.translationX = if (goingRight) 30f else -30f
+                    label?.alpha = 0f
                     label?.visibility = View.VISIBLE
+                    label?.animate()
+                        ?.translationX(0f)
+                        ?.alpha(1f)
+                        ?.setDuration(200)
+                        ?.setInterpolator(android.view.animation.DecelerateInterpolator())
+                        ?.start()
                 } else {
-                    container?.background = null
+                    // Slide label out in direction of travel
+                    label?.animate()
+                        ?.translationX(if (goingRight) -30f else 30f)
+                        ?.alpha(0f)
+                        ?.setDuration(150)
+                        ?.setInterpolator(android.view.animation.AccelerateInterpolator())
+                        ?.withEndAction {
+                            label.visibility = View.GONE
+                            label.translationX = 0f
+                            label.alpha = 1f
+                            container?.background = null
+                        }
+                        ?.start()
                     icon?.imageTintList = inactiveColor
-                    label?.visibility = View.GONE
                 }
             }
         }
@@ -597,8 +625,6 @@ class MainActivity : AppCompatActivity() {
         val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
         val graphStartDestinationId = navController.graph.startDestinationId
 
-        val tabOrder = listOf(R.id.liveEventsFragment, R.id.homeFragment, R.id.sportsFragment)
-
         val navigateTopLevel = fun(destinationId: Int) {
             val currentId = navController.currentDestination?.id ?: graphStartDestinationId
             if (currentId != destinationId) {
@@ -606,18 +632,10 @@ class MainActivity : AppCompatActivity() {
                     navController.popBackStack(R.id.homeFragment, false)
                     if (destinationId == R.id.homeFragment) return
                 }
-                val currentIndex = tabOrder.indexOf(currentId).takeIf { it >= 0 } ?: tabOrder.indexOf(R.id.homeFragment)
-                val targetIndex = tabOrder.indexOf(destinationId).takeIf { it >= 0 } ?: currentIndex
-                val goingRight = targetIndex > currentIndex
-
                 val navOptions = NavOptions.Builder()
                     .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
                     .setLaunchSingleTop(true)
                     .setRestoreState(true)
-                    .setEnterAnim(if (goingRight) R.anim.slide_in_right else R.anim.slide_in_left)
-                    .setExitAnim(if (goingRight) R.anim.slide_out_left else R.anim.slide_out_right)
-                    .setPopEnterAnim(if (goingRight) R.anim.slide_in_left else R.anim.slide_in_right)
-                    .setPopExitAnim(if (goingRight) R.anim.slide_out_right else R.anim.slide_out_left)
                     .build()
                 navController.navigate(destinationId, null, navOptions)
             }

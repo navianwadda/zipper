@@ -62,7 +62,7 @@ object FloatingPlayerHelper {
         if (existingInstanceId != null && FloatingPlayerManager.hasPlayer(existingInstanceId)) {
             updateFloatingPlayer(context, existingInstanceId, resolvedChannel, linkIndex, channelList)
         } else if (FloatingPlayerManager.canAddNewPlayer()) {
-            createNewFloatingPlayer(context, channel = resolvedChannel, linkIndex = linkIndex, eventId = actualEventId, channelList = channelList)
+            createNewFloatingPlayer(context, channel = resolvedChannel, linkIndex = linkIndex, eventId = actualEventId, channelList = channelList, isSports = isSports)
         } else {
             val lastId = FloatingPlayerManager.getLastPlayerId()
             if (lastId != null) {
@@ -204,7 +204,8 @@ object FloatingPlayerHelper {
         event: LiveEvent? = null,
         linkIndex: Int = 0,
         eventId: String? = null,
-        channelList: ArrayList<Channel>? = null
+        channelList: ArrayList<Channel>? = null,
+        isSports: Boolean = false
     ): String? {
         if (!FloatingPlayerManager.canAddNewPlayer()) return null
         if (!hasOverlayPermission(context)) {
@@ -225,7 +226,7 @@ object FloatingPlayerHelper {
         }
 
         return try {
-            val started = FloatingPlayerService.startFloatingPlayer(context, instanceId, channel, event, linkIndex, channelList)
+            val started = FloatingPlayerService.startFloatingPlayer(context, instanceId, channel, event, linkIndex, channelList, isSports)
             if (started) {
                 createdInstances.add(instanceId)
                 instanceId

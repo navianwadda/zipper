@@ -138,4 +138,16 @@
         <item name="colorPrimary">#EF4444</item>
     </style>
 
+    <style name="BottomNav.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:width">80dp</item>
+        <item name="android:height">32dp</item>
+        <item name="shapeAppearance">@style/BottomNav.ActiveIndicator.Shape</item>
+        <item name="android:color">#33EF4444</item>
+    </style>
+
+    <style name="BottomNav.ActiveIndicator.Shape" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
 </resources>

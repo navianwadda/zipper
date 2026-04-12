@@ -1425,6 +1425,18 @@ class FloatingPlayerService : Service() {
                 super.onPlayerError(error)
                 val instance = activeInstances[instanceId] ?: return
                 if (instance.player !== player) return
+
+                val event = instance.currentEvent
+                if (event != null && event.links.size > 1) {
+                    val nextIndex = instance.currentLinkIndex + 1
+                    if (nextIndex in event.links.indices) {
+                        serviceScope.launch {
+                            updateInstanceStream(instanceId, null, event, nextIndex)
+                        }
+                        return
+                    }
+                }
+
                 btnPlayPause?.setImageResource(R.drawable.ic_error_outline)
             }
         })

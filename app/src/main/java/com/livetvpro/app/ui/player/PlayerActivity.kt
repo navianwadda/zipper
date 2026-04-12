@@ -1169,6 +1169,7 @@ class PlayerActivity : AppCompatActivity() {
                             isLandscape = isLandscape,
                             isTvMode = DeviceUtils.isTvDevice,
                             centerControlsMode = preferencesManager.getCenterControlsMode(),
+                            isNetworkStream = contentType == ContentType.NETWORK_STREAM,
                             isChannelListAvailable = isChannelListAvailable,
                             onBackClick = { finish() },
                             onPipClick = {

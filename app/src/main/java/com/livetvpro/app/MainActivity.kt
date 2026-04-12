@@ -555,6 +555,8 @@ class MainActivity : AppCompatActivity() {
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
         val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
         bottomNavigation?.itemActiveIndicatorColor = android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+        bottomNavigation?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        bottomNavigation?.background = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bottom_nav_background)
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
@@ -997,33 +999,28 @@ class MainActivity : AppCompatActivity() {
             val itemView = menuView.getChildAt(i) ?: continue
             val itemId = bottomNav.menu.getItem(i).itemId
             if (itemId == selectedItemId) {
+                itemView.animate().cancel()
                 itemView.animate()
-                    .scaleX(1.2f)
-                    .scaleY(1.2f)
-                    .setDuration(120)
-                    .setInterpolator(android.view.animation.OvershootInterpolator(2f))
+                    .scaleX(1.25f)
+                    .scaleY(1.25f)
+                    .setDuration(150)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(3f))
                     .withEndAction {
                         itemView.animate()
                             .scaleX(1f)
                             .scaleY(1f)
-                            .setDuration(100)
+                            .setDuration(120)
                             .setInterpolator(android.view.animation.DecelerateInterpolator())
                             .start()
                     }
                     .start()
             } else {
+                itemView.animate().cancel()
                 itemView.animate()
-                    .scaleX(0.9f)
-                    .scaleY(0.9f)
+                    .scaleX(1f)
+                    .scaleY(1f)
                     .setDuration(100)
                     .setInterpolator(android.view.animation.DecelerateInterpolator())
-                    .withEndAction {
-                        itemView.animate()
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .setDuration(80)
-                            .start()
-                    }
                     .start()
             }
         }

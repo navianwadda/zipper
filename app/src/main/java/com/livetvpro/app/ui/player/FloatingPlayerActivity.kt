@@ -1305,6 +1305,15 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         super.onPlayerError(error)
                         binding.progressBar.visibility = View.GONE
+
+                        if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
+                            val nextIndex = currentLinkIndex + 1
+                            if (nextIndex in allEventLinks.indices) {
+                                switchToLink(allEventLinks[nextIndex], nextIndex)
+                                return
+                            }
+                        }
+
                         val errorMessage = when {
                             error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
                             error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_TIMEOUT ->
@@ -1557,6 +1566,14 @@ class FloatingPlayerActivity : AppCompatActivity() {
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                             super.onPlayerError(error)
                             binding.progressBar.visibility = View.GONE
+
+                            if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
+                                val nextIndex = currentLinkIndex + 1
+                                if (nextIndex in allEventLinks.indices) {
+                                    switchToLink(allEventLinks[nextIndex], nextIndex)
+                                    return
+                                }
+                            }
 
                             val errorMessage = when {
                                 error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||

@@ -1,5 +1,7 @@
 package com.livetvpro.app
 
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Typeface

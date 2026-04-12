@@ -182,7 +182,19 @@ class FavoriteAdapter(
                     return
                 }
                 try {
-                    FloatingPlayerHelper.launchFloatingPlayer(context, channelWithUrl, linkIndex)
+                    val favoriteChannelList = ArrayList(currentList.map { fav ->
+                        val liveChannel = getLiveChannel?.invoke(fav.id)
+                        liveChannel ?: Channel(
+                            id = fav.id,
+                            name = fav.name,
+                            logoUrl = fav.logoUrl,
+                            streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
+                            categoryId = fav.categoryId,
+                            categoryName = fav.categoryName,
+                            links = fav.links
+                        )
+                    })
+                    FloatingPlayerHelper.launchFloatingPlayer(context, channelWithUrl, linkIndex, channelList = favoriteChannelList)
                 } catch (e: Exception) {
                     PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex)
                 }
@@ -231,7 +243,19 @@ class FavoriteAdapter(
                     return
                 }
                 try {
-                    FloatingPlayerHelper.launchFloatingPlayer(context, channel, -1)
+                    val favoriteChannelList = ArrayList(currentList.map { fav ->
+                        val liveChannel = getLiveChannel?.invoke(fav.id)
+                        liveChannel ?: Channel(
+                            id = fav.id,
+                            name = fav.name,
+                            logoUrl = fav.logoUrl,
+                            streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
+                            categoryId = fav.categoryId,
+                            categoryName = fav.categoryName,
+                            links = fav.links
+                        )
+                    })
+                    FloatingPlayerHelper.launchFloatingPlayer(context, channel, -1, channelList = favoriteChannelList)
                 } catch (e: Exception) {
                     PlayerActivity.startWithChannel(context, channel, -1)
                 }

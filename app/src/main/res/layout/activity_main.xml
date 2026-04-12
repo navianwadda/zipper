@@ -170,8 +170,10 @@
             android:id="@+id/bottom_navigation"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:background="@drawable/bottom_nav_background"
+            android:background="@drawable/bottom_nav_glass_background"
             android:elevation="0dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -181,7 +183,7 @@
             app:itemTextAppearanceInactive="@style/BottomNav.TextAppearance"
             app:itemIconTint="@color/bottom_nav_colors"
             app:itemTextColor="@color/bottom_nav_colors"
-            app:itemActiveIndicatorStyle="@style/BottomNav.ActiveIndicator" />
+            app:itemActiveIndicatorStyle="@style/BottomNav.ActiveIndicator.Pill" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

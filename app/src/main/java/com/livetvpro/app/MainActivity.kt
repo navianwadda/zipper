@@ -653,6 +653,7 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigation?.setOnItemSelectedListener { menuItem ->
             if (menuItem.itemId in topLevelDestinations) {
+                animateBottomNavItem(bottomNavigation, menuItem.itemId)
                 navigateTopLevel(menuItem.itemId)
                 return@setOnItemSelectedListener true
             }
@@ -985,6 +986,47 @@ class MainActivity : AppCompatActivity() {
             DeviceUtils.notifyTouchDetected()
         }
         return super.dispatchTouchEvent(ev)
+    }
+
+    private fun animateBottomNavItem(
+        bottomNav: com.google.android.material.bottomnavigation.BottomNavigationView,
+        selectedItemId: Int
+    ) {
+        val menuView = bottomNav.getChildAt(0) as? android.view.ViewGroup ?: return
+        for (i in 0 until menuView.childCount) {
+            val itemView = menuView.getChildAt(i) ?: continue
+            val itemId = bottomNav.menu.getItem(i).itemId
+            if (itemId == selectedItemId) {
+                itemView.animate()
+                    .scaleX(1.2f)
+                    .scaleY(1.2f)
+                    .setDuration(120)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(2f))
+                    .withEndAction {
+                        itemView.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .setDuration(100)
+                            .setInterpolator(android.view.animation.DecelerateInterpolator())
+                            .start()
+                    }
+                    .start()
+            } else {
+                itemView.animate()
+                    .scaleX(0.9f)
+                    .scaleY(0.9f)
+                    .setDuration(100)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .withEndAction {
+                        itemView.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .setDuration(80)
+                            .start()
+                    }
+                    .start()
+            }
+        }
     }
 }
 

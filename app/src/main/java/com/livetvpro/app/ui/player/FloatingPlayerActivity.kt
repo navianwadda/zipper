@@ -1488,14 +1488,11 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
                     val mediaItem = mediaItemBuilder.build()
                     exo.setMediaItem(mediaItem)
-                    exo.prepare()
 
                     if (savedPlaybackPosition > 0) {
                         exo.seekTo(savedPlaybackPosition)
                         savedPlaybackPosition = -1L
                     }
-
-                    exo.playWhenReady = true
 
                     playerListener = object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -1607,6 +1604,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     }
 
                     playerListener?.let { exo.addListener(it) }
+                    exo.prepare()
+                    exo.playWhenReady = true
                 }
         } catch (e: Exception) {
             showError("Failed to initialize player")

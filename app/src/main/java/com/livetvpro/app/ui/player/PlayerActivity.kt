@@ -863,7 +863,14 @@ class PlayerActivity : AppCompatActivity() {
                 val items = viewModel.channelListItems.value
 
                 when {
-                    contentType != ContentType.CHANNEL -> {  }
+                    contentType == ContentType.EVENT -> {
+                        if (allEventLinks.size > 1) {
+                            val targetIndex = (currentLinkIndex + direction).coerceIn(0, allEventLinks.size - 1)
+                            if (targetIndex != currentLinkIndex) {
+                                switchToLink(allEventLinks[targetIndex], targetIndex)
+                            }
+                        }
+                    }
                     index != -1 && !items.isNullOrEmpty() && index in items.indices -> {
                         pendingChannelDirection = 0
                         val targetChannel = items[index]
@@ -982,6 +989,14 @@ class PlayerActivity : AppCompatActivity() {
                     return true
                 }
                 clearNumberTyping()
+                if (contentType == ContentType.EVENT) {
+                    if (allEventLinks.size > 1) {
+                        val nextIndex = (currentLinkIndex + 1).coerceAtMost(allEventLinks.size - 1)
+                        if (nextIndex != currentLinkIndex) switchToLink(allEventLinks[nextIndex], nextIndex)
+                    }
+                    controlsState.show(lifecycleScope)
+                    return true
+                }
                 val items = viewModel.channelListItems.value
                 if (contentType == ContentType.CHANNEL) {
                     if (!items.isNullOrEmpty()) {
@@ -1008,6 +1023,14 @@ class PlayerActivity : AppCompatActivity() {
                     return true
                 }
                 clearNumberTyping()
+                if (contentType == ContentType.EVENT) {
+                    if (allEventLinks.size > 1) {
+                        val prevIndex = (currentLinkIndex - 1).coerceAtLeast(0)
+                        if (prevIndex != currentLinkIndex) switchToLink(allEventLinks[prevIndex], prevIndex)
+                    }
+                    controlsState.show(lifecycleScope)
+                    return true
+                }
                 val items = viewModel.channelListItems.value
                 if (contentType == ContentType.CHANNEL) {
                     if (!items.isNullOrEmpty()) {

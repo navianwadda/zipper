@@ -1,0 +1,167 @@
+name: Apply Bottom Nav Theme
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apply-theme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── res/color/ ────────────────────────────────────────────────────────────
+
+      - name: Write bottom_nav_colors.xml
+        run: |
+          cat > app/src/main/res/color/bottom_nav_colors.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <selector xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:color="#EF4444" android:state_checked="true"/>
+              <item android:color="#99FFFFFF" android:state_checked="false"/>
+          </selector>
+          EOF
+
+      # ── res/drawable/ ─────────────────────────────────────────────────────────
+
+      - name: Write bottom_nav_text_colors.xml
+        run: |
+          cat > app/src/main/res/drawable/bottom_nav_text_colors.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <selector xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:color="#EF4444" android:state_checked="true"/>
+              <item android:color="#99FFFFFF" android:state_checked="false"/>
+          </selector>
+          EOF
+
+      - name: Write bottom_nav_indicator_bg.xml
+        run: |
+          cat > app/src/main/res/drawable/bottom_nav_indicator_bg.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+              android:shape="rectangle">
+              <solid android:color="#33EF4444" />
+              <corners android:radius="50dp"/>
+          </shape>
+          EOF
+
+      - name: Write bottom_nav_indicator_background.xml
+        run: |
+          cat > app/src/main/res/drawable/bottom_nav_indicator_background.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+              android:shape="rectangle">
+              <solid android:color="#33EF4444" />
+              <corners android:radius="24dp"/>
+          </shape>
+          EOF
+
+      - name: Write bottom_nav_container_bg.xml
+        run: |
+          cat > app/src/main/res/drawable/bottom_nav_container_bg.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+              android:shape="rectangle">
+              <solid android:color="#CC0A0A0A" />
+              <corners android:radius="50dp"/>
+          </shape>
+          EOF
+
+      - name: Write bottom_nav_glass_background.xml
+        run: |
+          cat > app/src/main/res/drawable/bottom_nav_glass_background.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+              android:shape="rectangle">
+              <solid android:color="#CC0A0A0A" />
+              <corners android:radius="28dp"/>
+          </shape>
+          EOF
+
+      # ── res/values/ ───────────────────────────────────────────────────────────
+
+      - name: Write navigation_colors.xml
+        run: |
+          cat > app/src/main/res/values/navigation_colors.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <!-- Material 3 Navigation Bar Indicator Color (translucent red) -->
+              <color name="navigation_indicator_color">#33EF4444</color>
+          </resources>
+          EOF
+
+      - name: Patch styles.xml — ensure BottomNav.TextAppearance exists
+        run: |
+          FILE=app/src/main/res/values/styles.xml
+          # Only insert if not already present
+          if ! grep -q 'BottomNav.TextAppearance' "$FILE"; then
+            # Insert the style right before the closing </resources> tag
+            sed -i 's|</resources>|    <style name="BottomNav.TextAppearance" parent="TextAppearance.MaterialComponents.Caption">\n        <item name="android:textSize">11sp</item>\n        <item name="fontFamily">sans-serif-medium</item>\n    </style>\n\n</resources>|' "$FILE"
+          fi
+
+      # ── res/layout/ ───────────────────────────────────────────────────────────
+
+      - name: Patch activity_main.xml — update BottomNavigationView
+        run: |
+          FILE=app/src/main/res/layout/activity_main.xml
+          python3 - <<'PYEOF'
+          import re, sys
+
+          with open("app/src/main/res/layout/activity_main.xml", "r") as f:
+              content = f.read()
+
+          # Replace the BottomNavigationView block
+          old = re.search(
+              r'<com\.google\.android\.material\.bottomnavigation\.BottomNavigationView\b.*?/>',
+              content, re.DOTALL
+          )
+          if not old:
+              print("BottomNavigationView block not found — skipping")
+              sys.exit(0)
+
+          new_block = '''<com.google.android.material.bottomnavigation.BottomNavigationView
+              android:id="@+id/bottom_navigation"
+              android:layout_width="0dp"
+              android:layout_height="wrap_content"
+              android:background="@drawable/bottom_nav_container_bg"
+              app:layout_constraintBottom_toBottomOf="parent"
+              app:layout_constraintEnd_toEndOf="parent"
+              app:layout_constraintStart_toStartOf="parent"
+              app:menu="@menu/bottom_nav_menu"
+              app:labelVisibilityMode="labeled"
+              app:itemTextAppearanceActive="@style/BottomNav.TextAppearance"
+              app:itemTextAppearanceInactive="@style/BottomNav.TextAppearance"
+              app:itemIconTint="@color/bottom_nav_colors"
+              app:itemTextColor="@color/bottom_nav_colors"
+              app:itemActiveIndicatorColor="@color/navigation_indicator_color" />'''
+
+          content = content[:old.start()] + new_block + content[old.end():]
+
+          with open("app/src/main/res/layout/activity_main.xml", "w") as f:
+              f.write(content)
+
+          print("activity_main.xml patched successfully")
+          PYEOF
+
+      # ── Commit & Push ─────────────────────────────────────────────────────────
+
+      - name: Commit and push changes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \
+            app/src/main/res/color/bottom_nav_colors.xml \
+            app/src/main/res/drawable/bottom_nav_text_colors.xml \
+            app/src/main/res/drawable/bottom_nav_indicator_bg.xml \
+            app/src/main/res/drawable/bottom_nav_indicator_background.xml \
+            app/src/main/res/drawable/bottom_nav_container_bg.xml \
+            app/src/main/res/drawable/bottom_nav_glass_background.xml \
+            app/src/main/res/values/navigation_colors.xml \
+            app/src/main/res/values/styles.xml \
+            app/src/main/res/layout/activity_main.xml
+          git diff --cached --quiet && echo "Nothing to commit" && exit 0
+          git commit -m "chore: apply translucent red bottom nav theme"
+          git push origin main

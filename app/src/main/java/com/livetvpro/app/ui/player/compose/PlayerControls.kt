@@ -130,6 +130,7 @@ fun PlayerControls(
     isLandscape: Boolean,
     isTvMode: Boolean = false,
     centerControlsMode: Int = 0,
+    isNetworkStream: Boolean = false,
     onBackClick: () -> Unit,
     onPipClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -264,6 +265,7 @@ fun PlayerControls(
                 isLandscape            = isLandscape,
                 isTvMode               = isTvMode,
                 centerControlsMode     = centerControlsMode,
+                isNetworkStream        = isNetworkStream,
                 onBackClick            = onBackClick,
                 onPipClick             = onPipClick,
                 onSettingsClick        = onSettingsClick,
@@ -376,6 +378,7 @@ private fun PlayerControlsContent(
     isLandscape: Boolean,
     isTvMode: Boolean,
     centerControlsMode: Int = 0,
+    isNetworkStream: Boolean = false,
     onBackClick: () -> Unit,
     onPipClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -563,7 +566,7 @@ private fun PlayerControlsContent(
                     // MODE 2: Nav only   (prev | play | next)
 
                     val showSeeks = centerControlsMode == 0 || centerControlsMode == 1
-                    val showNav   = centerControlsMode == 1 || centerControlsMode == 2
+                    val showNav   = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
 
                     if (showNav) {
                         PlayerIconButton(

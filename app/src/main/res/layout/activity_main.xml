@@ -172,7 +172,6 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bottom_nav_background"
             android:elevation="0dp"
-            app:backgroundTint="@android:color/transparent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -181,7 +180,8 @@
             app:itemTextAppearanceActive="@style/BottomNav.TextAppearance"
             app:itemTextAppearanceInactive="@style/BottomNav.TextAppearance"
             app:itemIconTint="@color/bottom_nav_colors"
-            app:itemTextColor="@color/bottom_nav_colors" />
+            app:itemTextColor="@color/bottom_nav_colors"
+            app:itemActiveIndicatorStyle="@style/BottomNav.ActiveIndicator" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

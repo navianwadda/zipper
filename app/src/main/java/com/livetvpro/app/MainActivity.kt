@@ -553,19 +553,46 @@ class MainActivity : AppCompatActivity() {
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
+        val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+
+        // Custom pill nav views
+        val navLiveEvents = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_live_events)
+        val navCategories = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_categories)
+        val navSports = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_sports)
+        val navIconLive = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_live)
+        val navIconCategories = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_categories)
+        val navIconSports = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_sports)
+        val navLabelLive = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_live)
+        val navLabelCategories = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_categories)
+        val navLabelSports = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_sports)
+
+        val pillDrawable = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bottom_nav_item_selected)
+        val activeColor = android.content.res.ColorStateList.valueOf(0xFFEF4444.toInt())
+        val inactiveColor = android.content.res.ColorStateList.valueOf(0xFF666666.toInt())
+
+        fun updateCustomNav(selectedDestId: Int) {
+            val items = listOf(
+                Triple(navLiveEvents, navIconLive, navLabelLive) to R.id.liveEventsFragment,
+                Triple(navCategories, navIconCategories, navLabelCategories) to R.id.homeFragment,
+                Triple(navSports, navIconSports, navLabelSports) to R.id.sportsFragment
+            )
+            items.forEach { (views, destId) ->
+                val (container, icon, label) = views
+                if (destId == selectedDestId) {
+                    container?.background = pillDrawable
+                    icon?.imageTintList = activeColor
+                    label?.visibility = View.VISIBLE
+                } else {
+                    container?.background = null
+                    icon?.imageTintList = inactiveColor
+                    label?.visibility = View.GONE
+                }
+            }
+        }
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
         val btnSearchClear = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search_clear)
-
-        val bottomNav = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
-            val navBarInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
-            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, navBarInset)
-            insets
-        }
-        androidx.core.view.ViewCompat.requestApplyInsets(bottomNav)
 
         val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
         val graphStartDestinationId = navController.graph.startDestinationId
@@ -584,11 +611,6 @@ class MainActivity : AppCompatActivity() {
                     .build()
                 navController.navigate(destinationId, null, navOptions)
             }
-        }
-
-        bottomNav.setOnItemSelectedListener { menuItem ->
-            navigateTopLevel(menuItem.itemId)
-            true
         }
 
         navigationView?.setNavigationItemSelectedListener { menuItem ->
@@ -663,6 +685,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Custom nav click listeners
+        navLiveEvents?.setOnClickListener { navigateTopLevel(R.id.liveEventsFragment) }
+        navCategories?.setOnClickListener { navigateTopLevel(R.id.homeFragment) }
+        navSports?.setOnClickListener { navigateTopLevel(R.id.sportsFragment) }
+
+        // Init default selected
+        updateCustomNav(navController.graph.startDestinationId)
+
         val drawerFragments2 = setOf(
             R.id.networkStreamFragment, R.id.playlistsFragment,
             R.id.cricketScoreFragment, R.id.footballScoreFragment,
@@ -706,6 +736,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (isTopLevel) {
+                updateCustomNav(destination.id)
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 drawerToggle?.isDrawerIndicatorEnabled = true
                 animateNavigationIcon(0f)
@@ -723,15 +754,6 @@ class MainActivity : AppCompatActivity() {
                 toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
 
-            val activeDestId = when (destination.id) {
-                R.id.categoryChannelsFragment -> R.id.homeFragment
-                else -> destination.id
-            }
-            if (activeDestId in topLevelDestinations && bottomNav.selectedItemId != activeDestId) {
-                bottomNav.setOnItemSelectedListener(null)
-                bottomNav.selectedItemId = activeDestId
-                bottomNav.setOnItemSelectedListener { item -> navigateTopLevel(item.itemId); true }
-            }
             if (isSearchVisible) hideSearch()
         }
 
@@ -998,7 +1020,6 @@ class MainActivity : AppCompatActivity() {
         }
         return super.dispatchTouchEvent(ev)
     }
-
 
 }
 

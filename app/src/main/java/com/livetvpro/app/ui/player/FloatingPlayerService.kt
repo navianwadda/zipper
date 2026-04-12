@@ -74,12 +74,14 @@ class FloatingPlayerService : Service() {
         var networkDrmScheme: String? = null,
         var networkXForwardedFor: String? = null,
         var currentLinkIndex: Int = 0,
-        var channelList: List<Channel>? = null
+        var channelList: List<Channel>? = null,
+        var isSports: Boolean = false
     )
 
     private var windowManager: WindowManager? = null
     private val activeInstances = mutableMapOf<String, FloatingPlayerInstance>()
     private val hideControlsHandlers = mutableMapOf<String, android.os.Handler>()
+    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     @javax.inject.Inject
     lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
@@ -141,7 +143,8 @@ class FloatingPlayerService : Service() {
             channel: Channel? = null,
             event: com.livetvpro.app.data.models.LiveEvent? = null,
             linkIndex: Int = 0,
-            channelList: ArrayList<Channel>? = null
+            channelList: ArrayList<Channel>? = null,
+            isSports: Boolean = false
         ): Boolean {
             try {
                 if (channel == null && event == null) return false
@@ -156,6 +159,7 @@ class FloatingPlayerService : Service() {
                     putExtra(EXTRA_PLAYBACK_POSITION, 0L)
                     putExtra(EXTRA_LINK_INDEX, linkIndex)
                     if (channelList != null) putParcelableArrayListExtra(EXTRA_CHANNEL_LIST, channelList)
+                    putExtra("EXTRA_IS_SPORTS", isSports)
                 }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -421,12 +425,13 @@ class FloatingPlayerService : Service() {
         val playbackPosition = intent?.getLongExtra(EXTRA_PLAYBACK_POSITION, 0L) ?: 0L
         val restorePosition = intent?.getBooleanExtra(EXTRA_RESTORE_POSITION, false) ?: false
         val useTransferredPlayer = intent?.getBooleanExtra("use_transferred_player", false) ?: false
+        val isSports = intent?.getBooleanExtra("EXTRA_IS_SPORTS", false) ?: false
 
         if (channel != null || event != null) {
             if (useTransferredPlayer) {
-                createFloatingPlayerInstanceFromTransfer(instanceId, channel, event, restorePosition, parsedChannelList)
+                createFloatingPlayerInstanceFromTransfer(instanceId, channel, event, restorePosition, parsedChannelList, isSports)
             } else {
-                createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition, parsedChannelList)
+                createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition, parsedChannelList, isSports)
             }
             updateNotification()
         }
@@ -441,7 +446,8 @@ class FloatingPlayerService : Service() {
         linkIndex: Int,
         playbackPosition: Long,
         restorePosition: Boolean = false,
-        channelList: List<Channel>? = null
+        channelList: List<Channel>? = null,
+        isSports: Boolean = false
     ) {
         try {
             val streamUrl = when {
@@ -599,7 +605,8 @@ class FloatingPlayerService : Service() {
                 lockOverlay = lockOverlay,
                 unlockButton = unlockButton,
                 currentLinkIndex = linkIndex,
-                channelList = channelList
+                channelList = channelList,
+                isSports = isSports
             )
 
             activeInstances[instanceId] = instance
@@ -618,12 +625,13 @@ class FloatingPlayerService : Service() {
         channel: Channel? = null,
         event: com.livetvpro.app.data.models.LiveEvent? = null,
         restorePosition: Boolean,
-        channelList: List<Channel>? = null
+        channelList: List<Channel>? = null,
+        isSports: Boolean = false
     ) {
         try {
             val transferredPlayer = PlayerHolder.player
             if (transferredPlayer == null) {
-                createFloatingPlayerInstance(instanceId, channel, event, 0, 0L, restorePosition, channelList)
+                createFloatingPlayerInstance(instanceId, channel, event, 0, 0L, restorePosition, channelList, isSports)
                 return
             }
 
@@ -694,7 +702,8 @@ class FloatingPlayerService : Service() {
                 currentEvent = event,
                 lockOverlay = lockOverlay,
                 unlockButton = unlockButton,
-                channelList = channelList
+                channelList = channelList,
+                isSports = isSports
             )
             activeInstances[instanceId] = instance
 
@@ -1268,6 +1277,10 @@ class FloatingPlayerService : Service() {
                         if (currentChannel != null) putExtra("extra_channel", currentChannel)
                         if (currentEvent != null) putExtra("extra_event", currentEvent)
                         putExtra("extra_selected_link_index", inst?.currentLinkIndex ?: 0)
+                        putExtra("extra_is_sports", inst?.isSports ?: false)
+                        currentChannel?.categoryId?.takeIf { it.isNotEmpty() }?.let {
+                            putExtra("extra_category_id", it)
+                        }
                     }
                     putExtra("use_transferred_player", true)
                     putExtra("source_instance_id", instanceId)
@@ -1336,7 +1349,7 @@ class FloatingPlayerService : Service() {
         btnPrevChannel?.setOnClickListener {
             val instance = activeInstances[instanceId] ?: return@setOnClickListener
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
-            CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
+            serviceScope.launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
                     ?: withContext(Dispatchers.IO) {
                         channelRepository.getChannelsByCategory(currentChannel.categoryId)
@@ -1353,7 +1366,7 @@ class FloatingPlayerService : Service() {
         btnNextChannel?.setOnClickListener {
             val instance = activeInstances[instanceId] ?: return@setOnClickListener
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
-            CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
+            serviceScope.launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
                     ?: withContext(Dispatchers.IO) {
                         channelRepository.getChannelsByCategory(currentChannel.categoryId)
@@ -1700,10 +1713,12 @@ class FloatingPlayerService : Service() {
         activeInstances.remove(instanceId)
         com.livetvpro.app.utils.FloatingPlayerManager.removePlayer(instanceId)
 
-        preferencesManager.setFloatingPlayerWidth(0)
-        preferencesManager.setFloatingPlayerHeight(0)
-        preferencesManager.setFloatingPlayerX(Int.MIN_VALUE)
-        preferencesManager.setFloatingPlayerY(Int.MIN_VALUE)
+        if (activeInstances.isEmpty()) {
+            preferencesManager.setFloatingPlayerWidth(0)
+            preferencesManager.setFloatingPlayerHeight(0)
+            preferencesManager.setFloatingPlayerX(Int.MIN_VALUE)
+            preferencesManager.setFloatingPlayerY(Int.MIN_VALUE)
+        }
 
         updateNotification()
 
@@ -1791,6 +1806,7 @@ class FloatingPlayerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.cancel()
         stopAllInstances()
     }
 

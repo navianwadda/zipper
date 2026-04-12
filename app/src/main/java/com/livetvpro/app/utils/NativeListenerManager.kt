@@ -7,6 +7,7 @@ import android.os.Build
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.livetvpro.app.data.repository.NativeDataRepository
+import com.livetvpro.app.utils.DeviceUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -24,6 +25,17 @@ class NativeListenerManager @Inject constructor(
         private val k1 = intArrayOf(0xc6,0xc3,0xf8,0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xce,0xc9,0xf8,0xc6,0xd7,0xd7).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
         private val k2 = intArrayOf(0xc6,0xc3,0xf8,0xc3,0xd2,0xd5,0xc6,0xd3,0xce,0xc8,0xc9,0xf8,0xd4,0xc2,0xc4,0xc8,0xc9,0xc3,0xd4).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
         val DEFAULT_AD_DURATION_SECONDS = 10L
+
+        // Redirect mode Remote Config keys per device type
+        // Accepted values: "dialog" | "direct" | "disabled"
+        const val REMOTE_CONFIG_REDIRECT_MODE_PHONE  = "redirect_mode_phone"
+        const val REMOTE_CONFIG_REDIRECT_MODE_TABLET = "redirect_mode_tablet"
+        const val REMOTE_CONFIG_REDIRECT_MODE_TV     = "redirect_mode_tv"
+        const val REMOTE_CONFIG_REDIRECT_MODE_OTHER  = "redirect_mode_other"
+
+        const val REDIRECT_MODE_DIALOG   = "dialog"
+        const val REDIRECT_MODE_DIRECT   = "direct"
+        const val REDIRECT_MODE_DISABLED = "disabled"
     }
 
     private external fun nativeShouldShowLink(pageType: String, uniqueId: String?, maxPerPage: Long, maxTotal: Long): Boolean
@@ -84,13 +96,31 @@ class NativeListenerManager @Inject constructor(
         }
     }
 
-    fun isInAppRedirectEnabled(): Boolean {
+    fun getRedirectMode(): String {
+        val key = when {
+            DeviceUtils.isTvDevice                        -> REMOTE_CONFIG_REDIRECT_MODE_TV
+            DeviceUtils.isPhone || DeviceUtils.isFoldable -> REMOTE_CONFIG_REDIRECT_MODE_PHONE
+            DeviceUtils.isTablet                          -> REMOTE_CONFIG_REDIRECT_MODE_TABLET
+            else                                          -> REMOTE_CONFIG_REDIRECT_MODE_OTHER
+        }
         return try {
-            Firebase.remoteConfig.getBoolean(k1)
+            val mode = Firebase.remoteConfig.getString(key).trim().lowercase()
+            if (mode.isEmpty()) {
+                // TV defaults to disabled; others fall back to legacy flag
+                if (DeviceUtils.isTvDevice) REDIRECT_MODE_DISABLED
+                else if (Firebase.remoteConfig.getBoolean(k1)) REDIRECT_MODE_DIALOG
+                else REDIRECT_MODE_DIRECT
+            } else {
+                mode
+            }
         } catch (e: Exception) {
-            false
+            if (DeviceUtils.isTvDevice) REDIRECT_MODE_DISABLED else REDIRECT_MODE_DIRECT
         }
     }
+
+    fun isRedirectEnabled(): Boolean = getRedirectMode() != REDIRECT_MODE_DISABLED
+
+    fun isInAppRedirectEnabled(): Boolean = getRedirectMode() == REDIRECT_MODE_DIALOG
 
     fun getAdDurationSeconds(): Long {
         return try {

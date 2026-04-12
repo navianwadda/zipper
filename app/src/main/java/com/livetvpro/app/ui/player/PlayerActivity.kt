@@ -1237,23 +1237,41 @@ class PlayerActivity : AppCompatActivity() {
                                 }
                             },
                             onPrevClick = {
-                                if (contentType == ContentType.CHANNEL) {
-                                    val items = viewModel.channelListItems.value
-                                    if (!items.isNullOrEmpty()) {
-                                        val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
-                                        val prevIndex = (currentIndex - 1).coerceAtLeast(0)
-                                        if (prevIndex != currentIndex) switchToChannel(items[prevIndex])
+                                when (contentType) {
+                                    ContentType.EVENT -> {
+                                        if (allEventLinks.size > 1) {
+                                            val prevIndex = (currentLinkIndex - 1).coerceAtLeast(0)
+                                            if (prevIndex != currentLinkIndex) switchToLink(allEventLinks[prevIndex], prevIndex)
+                                        }
                                     }
+                                    ContentType.CHANNEL -> {
+                                        val items = viewModel.channelListItems.value
+                                        if (!items.isNullOrEmpty()) {
+                                            val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                                            val prevIndex = (currentIndex - 1).coerceAtLeast(0)
+                                            if (prevIndex != currentIndex) switchToChannel(items[prevIndex])
+                                        }
+                                    }
+                                    else -> {}
                                 }
                             },
                             onNextClick = {
-                                if (contentType == ContentType.CHANNEL) {
-                                    val items = viewModel.channelListItems.value
-                                    if (!items.isNullOrEmpty()) {
-                                        val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
-                                        val nextIndex = (currentIndex + 1).coerceAtMost(items.size - 1)
-                                        if (nextIndex != currentIndex) switchToChannel(items[nextIndex])
+                                when (contentType) {
+                                    ContentType.EVENT -> {
+                                        if (allEventLinks.size > 1) {
+                                            val nextIndex = (currentLinkIndex + 1).coerceAtMost(allEventLinks.size - 1)
+                                            if (nextIndex != currentLinkIndex) switchToLink(allEventLinks[nextIndex], nextIndex)
+                                        }
                                     }
+                                    ContentType.CHANNEL -> {
+                                        val items = viewModel.channelListItems.value
+                                        if (!items.isNullOrEmpty()) {
+                                            val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                                            val nextIndex = (currentIndex + 1).coerceAtMost(items.size - 1)
+                                            if (nextIndex != currentIndex) switchToChannel(items[nextIndex])
+                                        }
+                                    }
+                                    else -> {}
                                 }
                             },
                             onAspectRatioClick = {

@@ -58,9 +58,4 @@
         <item name="cornerSize">50%</item>
     </style>
     
-    <style name="BottomNav.TextAppearance" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textSize">11sp</item>
-        <item name="fontFamily">sans-serif-medium</item>
-    </style>
-
 </resources>

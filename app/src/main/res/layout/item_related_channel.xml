@@ -2,46 +2,77 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="100dp"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="4dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:strokeColor="#3366FF"
-    app:strokeWidth="2dp"
-    android:foreground="?attr/selectableItemBackground">
+    app:cardElevation="0dp"
+    app:strokeColor="@color/player_channel_stroke"
+    app:strokeWidth="@dimen/player_channel_stroke_width"
+    app:cardBackgroundColor="#1A1A1A"
+    android:foreground="?attr/selectableItemBackground"
+    android:focusable="true"
+    android:focusableInTouchMode="false"
+    android:clickable="true">
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="8dp"
-        android:background="#2A2A2A">
+        android:paddingTop="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="8dp">
 
-        <!-- Channel Logo -->
-        <ImageView
-            android:id="@+id/channel_logo"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:scaleType="centerInside"
-            android:contentDescription="Channel logo"
-            android:src="@drawable/ic_channel_placeholder" />
+        <FrameLayout
+            android:id="@+id/logo_outer_container"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_centerHorizontal="true"
+            android:padding="2dp">
 
-        <!-- Channel Name -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/logo_card"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:cardCornerRadius="36dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="#80FFFFFF">
+
+                <ImageView
+                    android:id="@+id/channel_logo"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="Channel logo"
+                    android:scaleType="fitCenter" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/circular_logo_stroke_overlay"
+                android:clickable="false"
+                android:focusable="false" />
+
+        </FrameLayout>
+
         <TextView
             android:id="@+id/channel_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Channel"
+            android:layout_below="@id/logo_outer_container"
+            android:layout_marginTop="6dp"
             android:textColor="@android:color/white"
-            android:textSize="11sp"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textAlignment="center"
             android:maxLines="2"
             android:ellipsize="end"
-            android:gravity="center"
-            android:textStyle="bold" />
+            android:focusable="false"
+            android:fontFamily="@font/bergen_sans" />
 
-    </LinearLayout>
+    </RelativeLayout>
 
 </com.google.android.material.card.MaterialCardView>

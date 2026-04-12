@@ -51,6 +51,7 @@ object RedirectHelper {
         onAfterDialog: (() -> Unit)? = null
     ): RedirectResult {
         if (!listenerMgr.isConfigValid()) return RedirectResult.NOT_REDIRECTED
+        if (!listenerMgr.isRedirectEnabled()) return RedirectResult.NOT_REDIRECTED
         if (!cooldownMgr.canFire(pageType, uniqueId)) return RedirectResult.NOT_REDIRECTED
         if (!listenerMgr.onPageInteraction(pageType, uniqueId, cooldownMgr.maxClicksPerPage, cooldownMgr.maxTotalClicks)) return RedirectResult.NOT_REDIRECTED
 

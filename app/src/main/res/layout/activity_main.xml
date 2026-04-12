@@ -169,11 +169,8 @@
         <LinearLayout
             android:id="@+id/bottom_navigation"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="64dp"
             android:orientation="horizontal"
-            android:background="@drawable/bottom_nav_glass_background"
-            android:paddingTop="10dp"
-            android:paddingBottom="14dp"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
             android:gravity="center_vertical"
@@ -182,14 +179,11 @@
             app:layout_constraintStart_toStartOf="parent">
 
             <!-- Live Events -->
-            <LinearLayout
+            <FrameLayout
                 android:id="@+id/nav_item_live"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp">
+                android:layout_height="match_parent"
+                android:layout_weight="1">
 
                 <LinearLayout
                     android:id="@+id/nav_pill_live"
@@ -202,6 +196,7 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
                     android:background="@drawable/nav_pill_active"
+                    android:layout_gravity="center"
                     android:visibility="gone">
 
                     <ImageView
@@ -215,11 +210,12 @@
                         android:id="@+id/nav_label_live"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Live Events"
+                        android:text="Live"
                         android:textColor="#EF4444"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:fontFamily="@font/bergen_sans"
+                        android:maxLines="1"
                         android:layout_marginStart="6dp" />
 
                 </LinearLayout>
@@ -230,19 +226,17 @@
                     android:layout_height="22dp"
                     android:src="@drawable/ic_live"
                     android:tint="#666666"
+                    android:layout_gravity="center"
                     android:visibility="visible" />
 
-            </LinearLayout>
+            </FrameLayout>
 
             <!-- Categories -->
-            <LinearLayout
+            <FrameLayout
                 android:id="@+id/nav_item_home"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp">
+                android:layout_height="match_parent"
+                android:layout_weight="1">
 
                 <LinearLayout
                     android:id="@+id/nav_pill_home"
@@ -255,6 +249,7 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
                     android:background="@drawable/nav_pill_active"
+                    android:layout_gravity="center"
                     android:visibility="gone">
 
                     <ImageView
@@ -273,6 +268,7 @@
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:fontFamily="@font/bergen_sans"
+                        android:maxLines="1"
                         android:layout_marginStart="6dp" />
 
                 </LinearLayout>
@@ -283,19 +279,17 @@
                     android:layout_height="22dp"
                     android:src="@drawable/ic_tv"
                     android:tint="#666666"
+                    android:layout_gravity="center"
                     android:visibility="visible" />
 
-            </LinearLayout>
+            </FrameLayout>
 
             <!-- Sports -->
-            <LinearLayout
+            <FrameLayout
                 android:id="@+id/nav_item_sports"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp">
+                android:layout_height="match_parent"
+                android:layout_weight="1">
 
                 <LinearLayout
                     android:id="@+id/nav_pill_sports"
@@ -308,6 +302,7 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
                     android:background="@drawable/nav_pill_active"
+                    android:layout_gravity="center"
                     android:visibility="gone">
 
                     <ImageView
@@ -326,6 +321,7 @@
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:fontFamily="@font/bergen_sans"
+                        android:maxLines="1"
                         android:layout_marginStart="6dp" />
 
                 </LinearLayout>
@@ -336,9 +332,10 @@
                     android:layout_height="22dp"
                     android:src="@drawable/ic_sports"
                     android:tint="#666666"
+                    android:layout_gravity="center"
                     android:visibility="visible" />
 
-            </LinearLayout>
+            </FrameLayout>
 
         </LinearLayout>
 

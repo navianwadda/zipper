@@ -337,9 +337,13 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
             if (freshChannel != null && contentType == ContentType.CHANNEL) {
                 channelData = freshChannel
-                val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: freshChannel.categoryId
-                if (categoryId.isNotEmpty()) {
-                    viewModel.loadRandomRelatedChannels(categoryId, freshChannel.id, intentSelectedGroup)
+                if (intentIsSports) {
+                    viewModel.loadRandomRelatedSports(freshChannel.id)
+                } else {
+                    val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: freshChannel.categoryId
+                    if (categoryId.isNotEmpty()) {
+                        viewModel.loadRandomRelatedChannels(categoryId, freshChannel.id, intentSelectedGroup)
+                    }
                 }
             }
         }
@@ -854,7 +858,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 switchToChannel(relatedItem)
             }
 
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
+            binding.relatedChannelsRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
             binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
         }
     }
@@ -2049,27 +2053,12 @@ class FloatingPlayerActivity : AppCompatActivity() {
         params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.dimensionRatio = "H,16:9"
-        params.topMargin = 0
-        params.bottomMargin = 0
         params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
         params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        params.topToBottom = ConstraintLayout.LayoutParams.UNSET
         params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-        params.bottomToTop = ConstraintLayout.LayoutParams.UNSET
         binding.playerContainer.layoutParams = params
         binding.playerContainer.visibility = View.VISIBLE
-
-        // Reconnect links/banner/related chain below player
-        val linksParams = binding.linksSection.layoutParams as ConstraintLayout.LayoutParams
-        linksParams.topToBottom = binding.playerContainer.id
-        linksParams.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-        binding.linksSection.layoutParams = linksParams
-
-        val bannerParams = binding.messageBannerContainer.layoutParams as ConstraintLayout.LayoutParams
-        bannerParams.topToBottom = binding.linksSection.id
-        bannerParams.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-        binding.messageBannerContainer.layoutParams = bannerParams
 
         if (allEventLinks.size > 1) {
             binding.linksSection.visibility = View.VISIBLE
@@ -2094,14 +2083,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.topMargin = 0
-        params.bottomMargin = 0
         params.dimensionRatio = null
-        params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-        params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-        params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        params.topToBottom = ConstraintLayout.LayoutParams.UNSET
-        params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-        params.bottomToTop = ConstraintLayout.LayoutParams.UNSET
 
         binding.playerContainer.layoutParams = params
 

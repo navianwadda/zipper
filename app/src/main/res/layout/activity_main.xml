@@ -166,111 +166,128 @@
 
         </LinearLayout>
 
-        <LinearLayout
+        <FrameLayout
             android:id="@+id/bottom_navigation_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:background="@drawable/bottom_nav_background"
-            android:padding="10dp"
-            android:gravity="center_vertical"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent">
 
-            <!-- Live Events -->
-            <LinearLayout
-                android:id="@+id/nav_live_events"
+            <!-- Sliding pill indicator -->
+            <View
+                android:id="@+id/nav_pill"
                 android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center_vertical"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/bottom_nav_item_selected" />
+
+            <!-- Tab items row -->
+            <LinearLayout
+                android:id="@+id/nav_items_row"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="horizontal"
-                android:gravity="center"
-                android:padding="8dp">
+                android:padding="6dp">
 
-                <ImageView
-                    android:id="@+id/nav_icon_live"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_live"
-                    android:tint="#666666" />
-
-                <TextView
-                    android:id="@+id/nav_label_live"
-                    android:layout_width="wrap_content"
+                <!-- Live Events -->
+                <LinearLayout
+                    android:id="@+id/nav_live_events"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="@string/nav_live"
-                    android:textColor="#EF4444"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:fontFamily="@font/bergen_sans"
-                    android:layout_marginStart="5dp"
-                    android:visibility="gone" />
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:id="@+id/nav_icon_live"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_live"
+                        android:tint="#666666" />
+
+                    <TextView
+                        android:id="@+id/nav_label_live"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nav_live"
+                        android:textColor="#EF4444"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/bergen_sans"
+                        android:layout_marginStart="5dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- Categories -->
+                <LinearLayout
+                    android:id="@+id/nav_categories"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:id="@+id/nav_icon_categories"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_tv"
+                        android:tint="#EF4444" />
+
+                    <TextView
+                        android:id="@+id/nav_label_categories"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nav_home"
+                        android:textColor="#EF4444"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/bergen_sans"
+                        android:layout_marginStart="5dp"
+                        android:visibility="visible" />
+                </LinearLayout>
+
+                <!-- Sports -->
+                <LinearLayout
+                    android:id="@+id/nav_sports"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:id="@+id/nav_icon_sports"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_sports"
+                        android:tint="#666666" />
+
+                    <TextView
+                        android:id="@+id/nav_label_sports"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nav_sports"
+                        android:textColor="#EF4444"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/bergen_sans"
+                        android:layout_marginStart="5dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
             </LinearLayout>
 
-            <!-- Categories -->
-            <LinearLayout
-                android:id="@+id/nav_categories"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:padding="8dp">
+        </FrameLayout>
 
-                <ImageView
-                    android:id="@+id/nav_icon_categories"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_tv"
-                    android:tint="#EF4444" />
-
-                <TextView
-                    android:id="@+id/nav_label_categories"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/nav_home"
-                    android:textColor="#EF4444"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:fontFamily="@font/bergen_sans"
-                    android:layout_marginStart="5dp"
-                    android:visibility="visible" />
-            </LinearLayout>
-
-            <!-- Sports -->
-            <LinearLayout
-                android:id="@+id/nav_sports"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:padding="8dp">
-
-                <ImageView
-                    android:id="@+id/nav_icon_sports"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:src="@drawable/ic_sports"
-                    android:tint="#666666" />
-
-                <TextView
-                    android:id="@+id/nav_label_sports"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/nav_sports"
-                    android:textColor="#EF4444"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:fontFamily="@font/bergen_sans"
-                    android:layout_marginStart="5dp"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Keep hidden BottomNavigationView for nav controller compatibility -->
+        
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottom_navigation"
             android:layout_width="0dp"

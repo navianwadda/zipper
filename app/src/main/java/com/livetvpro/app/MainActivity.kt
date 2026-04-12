@@ -28,7 +28,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import android.view.ViewGroup
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.databinding.ActivityMainBinding
@@ -559,15 +558,48 @@ class MainActivity : AppCompatActivity() {
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
         val btnSearchClear = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search_clear)
 
-        val bottomNav = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        // Custom nav items
+        val navItemLive = binding.root.findViewById<android.view.View>(R.id.nav_item_live)
+        val navItemHome = binding.root.findViewById<android.view.View>(R.id.nav_item_home)
+        val navItemSports = binding.root.findViewById<android.view.View>(R.id.nav_item_sports)
+        val navPillLive = binding.root.findViewById<android.view.View>(R.id.nav_pill_live)
+        val navPillHome = binding.root.findViewById<android.view.View>(R.id.nav_pill_home)
+        val navPillSports = binding.root.findViewById<android.view.View>(R.id.nav_pill_sports)
+        val navIconLiveInactive = binding.root.findViewById<android.view.View>(R.id.nav_icon_live_inactive)
+        val navIconHomeInactive = binding.root.findViewById<android.view.View>(R.id.nav_icon_home_inactive)
+        val navIconSportsInactive = binding.root.findViewById<android.view.View>(R.id.nav_icon_sports_inactive)
 
+        val bottomNavContainer = binding.root.findViewById<android.view.ViewGroup>(R.id.bottom_navigation)
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomNavContainer) { view, insets ->
             val navBarInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
             view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, navBarInset)
             insets
         }
-        androidx.core.view.ViewCompat.requestApplyInsets(bottomNav)
+        androidx.core.view.ViewCompat.requestApplyInsets(bottomNavContainer)
+
+        fun updateNavSelection(destinationId: Int) {
+            val pairs = listOf(
+                Triple(navPillLive, navIconLiveInactive, R.id.liveEventsFragment),
+                Triple(navPillHome, navIconHomeInactive, R.id.homeFragment),
+                Triple(navPillSports, navIconSportsInactive, R.id.sportsFragment)
+            )
+            pairs.forEach { (pill, icon, destId) ->
+                val active = destinationId == destId ||
+                    (destId == R.id.homeFragment && destinationId == R.id.categoryChannelsFragment)
+                if (active) {
+                    icon?.animate()?.alpha(0f)?.setDuration(150)?.withEndAction { icon.visibility = View.GONE }?.start()
+                    pill?.alpha = 0f
+                    pill?.visibility = View.VISIBLE
+                    pill?.animate()?.alpha(1f)?.setDuration(150)?.start()
+                } else {
+                    pill?.animate()?.alpha(0f)?.setDuration(150)?.withEndAction { pill.visibility = View.GONE }?.start()
+                    icon?.alpha = 0f
+                    icon?.visibility = View.VISIBLE
+                    icon?.animate()?.alpha(1f)?.setDuration(150)?.start()
+                }
+            }
+        }
 
         val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
         val graphStartDestinationId = navController.graph.startDestinationId
@@ -588,10 +620,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        bottomNav.setOnItemSelectedListener { menuItem ->
-            navigateTopLevel(menuItem.itemId)
-            true
-        }
+        navItemLive?.setOnClickListener { navigateTopLevel(R.id.liveEventsFragment) }
+        navItemHome?.setOnClickListener { navigateTopLevel(R.id.homeFragment) }
+        navItemSports?.setOnClickListener { navigateTopLevel(R.id.sportsFragment) }
 
         navigationView?.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
@@ -725,17 +756,12 @@ class MainActivity : AppCompatActivity() {
                 toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
 
-            val activeDestId = when (destination.id) {
-                R.id.categoryChannelsFragment -> R.id.homeFragment
-                else -> destination.id
-            }
-            if (bottomNav.selectedItemId != activeDestId && activeDestId in topLevelDestinations) {
-                bottomNav.setOnItemSelectedListener(null)
-                bottomNav.selectedItemId = activeDestId
-                bottomNav.setOnItemSelectedListener { item -> navigateTopLevel(item.itemId); true }
-            }
+            updateNavSelection(destination.id)
             if (isSearchVisible) hideSearch()
         }
+
+        // Set initial selection
+        updateNavSelection(navController.graph.startDestinationId)
 
         btnFavorites?.setOnClickListener {
             if (navController.currentDestination?.id != R.id.favoritesFragment) {

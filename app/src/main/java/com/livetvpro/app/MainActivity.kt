@@ -1,7 +1,5 @@
 package com.livetvpro.app
 
-import android.animation.AnimatorListenerAdapter
-import android.animation.ValueAnimator
 import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Typeface
@@ -554,7 +552,6 @@ class MainActivity : AppCompatActivity() {
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
         val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
-        bottomNavigation?.itemActiveIndicatorColor = android.content.res.ColorStateList.valueOf(0x33EF4444.toInt())
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
@@ -653,7 +650,6 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigation?.setOnItemSelectedListener { menuItem ->
             if (menuItem.itemId in topLevelDestinations) {
-                animateBottomNavItem(bottomNavigation, menuItem.itemId)
                 navigateTopLevel(menuItem.itemId)
                 return@setOnItemSelectedListener true
             }
@@ -988,41 +984,7 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    private fun animateBottomNavItem(
-        bottomNav: com.google.android.material.bottomnavigation.BottomNavigationView,
-        selectedItemId: Int
-    ) {
-        val menuView = bottomNav.getChildAt(0) as? android.view.ViewGroup ?: return
-        for (i in 0 until menuView.childCount) {
-            val itemView = menuView.getChildAt(i) ?: continue
-            val itemId = bottomNav.menu.getItem(i).itemId
-            if (itemId == selectedItemId) {
-                itemView.animate().cancel()
-                itemView.animate()
-                    .scaleX(1.25f)
-                    .scaleY(1.25f)
-                    .setDuration(150)
-                    .setInterpolator(android.view.animation.OvershootInterpolator(3f))
-                    .withEndAction {
-                        itemView.animate()
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .setDuration(120)
-                            .setInterpolator(android.view.animation.DecelerateInterpolator())
-                            .start()
-                    }
-                    .start()
-            } else {
-                itemView.animate().cancel()
-                itemView.animate()
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(100)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator())
-                    .start()
-            }
-        }
-    }
+
 }
 
 private class CustomTypefaceSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("") {

@@ -191,7 +191,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:padding="6dp">
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="14dp">
 
                 <!-- Live Events -->
                 <LinearLayout
@@ -287,7 +290,7 @@
 
         </FrameLayout>
 
-        
+        <!-- Keep hidden BottomNavigationView for nav controller compatibility -->
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottom_navigation"
             android:layout_width="0dp"

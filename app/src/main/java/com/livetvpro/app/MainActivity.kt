@@ -551,11 +551,35 @@ class MainActivity : AppCompatActivity() {
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
-        val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
         val btnSearchClear = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search_clear)
+
+        // Custom nav items
+        val navItemLive = binding.root.findViewById<android.view.View>(R.id.nav_item_live)
+        val navItemHome = binding.root.findViewById<android.view.View>(R.id.nav_item_home)
+        val navItemSports = binding.root.findViewById<android.view.View>(R.id.nav_item_sports)
+        val navPillLive = binding.root.findViewById<android.view.View>(R.id.nav_pill_live)
+        val navPillHome = binding.root.findViewById<android.view.View>(R.id.nav_pill_home)
+        val navPillSports = binding.root.findViewById<android.view.View>(R.id.nav_pill_sports)
+        val navIconLiveInactive = binding.root.findViewById<android.view.View>(R.id.nav_icon_live_inactive)
+        val navIconHomeInactive = binding.root.findViewById<android.view.View>(R.id.nav_icon_home_inactive)
+        val navIconSportsInactive = binding.root.findViewById<android.view.View>(R.id.nav_icon_sports_inactive)
+
+        fun updateNavSelection(destinationId: Int) {
+            val pairs = listOf(
+                Triple(navPillLive, navIconLiveInactive, R.id.liveEventsFragment),
+                Triple(navPillHome, navIconHomeInactive, R.id.homeFragment),
+                Triple(navPillSports, navIconSportsInactive, R.id.sportsFragment)
+            )
+            pairs.forEach { (pill, icon, destId) ->
+                val active = destinationId == destId ||
+                    (destId == R.id.homeFragment && destinationId == R.id.categoryChannelsFragment)
+                pill?.visibility = if (active) View.VISIBLE else View.GONE
+                icon?.visibility = if (active) View.GONE else View.VISIBLE
+            }
+        }
 
         val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
         val graphStartDestinationId = navController.graph.startDestinationId
@@ -575,6 +599,10 @@ class MainActivity : AppCompatActivity() {
                 navController.navigate(destinationId, null, navOptions)
             }
         }
+
+        navItemLive?.setOnClickListener { navigateTopLevel(R.id.liveEventsFragment) }
+        navItemHome?.setOnClickListener { navigateTopLevel(R.id.homeFragment) }
+        navItemSports?.setOnClickListener { navigateTopLevel(R.id.sportsFragment) }
 
         navigationView?.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
@@ -648,14 +676,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        bottomNavigation?.setOnItemSelectedListener { menuItem ->
-            if (menuItem.itemId in topLevelDestinations) {
-                navigateTopLevel(menuItem.itemId)
-                return@setOnItemSelectedListener true
-            }
-            return@setOnItemSelectedListener false
-        }
-
         val drawerFragments2 = setOf(
             R.id.networkStreamFragment, R.id.playlistsFragment,
             R.id.cricketScoreFragment, R.id.footballScoreFragment,
@@ -709,7 +729,6 @@ class MainActivity : AppCompatActivity() {
                         drawerLayout?.openDrawer(GravityCompat.START)
                     }
                 }
-                bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
                 drawerToggle?.isDrawerIndicatorEnabled = true
@@ -717,8 +736,12 @@ class MainActivity : AppCompatActivity() {
                 toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
 
+            updateNavSelection(destination.id)
             if (isSearchVisible) hideSearch()
         }
+
+        // Set initial selection
+        updateNavSelection(navController.graph.startDestinationId)
 
         btnFavorites?.setOnClickListener {
             if (navController.currentDestination?.id != R.id.favoritesFragment) {

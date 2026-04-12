@@ -573,6 +573,14 @@ class MainActivity : AppCompatActivity() {
 
         val bottomNavContainer = binding.root.findViewById<ViewGroup>(R.id.bottom_navigation)
 
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomNavContainer) { view, insets ->
+            val navBarInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, navBarInset)
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(bottomNavContainer)
+
         fun updateNavSelection(destinationId: Int) {
             TransitionManager.beginDelayedTransition(bottomNavContainer)
             val pairs = listOf(

@@ -150,4 +150,13 @@
         <item name="cornerSize">50%</item>
     </style>
 
+
+    <style name="BottomNav.ActiveIndicator.Pill" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:width">120dp</item>
+        <item name="android:height">40dp</item>
+        <item name="shapeAppearance">@style/BottomNav.ActiveIndicator.Shape</item>
+        <item name="android:color">#26FFFFFF</item>
+        <item name="marginHorizontal">0dp</item>
+    </style>
+
 </resources>

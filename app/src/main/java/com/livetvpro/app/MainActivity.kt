@@ -57,6 +57,10 @@ class MainActivity : AppCompatActivity() {
     private var showRefreshIcon = false
     private var backPressedTime = 0L
 
+    private var pillView: android.view.View? = null
+    private var currentNavDestId: Int = 0
+    private var updateCustomNavFn: ((Int) -> Unit)? = null
+
     private var phoneToolbar: com.google.android.material.appbar.MaterialToolbar? = null
     private var phoneToolbarTitle: android.widget.TextView? = null
     private var phoneBtnSearch: android.widget.ImageButton? = null
@@ -217,6 +221,10 @@ class MainActivity : AppCompatActivity() {
             handleStatusBarForOrientation()
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
             navHostFragment?.childFragmentManager?.fragments?.firstOrNull()?.onConfigurationChanged(newConfig)
+            // Reposition pill after layout redraws for new orientation
+            pillView?.post {
+                updateCustomNavFn?.invoke(currentNavDestId)
+            }
         }
     }
 
@@ -566,13 +574,12 @@ class MainActivity : AppCompatActivity() {
         val navLabelCategories = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_categories)
         val navLabelSports = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_sports)
 
-        val pillView = binding.root.findViewById<android.view.View>(R.id.nav_pill)
-        val pillDrawable = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bottom_nav_item_selected)
+        pillView = binding.root.findViewById<android.view.View>(R.id.nav_pill)
         val activeColor = android.content.res.ColorStateList.valueOf(0xFFEF4444.toInt())
         val inactiveColor = android.content.res.ColorStateList.valueOf(0xFF666666.toInt())
 
         val tabOrder = listOf(R.id.liveEventsFragment, R.id.homeFragment, R.id.sportsFragment)
-        var currentNavDestId = navController.graph.startDestinationId
+        currentNavDestId = navController.graph.startDestinationId
 
         fun slidePillToTab(targetView: android.widget.LinearLayout) {
             targetView.post {
@@ -581,17 +588,17 @@ class MainActivity : AppCompatActivity() {
                 val pillHalfWidth = targetWidth / 2f
                 val targetX = targetCenterX - pillHalfWidth
 
-                val widthAnim = android.animation.ValueAnimator.ofInt(pillView.width, targetWidth.toInt()).apply {
+                val widthAnim = android.animation.ValueAnimator.ofInt(pillView!!.width, targetWidth.toInt()).apply {
                     duration = 250
                     interpolator = android.view.animation.DecelerateInterpolator(1.5f)
                     addUpdateListener {
-                        pillView.layoutParams = pillView.layoutParams.also { lp ->
+                        pillView!!.layoutParams = pillView!!.layoutParams.also { lp ->
                             lp.width = it.animatedValue as Int
                         }
-                        pillView.requestLayout()
+                        pillView!!.requestLayout()
                     }
                 }
-                pillView.animate()
+                pillView!!.animate()
                     .translationX(targetX)
                     .setDuration(250)
                     .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
@@ -619,6 +626,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        updateCustomNavFn = { id -> updateCustomNav(id) }
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)

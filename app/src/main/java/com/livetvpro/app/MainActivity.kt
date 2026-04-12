@@ -597,6 +597,8 @@ class MainActivity : AppCompatActivity() {
         val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
         val graphStartDestinationId = navController.graph.startDestinationId
 
+        val tabOrder = listOf(R.id.liveEventsFragment, R.id.homeFragment, R.id.sportsFragment)
+
         val navigateTopLevel = fun(destinationId: Int) {
             val currentId = navController.currentDestination?.id ?: graphStartDestinationId
             if (currentId != destinationId) {
@@ -604,10 +606,18 @@ class MainActivity : AppCompatActivity() {
                     navController.popBackStack(R.id.homeFragment, false)
                     if (destinationId == R.id.homeFragment) return
                 }
+                val currentIndex = tabOrder.indexOf(currentId).takeIf { it >= 0 } ?: tabOrder.indexOf(R.id.homeFragment)
+                val targetIndex = tabOrder.indexOf(destinationId).takeIf { it >= 0 } ?: currentIndex
+                val goingRight = targetIndex > currentIndex
+
                 val navOptions = NavOptions.Builder()
                     .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
                     .setLaunchSingleTop(true)
                     .setRestoreState(true)
+                    .setEnterAnim(if (goingRight) R.anim.slide_in_right else R.anim.slide_in_left)
+                    .setExitAnim(if (goingRight) R.anim.slide_out_left else R.anim.slide_out_right)
+                    .setPopEnterAnim(if (goingRight) R.anim.slide_in_left else R.anim.slide_in_right)
+                    .setPopExitAnim(if (goingRight) R.anim.slide_out_right else R.anim.slide_out_left)
                     .build()
                 navController.navigate(destinationId, null, navOptions)
             }

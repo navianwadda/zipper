@@ -554,7 +554,7 @@ class MainActivity : AppCompatActivity() {
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
         val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
-        bottomNavigation?.itemActiveIndicatorColor = android.content.res.ColorStateList.valueOf(0x33EF4444.toInt())
+        bottomNavigation?.itemActiveIndicatorColor = android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)

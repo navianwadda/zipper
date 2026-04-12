@@ -184,7 +184,7 @@
             <!-- Live Events -->
             <LinearLayout
                 android:id="@+id/nav_item_live"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
@@ -237,7 +237,7 @@
             <!-- Categories -->
             <LinearLayout
                 android:id="@+id/nav_item_home"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
@@ -290,7 +290,7 @@
             <!-- Sports -->
             <LinearLayout
                 android:id="@+id/nav_item_sports"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"

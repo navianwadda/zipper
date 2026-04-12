@@ -179,8 +179,7 @@
             app:itemTextAppearanceActive="@style/BottomNav.TextAppearance"
             app:itemTextAppearanceInactive="@style/BottomNav.TextAppearance"
             app:itemIconTint="@color/bottom_nav_colors"
-            app:itemTextColor="@color/bottom_nav_colors"
-            app:itemActiveIndicatorColor="#33EF4444" />
+            app:itemTextColor="@color/bottom_nav_colors" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

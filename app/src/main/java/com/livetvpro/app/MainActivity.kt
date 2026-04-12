@@ -28,6 +28,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
+import androidx.transition.TransitionManager
+import android.view.ViewGroup
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.databinding.ActivityMainBinding
@@ -569,7 +571,10 @@ class MainActivity : AppCompatActivity() {
         val navIconHomeInactive = binding.root.findViewById<android.view.View>(R.id.nav_icon_home_inactive)
         val navIconSportsInactive = binding.root.findViewById<android.view.View>(R.id.nav_icon_sports_inactive)
 
+        val bottomNavContainer = binding.root.findViewById<ViewGroup>(R.id.bottom_navigation)
+
         fun updateNavSelection(destinationId: Int) {
+            TransitionManager.beginDelayedTransition(bottomNavContainer)
             val pairs = listOf(
                 Triple(navPillLive, navIconLiveInactive, R.id.liveEventsFragment),
                 Triple(navPillHome, navIconHomeInactive, R.id.homeFragment),

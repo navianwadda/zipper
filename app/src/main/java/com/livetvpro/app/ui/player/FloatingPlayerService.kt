@@ -1358,6 +1358,16 @@ class FloatingPlayerService : Service() {
 
         btnPrevChannel?.setOnClickListener {
             val instance = activeInstances[instanceId] ?: return@setOnClickListener
+            if (instance.currentEvent != null) {
+                val currentEvent = instance.currentEvent!!
+                if (currentEvent.links.size > 1) {
+                    val prevIndex = (instance.currentLinkIndex - 1).coerceAtLeast(0)
+                    if (prevIndex != instance.currentLinkIndex) {
+                        updateInstanceStream(instanceId, null, currentEvent, prevIndex)
+                    }
+                }
+                return@setOnClickListener
+            }
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
             serviceScope.launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }
@@ -1379,6 +1389,16 @@ class FloatingPlayerService : Service() {
 
         btnNextChannel?.setOnClickListener {
             val instance = activeInstances[instanceId] ?: return@setOnClickListener
+            if (instance.currentEvent != null) {
+                val currentEvent = instance.currentEvent!!
+                if (currentEvent.links.size > 1) {
+                    val nextIndex = (instance.currentLinkIndex + 1).coerceAtMost(currentEvent.links.size - 1)
+                    if (nextIndex != instance.currentLinkIndex) {
+                        updateInstanceStream(instanceId, null, currentEvent, nextIndex)
+                    }
+                }
+                return@setOnClickListener
+            }
             val currentChannel = instance.currentChannel ?: return@setOnClickListener
             serviceScope.launch {
                 val allChannels = instance.channelList?.takeIf { it.isNotEmpty() }

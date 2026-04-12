@@ -402,7 +402,7 @@ class PlayerActivity : AppCompatActivity() {
                     switchToChannel(relatedItem)
                 }
             }
-            binding.relatedChannelsRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
             binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
             relatedChannelsAdapter.submitList(channels)
             binding.relatedChannelsSection.visibility = if (channels.isEmpty()) {
@@ -1541,7 +1541,7 @@ class PlayerActivity : AppCompatActivity() {
                 switchToChannel(relatedItem)
             }
 
-            binding.relatedChannelsRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
             binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
         }
     }
@@ -1687,7 +1687,7 @@ class PlayerActivity : AppCompatActivity() {
         relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
             switchToChannel(relatedItem)
         }
-        binding.relatedChannelsRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
         binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
 
         binding.relatedLoadingProgress.visibility = View.VISIBLE

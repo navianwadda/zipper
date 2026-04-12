@@ -582,8 +582,6 @@ class FloatingPlayerService : Service() {
 
             val mediaItem = buildDrmMediaItem(effectiveStreamInfo, headers)
             player.setMediaItem(mediaItem)
-            player.prepare()
-            player.playWhenReady = true
 
             if (playbackPosition > 0) player.seekTo(playbackPosition)
 
@@ -594,6 +592,9 @@ class FloatingPlayerService : Service() {
             val unlockButton = floatingView.findViewById<ImageButton>(R.id.unlock_button)
 
             setupFloatingControls(floatingView, playerView, params, instanceId, player, lockOverlay, unlockButton, channel, event)
+
+            player.prepare()
+            player.playWhenReady = true
 
             windowManager?.addView(floatingView, params)
             hideControlsHandlers[instanceId] = android.os.Handler(android.os.Looper.getMainLooper())
@@ -941,8 +942,6 @@ class FloatingPlayerService : Service() {
 
             val nsMediaItem = buildDrmMediaItem(nsStreamInfo, headers)
             player.setMediaItem(nsMediaItem)
-            player.prepare()
-            player.playWhenReady = true
 
             val playerView = floatingView.findViewById<PlayerView>(R.id.player_view)
             playerView.player = player
@@ -954,6 +953,9 @@ class FloatingPlayerService : Service() {
             val unlockButton = floatingView.findViewById<ImageButton>(R.id.unlock_button)
 
             setupFloatingControls(floatingView, playerView, layoutParams, instanceId, player, lockOverlay, unlockButton, null, null)
+
+            player.prepare()
+            player.playWhenReady = true
 
             windowManager?.addView(floatingView, layoutParams)
             hideControlsHandlers[instanceId] = android.os.Handler(android.os.Looper.getMainLooper())
@@ -1088,12 +1090,13 @@ class FloatingPlayerService : Service() {
 
             val mediaItem = buildDrmMediaItem(parsedStream, headers)
             newPlayer.setMediaItem(mediaItem)
-            newPlayer.prepare()
-            newPlayer.playWhenReady = true
 
             activeInstances[instanceId] = instance.copy(player = newPlayer)
             val btnPlayPause1 = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
             attachPlayerListener(newPlayer, btnPlayPause1, instanceId)
+
+            newPlayer.prepare()
+            newPlayer.playWhenReady = true
 
             updateNotification()
 
@@ -1174,8 +1177,6 @@ class FloatingPlayerService : Service() {
             instance.playerView.player = newPlayer
 
             newPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
-            newPlayer.prepare()
-            newPlayer.playWhenReady = true
 
             activeInstances[instanceId] = instance.copy(
                 player = newPlayer,
@@ -1194,6 +1195,9 @@ class FloatingPlayerService : Service() {
             )
             val btnPlayPause = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
             attachPlayerListener(newPlayer, btnPlayPause, instanceId)
+
+            newPlayer.prepare()
+            newPlayer.playWhenReady = true
 
             updateNotification()
 
@@ -1711,12 +1715,13 @@ class FloatingPlayerService : Service() {
 
                 instance.playerView.player = newPlayer
                 newPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
-                newPlayer.prepare()
-                newPlayer.playWhenReady = true
 
                 activeInstances[instanceId] = instance.copy(player = newPlayer)
                 val btnPlayPause2 = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
                 attachPlayerListener(newPlayer, btnPlayPause2, instanceId)
+
+                newPlayer.prepare()
+                newPlayer.playWhenReady = true
             } else {
                 updateInstanceStream(instanceId, instance.currentChannel, instance.currentEvent, 0)
             }

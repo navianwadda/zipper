@@ -28,7 +28,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import androidx.transition.TransitionManager
 import android.view.ViewGroup
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -582,7 +581,6 @@ class MainActivity : AppCompatActivity() {
         androidx.core.view.ViewCompat.requestApplyInsets(bottomNavContainer)
 
         fun updateNavSelection(destinationId: Int) {
-            TransitionManager.beginDelayedTransition(bottomNavContainer)
             val pairs = listOf(
                 Triple(navPillLive, navIconLiveInactive, R.id.liveEventsFragment),
                 Triple(navPillHome, navIconHomeInactive, R.id.homeFragment),
@@ -591,8 +589,17 @@ class MainActivity : AppCompatActivity() {
             pairs.forEach { (pill, icon, destId) ->
                 val active = destinationId == destId ||
                     (destId == R.id.homeFragment && destinationId == R.id.categoryChannelsFragment)
-                pill?.visibility = if (active) View.VISIBLE else View.GONE
-                icon?.visibility = if (active) View.GONE else View.VISIBLE
+                if (active) {
+                    icon?.animate()?.alpha(0f)?.setDuration(150)?.withEndAction { icon.visibility = View.GONE }?.start()
+                    pill?.alpha = 0f
+                    pill?.visibility = View.VISIBLE
+                    pill?.animate()?.alpha(1f)?.setDuration(150)?.start()
+                } else {
+                    pill?.animate()?.alpha(0f)?.setDuration(150)?.withEndAction { pill.visibility = View.GONE }?.start()
+                    icon?.alpha = 0f
+                    icon?.visibility = View.VISIBLE
+                    icon?.animate()?.alpha(1f)?.setDuration(150)?.start()
+                }
             }
         }
 

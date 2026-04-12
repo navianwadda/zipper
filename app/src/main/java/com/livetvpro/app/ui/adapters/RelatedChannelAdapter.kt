@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.livetvpro.app.R
 import com.livetvpro.app.utils.GlideExtensions
 import com.livetvpro.app.data.models.Channel
-import com.livetvpro.app.databinding.ItemChannelBinding
+import com.livetvpro.app.databinding.ItemRelatedChannelBinding
 import com.livetvpro.app.databinding.ItemRelatedEventBinding
 import java.text.SimpleDateFormat
 import java.util.*
@@ -43,7 +43,7 @@ class RelatedChannelAdapter(
                 EventViewHolder(binding)
             }
             else -> {
-                val binding = ItemChannelBinding.inflate(
+                val binding = ItemRelatedChannelBinding.inflate(
                     LayoutInflater.from(parent.context),
                     parent,
                     false
@@ -188,7 +188,7 @@ class RelatedChannelAdapter(
     }
 
     inner class ChannelViewHolder(
-        private val binding: ItemChannelBinding
+        private val binding: ItemRelatedChannelBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {

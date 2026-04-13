@@ -825,7 +825,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showNoticeDialog() {
-        val dialog = MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
             .setTitle("Important Notice")
             .setMessage(
                 "We do not support gambling. If you see gambling ads on our app or website, they come from the ad network, not us. We've tried to block these ads, but some may still appear.\n\n" +

@@ -572,7 +572,7 @@ private fun PlayerControlsContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = t.rowPaddingH, bottom = t.rowPaddingV),
+                    .padding(start = t.rowPaddingH, end = t.rowPaddingH, bottom = t.rowPaddingV),
             ) {
                 ExoPlayerTimeBar(
                     currentPosition  = currentPosition,

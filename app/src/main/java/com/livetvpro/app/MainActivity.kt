@@ -821,11 +821,7 @@ class MainActivity : AppCompatActivity() {
             .setMessage("Live TV Pro does not stream any of the channels included in this application, all the streaming links are from third party websites available freely on the internet. We're just giving way to stream and all content is the copyright of their owner.")
             .setPositiveButton("OK", null)
             .show()
-        val bg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xE6121212.toInt())
-            cornerRadius = 28f * resources.displayMetrics.density
-        }
-        dialog.window?.setBackgroundDrawable(bg)
+        applyGlassMorphism(dialog)
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
@@ -838,11 +834,7 @@ class MainActivity : AppCompatActivity() {
             )
             .setPositiveButton("OK", null)
             .show()
-        val bg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xE6121212.toInt())
-            cornerRadius = 28f * resources.displayMetrics.density
-        }
-        dialog.window?.setBackgroundDrawable(bg)
+        applyGlassMorphism(dialog)
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
@@ -904,11 +896,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
-        val bg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xE6121212.toInt())
-            cornerRadius = 28f * resources.displayMetrics.density
-        }
-        dialog.window?.setBackgroundDrawable(bg)
+        applyGlassMorphism(dialog)
 
         val dm = resources.displayMetrics
         val swDp = resources.configuration.smallestScreenWidthDp
@@ -940,11 +928,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
-            val bg = android.graphics.drawable.GradientDrawable().apply {
-                setColor(0xE6121212.toInt())
-                cornerRadius = 28f * resources.displayMetrics.density
-            }
-            dialog.window?.setBackgroundDrawable(bg)
+            applyGlassMorphism(dialog)
             dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
         } else {
             FloatingPlayerDialog.newInstance().show(supportFragmentManager, FloatingPlayerDialog.TAG)
@@ -1083,6 +1067,28 @@ class MainActivity : AppCompatActivity() {
             DeviceUtils.notifyTouchDetected()
         }
         return super.dispatchTouchEvent(ev)
+    }
+
+    private fun applyGlassMorphism(dialog: android.app.Dialog) {
+        val window = dialog.window ?: return
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        val radius = 28f * resources.displayMetrics.density
+        val bg = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            cornerRadius = radius
+            setColor(0xCC0D0D0D.toInt())
+            setStroke(1, 0x33FFFFFF)
+        }
+        val decorView = window.decorView as? android.view.ViewGroup ?: return
+        decorView.post {
+            val content = decorView.getChildAt(0) ?: return@post
+            content.background = bg
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                content.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(18f, 18f, android.graphics.Shader.TileMode.CLAMP)
+                )
+            }
+        }
     }
 
 }

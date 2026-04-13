@@ -185,6 +185,8 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
+            // Hide bottom nav in landscape — more screen space, no nav bar inset needed
+            binding.root.findViewById<android.widget.FrameLayout>(R.id.bottom_navigation_container)?.visibility = View.GONE
         } else {
             windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
             windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
@@ -192,6 +194,8 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
             }
+            // Restore bottom nav in portrait
+            binding.root.findViewById<android.widget.FrameLayout>(R.id.bottom_navigation_container)?.visibility = View.VISIBLE
         }
 
         val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
@@ -202,6 +206,18 @@ class MainActivity : AppCompatActivity() {
                 insets
             }
             androidx.core.view.ViewCompat.requestApplyInsets(appBarLayout)
+        }
+
+        // Fix bottom nav overflow: apply navigation bar inset as bottom padding
+        // so the custom nav sits above the gesture bar / 3-button nav on all devices
+        val bottomNavContainer = binding.root.findViewById<android.widget.FrameLayout>(R.id.bottom_navigation_container)
+        if (bottomNavContainer != null) {
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomNavContainer) { view, insets ->
+                val bottomInset = if (isLandscape) 0 else insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+                view.setPadding(0, 0, 0, bottomInset)
+                insets
+            }
+            androidx.core.view.ViewCompat.requestApplyInsets(bottomNavContainer)
         }
     }
 
@@ -215,6 +231,7 @@ class MainActivity : AppCompatActivity() {
             handleStatusBarForOrientation()
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
             navHostFragment?.childFragmentManager?.fragments?.firstOrNull()?.onConfigurationChanged(newConfig)
+            // Re-measure pill position after layout settles on new orientation
             pillView?.post {
                 updateCustomNavFn?.invoke(currentNavDestId)
             }

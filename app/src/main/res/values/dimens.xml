@@ -7,4 +7,7 @@
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="fab_margin_bottom_file">140dp</dimen>
     <dimen name="fab_margin_bottom_url">220dp</dimen>
+
+    <dimen name="nav_drawer_width">260dp</dimen>
+    <dimen name="nav_header_height">176dp</dimen>
 </resources>

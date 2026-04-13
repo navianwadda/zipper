@@ -3,10 +3,9 @@ package com.livetvpro.app.ui.dialogs
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.PixelFormat
 import android.graphics.RectF
-import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -34,56 +33,33 @@ object SupportDialog {
         var dialog: AlertDialog? = null
         val radius = 24 * dp
 
-        val glassCard = object : LinearLayout(context) {
-            private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                style = Paint.Style.STROKE
-                strokeWidth = (1f * dp)
-            }
-            private val rect = RectF()
-
-            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-                val screenHeight = context.resources.displayMetrics.heightPixels
-                val maxHeightPx = (screenHeight * 0.90f).toInt()
-                val maxSpec = MeasureSpec.makeMeasureSpec(maxHeightPx, MeasureSpec.AT_MOST)
-                super.onMeasure(widthMeasureSpec, maxSpec)
-            }
-
-            override fun onDraw(canvas: Canvas) {
-                rect.set(0f, 0f, width.toFloat(), height.toFloat())
-
-                basePaint.shader = LinearGradient(
-                    0f, 0f, 0f, height.toFloat(),
-                    intArrayOf(
-                        Color.argb(80, 255, 255, 255),
-                        Color.argb(40, 220, 220, 235),
-                        Color.argb(55, 200, 210, 255),
-                        Color.argb(45, 255, 255, 255)
-                    ),
-                    floatArrayOf(0f, 0.3f, 0.7f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRoundRect(rect, radius, radius, basePaint)
-
-                strokePaint.shader = LinearGradient(
-                    0f, 0f, 0f, height.toFloat(),
-                    intArrayOf(
-                        Color.argb(160, 255, 255, 255),
-                        Color.argb(80, 255, 255, 255),
-                        Color.argb(60, 239, 68, 68),
-                        Color.argb(100, 239, 68, 68)
-                    ),
-                    floatArrayOf(0f, 0.4f, 0.7f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRoundRect(rect, radius, radius, strokePaint)
-
-                super.onDraw(canvas)
-            }
-        }.apply {
+        val glassCard = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setWillNotDraw(false)
             clipToOutline = true
+            background = object : android.graphics.drawable.Drawable() {
+                private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = 0xCC0D0D0D.toInt()
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        maskFilter = android.graphics.BlurMaskFilter(18f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                    }
+                }
+                private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    color = 0x33FFFFFF
+                    strokeWidth = 2f
+                }
+                private val rectF = RectF()
+                override fun draw(canvas: Canvas) {
+                    rectF.set(bounds)
+                    canvas.drawRoundRect(rectF, radius, radius, paint)
+                    canvas.drawRoundRect(rectF, radius, radius, borderPaint)
+                }
+                override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+                override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
+                @Suppress("OVERRIDE_DEPRECATION")
+                override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+            }
             layoutParams = android.widget.FrameLayout.LayoutParams(
                 android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
@@ -91,33 +67,6 @@ object SupportDialog {
         }
 
 
-
-        glassCard.addView(object : View(context) {
-            override fun onDraw(canvas: Canvas) {
-                super.onDraw(canvas)
-                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    shader = LinearGradient(
-                        0f, 0f, width.toFloat(), 0f,
-                        intArrayOf(
-                            Color.argb(0, 255, 255, 255),
-                            Color.argb(180, 255, 255, 255),
-                            Color.argb(255, 255, 255, 255),
-                            Color.argb(180, 255, 255, 255),
-                            Color.argb(0, 255, 255, 255)
-                        ),
-                        floatArrayOf(0f, 0.2f, 0.5f, 0.8f, 1f),
-                        Shader.TileMode.CLAMP
-                    )
-                }
-                canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
-            }
-        }.apply {
-            setWillNotDraw(false)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (1.5f * dp).toInt()
-            )
-        })
 
         glassCard.addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL

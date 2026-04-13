@@ -816,11 +816,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showCopyrightDialog() {
-        val dialog = MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
             .setTitle("Copyright")
             .setMessage("Live TV Pro does not stream any of the channels included in this application, all the streaming links are from third party websites available freely on the internet. We're just giving way to stream and all content is the copyright of their owner.")
             .setPositiveButton("OK", null)
             .show()
+        val bg = android.graphics.drawable.GradientDrawable().apply {
+            setColor(0xE6121212.toInt())
+            cornerRadius = 28f * resources.displayMetrics.density
+        }
+        dialog.window?.setBackgroundDrawable(bg)
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
@@ -834,7 +839,7 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("OK", null)
             .show()
         val bg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xF2121212.toInt())
+            setColor(0xE6121212.toInt())
             cornerRadius = 28f * resources.displayMetrics.density
         }
         dialog.window?.setBackgroundDrawable(bg)
@@ -881,7 +886,7 @@ class MainActivity : AppCompatActivity() {
             else                                                                        -> rbSeeksOnly.isChecked = true
         }
 
-        val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog)
+        val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
             .setView(view)
             .create()
 
@@ -899,6 +904,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
+        val bg = android.graphics.drawable.GradientDrawable().apply {
+            setColor(0xE6121212.toInt())
+            cornerRadius = 28f * resources.displayMetrics.density
+        }
+        dialog.window?.setBackgroundDrawable(bg)
 
         val dm = resources.displayMetrics
         val swDp = resources.configuration.smallestScreenWidthDp
@@ -921,7 +931,7 @@ class MainActivity : AppCompatActivity() {
     private fun showFloatingPlayerDialog() {
         if (DeviceUtils.isTvDevice) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            val dialog = MaterialAlertDialogBuilder(this)
+            val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
                 .setTitle("Permission Required")
                 .setMessage("Floating Player requires permission to draw over other apps. Please enable it in the next screen.")
                 .setPositiveButton("Settings") { _, _ ->
@@ -930,6 +940,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
+            val bg = android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xE6121212.toInt())
+                cornerRadius = 28f * resources.displayMetrics.density
+            }
+            dialog.window?.setBackgroundDrawable(bg)
             dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
         } else {
             FloatingPlayerDialog.newInstance().show(supportFragmentManager, FloatingPlayerDialog.TAG)

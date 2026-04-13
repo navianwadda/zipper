@@ -177,9 +177,6 @@ class MainActivity : AppCompatActivity() {
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-        // Always edge-to-edge — setDecorFitsSystemWindows(true) is ignored on API 36+
-        // where the OS enforces edge-to-edge unconditionally. We compensate by applying
-        // the status bar inset as padding on AppBarLayout instead (see listener below).
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         if (isLandscape) {
@@ -197,9 +194,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Push the toolbar below the status bar by applying the real inset as top
-        // padding on AppBarLayout. This works on all API levels including API 36+
-        // where setDecorFitsSystemWindows(true) no longer has any effect.
         val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
         if (appBarLayout != null) {
             androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(appBarLayout) { view, insets ->
@@ -221,7 +215,6 @@ class MainActivity : AppCompatActivity() {
             handleStatusBarForOrientation()
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
             navHostFragment?.childFragmentManager?.fragments?.firstOrNull()?.onConfigurationChanged(newConfig)
-            // Reposition pill after layout redraws for new orientation
             pillView?.post {
                 updateCustomNavFn?.invoke(currentNavDestId)
             }
@@ -563,7 +556,6 @@ class MainActivity : AppCompatActivity() {
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
         val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
 
-        // Custom pill nav views
         val navLiveEvents = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_live_events)
         val navCategories = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_categories)
         val navSports = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_sports)
@@ -724,12 +716,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Custom nav click listeners
         navLiveEvents?.setOnClickListener { navigateTopLevel(R.id.liveEventsFragment) }
         navCategories?.setOnClickListener { navigateTopLevel(R.id.homeFragment) }
         navSports?.setOnClickListener { navigateTopLevel(R.id.sportsFragment) }
 
-        // Init pill position after layout pass
         val startDestId = navController.graph.startDestinationId
         pillView?.visibility = View.INVISIBLE
         binding.root.post {
@@ -939,7 +929,6 @@ class MainActivity : AppCompatActivity() {
         phoneBtnSearch?.setOnClickListener { showSearch() }
         phoneSearchView?.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
-                // Dispatch the query to the current fragment and dismiss the keyboard
                 query?.let {
                     val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
                     val currentFragment = navHostFragment?.childFragmentManager?.fragments?.firstOrNull()

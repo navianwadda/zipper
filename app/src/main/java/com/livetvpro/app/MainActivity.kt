@@ -1072,25 +1072,44 @@ class MainActivity : AppCompatActivity() {
     private fun applyGlassMorphism(dialog: android.app.Dialog) {
         val window = dialog.window ?: return
         val radius = 28f * resources.displayMetrics.density
-        val bg = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = radius
-            setColor(0xCC0D0D0D.toInt())
-            setStroke(1, 0x33FFFFFF)
-        }
         val decorView = window.decorView as? android.view.ViewGroup ?: return
         decorView.post {
-            fun findFirstViewGroup(v: android.view.View): android.view.ViewGroup? {
-                if (v is android.view.ViewGroup && v.childCount > 0) return v
-                return null
-            }
             val windowContent = decorView.getChildAt(0) as? android.view.ViewGroup ?: return@post
-            val panel = findFirstViewGroup(windowContent) ?: windowContent
-            panel.background = bg
+
+            // Glass border + transparent background on the panel
+            val border = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = radius
+                setColor(0x00000000)
+                setStroke(1, 0x33FFFFFF)
+            }
+            windowContent.background = border
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                panel.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(18f, 18f, android.graphics.Shader.TileMode.CLAMP)
-                )
+                // Insert a blurred backdrop view at index 0 (behind all content)
+                val backdrop = android.view.View(this).apply {
+                    layoutParams = android.view.ViewGroup.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                        cornerRadius = radius
+                        setColor(0xCC0D0D0D.toInt())
+                    }
+                    setRenderEffect(
+                        android.graphics.RenderEffect.createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.CLAMP)
+                    )
+                }
+                windowContent.addView(backdrop, 0)
+            } else {
+                // Fallback for older APIs
+                windowContent.background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = radius
+                    setColor(0xE6121212.toInt())
+                    setStroke(1, 0x33FFFFFF)
+                }
             }
         }
     }

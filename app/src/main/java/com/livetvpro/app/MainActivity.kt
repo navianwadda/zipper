@@ -833,7 +833,6 @@ class MainActivity : AppCompatActivity() {
             )
             .setPositiveButton("OK", null)
             .show()
-        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0xE0121212.toInt()))
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 

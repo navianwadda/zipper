@@ -170,25 +170,12 @@
             android:id="@+id/bottom_navigation_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:elevation="8dp"
+            android:background="@drawable/bottom_nav_container_bg"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent">
 
-            <com.google.android.material.bottomnavigation.BottomNavigationView
-                android:id="@+id/bottom_navigation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bottom_nav_container_bg"
-                app:backgroundTint="@android:color/transparent"
-                app:itemActiveIndicatorColor="@android:color/transparent"
-                app:menu="@menu/bottom_nav_menu"
-                app:labelVisibilityMode="labeled"
-                app:itemTextAppearanceActive="@style/BottomNav.TextAppearance"
-                app:itemTextAppearanceInactive="@style/BottomNav.TextAppearance"
-                app:itemIconTint="@color/bottom_nav_colors"
-                app:itemTextColor="@color/bottom_nav_colors" />
-
+            <!-- Sliding pill indicator -->
             <View
                 android:id="@+id/nav_pill"
                 android:layout_width="0dp"
@@ -198,7 +185,121 @@
                 android:layout_marginBottom="6dp"
                 android:background="@drawable/bottom_nav_item_selected" />
 
+            <!-- Tab items row -->
+            <LinearLayout
+                android:id="@+id/nav_items_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="14dp">
+
+                <!-- Live Events -->
+                <LinearLayout
+                    android:id="@+id/nav_live_events"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:id="@+id/nav_icon_live"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_live"
+                        android:tint="#666666" />
+
+                    <TextView
+                        android:id="@+id/nav_label_live"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nav_live"
+                        android:textColor="#EF4444"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/bergen_sans"
+                        android:layout_marginStart="5dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- Categories -->
+                <LinearLayout
+                    android:id="@+id/nav_categories"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:id="@+id/nav_icon_categories"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_tv"
+                        android:tint="#EF4444" />
+
+                    <TextView
+                        android:id="@+id/nav_label_categories"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nav_home"
+                        android:textColor="#EF4444"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/bergen_sans"
+                        android:layout_marginStart="5dp"
+                        android:visibility="visible" />
+                </LinearLayout>
+
+                <!-- Sports -->
+                <LinearLayout
+                    android:id="@+id/nav_sports"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:id="@+id/nav_icon_sports"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_sports"
+                        android:tint="#666666" />
+
+                    <TextView
+                        android:id="@+id/nav_label_sports"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nav_sports"
+                        android:textColor="#EF4444"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/bergen_sans"
+                        android:layout_marginStart="5dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+            </LinearLayout>
+
         </FrameLayout>
+
+        <!-- Keep hidden BottomNavigationView for nav controller compatibility -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_navigation"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:menu="@menu/bottom_nav_menu" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -209,8 +310,6 @@
         android:layout_gravity="start"
         android:fitsSystemWindows="false"
         android:background="#E0121212"
-        app:itemShapeAppearance="@null"
-        app:itemShapeAppearanceOverlay="@null"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/drawer_menu"
         style="@style/Sidebar.NavigationView" />

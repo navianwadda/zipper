@@ -542,108 +542,137 @@ private fun PlayerControlsContent(
                 val showSeeks = centerControlsMode == 0 || centerControlsMode == 1
                 val showNav   = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
 
-                Row(
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment     = Alignment.CenterVertically,
                 ) {
-                    Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                        if (showAspectRatioButton) {
-                            PlayerIconButton(
-                                onClick            = { onAspectRatioClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_aspect_ratio,
-                                contentDescription = "Aspect ratio",
-                                size               = 36,
-                                isTvMode           = isTvMode,
-                            )
-                        }
+                    val isCompact = maxWidth < 360.dp
+                    val slotSize  = when {
+                        isTvMode    -> 44
+                        isLandscape -> 40
+                        isCompact   -> 32
+                        else        -> 36
+                    }
+                    val seekSize  = when {
+                        isTvMode    -> 48
+                        isLandscape -> 48
+                        isCompact   -> 36
+                        else        -> 40
+                    }
+                    val playSize  = when {
+                        isTvMode    -> 64
+                        isLandscape -> 64
+                        isCompact   -> 48
+                        else        -> 56
+                    }
+                    val spacing   = when {
+                        isLandscape -> 8.dp
+                        isCompact   -> 4.dp
+                        else        -> 6.dp
                     }
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment     = Alignment.CenterVertically,
                     ) {
-                        if (showNav) {
-                            PlayerIconButton(
-                                onClick            = { onPrevClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_prev_channel,
-                                contentDescription = "Previous channel",
-                                size               = 36,
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        if (showSeeks) {
-                            PlayerIconButton(
-                                onClick            = { onRewindClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_backward,
-                                contentDescription = "Rewind 10 seconds",
-                                size               = if (isLandscape) 48 else 40,
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        PlayerIconButton(
-                            onClick            = { onPlayPauseClick(); onInteraction() },
-                            iconRes            = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
-                            size               = if (isLandscape) 64 else 52,
-                            modifier           = Modifier.focusRequester(playPauseFocusRequester),
-                            isTvMode           = isTvMode,
-                        )
-
-                        if (showSeeks) {
-                            PlayerIconButton(
-                                onClick            = { onForwardClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_forward,
-                                contentDescription = "Forward 10 seconds",
-                                size               = if (isLandscape) 48 else 40,
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        if (showNav) {
-                            PlayerIconButton(
-                                onClick            = { onNextClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_next_channel,
-                                contentDescription = "Next channel",
-                                size               = 36,
-                                isTvMode           = isTvMode,
-                            )
-                        }
-                    }
-
-                    Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                        if (isTvMode) {
-                            if (isChannelListAvailable) {
+                        Box(modifier = Modifier.size(slotSize.dp), contentAlignment = Alignment.Center) {
+                            if (showAspectRatioButton && (isLandscape || isNetworkStream)) {
                                 PlayerIconButton(
-                                    onClick            = { onChannelListClick(); onInteraction() },
-                                    iconRes            = R.drawable.ic_list,
-                                    contentDescription = "Channel list",
-                                    size               = 36,
+                                    onClick            = { onAspectRatioClick(); onInteraction() },
+                                    iconRes            = R.drawable.ic_aspect_ratio,
+                                    contentDescription = "Aspect ratio",
+                                    size               = slotSize,
                                     isTvMode           = isTvMode,
                                 )
                             }
-                        } else {
-                            if (isLandscape && isChannelListAvailable) {
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(spacing),
+                            verticalAlignment     = Alignment.CenterVertically,
+                        ) {
+                            if (showNav) {
                                 PlayerIconButton(
-                                    onClick            = { onChannelListClick(); onInteraction() },
-                                    iconRes            = R.drawable.ic_list,
-                                    contentDescription = "Channel list",
-                                    size               = 36,
+                                    onClick            = { onPrevClick(); onInteraction() },
+                                    iconRes            = R.drawable.ic_skip_prev_channel,
+                                    contentDescription = "Previous channel",
+                                    size               = seekSize,
                                     isTvMode           = isTvMode,
                                 )
+                            }
+
+                            if (showSeeks) {
+                                PlayerIconButton(
+                                    onClick            = { onRewindClick(); onInteraction() },
+                                    iconRes            = R.drawable.ic_skip_backward,
+                                    contentDescription = "Rewind 10 seconds",
+                                    size               = seekSize,
+                                    isTvMode           = isTvMode,
+                                )
+                            }
+
+                            PlayerIconButton(
+                                onClick            = { onPlayPauseClick(); onInteraction() },
+                                iconRes            = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                size               = playSize,
+                                modifier           = Modifier.focusRequester(playPauseFocusRequester),
+                                isTvMode           = isTvMode,
+                            )
+
+                            if (showSeeks) {
+                                PlayerIconButton(
+                                    onClick            = { onForwardClick(); onInteraction() },
+                                    iconRes            = R.drawable.ic_skip_forward,
+                                    contentDescription = "Forward 10 seconds",
+                                    size               = seekSize,
+                                    isTvMode           = isTvMode,
+                                )
+                            }
+
+                            if (showNav) {
+                                PlayerIconButton(
+                                    onClick            = { onNextClick(); onInteraction() },
+                                    iconRes            = R.drawable.ic_skip_next_channel,
+                                    contentDescription = "Next channel",
+                                    size               = seekSize,
+                                    isTvMode           = isTvMode,
+                                )
+                            }
+                        }
+
+                        Box(modifier = Modifier.size(slotSize.dp), contentAlignment = Alignment.Center) {
+                            if (isTvMode) {
+                                if (isChannelListAvailable) {
+                                    PlayerIconButton(
+                                        onClick            = { onChannelListClick(); onInteraction() },
+                                        iconRes            = R.drawable.ic_list,
+                                        contentDescription = "Channel list",
+                                        size               = slotSize,
+                                        isTvMode           = isTvMode,
+                                    )
+                                }
                             } else {
-                                PlayerIconButton(
-                                    onClick            = { onFullscreenClick(); onInteraction() },
-                                    iconRes            = if (isLandscape) R.drawable.ic_fullscreen_exit
-                                                         else R.drawable.ic_fullscreen,
-                                    contentDescription = "Toggle fullscreen",
-                                    size               = 36,
-                                    isTvMode           = isTvMode,
-                                )
+                                if (isLandscape && isChannelListAvailable) {
+                                    PlayerIconButton(
+                                        onClick            = { onChannelListClick(); onInteraction() },
+                                        iconRes            = R.drawable.ic_list,
+                                        contentDescription = "Channel list",
+                                        size               = slotSize,
+                                        isTvMode           = isTvMode,
+                                    )
+                                } else {
+                                    PlayerIconButton(
+                                        onClick            = { onFullscreenClick(); onInteraction() },
+                                        iconRes            = if (isLandscape) R.drawable.ic_fullscreen_exit
+                                                             else R.drawable.ic_fullscreen,
+                                        contentDescription = "Toggle fullscreen",
+                                        size               = slotSize,
+                                        isTvMode           = isTvMode,
+                                    )
+                                }
                             }
                         }
                     }

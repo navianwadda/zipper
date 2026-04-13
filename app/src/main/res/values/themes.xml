@@ -134,32 +134,12 @@
         <item name="colorOutline">#00000000</item>
     </style>
 
-    <style name="ThemeOverlay.LiveTVPro.Dialog.Transparent" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="colorSurface">#F5F5F5</item>
-        <item name="colorSurfaceContainerHigh">#F5F5F5</item>
-        <item name="colorOnSurface">#1A1A1A</item>
-        <item name="colorPrimary">#EF4444</item>
-        <item name="colorControlActivated">#EF4444</item>
-        <item name="android:textColorPrimary">#1A1A1A</item>
-        <item name="android:textColorSecondary">#333333</item>
-        <item name="materialAlertDialogTitleTextStyle">@style/Dialog.TitleText.Light</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/Dialog.BodyText.Light</item>
-        <item name="buttonBarPositiveButtonStyle">@style/Dialog.ButtonText</item>
-        <item name="buttonBarNegativeButtonStyle">@style/Dialog.ButtonText</item>
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-    </style>
-
-    <style name="Dialog.TitleText.Light" parent="MaterialAlertDialog.Material3.Title.Text">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-        <item name="android:textColor">#1A1A1A</item>
-    </style>
-
-    <style name="Dialog.BodyText.Light" parent="MaterialAlertDialog.Material3.Body.Text">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-        <item name="android:textColor">#333333</item>
+    <style name="ThemeOverlay.LiveTVPro.Dialog.Transparent" parent="ThemeOverlay.LiveTVPro.Dialog">
+        <item name="colorSurface">#E0121212</item>
+        <item name="colorSurfaceContainerHigh">#E0121212</item>
+        <item name="colorSurfaceContainerHighest">#E0121212</item>
+        <item name="colorSurfaceContainer">#E0121212</item>
+        <item name="android:colorBackground">#E0121212</item>
     </style>
 
     <style name="Dialog.ButtonText.ColorOverlay" parent="">

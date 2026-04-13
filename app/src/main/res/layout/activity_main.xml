@@ -305,10 +305,10 @@
 
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigation_view"
-        android:layout_width="260dp"
+        android:layout_width="@dimen/nav_drawer_width"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:fitsSystemWindows="false"
+        android:fitsSystemWindows="true"
         android:background="#E0121212"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/drawer_menu"

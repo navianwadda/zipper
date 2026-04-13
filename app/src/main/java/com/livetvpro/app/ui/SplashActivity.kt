@@ -325,9 +325,19 @@ class SplashActivity : AppCompatActivity() {
         listOf(bar1, bar2, bar3, bar4, bar5).forEach { it.scaleY = 1f }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (signalLoader.visibility == View.VISIBLE) startBarAnimations()
+    }
+
     override fun onStop() {
         super.onStop()
         stopBarAnimations()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        downloadedApk?.let { if (it.exists()) it.delete() }
     }
 
     private fun startDownload() {
@@ -430,6 +440,7 @@ class SplashActivity : AppCompatActivity() {
                 setDataAndType(uri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
             })
+            android.os.Handler(mainLooper).postDelayed({ apkFile.delete() }, 3000)
         } catch (e: Exception) { }
     }
 

@@ -34,6 +34,8 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.livetvpro.app.R
@@ -45,6 +47,61 @@ import androidx.compose.ui.res.painterResource
 
 private val exoEnterAnim = fadeIn(tween(150, easing = LinearEasing))
 private val exoExitAnim  = fadeOut(tween(150, easing = LinearEasing))
+
+private fun fluidDp(
+    width: Dp,
+    minWidth: Dp = 280.dp,
+    maxWidth: Dp = 960.dp,
+    minVal: Dp,
+    maxVal: Dp,
+): Dp {
+    val t = ((width - minWidth) / (maxWidth - minWidth)).coerceIn(0f, 1f)
+    return minVal + (maxVal - minVal) * t
+}
+
+private fun fluidSp(
+    width: Dp,
+    minWidth: Dp = 280.dp,
+    maxWidth: Dp = 960.dp,
+    minVal: Float,
+    maxVal: Float,
+): TextUnit {
+    val t = ((width - minWidth) / (maxWidth - minWidth)).coerceIn(0f, 1f)
+    return (minVal + (maxVal - minVal) * t).sp
+}
+
+private data class ResponsiveTokens(
+    val topIconSize   : Dp,
+    val slotIconSize  : Dp,
+    val seekIconSize  : Dp,
+    val playIconSize  : Dp,
+    val iconSpacing   : Dp,
+    val rowPaddingH   : Dp,
+    val rowPaddingV   : Dp,
+    val titleFontSize : TextUnit,
+    val timeFontSize  : TextUnit,
+    val timeMinWidth  : Dp,
+    val hintFontSize  : TextUnit,
+)
+
+private fun computeTokens(width: Dp, isTvMode: Boolean): ResponsiveTokens {
+    val lo = 280.dp
+    val hi = 960.dp
+    val tvScale = if (isTvMode) 1.25f else 1f
+    return ResponsiveTokens(
+        topIconSize   = fluidDp(width, lo, hi, (26 * tvScale).dp, (50 * tvScale).dp),
+        slotIconSize  = fluidDp(width, lo, hi, (24 * tvScale).dp, (46 * tvScale).dp),
+        seekIconSize  = fluidDp(width, lo, hi, (28 * tvScale).dp, (54 * tvScale).dp),
+        playIconSize  = fluidDp(width, lo, hi, (40 * tvScale).dp, (70 * tvScale).dp),
+        iconSpacing   = fluidDp(width, lo, hi, 2.dp,  14.dp),
+        rowPaddingH   = fluidDp(width, lo, hi, 4.dp,  20.dp),
+        rowPaddingV   = fluidDp(width, lo, hi, 2.dp,   8.dp),
+        titleFontSize = fluidSp(width, lo, hi, 11f, if (isTvMode) 22f else 18f),
+        timeFontSize  = fluidSp(width, lo, hi, 10f, if (isTvMode) 18f else 15f),
+        timeMinWidth  = fluidDp(width, lo, hi, 40.dp, if (isTvMode) 80.dp else 68.dp),
+        hintFontSize  = fluidSp(width, lo, hi,  8f, 12f),
+    )
+}
 
 class PlayerControlsState(
     initialVisible: Boolean = true,
@@ -177,7 +234,7 @@ fun PlayerControls(
 
         if (!isTvMode) {
             GestureOverlay(
-                modifier            = Modifier
+                modifier = Modifier
                     .fillMaxSize()
                     .pointerInput("mouse-reveal") {
                         awaitPointerEventScope {
@@ -192,7 +249,7 @@ fun PlayerControls(
                             }
                         }
                     },
-                gestureState        = GestureState(
+                gestureState = GestureState(
                     volumePercent     = gestureVolume,
                     brightnessPercent = gestureBrightness,
                 ),
@@ -207,9 +264,7 @@ fun PlayerControls(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput("tap") {
-                        detectTapGestures(onTap = { state.show(scope) })
-                    }
+                    .pointerInput("tap") { detectTapGestures(onTap = { state.show(scope) }) }
                     .pointerInput("mouse-reveal") {
                         awaitPointerEventScope {
                             while (true) {
@@ -229,9 +284,7 @@ fun PlayerControls(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput("lock-tap") {
-                        detectTapGestures(onTap = { state.toggle(scope) })
-                    }
+                    .pointerInput("lock-tap") { detectTapGestures(onTap = { state.toggle(scope) }) }
                     .pointerInput("lock-mouse-reveal") {
                         awaitPointerEventScope {
                             while (true) {
@@ -239,9 +292,7 @@ fun PlayerControls(
                                 if ((event.type == PointerEventType.Move ||
                                      event.type == PointerEventType.Enter) &&
                                     !state.isLockOverlayVisible
-                                ) {
-                                    state.toggle(scope)
-                                }
+                                ) { state.toggle(scope) }
                             }
                         }
                     }
@@ -301,49 +352,52 @@ fun PlayerControls(
                         detectTapGestures(onTap = { state.toggle(scope) })
                     }
             ) {
-                val lockInteractionSource = remember { MutableInteractionSource() }
-                var isUnlockFocused     by remember { mutableStateOf(false) }
-                val isUnlockHovered     by lockInteractionSource.collectIsHoveredAsState()
-                val isUnlockHighlighted = isUnlockFocused || isUnlockHovered
-                val unlockFocusRequester= remember { FocusRequester() }
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val btnSize = fluidDp(maxWidth, minVal = 34.dp, maxVal = 56.dp)
+                    val btnPad  = fluidDp(maxWidth, minVal = 4.dp,  maxVal = 14.dp)
 
-                LaunchedEffect(Unit) { runCatching { unlockFocusRequester.requestFocus() } }
+                    val lockInteractionSource = remember { MutableInteractionSource() }
+                    var isUnlockFocused       by remember { mutableStateOf(false) }
+                    val isUnlockHovered       by lockInteractionSource.collectIsHoveredAsState()
+                    val isUnlockHighlighted   = isUnlockFocused || isUnlockHovered
+                    val unlockFocusRequester  = remember { FocusRequester() }
 
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(start = 4.dp, top = 4.dp)
-                        .size(40.dp)
-                        .hoverable(interactionSource = lockInteractionSource)
-                        .focusRequester(unlockFocusRequester)
-                        .focusable(interactionSource = lockInteractionSource)
-                        .onFocusChanged { isUnlockFocused = it.isFocused }
-                        .onKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyUp &&
-                                (event.key == Key.DirectionCenter || event.key == Key.Enter)
-                            ) {
-                                state.unlock(scope); onLockClick(false); true
-                            } else false
-                        }
-                        .clickable(
-                            interactionSource = lockInteractionSource,
-                            indication        = ripple(bounded = true, color = Color.White.copy(alpha = 0.25f)),
-                            onClick           = { state.unlock(scope); onLockClick(false) },
+                    LaunchedEffect(Unit) { runCatching { unlockFocusRequester.requestFocus() } }
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = btnPad, top = btnPad)
+                            .size(btnSize)
+                            .hoverable(interactionSource = lockInteractionSource)
+                            .focusRequester(unlockFocusRequester)
+                            .focusable(interactionSource = lockInteractionSource)
+                            .onFocusChanged { isUnlockFocused = it.isFocused }
+                            .onKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyUp &&
+                                    (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                                ) { state.unlock(scope); onLockClick(false); true } else false
+                            }
+                            .clickable(
+                                interactionSource = lockInteractionSource,
+                                indication        = ripple(bounded = true, color = Color.White.copy(alpha = 0.25f)),
+                                onClick           = { state.unlock(scope); onLockClick(false) },
+                            )
+                            .then(
+                                if (isUnlockHighlighted) Modifier.background(
+                                    Color.White.copy(alpha = 0.18f),
+                                    androidx.compose.foundation.shape.CircleShape,
+                                ) else Modifier
+                            )
+                    ) {
+                        Icon(
+                            painter            = painterResource(R.drawable.ic_lock_closed),
+                            contentDescription = "Unlock controls",
+                            tint               = if (isUnlockHighlighted) Color(0xFFEF4444) else Color.White,
+                            modifier           = Modifier.size(btnSize * 0.6f),
                         )
-                        .then(
-                            if (isUnlockHighlighted) Modifier.background(
-                                Color.White.copy(alpha = 0.18f),
-                                androidx.compose.foundation.shape.CircleShape,
-                            ) else Modifier
-                        )
-                ) {
-                    Icon(
-                        painter            = painterResource(R.drawable.ic_lock_closed),
-                        contentDescription = "Unlock controls",
-                        tint               = if (isUnlockHighlighted) Color(0xFFEF4444) else Color.White,
-                        modifier           = Modifier.size(24.dp),
-                    )
+                    }
                 }
             }
         }
@@ -400,15 +454,11 @@ private fun PlayerControlsContent(
     onMouseHoverWithinControls: (Boolean) -> Unit = {},
 ) {
     val playPauseFocusRequester = remember { FocusRequester() }
-
     LaunchedEffect(Unit) {
-        if (isTvMode) {
-            delay(160)
-            runCatching { playPauseFocusRequester.requestFocus() }
-        }
+        if (isTvMode) { delay(160); runCatching { playPauseFocusRequester.requestFocus() } }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .onFocusChanged { onTvFocusWithinControls(it.hasFocus) }
@@ -418,7 +468,7 @@ private fun PlayerControlsContent(
             .pointerInput("controls-hover") {
                 awaitPointerEventScope {
                     while (true) {
-                        val event = awaitPointerEvent()
+                        val event   = awaitPointerEvent()
                         val isMouse = event.changes.any { it.type == PointerType.Mouse }
                         if (isMouse) {
                             when (event.type) {
@@ -432,270 +482,209 @@ private fun PlayerControlsContent(
                 }
             }
     ) {
+        val t = remember(maxWidth, isTvMode) { computeTokens(maxWidth, isTvMode) }
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp)
+                .height(maxWidth * 0.18f)
                 .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent)
-                    )
-                )
+                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent)))
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(maxWidth * 0.34f)
                 .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
-                    )
-                )
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
         )
 
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier            = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            BoxWithConstraints(
-                modifier = Modifier
+            Row(
+                modifier              = Modifier
                     .fillMaxWidth()
-                    .padding(start = 4.dp, end = 4.dp, top = 0.dp, bottom = 4.dp),
+                    .padding(horizontal = t.rowPaddingH, vertical = t.rowPaddingV),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
             ) {
-                val isCompact = maxWidth < 360.dp
-                val topIconSize = when {
-                    isTvMode    -> 44
-                    isLandscape -> 40
-                    isCompact   -> 32
-                    else        -> 40
+                PlayerIconButton(
+                    onClick            = { onBackClick(); onInteraction() },
+                    iconRes            = R.drawable.ic_arrow_back,
+                    contentDescription = "Back",
+                    size               = t.topIconSize,
+                    isTvMode           = isTvMode,
+                )
+                Text(
+                    text       = channelName,
+                    color      = Color.White,
+                    fontSize   = t.titleFontSize,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = BergenSans,
+                    maxLines   = 1,
+                    overflow   = TextOverflow.Ellipsis,
+                    modifier   = Modifier
+                        .weight(1f)
+                        .padding(start = t.iconSpacing + 4.dp),
+                )
+                if (showPipButton) {
+                    Spacer(Modifier.width(t.iconSpacing))
+                    PlayerIconButton(
+                        onClick            = { onPipClick(); onInteraction() },
+                        iconRes            = R.drawable.ic_pip,
+                        contentDescription = "Picture in Picture",
+                        size               = t.topIconSize,
+                        isTvMode           = isTvMode,
+                    )
                 }
-                val topTitleSize = when {
-                    isTvMode    -> 18.sp
-                    isLandscape -> 16.sp
-                    isCompact   -> 13.sp
-                    else        -> 16.sp
-                }
-                Row(
-                    modifier              = Modifier.fillMaxWidth(),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start,
-                ) {
+                Spacer(Modifier.width(t.iconSpacing))
+                PlayerIconButton(
+                    onClick            = { onSettingsClick(); onInteraction() },
+                    iconRes            = R.drawable.ic_settings,
+                    contentDescription = "Settings",
+                    size               = t.topIconSize,
+                    isTvMode           = isTvMode,
+                )
+                Spacer(Modifier.width(t.iconSpacing))
+                PlayerIconButton(
+                    onClick            = { onMuteClick(); onInteraction() },
+                    iconRes            = if (isMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_up,
+                    contentDescription = if (isMuted) "Unmute" else "Mute",
+                    size               = t.topIconSize,
+                    isTvMode           = isTvMode,
+                )
+                if (!isTvMode) {
+                    Spacer(Modifier.width(t.iconSpacing))
                     PlayerIconButton(
-                        onClick            = { onBackClick(); onInteraction() },
-                        iconRes            = R.drawable.ic_arrow_back,
-                        contentDescription = "Back",
-                        size               = topIconSize,
+                        onClick            = { onLockClick(); onInteraction() },
+                        iconRes            = R.drawable.ic_lock_open,
+                        contentDescription = "Lock controls",
+                        size               = t.topIconSize,
                         isTvMode           = isTvMode,
                     )
-                    Text(
-                        text       = channelName,
-                        color      = Color.White,
-                        fontSize   = topTitleSize,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = BergenSans,
-                        maxLines   = 1,
-                        overflow   = TextOverflow.Ellipsis,
-                        modifier   = Modifier
-                            .weight(1f)
-                            .padding(start = 12.dp),
-                    )
-                    if (showPipButton) {
-                        PlayerIconButton(
-                            onClick            = { onPipClick(); onInteraction() },
-                            iconRes            = R.drawable.ic_pip,
-                            contentDescription = "Picture in Picture",
-                            size               = topIconSize,
-                            isTvMode           = isTvMode,
-                        )
-                    }
-                    PlayerIconButton(
-                        onClick            = { onSettingsClick(); onInteraction() },
-                        iconRes            = R.drawable.ic_settings,
-                        contentDescription = "Settings",
-                        size               = topIconSize,
-                        isTvMode           = isTvMode,
-                    )
-                    PlayerIconButton(
-                        onClick            = { onMuteClick(); onInteraction() },
-                        iconRes            = if (isMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_up,
-                        contentDescription = if (isMuted) "Unmute" else "Mute",
-                        size               = topIconSize,
-                        isTvMode           = isTvMode,
-                    )
-                    if (!isTvMode) {
-                        PlayerIconButton(
-                            onClick            = { onLockClick(); onInteraction() },
-                            iconRes            = R.drawable.ic_lock_open,
-                            contentDescription = "Lock controls",
-                            size               = topIconSize,
-                            modifier           = Modifier.padding(start = 4.dp),
-                            isTvMode           = isTvMode,
-                        )
-                    }
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            BoxWithConstraints(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, end = 8.dp, bottom = 0.dp),
+                    .padding(horizontal = t.rowPaddingH, bottom = t.rowPaddingV),
             ) {
-                val isCompactBottom = maxWidth < 360.dp
-                Column(modifier = Modifier.fillMaxWidth()) {
                 ExoPlayerTimeBar(
                     currentPosition  = currentPosition,
                     duration         = duration,
                     bufferedPosition = bufferedPosition,
                     onSeek           = { pos -> onSeek(pos); onInteraction() },
                     isTvMode         = isTvMode,
-                    isCompact        = isCompactBottom,
+                    tokens           = t,
                     modifier         = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 4.dp),
+                        .padding(bottom = t.iconSpacing),
                 )
 
                 val showSeeks = centerControlsMode == 0 || centerControlsMode == 1
                 val showNav   = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
 
-                BoxWithConstraints(
-                    modifier = Modifier
+                Row(
+                    modifier              = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp),
+                        .padding(bottom = t.rowPaddingV),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment     = Alignment.CenterVertically,
                 ) {
-                    val isCompact = maxWidth < 360.dp
-                    val slotSize = when {
-                        isTvMode    -> 44
-                        isLandscape -> 40
-                        isCompact   -> 32
-                        else        -> 36
-                    }
-                    val seekSize = when {
-                        isTvMode    -> 48
-                        isLandscape -> 48
-                        isCompact   -> 36
-                        else        -> 40
-                    }
-                    val playSize = when {
-                        isTvMode    -> 64
-                        isLandscape -> 64
-                        isCompact   -> 48
-                        else        -> 56
-                    }
-                    val spacing = when {
-                        isLandscape -> 8.dp
-                        isCompact   -> 4.dp
-                        else        -> 6.dp
-                    }
-
-                    Row(
-                        modifier              = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment     = Alignment.CenterVertically,
-                    ) {
-                        if (showAspectRatioButton) {
-                            PlayerIconButton(
-                                onClick            = { onAspectRatioClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_aspect_ratio,
-                                contentDescription = "Aspect ratio",
-                                size               = slotSize,
-                                modifier           = Modifier.padding(end = spacing),
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        if (showNav) {
-                            PlayerIconButton(
-                                onClick            = { onPrevClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_prev_channel,
-                                contentDescription = "Previous channel",
-                                size               = seekSize,
-                                modifier           = Modifier.padding(end = spacing),
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        if (showSeeks) {
-                            PlayerIconButton(
-                                onClick            = { onRewindClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_backward,
-                                contentDescription = "Rewind 10 seconds",
-                                size               = seekSize,
-                                modifier           = Modifier.padding(end = spacing),
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
+                    if (showAspectRatioButton) {
                         PlayerIconButton(
-                            onClick            = { onPlayPauseClick(); onInteraction() },
-                            iconRes            = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
-                            size               = playSize,
-                            modifier           = Modifier
-                                .padding(end = spacing)
-                                .focusRequester(playPauseFocusRequester),
+                            onClick            = { onAspectRatioClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_aspect_ratio,
+                            contentDescription = "Aspect ratio",
+                            size               = t.slotIconSize,
                             isTvMode           = isTvMode,
                         )
-
-                        if (showSeeks) {
-                            PlayerIconButton(
-                                onClick            = { onForwardClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_forward,
-                                contentDescription = "Forward 10 seconds",
-                                size               = seekSize,
-                                modifier           = Modifier.padding(end = spacing),
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        if (showNav) {
-                            PlayerIconButton(
-                                onClick            = { onNextClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_next_channel,
-                                contentDescription = "Next channel",
-                                size               = seekSize,
-                                modifier           = Modifier.padding(end = spacing),
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        if ((isLandscape || isTvMode) && isChannelListAvailable) {
-                            PlayerIconButton(
-                                onClick            = { onChannelListClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_list,
-                                contentDescription = "Channel list",
-                                size               = slotSize,
-                                modifier           = Modifier.padding(end = spacing),
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        if (!isTvMode) {
-                            PlayerIconButton(
-                                onClick            = { onFullscreenClick(); onInteraction() },
-                                iconRes            = if (isLandscape) R.drawable.ic_fullscreen_exit
-                                                     else R.drawable.ic_fullscreen,
-                                contentDescription = "Toggle fullscreen",
-                                size               = slotSize,
-                                isTvMode           = isTvMode,
-                            )
-                        }
+                        Spacer(Modifier.width(t.iconSpacing))
+                    }
+                    if (showNav) {
+                        PlayerIconButton(
+                            onClick            = { onPrevClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_skip_prev_channel,
+                            contentDescription = "Previous channel",
+                            size               = t.seekIconSize,
+                            isTvMode           = isTvMode,
+                        )
+                        Spacer(Modifier.width(t.iconSpacing))
+                    }
+                    if (showSeeks) {
+                        PlayerIconButton(
+                            onClick            = { onRewindClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_skip_backward,
+                            contentDescription = "Rewind 10 seconds",
+                            size               = t.seekIconSize,
+                            isTvMode           = isTvMode,
+                        )
+                        Spacer(Modifier.width(t.iconSpacing))
+                    }
+                    PlayerIconButton(
+                        onClick            = { onPlayPauseClick(); onInteraction() },
+                        iconRes            = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        size               = t.playIconSize,
+                        modifier           = Modifier.focusRequester(playPauseFocusRequester),
+                        isTvMode           = isTvMode,
+                    )
+                    if (showSeeks) {
+                        Spacer(Modifier.width(t.iconSpacing))
+                        PlayerIconButton(
+                            onClick            = { onForwardClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_skip_forward,
+                            contentDescription = "Forward 10 seconds",
+                            size               = t.seekIconSize,
+                            isTvMode           = isTvMode,
+                        )
+                    }
+                    if (showNav) {
+                        Spacer(Modifier.width(t.iconSpacing))
+                        PlayerIconButton(
+                            onClick            = { onNextClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_skip_next_channel,
+                            contentDescription = "Next channel",
+                            size               = t.seekIconSize,
+                            isTvMode           = isTvMode,
+                        )
+                    }
+                    if ((isLandscape || isTvMode) && isChannelListAvailable) {
+                        Spacer(Modifier.width(t.iconSpacing))
+                        PlayerIconButton(
+                            onClick            = { onChannelListClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_list,
+                            contentDescription = "Channel list",
+                            size               = t.slotIconSize,
+                            isTvMode           = isTvMode,
+                        )
+                    }
+                    if (!isTvMode) {
+                        Spacer(Modifier.width(t.iconSpacing))
+                        PlayerIconButton(
+                            onClick            = { onFullscreenClick(); onInteraction() },
+                            iconRes            = if (isLandscape) R.drawable.ic_fullscreen_exit
+                                                 else R.drawable.ic_fullscreen,
+                            contentDescription = "Toggle fullscreen",
+                            size               = t.slotIconSize,
+                            isTvMode           = isTvMode,
+                        )
                     }
                 }
 
-                if (isTvMode) TvRemoteHintBar(isCompact = isCompactBottom)
-                } // Column
-            } // BoxWithConstraints
+                if (isTvMode) TvRemoteHintBar(tokens = t)
+            }
         }
     }
 }
 
 @Composable
-private fun TvRemoteHintBar(isCompact: Boolean = false) {
+private fun TvRemoteHintBar(tokens: ResponsiveTokens) {
     val hints = listOf(
         "◀▶"    to "Seek",
         "▼"     to "Channels",
@@ -703,7 +692,6 @@ private fun TvRemoteHintBar(isCompact: Boolean = false) {
         "OK"    to "Play / Pause",
         "BACK"  to "Close / Exit",
     )
-    val hintFontSize = if (isCompact) 9.sp else 10.sp
 
     @Composable
     fun HintRow(items: List<Pair<String, String>>) {
@@ -713,27 +701,26 @@ private fun TvRemoteHintBar(isCompact: Boolean = false) {
             verticalAlignment     = Alignment.CenterVertically,
         ) {
             items.forEachIndexed { i, (key, label) ->
-                if (i > 0) Text("  ·  ", color = Color.White.copy(alpha = 0.3f), fontSize = hintFontSize)
-                Text(text = key,       color = Color(0xFFEF4444),              fontSize = hintFontSize, fontWeight = FontWeight.Bold, fontFamily = BergenSans)
-                Text(text = " $label", color = Color.White.copy(alpha = 0.55f), fontSize = hintFontSize, fontFamily = BergenSans)
+                if (i > 0) Text("  ·  ", color = Color.White.copy(alpha = 0.3f), fontSize = tokens.hintFontSize)
+                Text(key,       color = Color(0xFFEF4444),               fontSize = tokens.hintFontSize, fontWeight = FontWeight.Bold, fontFamily = BergenSans)
+                Text(" $label", color = Color.White.copy(alpha = 0.55f), fontSize = tokens.hintFontSize, fontFamily = BergenSans)
             }
         }
     }
 
+    val split = tokens.hintFontSize.value < 10f
+
     Column(
         modifier              = Modifier
             .fillMaxWidth()
-            .padding(bottom = 10.dp, start = 4.dp, end = 4.dp),
+            .padding(bottom = tokens.rowPaddingV * 2,
+                     start  = tokens.rowPaddingH,
+                     end    = tokens.rowPaddingH),
         horizontalAlignment   = Alignment.CenterHorizontally,
         verticalArrangement   = Arrangement.spacedBy(2.dp),
     ) {
-        if (isCompact) {
-            // Two rows: first 3 hints, last 2 hints
-            HintRow(hints.take(3))
-            HintRow(hints.drop(3))
-        } else {
-            HintRow(hints)
-        }
+        if (split) { HintRow(hints.take(3)); HintRow(hints.drop(3)) }
+        else HintRow(hints)
     }
 }
 
@@ -743,7 +730,7 @@ internal fun PlayerIconButton(
     iconRes: Int,
     contentDescription: String,
     modifier: Modifier = Modifier,
-    size: Int = 40,
+    size: Dp = 40.dp,
     tint: Color = Color.White,
     isTvMode: Boolean = false,
 ) {
@@ -755,7 +742,7 @@ internal fun PlayerIconButton(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .size(size.dp)
+            .size(size)
             .hoverable(interactionSource = interactionSource)
             .focusable(interactionSource = interactionSource)
             .onFocusChanged { isFocused = it.isFocused }
@@ -782,7 +769,7 @@ internal fun PlayerIconButton(
             painter            = painterResource(iconRes),
             contentDescription = contentDescription,
             tint               = if (isHighlighted) Color(0xFFEF4444) else tint,
-            modifier           = Modifier.size((size * 0.6f).toInt().dp),
+            modifier           = Modifier.size(size * 0.6f),
         )
     }
 }
@@ -794,21 +781,10 @@ private fun ExoPlayerTimeBar(
     bufferedPosition: Long,
     onSeek: (Long) -> Unit,
     isTvMode: Boolean = false,
-    isCompact: Boolean = false,
+    tokens: ResponsiveTokens,
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-
-    val timeFontSize = when {
-        isTvMode   -> 16.sp
-        isCompact  -> 11.sp
-        else       -> 14.sp
-    }
-    val timeMinWidth = when {
-        isTvMode   -> 68.dp
-        isCompact  -> 48.dp
-        else       -> 60.dp
-    }
 
     Row(
         modifier = modifier
@@ -838,9 +814,9 @@ private fun ExoPlayerTimeBar(
         Text(
             text      = formatTime(currentPosition),
             color     = Color.White,
-            fontSize  = timeFontSize,
+            fontSize  = tokens.timeFontSize,
             fontFamily= BergenSans,
-            modifier  = Modifier.widthIn(min = timeMinWidth),
+            modifier  = Modifier.widthIn(min = tokens.timeMinWidth),
             textAlign = TextAlign.End,
             maxLines  = 1,
         )
@@ -858,9 +834,9 @@ private fun ExoPlayerTimeBar(
         Text(
             text      = formatTime(duration),
             color     = Color.White,
-            fontSize  = timeFontSize,
+            fontSize  = tokens.timeFontSize,
             fontFamily= BergenSans,
-            modifier  = Modifier.widthIn(min = timeMinWidth),
+            modifier  = Modifier.widthIn(min = tokens.timeMinWidth),
             textAlign = TextAlign.Start,
             maxLines  = 1,
         )
@@ -907,10 +883,7 @@ private fun CustomTimeBar(
                             break
                         }
                         val newX = (change.position.x / size.width).coerceIn(0f, 1f)
-                        if (newX != dragPosition) {
-                            dragPosition = newX
-                            change.consume()
-                        }
+                        if (newX != dragPosition) { dragPosition = newX; change.consume() }
                     }
                 }
             }
@@ -941,39 +914,15 @@ private fun CustomTimeBar(
         val activeBar      = if (active) barHeightActive      else barHeight
         val activeScrubber = if (active) scrubberRadiusActive else scrubberRadius
 
-        drawLine(
-            color = Color.White.copy(alpha = 0.3f),
-            start = Offset(0f, centerY), end = Offset(size.width, centerY),
-            strokeWidth = activeBar, cap = StrokeCap.Round,
-        )
-        val bufferedWidth = size.width * bufferedProgress
-        if (bufferedWidth > 0f) {
-            drawLine(
-                color = Color.White.copy(alpha = 0.5f),
-                start = Offset(0f, centerY), end = Offset(bufferedWidth, centerY),
-                strokeWidth = activeBar, cap = StrokeCap.Round,
-            )
-        }
-        val currentProgress = if (isDragging) dragPosition else progress
-        val playedWidth     = size.width * currentProgress
-        if (playedWidth > 0f) {
-            drawLine(
-                color = Color.White,
-                start = Offset(0f, centerY), end = Offset(playedWidth, centerY),
-                strokeWidth = activeBar, cap = StrokeCap.Round,
-            )
-        }
-        drawCircle(
-            color  = Color.White,
-            radius = activeScrubber,
-            center = Offset(playedWidth, centerY),
-        )
+        drawLine(Color.White.copy(alpha = 0.3f), Offset(0f, centerY), Offset(size.width, centerY), activeBar, StrokeCap.Round)
+        val bw = size.width * bufferedProgress
+        if (bw > 0f) drawLine(Color.White.copy(alpha = 0.5f), Offset(0f, centerY), Offset(bw, centerY), activeBar, StrokeCap.Round)
+        val cp = if (isDragging) dragPosition else progress
+        val pw = size.width * cp
+        if (pw > 0f) drawLine(Color.White, Offset(0f, centerY), Offset(pw, centerY), activeBar, StrokeCap.Round)
+        drawCircle(Color.White, activeScrubber, Offset(pw, centerY))
         if (isHovering && !isDragging && duration > 0L) {
-            drawCircle(
-                color  = Color.White.copy(alpha = 0.45f),
-                radius = 4.dp.toPx(),
-                center = Offset(hoverX.coerceIn(0f, size.width), centerY),
-            )
+            drawCircle(Color.White.copy(alpha = 0.45f), 4.dp.toPx(), Offset(hoverX.coerceIn(0f, size.width), centerY))
         }
     }
 }

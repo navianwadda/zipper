@@ -333,7 +333,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                     savedScrollState = null
                 }
             }
-            if (viewModel.isLoading.value != true && viewModel.error.value == null) {
+            if (viewModel.isLoading.value != true && viewModel.error.value == null && channelAdapter.itemCount == 0) {
                 binding.emptyView.visibility = if (channels.isEmpty()) View.VISIBLE else View.GONE
                 binding.recyclerViewChannels.visibility = if (channels.isEmpty()) View.GONE else View.VISIBLE
             }

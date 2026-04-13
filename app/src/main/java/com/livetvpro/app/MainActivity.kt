@@ -1071,7 +1071,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyGlassMorphism(dialog: android.app.Dialog) {
         val window = dialog.window ?: return
-        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         val radius = 28f * resources.displayMetrics.density
         val bg = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.RECTANGLE
@@ -1081,10 +1080,15 @@ class MainActivity : AppCompatActivity() {
         }
         val decorView = window.decorView as? android.view.ViewGroup ?: return
         decorView.post {
-            val content = decorView.getChildAt(0) ?: return@post
-            content.background = bg
+            fun findFirstViewGroup(v: android.view.View): android.view.ViewGroup? {
+                if (v is android.view.ViewGroup && v.childCount > 0) return v
+                return null
+            }
+            val windowContent = decorView.getChildAt(0) as? android.view.ViewGroup ?: return@post
+            val panel = findFirstViewGroup(windowContent) ?: windowContent
+            panel.background = bg
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                content.setRenderEffect(
+                panel.setRenderEffect(
                     android.graphics.RenderEffect.createBlurEffect(18f, 18f, android.graphics.Shader.TileMode.CLAMP)
                 )
             }

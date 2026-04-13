@@ -105,10 +105,10 @@ object SupportDialog {
                 text = "Cancel"
                 textSize = 14f
                 typeface = bergenSans
-                setTextColor(0xFFFFFFFF.toInt())
-                strokeColor = android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt())
+                setTextColor(0xCCFFFFFF.toInt())
+                strokeColor = android.content.res.ColorStateList.valueOf(0x33FFFFFF)
                 strokeWidth = (1 * dp).toInt()
-                cornerRadius = 0
+                cornerRadius = (50 * dp).toInt()
                 insetTop = 0
                 insetBottom = 0
                 isFocusable = true

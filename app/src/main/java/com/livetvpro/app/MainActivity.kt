@@ -834,7 +834,7 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("OK", null)
             .show()
         val bg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xE0121212.toInt())
+            setColor(0xF2121212.toInt())
             cornerRadius = 28f * resources.displayMetrics.density
         }
         dialog.window?.setBackgroundDrawable(bg)

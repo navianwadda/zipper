@@ -134,6 +134,10 @@
         <item name="colorOutline">#00000000</item>
     </style>
 
+    <style name="ThemeOverlay.LiveTVPro.Dialog.Transparent" parent="ThemeOverlay.LiveTVPro.Dialog">
+        <item name="colorSurface">#E0121212</item>
+    </style>
+
     <style name="Dialog.ButtonText.ColorOverlay" parent="">
         <item name="colorPrimary">#EF4444</item>
     </style>

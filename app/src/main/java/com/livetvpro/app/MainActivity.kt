@@ -1072,46 +1072,30 @@ class MainActivity : AppCompatActivity() {
     private fun applyGlassMorphism(dialog: android.app.Dialog) {
         val window = dialog.window ?: return
         val radius = 28f * resources.displayMetrics.density
-        val decorView = window.decorView as? android.view.ViewGroup ?: return
-        decorView.post {
-            val windowContent = decorView.getChildAt(0) as? android.view.ViewGroup ?: return@post
-
-            // Glass border + transparent background on the panel
-            val border = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = radius
-                setColor(0x00000000)
-                setStroke(1, 0x33FFFFFF)
-            }
-            windowContent.background = border
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Insert a blurred backdrop view at index 0 (behind all content)
-                val backdrop = android.view.View(this).apply {
-                    layoutParams = android.view.ViewGroup.LayoutParams(
-                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    background = android.graphics.drawable.GradientDrawable().apply {
-                        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                        cornerRadius = radius
-                        setColor(0xCC0D0D0D.toInt())
-                    }
-                    setRenderEffect(
-                        android.graphics.RenderEffect.createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.CLAMP)
-                    )
-                }
-                windowContent.addView(backdrop, 0)
-            } else {
-                // Fallback for older APIs
-                windowContent.background = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = radius
-                    setColor(0xE6121212.toInt())
-                    setStroke(1, 0x33FFFFFF)
+        val glassBg = object : android.graphics.drawable.Drawable() {
+            private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0xCC0D0D0D.toInt()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    maskFilter = android.graphics.BlurMaskFilter(18f, android.graphics.BlurMaskFilter.Blur.NORMAL)
                 }
             }
+            private val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                style = android.graphics.Paint.Style.STROKE
+                color = 0x33FFFFFF
+                strokeWidth = 2f
+            }
+            private val rectF = android.graphics.RectF()
+            override fun draw(canvas: android.graphics.Canvas) {
+                rectF.set(bounds)
+                canvas.drawRoundRect(rectF, radius, radius, paint)
+                canvas.drawRoundRect(rectF, radius, radius, borderPaint)
+            }
+            override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+            override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
+            @Suppress("OVERRIDE_DEPRECATION")
+            override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
         }
+        window.setBackgroundDrawable(glassBg)
     }
 
 }

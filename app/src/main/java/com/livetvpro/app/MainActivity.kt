@@ -1063,14 +1063,14 @@ class MainActivity : AppCompatActivity() {
         val radius = 28f * resources.displayMetrics.density
         val glassBg = object : android.graphics.drawable.Drawable() {
             private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0xCCF5F5F5.toInt()
+                color = 0xCC0D0D0D.toInt()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     maskFilter = android.graphics.BlurMaskFilter(18f, android.graphics.BlurMaskFilter.Blur.NORMAL)
                 }
             }
             private val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                 style = android.graphics.Paint.Style.STROKE
-                color = 0x66FFFFFF
+                color = 0x33FFFFFF
                 strokeWidth = 2f
             }
             private val rectF = android.graphics.RectF()

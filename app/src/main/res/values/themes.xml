@@ -136,7 +136,8 @@
 
     <style name="ThemeOverlay.LiveTVPro.Dialog.Transparent" parent="ThemeOverlay.LiveTVPro.Dialog">
         <item name="colorSurface">#E0121212</item>
-        <item name="android:colorBackground">#E0121212</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/Dialog.BodyText</item>
     </style>
 
     <style name="Dialog.ButtonText.ColorOverlay" parent="">

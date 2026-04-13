@@ -465,19 +465,18 @@ private fun PlayerControlsContent(
                     .fillMaxWidth()
                     .padding(start = 4.dp, end = 4.dp, top = 0.dp, bottom = 4.dp),
             ) {
-                val isCompact  = maxWidth < 600.dp
-                val isMedium   = maxWidth < 840.dp
+                val isCompact = maxWidth < 360.dp
                 val topIconSize = when {
-                    isTvMode   -> 44
-                    !isCompact -> 44
-                    !isMedium  -> 40
-                    else       -> 32
+                    isTvMode    -> 44
+                    isLandscape -> 40
+                    isCompact   -> 32
+                    else        -> 40
                 }
                 val topTitleSize = when {
-                    isTvMode   -> 18.sp
-                    !isCompact -> 18.sp
-                    !isMedium  -> 16.sp
-                    else       -> 13.sp
+                    isTvMode    -> 18.sp
+                    isLandscape -> 16.sp
+                    isCompact   -> 13.sp
+                    else        -> 16.sp
                 }
                 Row(
                     modifier              = Modifier.fillMaxWidth(),
@@ -546,7 +545,7 @@ private fun PlayerControlsContent(
                     .fillMaxWidth()
                     .padding(start = 8.dp, end = 8.dp, bottom = 0.dp),
             ) {
-                val isCompactBottom = maxWidth < 600.dp
+                val isCompactBottom = maxWidth < 360.dp
                 Column(modifier = Modifier.fillMaxWidth()) {
                 ExoPlayerTimeBar(
                     currentPosition  = currentPosition,
@@ -568,31 +567,29 @@ private fun PlayerControlsContent(
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
                 ) {
-                    val isCompact  = maxWidth < 600.dp
-                    val isMedium   = maxWidth < 840.dp
+                    val isCompact = maxWidth < 360.dp
                     val slotSize = when {
-                        isTvMode   -> 44
-                        !isCompact -> 44
-                        !isMedium  -> 40
-                        else       -> 34
+                        isTvMode    -> 44
+                        isLandscape -> 40
+                        isCompact   -> 32
+                        else        -> 36
                     }
                     val seekSize = when {
-                        isTvMode   -> 48
-                        !isCompact -> 52
-                        !isMedium  -> 48
-                        else       -> 34
+                        isTvMode    -> 48
+                        isLandscape -> 48
+                        isCompact   -> 36
+                        else        -> 40
                     }
                     val playSize = when {
-                        isTvMode   -> 64
-                        !isCompact -> 72
-                        !isMedium  -> 64
-                        else       -> 44
+                        isTvMode    -> 64
+                        isLandscape -> 64
+                        isCompact   -> 48
+                        else        -> 56
                     }
                     val spacing = when {
-                        isTvMode   -> 10.dp
-                        !isCompact -> 10.dp
-                        !isMedium  -> 8.dp
-                        else       -> 4.dp
+                        isLandscape -> 8.dp
+                        isCompact   -> 4.dp
+                        else        -> 6.dp
                     }
 
                     Row(
@@ -805,12 +802,12 @@ private fun ExoPlayerTimeBar(
     val timeFontSize = when {
         isTvMode   -> 16.sp
         isCompact  -> 11.sp
-        else       -> 15.sp
+        else       -> 14.sp
     }
     val timeMinWidth = when {
         isTvMode   -> 68.dp
         isCompact  -> 48.dp
-        else       -> 64.dp
+        else       -> 60.dp
     }
 
     Row(

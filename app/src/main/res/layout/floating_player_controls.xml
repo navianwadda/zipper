@@ -141,77 +141,76 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <LinearLayout
+            <ImageButton
+                android:id="@+id/btn_prev_channel"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_skip_prev_channel"
+                android:background="@drawable/ripple_square_white"
+                android:tint="@android:color/white"
+                android:scaleType="fitCenter"
+                android:contentDescription="Previous channel"
+                android:padding="5dp"
+                android:layout_marginEnd="6dp"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/btn_seek_back"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_skip_backward"
+                android:background="@drawable/ripple_square_white"
+                android:tint="@android:color/white"
+                android:scaleType="fitCenter"
+                android:contentDescription="Rewind"
+                android:padding="6dp"
+                android:layout_marginEnd="6dp" />
+
+            <View
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:gravity="center">
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
-                <ImageButton
-                    android:id="@+id/btn_prev_channel"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:src="@drawable/ic_skip_prev_channel"
-                    android:background="@drawable/ripple_square_white"
-                    android:tint="@android:color/white"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Previous channel"
-                    android:padding="5dp"
-                    android:layout_marginEnd="8dp"
-                    android:visibility="gone" />
+            <ImageButton
+                android:id="@+id/btn_play_pause"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_pause"
+                android:background="@drawable/ripple_square_white"
+                android:tint="@android:color/white"
+                android:scaleType="fitCenter"
+                android:contentDescription="Play/Pause"
+                android:padding="8dp" />
 
-                <ImageButton
-                    android:id="@+id/btn_seek_back"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:src="@drawable/ic_skip_backward"
-                    android:background="@drawable/ripple_square_white"
-                    android:tint="@android:color/white"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Rewind"
-                    android:padding="6dp"
-                    android:layout_marginEnd="8dp" />
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
-                <ImageButton
-                    android:id="@+id/btn_play_pause"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:src="@drawable/ic_pause"
-                    android:background="@drawable/ripple_square_white"
-                    android:tint="@android:color/white"
-                    android:scaleType="fitCenter"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    android:contentDescription="Play/Pause"
-                    android:padding="8dp" />
+            <ImageButton
+                android:id="@+id/btn_seek_forward"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_skip_forward"
+                android:background="@drawable/ripple_square_white"
+                android:tint="@android:color/white"
+                android:scaleType="fitCenter"
+                android:contentDescription="Forward"
+                android:padding="6dp"
+                android:layout_marginStart="6dp" />
 
-                <ImageButton
-                    android:id="@+id/btn_seek_forward"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:src="@drawable/ic_skip_forward"
-                    android:background="@drawable/ripple_square_white"
-                    android:tint="@android:color/white"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Forward"
-                    android:padding="6dp"
-                    android:layout_marginStart="8dp" />
-
-                <ImageButton
-                    android:id="@+id/btn_next_channel"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:src="@drawable/ic_skip_next_channel"
-                    android:background="@drawable/ripple_square_white"
-                    android:tint="@android:color/white"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Next channel"
-                    android:padding="5dp"
-                    android:layout_marginStart="8dp"
-                    android:visibility="gone" />
-
-            </LinearLayout>
+            <ImageButton
+                android:id="@+id/btn_next_channel"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_skip_next_channel"
+                android:background="@drawable/ripple_square_white"
+                android:tint="@android:color/white"
+                android:scaleType="fitCenter"
+                android:contentDescription="Next channel"
+                android:padding="5dp"
+                android:layout_marginStart="6dp"
+                android:visibility="gone" />
 
             <ImageButton
                 android:id="@+id/btn_resize"
@@ -222,7 +221,8 @@
                 android:tint="@android:color/white"
                 android:scaleType="fitCenter"
                 android:contentDescription="Resize"
-                android:padding="6dp" />
+                android:padding="6dp"
+                android:layout_marginStart="8dp" />
 
         </LinearLayout>
 

@@ -224,6 +224,9 @@ class MainActivity : AppCompatActivity() {
             // Reposition pill after layout redraws for new orientation
             pillView?.post {
                 updateCustomNavFn?.invoke(currentNavDestId)
+                val navContainer2 = binding.root.findViewById<android.widget.FrameLayout>(R.id.bottom_navigation_container)
+                val navHost2 = binding.root.findViewById<androidx.fragment.app.FragmentContainerView>(R.id.nav_host_fragment)
+                navHost2?.setPadding(0, 0, 0, navContainer2?.height ?: 0)
             }
         }
     }
@@ -729,12 +732,16 @@ class MainActivity : AppCompatActivity() {
         navCategories?.setOnClickListener { navigateTopLevel(R.id.homeFragment) }
         navSports?.setOnClickListener { navigateTopLevel(R.id.sportsFragment) }
 
-        // Init pill position after layout pass
+        // Init pill position after layout pass + apply nav height as padding so content isn't hidden
         val startDestId = navController.graph.startDestinationId
+        val navContainer = binding.root.findViewById<android.widget.FrameLayout>(R.id.bottom_navigation_container)
+        val navHostFragment = binding.root.findViewById<androidx.fragment.app.FragmentContainerView>(R.id.nav_host_fragment)
         pillView?.visibility = View.INVISIBLE
         binding.root.post {
             pillView?.visibility = View.VISIBLE
             updateCustomNav(startDestId)
+            val navHeight = navContainer?.height ?: 0
+            navHostFragment?.setPadding(0, 0, 0, navHeight)
         }
 
         val drawerFragments2 = setOf(

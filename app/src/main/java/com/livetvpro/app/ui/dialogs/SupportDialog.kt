@@ -3,7 +3,6 @@ package com.livetvpro.app.ui.dialogs
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -44,21 +43,11 @@ object SupportDialog {
                 textSize = 18f
                 typeface = Typeface.create(bergenSans, Typeface.BOLD)
                 setTextColor(0xFFFFFFFF.toInt())
-                gravity = Gravity.START
+                gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-            })
-
-            addView(View(context).apply {
-                background = GradientDrawable(
-                    GradientDrawable.Orientation.LEFT_RIGHT,
-                    intArrayOf(Color.argb(0, 239, 68, 68), Color.parseColor("#EF4444"), Color.argb(0, 239, 68, 68))
-                ).apply { cornerRadius = (2 * dp) }
-                layoutParams = LinearLayout.LayoutParams(
-                    (72 * dp).toInt(), (2 * dp).toInt()
-                ).also { it.topMargin = (10 * dp).toInt() }
             })
         })
 

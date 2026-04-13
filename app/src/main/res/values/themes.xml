@@ -20,8 +20,7 @@
         <item name="colorOnSecondaryContainer">#EF4444</item>
 
         <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:navigationBarColor">@color/surface_dark</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
@@ -41,8 +40,7 @@
         <item name="colorAccent">@color/accent</item>
 
         <item name="android:statusBarColor">#FAFAFA</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
@@ -152,13 +150,14 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <style name="Sidebar.NavigationView" parent="Widget.Material3.NavigationView">
+        <item name="shapeAppearance">@style/Sidebar.ShapeAppearance</item>
+        <item name="shapeAppearanceOverlay">@null</item>
+    </style>
 
-    <style name="BottomNav.ActiveIndicator.Pill" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:width">120dp</item>
-        <item name="android:height">40dp</item>
-        <item name="shapeAppearance">@style/BottomNav.ActiveIndicator.Shape</item>
-        <item name="android:color">#26FFFFFF</item>
-        <item name="marginHorizontal">0dp</item>
+    <style name="Sidebar.ShapeAppearance" parent="ShapeAppearance.Material3.Corner.None">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">0dp</item>
     </style>
 
 </resources>

@@ -70,16 +70,19 @@ class SportsViewModel @Inject constructor(
 
     override fun loadData() {
         viewModelScope.launch {
+            val hasExisting = !_channels.value.isNullOrEmpty()
             try {
-                startLoading()
+                if (!hasExisting) startLoading()
                 val sports = repository.getSports()
                 _channels.value = sports
                 applyFilter()
                 finishLoading(dataIsEmpty = sports.isEmpty())
             } catch (e: Exception) {
-                _channels.value = emptyList()
-                applyFilter()
-                finishLoading(dataIsEmpty = true, error = e)
+                if (!hasExisting) {
+                    _channels.value = emptyList()
+                    applyFilter()
+                    finishLoading(dataIsEmpty = true, error = e)
+                }
             }
         }
     }

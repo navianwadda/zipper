@@ -1,171 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.LiveTVPro" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">#1F1F1F</item>
-        <item name="colorPrimaryVariant">#0A0A0A</item>
-        <item name="colorSecondary">@color/secondary_dark</item>
+<androidx.drawerlayout.widget.DrawerLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-        <item name="android:colorBackground">@color/background_dark</item>
-        <item name="colorSurface">@color/surface_dark</item>
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorOnSecondary">@color/white</item>
-        <item name="colorOnBackground">@color/text_primary_dark</item>
-        <item name="colorOnSurface">@color/text_secondary_dark</item>
+        <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/app_bar_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:layout_constraintTop_toTopOf="parent">
 
-        <item name="colorAccent">@color/accent</item>
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.LiveTVPro.Dialog</item>
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                app:titleTextColor="@android:color/white"
+                app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
 
-        <item name="colorSecondaryContainer">#00000000</item>
-        <item name="colorOnSecondaryContainer">#EF4444</item>
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
 
-        <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">@color/surface_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
-    </style>
+                    <TextView
+                        android:id="@+id/toolbar_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="Live TV Pro"
+                        android:textColor="@android:color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/bergen_sans"
+                        android:maxLines="1"
+                        android:ellipsize="middle"
+                        android:layout_marginStart="0dp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/btn_search"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
 
-    <style name="Theme.LiveTVPro.Light" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">#FFFFFF</item>
-        <item name="colorPrimaryVariant">#F5F5F5</item>
-        <item name="colorSecondary">#2196F3</item>
+                    <ImageButton
+                        android:id="@+id/btn_search"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Search"
+                        android:src="@drawable/ic_search"
+                        android:tint="@android:color/white"
+                        android:padding="12dp"
+                        app:layout_constraintEnd_toStartOf="@id/btn_favorites"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
 
-        <item name="android:colorBackground">#FAFAFA</item>
-        <item name="colorSurface">#FFFFFF</item>
+                    <ImageButton
+                        android:id="@+id/btn_favorites"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Favorites"
+                        android:src="@drawable/ic_star_outline"
+                        android:tint="@android:color/white"
+                        android:padding="12dp"
+                        android:layout_marginEnd="8dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
 
-        <item name="colorOnPrimary">#000000</item>
-        <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="colorOnBackground">#000000</item>
-        <item name="colorOnSurface">#666666</item>
+                    <androidx.appcompat.widget.SearchView
+                        android:id="@+id/search_view"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:background="@android:color/transparent"
+                        android:visibility="gone"
+                        app:iconifiedByDefault="false"
+                        app:queryHint="Search something..."
+                        app:searchIcon="@null"
+                        app:closeIcon="@null"
+                        app:queryBackground="@android:color/transparent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/btn_search_clear"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
 
-        <item name="colorAccent">@color/accent</item>
+                    <ImageButton
+                        android:id="@+id/btn_search_clear"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Clear"
+                        android:src="@drawable/ic_close"
+                        android:tint="@android:color/white"
+                        android:padding="12dp"
+                        android:visibility="gone"
+                        android:layout_marginEnd="8dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
 
-        <item name="android:statusBarColor">#FAFAFA</item>
-        <item name="android:navigationBarColor">#FFFFFF</item>
-        <item name="android:windowLightStatusBar">true</item>
-    </style>
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <style name="Theme.LiveTVPro.Fullscreen" parent="Theme.LiveTVPro">
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowNoTitle">true</item>
-    </style>
+            </com.google.android.material.appbar.MaterialToolbar>
 
-    <style name="Theme.LiveTVPro.Splash" parent="Theme.LiveTVPro">
-        <item name="android:windowBackground">@color/background_dark</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowFullscreen">false</item>
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:statusBarColor">@color/background_dark</item>
-    </style>
+        </com.google.android.material.appbar.AppBarLayout>
 
-    <style name="TabTextStyle" parent="TextAppearance.Design.Tab">
-        <item name="android:textSize">13sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.08</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-    </style>
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/nav_host_fragment"
+            android:name="androidx.navigation.fragment.NavHostFragment"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:defaultNavHost="true"
+            app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/app_bar_layout"
+            app:navGraph="@navigation/nav_graph" />
 
-    <style name="NetworkStreamEditText" parent="Widget.Material3.TextInputEditText.OutlinedBox">
-        <item name="android:textCursorDrawable">@null</item>
-    </style>
+        <LinearLayout
+            android:id="@+id/global_error_overlay"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@color/background_dark"
+            android:visibility="gone"
+            android:elevation="8dp"
+            app:layout_constraintTop_toBottomOf="@id/app_bar_layout"
+            app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-    <style name="ThemeOverlay.NetworkStream.AmberHandles" parent="">
-        <item name="colorControlActivated">#EF4444</item>
-        <item name="colorAccent">#EF4444</item>
-        <item name="colorPrimary">#EF4444</item>
-        <item name="colorOnSurface">#FFFFFF</item>
-        <item name="colorOutline">#666666</item>
-        <item name="android:textColorPrimary">#FFFFFF</item>
-        <item name="android:textColorHint">#888888</item>
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-    </style>
+            <TextView
+                android:id="@+id/global_error_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/bergen_sans"
+                android:gravity="center" />
 
-    <style name="BottomNav.TextAppearance" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-    </style>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/global_retry_button"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:paddingStart="36dp"
+                android:paddingEnd="36dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp"
+                android:text="RETRY"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:fontFamily="@font/bergen_sans"
+                app:backgroundTint="@color/accent"
+                app:cornerRadius="8dp"
+                app:rippleColor="#40FFFFFF" />
 
-    <style name="ThemeOverlay.LiveTVPro.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="colorSurface">#1F1F1F</item>
-        <item name="colorOnSurface">#FFFFFF</item>
-        <item name="colorPrimary">#EF4444</item>
-        <item name="colorControlActivated">#EF4444</item>
-        <item name="colorAccent">#EF4444</item>
-        <item name="colorOutline">#666666</item>
-        <item name="android:textColorPrimary">#FFFFFF</item>
-        <item name="android:textColorSecondary">#CCCCCC</item>
-        <item name="android:textColorHint">#888888</item>
-        <item name="android:textColorAlertDialogListItem">#FFFFFF</item>
-        <item name="materialAlertDialogTitleTextStyle">@style/Dialog.TitleText</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/Dialog.BodyText</item>
-        <item name="buttonBarPositiveButtonStyle">@style/Dialog.ButtonText</item>
-        <item name="buttonBarNegativeButtonStyle">@style/Dialog.ButtonText</item>
-        <item name="buttonBarNeutralButtonStyle">@style/Dialog.ButtonText</item>
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-    </style>
+        </LinearLayout>
 
-    <style name="Dialog.TitleText" parent="MaterialAlertDialog.Material3.Title.Text">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-        <item name="android:textColor">#FFFFFF</item>
-    </style>
+        <com.google.android.material.navigationbar.NavigationBar
+            android:id="@+id/bottom_navigation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bottom_nav_container_bg"
+            app:menu="@menu/bottom_nav_menu"
+            app:itemIconTint="@color/bottom_nav_colors"
+            app:itemTextColor="@color/bottom_nav_colors"
+            app:itemActiveIndicatorColor="#EF4444"
+            app:itemRippleColor="#22EF4444"
+            app:labelVisibilityMode="selected"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
-    <style name="Dialog.BodyText" parent="MaterialAlertDialog.Material3.Body.Text">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-        <item name="android:textColor">#CCCCCC</item>
-    </style>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <style name="Dialog.ButtonText" parent="Widget.Material3.Button.TextButton.Dialog">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-        <item name="android:textColor">#EF4444</item>
-        <item name="android:backgroundTint">#1AEF4444</item>
-        <item name="backgroundTint">#1AEF4444</item>
-        <item name="rippleColor">#33EF4444</item>
-        <item name="materialThemeOverlay">@style/Dialog.ButtonText.ColorOverlay</item>
-    </style>
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/navigation_view"
+        android:layout_width="260dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:fitsSystemWindows="false"
+        android:background="#E0121212"
+        app:headerLayout="@layout/nav_header"
+        app:menu="@menu/drawer_menu"
+        style="@style/Sidebar.NavigationView" />
 
-    <style name="ThemeOverlay.LiveTVPro.Dialog.NoGlow" parent="ThemeOverlay.LiveTVPro.Dialog">
-        <item name="colorPrimary">#1F1F1F</item>
-        <item name="colorOutline">#00000000</item>
-    </style>
-
-    <style name="ThemeOverlay.LiveTVPro.Dialog.Transparent" parent="ThemeOverlay.LiveTVPro.Dialog">
-        <item name="colorSurface">#E0121212</item>
-        <item name="colorSurfaceContainerHigh">#E0121212</item>
-        <item name="colorSurfaceContainerHighest">#E0121212</item>
-        <item name="colorSurfaceContainer">#E0121212</item>
-        <item name="android:colorBackground">#E0121212</item>
-    </style>
-
-    <style name="Dialog.ButtonText.ColorOverlay" parent="">
-        <item name="colorPrimary">#EF4444</item>
-    </style>
-
-    <style name="BottomNav.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:width">80dp</item>
-        <item name="android:height">32dp</item>
-        <item name="shapeAppearance">@style/BottomNav.ActiveIndicator.Shape</item>
-        <item name="android:color">#33EF4444</item>
-    </style>
-
-    <style name="BottomNav.ActiveIndicator.Shape" parent="">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">50%</item>
-    </style>
-
-    <style name="Sidebar.NavigationView" parent="Widget.Material3.NavigationView">
-        <item name="shapeAppearance">@style/Sidebar.ShapeAppearance</item>
-        <item name="shapeAppearanceOverlay">@null</item>
-    </style>
-
-    <style name="Sidebar.ShapeAppearance" parent="ShapeAppearance.Material3.Corner.None">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">0dp</item>
-    </style>
-
-</resources>
+</androidx.drawerlayout.widget.DrawerLayout>

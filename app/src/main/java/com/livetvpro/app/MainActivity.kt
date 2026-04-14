@@ -57,8 +57,7 @@ class MainActivity : AppCompatActivity() {
     private var showRefreshIcon = false
     private var backPressedTime = 0L
 
-    private var pillView: android.view.View? = null
-    private var currentNavDestId: Int = 0
+    private var updateCustomNavFn: ((Int) -> Unit)? = null    private var currentNavDestId: Int = 0
     private var updateCustomNavFn: ((Int) -> Unit)? = null
 
     private var phoneToolbar: com.google.android.material.appbar.MaterialToolbar? = null
@@ -185,8 +184,6 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
-            // Hide bottom nav in landscape — more screen space, no nav bar inset needed
-            binding.root.findViewById<android.widget.FrameLayout>(R.id.bottom_navigation_container)?.visibility = View.GONE
         } else {
             windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
             windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
@@ -194,8 +191,6 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
             }
-            // Restore bottom nav in portrait
-            binding.root.findViewById<android.widget.FrameLayout>(R.id.bottom_navigation_container)?.visibility = View.VISIBLE
         }
 
         val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
@@ -206,18 +201,6 @@ class MainActivity : AppCompatActivity() {
                 insets
             }
             androidx.core.view.ViewCompat.requestApplyInsets(appBarLayout)
-        }
-
-        // Fix bottom nav overflow: apply navigation bar inset as bottom padding
-        // so the custom nav sits above the gesture bar / 3-button nav on all devices
-        val bottomNavContainer = binding.root.findViewById<android.widget.FrameLayout>(R.id.bottom_navigation_container)
-        if (bottomNavContainer != null) {
-            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomNavContainer) { view, insets ->
-                val bottomInset = if (isLandscape) 0 else insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
-                view.setPadding(0, 0, 0, bottomInset)
-                insets
-            }
-            androidx.core.view.ViewCompat.requestApplyInsets(bottomNavContainer)
         }
     }
 
@@ -231,10 +214,7 @@ class MainActivity : AppCompatActivity() {
             handleStatusBarForOrientation()
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
             navHostFragment?.childFragmentManager?.fragments?.firstOrNull()?.onConfigurationChanged(newConfig)
-            // Re-measure pill position after layout settles on new orientation
-            pillView?.post {
-                updateCustomNavFn?.invoke(currentNavDestId)
-            }
+            updateCustomNavFn?.invoke(currentNavDestId)
         }
     }
 
@@ -571,72 +551,16 @@ class MainActivity : AppCompatActivity() {
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
-        val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        val bottomNavigation = binding.root.findViewById<com.google.android.material.navigationbar.NavigationBar>(R.id.bottom_navigation)
 
-        val navLiveEvents = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_live_events)
-        val navCategories = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_categories)
-        val navSports = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_sports)
-        val navIconLive = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_live)
-        val navIconCategories = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_categories)
-        val navIconSports = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_sports)
-        val navLabelLive = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_live)
-        val navLabelCategories = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_categories)
-        val navLabelSports = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_sports)
-
-        pillView = binding.root.findViewById<android.view.View>(R.id.nav_pill)
-        val activeColor = android.content.res.ColorStateList.valueOf(0xFFEF4444.toInt())
-        val inactiveColor = android.content.res.ColorStateList.valueOf(0xFF666666.toInt())
-
-        val tabOrder = listOf(R.id.liveEventsFragment, R.id.homeFragment, R.id.sportsFragment)
         currentNavDestId = navController.graph.startDestinationId
 
-        fun slidePillToTab(targetView: android.widget.LinearLayout) {
-            targetView.post {
-                val targetCenterX = targetView.left + targetView.width / 2f
-                val targetWidth = targetView.width.toFloat()
-                val pillHalfWidth = targetWidth / 2f
-                val targetX = targetCenterX - pillHalfWidth
+        NavigationUI.setupWithNavController(bottomNavigation, navController)
 
-                val widthAnim = android.animation.ValueAnimator.ofInt(pillView!!.width, targetWidth.toInt()).apply {
-                    duration = 250
-                    interpolator = android.view.animation.DecelerateInterpolator(1.5f)
-                    addUpdateListener {
-                        pillView!!.layoutParams = pillView!!.layoutParams.also { lp ->
-                            lp.width = it.animatedValue as Int
-                        }
-                        pillView!!.requestLayout()
-                    }
-                }
-                pillView!!.animate()
-                    .translationX(targetX)
-                    .setDuration(250)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
-                    .start()
-                widthAnim.start()
-            }
+        updateCustomNavFn = { id ->
+            currentNavDestId = id
+            bottomNavigation?.selectedItemId = id
         }
-
-        fun updateCustomNav(selectedDestId: Int) {
-            currentNavDestId = selectedDestId
-            val items = listOf(
-                Triple(navLiveEvents, navIconLive, navLabelLive) to R.id.liveEventsFragment,
-                Triple(navCategories, navIconCategories, navLabelCategories) to R.id.homeFragment,
-                Triple(navSports, navIconSports, navLabelSports) to R.id.sportsFragment
-            )
-            items.forEach { (views, destId) ->
-                val (container, icon, label) = views
-                if (destId == selectedDestId) {
-                    icon?.imageTintList = activeColor
-                    label?.visibility = View.VISIBLE
-                    container?.let { slidePillToTab(it) }
-                } else {
-                    icon?.imageTintList = inactiveColor
-                    label?.visibility = View.GONE
-                }
-            }
-        }
-
-        updateCustomNavFn = { id -> updateCustomNav(id) }
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
@@ -733,16 +657,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        navLiveEvents?.setOnClickListener { navigateTopLevel(R.id.liveEventsFragment) }
-        navCategories?.setOnClickListener { navigateTopLevel(R.id.homeFragment) }
-        navSports?.setOnClickListener { navigateTopLevel(R.id.sportsFragment) }
-
-        val startDestId = navController.graph.startDestinationId
-        pillView?.visibility = View.INVISIBLE
-        binding.root.post {
-            pillView?.visibility = View.VISIBLE
-            updateCustomNav(startDestId)
-        }
 
         val drawerFragments2 = setOf(
             R.id.networkStreamFragment, R.id.playlistsFragment,
@@ -787,7 +701,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (isTopLevel) {
-                updateCustomNav(destination.id)
+                currentNavDestId = destination.id
+                bottomNavigation?.selectedItemId = destination.id
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 drawerToggle?.isDrawerIndicatorEnabled = true
                 animateNavigationIcon(0f)

@@ -174,7 +174,7 @@
             app:menu="@menu/bottom_nav_menu"
             app:itemIconTint="@color/bottom_nav_colors"
             app:itemTextColor="@color/bottom_nav_colors"
-            app:itemActiveIndicatorColor="#EF4444"
+            app:itemActiveIndicatorStyle="@style/BottomNav.ActiveIndicator"
             app:itemRippleColor="#22EF4444"
             app:labelVisibilityMode="selected"
             app:layout_constraintBottom_toBottomOf="parent"

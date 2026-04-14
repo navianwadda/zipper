@@ -28,8 +28,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.NavigationUI
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.databinding.ActivityMainBinding
@@ -58,9 +56,6 @@ class MainActivity : AppCompatActivity() {
     private var isSearchVisible = false
     private var showRefreshIcon = false
     private var backPressedTime = 0L
-
-    private var updateCustomNavFn: ((Int) -> Unit)? = null
-    private var currentNavDestId: Int = 0
 
     private var phoneToolbar: com.google.android.material.appbar.MaterialToolbar? = null
     private var phoneToolbarTitle: android.widget.TextView? = null
@@ -216,7 +211,6 @@ class MainActivity : AppCompatActivity() {
             handleStatusBarForOrientation()
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
             navHostFragment?.childFragmentManager?.fragments?.firstOrNull()?.onConfigurationChanged(newConfig)
-            updateCustomNavFn?.invoke(currentNavDestId)
         }
     }
 
@@ -555,14 +549,6 @@ class MainActivity : AppCompatActivity() {
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
         val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
 
-        currentNavDestId = navController.graph.startDestinationId
-
-        bottomNavigation?.let { NavigationUI.setupWithNavController(it, navController) }
-
-        updateCustomNavFn = { id ->
-            currentNavDestId = id
-            bottomNavigation?.selectedItemId = id
-        }
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
@@ -585,6 +571,14 @@ class MainActivity : AppCompatActivity() {
                     .build()
                 navController.navigate(destinationId, null, navOptions)
             }
+        }
+
+        bottomNavigation?.setOnItemSelectedListener { menuItem ->
+            if (menuItem.itemId in topLevelDestinations) {
+                navigateTopLevel(menuItem.itemId)
+                return@setOnItemSelectedListener true
+            }
+            return@setOnItemSelectedListener false
         }
 
         navigationView?.setNavigationItemSelectedListener { menuItem ->
@@ -703,8 +697,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (isTopLevel) {
-                currentNavDestId = destination.id
-                bottomNavigation?.selectedItemId = destination.id
+                bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 drawerToggle?.isDrawerIndicatorEnabled = true
                 animateNavigationIcon(0f)
@@ -717,7 +710,7 @@ class MainActivity : AppCompatActivity() {
                 }
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                drawerToggle?.isDrawerIndicatorEnabled = true
+                drawerToggle?.isDrawerIndicatorEnabled = false
                 animateNavigationIcon(1f)
                 toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }

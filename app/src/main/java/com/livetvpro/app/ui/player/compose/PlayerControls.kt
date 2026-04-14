@@ -46,17 +46,6 @@ import androidx.compose.ui.res.painterResource
 private val exoEnterAnim = fadeIn(tween(150, easing = LinearEasing))
 private val exoExitAnim  = fadeOut(tween(150, easing = LinearEasing))
 
-// ── Official Material 3 window-size breakpoints (dp) ──────────────────────────
-// Compact  : width < 600 dp   (phones portrait, small phones landscape)
-// Medium   : 600 ≤ width < 840 dp  (tablets portrait, large phones landscape)
-// Expanded : width ≥ 840 dp   (tablets landscape, desktop)
-private enum class WindowSize { Compact, Medium, Expanded }
-private fun windowSizeOf(widthDp: androidx.compose.ui.unit.Dp) = when {
-    widthDp < 600.dp  -> WindowSize.Compact
-    widthDp < 840.dp  -> WindowSize.Medium
-    else              -> WindowSize.Expanded
-}
-
 class PlayerControlsState(
     initialVisible: Boolean = true,
     val autoHideDelay: Long = 5000L,
@@ -471,35 +460,24 @@ private fun PlayerControlsContent(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            // ── TOP BAR ──────────────────────────────────────────────────────
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 4.dp, end = 4.dp, top = 0.dp, bottom = 4.dp),
             ) {
-                val winSize = windowSizeOf(maxWidth)
-
-                // Icon sizes scale with window class, not a single 360dp break
+                val isCompact = maxWidth < 360.dp
                 val topIconSize = when {
-                    isTvMode                    -> 44
-                    winSize == WindowSize.Expanded -> 44
-                    winSize == WindowSize.Medium   -> 40
-                    isLandscape                 -> 36
-                    else /* Compact portrait */  -> 32
+                    isTvMode    -> 44
+                    isLandscape -> 40
+                    isCompact   -> 32
+                    else        -> 40
                 }
                 val topTitleSize = when {
-                    isTvMode                    -> 18.sp
-                    winSize == WindowSize.Expanded -> 18.sp
-                    winSize == WindowSize.Medium   -> 16.sp
-                    isLandscape                 -> 15.sp
-                    else                        -> 13.sp
+                    isTvMode    -> 18.sp
+                    isLandscape -> 16.sp
+                    isCompact   -> 13.sp
+                    else        -> 16.sp
                 }
-
-                // On Compact portrait without landscape, collapse PiP into overflow
-                // so the title always has at least 80dp breathing room.
-                val showPipInline = showPipButton &&
-                    (isTvMode || isLandscape || winSize != WindowSize.Compact)
-
                 Row(
                     modifier              = Modifier.fillMaxWidth(),
                     verticalAlignment     = Alignment.CenterVertically,
@@ -512,7 +490,6 @@ private fun PlayerControlsContent(
                         size               = topIconSize,
                         isTvMode           = isTvMode,
                     )
-                    // Title gets remaining space; ellipsis prevents overflow
                     Text(
                         text       = channelName,
                         color      = Color.White,
@@ -523,9 +500,9 @@ private fun PlayerControlsContent(
                         overflow   = TextOverflow.Ellipsis,
                         modifier   = Modifier
                             .weight(1f)
-                            .padding(horizontal = 8.dp),
+                            .padding(start = 12.dp),
                     )
-                    if (showPipInline) {
+                    if (showPipButton) {
                         PlayerIconButton(
                             onClick            = { onPipClick(); onInteraction() },
                             iconRes            = R.drawable.ic_pip,
@@ -563,173 +540,156 @@ private fun PlayerControlsContent(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // ── BOTTOM BAR ───────────────────────────────────────────────────
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 8.dp, end = 8.dp, bottom = 0.dp),
             ) {
-                val winSizeBottom = windowSizeOf(maxWidth)
-                val isCompactBottom = winSizeBottom == WindowSize.Compact
-
+                val isCompactBottom = maxWidth < 360.dp
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    ExoPlayerTimeBar(
-                        currentPosition  = currentPosition,
-                        duration         = duration,
-                        bufferedPosition = bufferedPosition,
-                        onSeek           = { pos -> onSeek(pos); onInteraction() },
-                        isTvMode         = isTvMode,
-                        windowSize       = winSizeBottom,
-                        modifier         = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 4.dp),
-                    )
+                ExoPlayerTimeBar(
+                    currentPosition  = currentPosition,
+                    duration         = duration,
+                    bufferedPosition = bufferedPosition,
+                    onSeek           = { pos -> onSeek(pos); onInteraction() },
+                    isTvMode         = isTvMode,
+                    isCompact        = isCompactBottom,
+                    modifier         = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                )
 
-                    val showSeeks = centerControlsMode == 0 || centerControlsMode == 1
-                    val showNav   = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
+                val showSeeks = centerControlsMode == 0 || centerControlsMode == 1
+                val showNav   = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
 
-                    BoxWithConstraints(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                    ) {
-                        val winSizeControls = windowSizeOf(maxWidth)
-
-                        // ── Scale icon sizes with official window classes ──
-                        val slotSize = when {
-                            isTvMode                             -> 44
-                            winSizeControls == WindowSize.Expanded -> 44
-                            winSizeControls == WindowSize.Medium   -> 40
-                            isLandscape                          -> 36
-                            else /* Compact */                   -> 30
-                        }
-                        val seekSize = when {
-                            isTvMode                             -> 48
-                            winSizeControls == WindowSize.Expanded -> 52
-                            winSizeControls == WindowSize.Medium   -> 44
-                            isLandscape                          -> 40
-                            else /* Compact */                   -> 34
-                        }
-                        val playSize = when {
-                            isTvMode                             -> 64
-                            winSizeControls == WindowSize.Expanded -> 68
-                            winSizeControls == WindowSize.Medium   -> 60
-                            isLandscape                          -> 56
-                            else /* Compact */                   -> 48
-                        }
-                        // Spacing also shrinks on Compact so icons don't clip
-                        val spacing = when {
-                            winSizeControls == WindowSize.Expanded -> 10.dp
-                            winSizeControls == WindowSize.Medium   -> 8.dp
-                            isLandscape                          -> 6.dp
-                            else /* Compact */                   -> 2.dp
-                        }
-
-                        // On Compact portrait, hide AspectRatio & ChannelList
-                        // inline to avoid the row overflowing. Users can still
-                        // access them via Settings.
-                        val showAspectInline = showAspectRatioButton &&
-                            (isTvMode || isLandscape || winSizeControls != WindowSize.Compact)
-                        val showChannelListInline = (isLandscape || isTvMode) && isChannelListAvailable
-
-                        Row(
-                            modifier              = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment     = Alignment.CenterVertically,
-                        ) {
-                            if (showAspectInline) {
-                                PlayerIconButton(
-                                    onClick            = { onAspectRatioClick(); onInteraction() },
-                                    iconRes            = R.drawable.ic_aspect_ratio,
-                                    contentDescription = "Aspect ratio",
-                                    size               = slotSize,
-                                    modifier           = Modifier.padding(end = spacing),
-                                    isTvMode           = isTvMode,
-                                )
-                            }
-
-                            if (showNav) {
-                                PlayerIconButton(
-                                    onClick            = { onPrevClick(); onInteraction() },
-                                    iconRes            = R.drawable.ic_skip_prev_channel,
-                                    contentDescription = "Previous channel",
-                                    size               = seekSize,
-                                    modifier           = Modifier.padding(end = spacing),
-                                    isTvMode           = isTvMode,
-                                )
-                            }
-
-                            if (showSeeks) {
-                                PlayerIconButton(
-                                    onClick            = { onRewindClick(); onInteraction() },
-                                    iconRes            = R.drawable.ic_skip_backward,
-                                    contentDescription = "Rewind 10 seconds",
-                                    size               = seekSize,
-                                    modifier           = Modifier.padding(end = spacing),
-                                    isTvMode           = isTvMode,
-                                )
-                            }
-
-                            PlayerIconButton(
-                                onClick            = { onPlayPauseClick(); onInteraction() },
-                                iconRes            = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                size               = playSize,
-                                modifier           = Modifier
-                                    .padding(end = spacing)
-                                    .focusRequester(playPauseFocusRequester),
-                                isTvMode           = isTvMode,
-                            )
-
-                            if (showSeeks) {
-                                PlayerIconButton(
-                                    onClick            = { onForwardClick(); onInteraction() },
-                                    iconRes            = R.drawable.ic_skip_forward,
-                                    contentDescription = "Forward 10 seconds",
-                                    size               = seekSize,
-                                    modifier           = Modifier.padding(end = spacing),
-                                    isTvMode           = isTvMode,
-                                )
-                            }
-
-                            if (showNav) {
-                                PlayerIconButton(
-                                    onClick            = { onNextClick(); onInteraction() },
-                                    iconRes            = R.drawable.ic_skip_next_channel,
-                                    contentDescription = "Next channel",
-                                    size               = seekSize,
-                                    modifier           = Modifier.padding(end = spacing),
-                                    isTvMode           = isTvMode,
-                                )
-                            }
-
-                            if (showChannelListInline) {
-                                PlayerIconButton(
-                                    onClick            = { onChannelListClick(); onInteraction() },
-                                    iconRes            = R.drawable.ic_list,
-                                    contentDescription = "Channel list",
-                                    size               = slotSize,
-                                    modifier           = Modifier.padding(end = spacing),
-                                    isTvMode           = isTvMode,
-                                )
-                            }
-
-                            if (!isTvMode) {
-                                PlayerIconButton(
-                                    onClick            = { onFullscreenClick(); onInteraction() },
-                                    iconRes            = if (isLandscape) R.drawable.ic_fullscreen_exit
-                                                         else R.drawable.ic_fullscreen,
-                                    contentDescription = "Toggle fullscreen",
-                                    size               = slotSize,
-                                    isTvMode           = isTvMode,
-                                )
-                            }
-                        }
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                ) {
+                    val isCompact = maxWidth < 360.dp
+                    val slotSize = when {
+                        isTvMode    -> 44
+                        isLandscape -> 40
+                        isCompact   -> 32
+                        else        -> 36
+                    }
+                    val seekSize = when {
+                        isTvMode    -> 48
+                        isLandscape -> 48
+                        isCompact   -> 36
+                        else        -> 40
+                    }
+                    val playSize = when {
+                        isTvMode    -> 64
+                        isLandscape -> 64
+                        isCompact   -> 48
+                        else        -> 56
+                    }
+                    val spacing = when {
+                        isLandscape -> 8.dp
+                        isCompact   -> 4.dp
+                        else        -> 6.dp
                     }
 
-                    if (isTvMode) TvRemoteHintBar(isCompact = isCompactBottom)
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment     = Alignment.CenterVertically,
+                    ) {
+                        if (showAspectRatioButton) {
+                            PlayerIconButton(
+                                onClick            = { onAspectRatioClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_aspect_ratio,
+                                contentDescription = "Aspect ratio",
+                                size               = slotSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if (showNav) {
+                            PlayerIconButton(
+                                onClick            = { onPrevClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_prev_channel,
+                                contentDescription = "Previous channel",
+                                size               = seekSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if (showSeeks) {
+                            PlayerIconButton(
+                                onClick            = { onRewindClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_backward,
+                                contentDescription = "Rewind 10 seconds",
+                                size               = seekSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        PlayerIconButton(
+                            onClick            = { onPlayPauseClick(); onInteraction() },
+                            iconRes            = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            size               = playSize,
+                            modifier           = Modifier
+                                .padding(end = spacing)
+                                .focusRequester(playPauseFocusRequester),
+                            isTvMode           = isTvMode,
+                        )
+
+                        if (showSeeks) {
+                            PlayerIconButton(
+                                onClick            = { onForwardClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_forward,
+                                contentDescription = "Forward 10 seconds",
+                                size               = seekSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if (showNav) {
+                            PlayerIconButton(
+                                onClick            = { onNextClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_next_channel,
+                                contentDescription = "Next channel",
+                                size               = seekSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if ((isLandscape || isTvMode) && isChannelListAvailable) {
+                            PlayerIconButton(
+                                onClick            = { onChannelListClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_list,
+                                contentDescription = "Channel list",
+                                size               = slotSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if (!isTvMode) {
+                            PlayerIconButton(
+                                onClick            = { onFullscreenClick(); onInteraction() },
+                                iconRes            = if (isLandscape) R.drawable.ic_fullscreen_exit
+                                                     else R.drawable.ic_fullscreen,
+                                contentDescription = "Toggle fullscreen",
+                                size               = slotSize,
+                                isTvMode           = isTvMode,
+                            )
+                        }
+                    }
+                }
+
+                if (isTvMode) TvRemoteHintBar(isCompact = isCompactBottom)
                 } // Column
-            } // BoxWithConstraints bottom
+            } // BoxWithConstraints
         }
     }
 }
@@ -834,24 +794,20 @@ private fun ExoPlayerTimeBar(
     bufferedPosition: Long,
     onSeek: (Long) -> Unit,
     isTvMode: Boolean = false,
-    // Replaced isCompact: Boolean with the full WindowSize enum so sizing is
-    // consistent with the rest of the controls.
-    windowSize: WindowSize = WindowSize.Compact,
+    isCompact: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     val timeFontSize = when {
-        isTvMode                      -> 16.sp
-        windowSize == WindowSize.Compact -> 11.sp
-        else                          -> 14.sp
+        isTvMode   -> 16.sp
+        isCompact  -> 11.sp
+        else       -> 14.sp
     }
-    // Use widthIn(max=…) instead of a fixed min so the scrubber bar never gets
-    // squeezed to zero on very narrow screens.
-    val timeMaxWidth = when {
-        isTvMode                      -> 72.dp
-        windowSize == WindowSize.Compact -> 48.dp
-        else                          -> 64.dp
+    val timeMinWidth = when {
+        isTvMode   -> 68.dp
+        isCompact  -> 48.dp
+        else       -> 60.dp
     }
 
     Row(
@@ -884,9 +840,7 @@ private fun ExoPlayerTimeBar(
             color     = Color.White,
             fontSize  = timeFontSize,
             fontFamily= BergenSans,
-            // widthIn(max) lets the text shrink on tiny screens instead of
-            // pushing the scrubber off-screen.
-            modifier  = Modifier.widthIn(max = timeMaxWidth),
+            modifier  = Modifier.widthIn(min = timeMinWidth),
             textAlign = TextAlign.End,
             maxLines  = 1,
         )
@@ -906,7 +860,7 @@ private fun ExoPlayerTimeBar(
             color     = Color.White,
             fontSize  = timeFontSize,
             fontFamily= BergenSans,
-            modifier  = Modifier.widthIn(max = timeMaxWidth),
+            modifier  = Modifier.widthIn(min = timeMinWidth),
             textAlign = TextAlign.Start,
             maxLines  = 1,
         )

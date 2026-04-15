@@ -56,7 +56,6 @@
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="marquee_forever"
             android:scrollHorizontally="true"
-            android:selected="true"
             android:focusable="false"
             app:layout_constraintBottom_toBottomOf="@+id/leagueLogo"
             app:layout_constraintEnd_toStartOf="@+id/categoryTag"

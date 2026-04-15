@@ -28,6 +28,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.databinding.ActivityMainBinding
@@ -56,6 +57,8 @@ class MainActivity : AppCompatActivity() {
     private var isSearchVisible = false
     private var showRefreshIcon = false
     private var backPressedTime = 0L
+
+
 
     private var phoneToolbar: com.google.android.material.appbar.MaterialToolbar? = null
     private var phoneToolbarTitle: android.widget.TextView? = null
@@ -573,14 +576,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        bottomNavigation?.setOnItemSelectedListener { menuItem ->
-            if (menuItem.itemId in topLevelDestinations) {
-                navigateTopLevel(menuItem.itemId)
-                return@setOnItemSelectedListener true
-            }
-            return@setOnItemSelectedListener false
-        }
-
         navigationView?.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.floating_player_settings -> {
@@ -653,6 +648,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        bottomNavigation?.setOnItemSelectedListener { menuItem ->
+            if (menuItem.itemId in topLevelDestinations) {
+                navigateTopLevel(menuItem.itemId)
+                return@setOnItemSelectedListener true
+            }
+            return@setOnItemSelectedListener false
+        }
 
         val drawerFragments2 = setOf(
             R.id.networkStreamFragment, R.id.playlistsFragment,
@@ -697,9 +699,9 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (isTopLevel) {
-                bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 drawerToggle?.isDrawerIndicatorEnabled = true
+                drawerToggle?.syncState()
                 animateNavigationIcon(0f)
                 toolbar?.setNavigationOnClickListener {
                     if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
@@ -708,9 +710,10 @@ class MainActivity : AppCompatActivity() {
                         drawerLayout?.openDrawer(GravityCompat.START)
                     }
                 }
+                bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                drawerToggle?.isDrawerIndicatorEnabled = false
+                drawerToggle?.isDrawerIndicatorEnabled = true
                 animateNavigationIcon(1f)
                 toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
@@ -720,7 +723,7 @@ class MainActivity : AppCompatActivity() {
 
         btnFavorites?.setOnClickListener {
             if (navController.currentDestination?.id != R.id.favoritesFragment) {
-                navController.navigate(R.id.favoritesFragment, null, null)
+                navController.navigate(R.id.favoritesFragment)
             }
         }
 

@@ -303,7 +303,12 @@ class PlaylistsFragment : Fragment() {
 
         if (isFile) {
             urlInput.isEnabled = false
-            urlInput.setText(fileUri?.toString() ?: "")
+            if (fileUri != null) {
+                val displayName = requireContext().contentResolver.query(fileUri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getString(0) else null
+                } ?: fileUri.lastPathSegment ?: fileUri.toString()
+                urlInput.setText(displayName)
+            }
         }
 
         val builtDialog = MaterialAlertDialogBuilder(requireContext())

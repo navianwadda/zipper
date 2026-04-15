@@ -742,6 +742,17 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("OK", null)
             .show()
         applyGlassMorphism(dialog)
+        val dm = resources.displayMetrics
+        val swDp = resources.configuration.smallestScreenWidthDp
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val dialogWidth = when {
+            DeviceUtils.isTvDevice -> (dm.widthPixels * 0.45f).toInt()
+            swDp >= 720            -> (dm.widthPixels * 0.45f).toInt()
+            swDp >= 600            -> (dm.widthPixels * 0.55f).toInt()
+            isLandscape            -> (dm.widthPixels * 0.55f).toInt()
+            else                   -> (dm.widthPixels * 0.88f).toInt()
+        }
+        dialog.window?.setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
@@ -755,6 +766,17 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("OK", null)
             .show()
         applyGlassMorphism(dialog)
+        val dm = resources.displayMetrics
+        val swDp = resources.configuration.smallestScreenWidthDp
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val dialogWidth = when {
+            DeviceUtils.isTvDevice -> (dm.widthPixels * 0.45f).toInt()
+            swDp >= 720            -> (dm.widthPixels * 0.45f).toInt()
+            swDp >= 600            -> (dm.widthPixels * 0.55f).toInt()
+            isLandscape            -> (dm.widthPixels * 0.55f).toInt()
+            else                   -> (dm.widthPixels * 0.88f).toInt()
+        }
+        dialog.window?.setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
@@ -849,6 +871,16 @@ class MainActivity : AppCompatActivity() {
                 .setNegativeButton("Cancel", null)
                 .show()
             applyGlassMorphism(dialog)
+            val dm = resources.displayMetrics
+            val swDp = resources.configuration.smallestScreenWidthDp
+            val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            val dialogWidth = when {
+                swDp >= 720 -> (dm.widthPixels * 0.45f).toInt()
+                swDp >= 600 -> (dm.widthPixels * 0.55f).toInt()
+                isLandscape -> (dm.widthPixels * 0.55f).toInt()
+                else        -> (dm.widthPixels * 0.88f).toInt()
+            }
+            dialog.window?.setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
             dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
         } else {
             FloatingPlayerDialog.newInstance().show(supportFragmentManager, FloatingPlayerDialog.TAG)

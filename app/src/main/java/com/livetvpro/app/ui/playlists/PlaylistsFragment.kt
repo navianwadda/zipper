@@ -307,7 +307,8 @@ class PlaylistsFragment : Fragment() {
                 val displayName = requireContext().contentResolver.query(fileUri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
                     if (cursor.moveToFirst()) cursor.getString(0) else null
                 } ?: fileUri.lastPathSegment ?: fileUri.toString()
-                urlInput.setText(displayName)
+                titleInput.setText(displayName)
+                urlInput.setText(fileUri.toString())
             }
         }
 

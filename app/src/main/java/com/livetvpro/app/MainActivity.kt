@@ -571,7 +571,7 @@ class MainActivity : AppCompatActivity() {
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
         val btnSearchClear = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search_clear)
 
-        val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
+        val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment, R.id.favoritesFragment)
         val graphStartDestinationId = navController.graph.startDestinationId
 
         val navigateTopLevel = fun(destinationId: Int) {
@@ -733,9 +733,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnFavorites?.setOnClickListener {
-            if (navController.currentDestination?.id != R.id.favoritesFragment) {
-                navController.navigate(R.id.favoritesFragment)
-            }
+            navigateTopLevel(R.id.favoritesFragment)
         }
 
         phoneToolbar = toolbar

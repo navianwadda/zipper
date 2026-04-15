@@ -171,6 +171,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
     @Inject lateinit var preferencesManager: PreferencesManager
 
     private var savedScrollState: android.os.Parcelable? = null
+    private var lastSubmittedChannels: List<com.livetvpro.app.data.models.Channel>? = null
 
     override fun onSearchQuery(query: String) {
         if (query.isBlank() && viewModel.currentQuery.isNotBlank()) {
@@ -329,12 +330,18 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
         )
         viewModel.filteredChannels.observe(viewLifecycleOwner) { channels ->
             val restoreState = if (viewModel.currentQuery.isBlank()) savedScrollState else null
-            lifecycleScope.launch {
-                channelAdapter.submitData(PagingData.from(channels))
-                if (restoreState != null) {
-                    binding.recyclerViewChannels.layoutManager?.onRestoreInstanceState(restoreState)
-                    savedScrollState = null
+            if (channels !== lastSubmittedChannels) {
+                lastSubmittedChannels = channels
+                lifecycleScope.launch {
+                    channelAdapter.submitData(PagingData.from(channels))
+                    if (restoreState != null) {
+                        binding.recyclerViewChannels.layoutManager?.onRestoreInstanceState(restoreState)
+                        savedScrollState = null
+                    }
                 }
+            } else if (restoreState != null) {
+                binding.recyclerViewChannels.layoutManager?.onRestoreInstanceState(restoreState)
+                savedScrollState = null
             }
             if (viewModel.isLoading.value != true && viewModel.error.value == null && channelAdapter.itemCount == 0) {
                 binding.emptyView.visibility = if (channels.isEmpty()) View.VISIBLE else View.GONE

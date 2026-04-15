@@ -306,8 +306,9 @@ class MainActivity : AppCompatActivity() {
                 navController.popBackStack(R.id.homeFragment, false)
             }
             val navOptions = NavOptions.Builder()
-                .setPopUpTo(navController.graph.startDestinationId, false)
+                .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
                 .setLaunchSingleTop(true)
+                .setRestoreState(true)
                 .build()
             navController.navigate(destinationId, null, navOptions)
         }

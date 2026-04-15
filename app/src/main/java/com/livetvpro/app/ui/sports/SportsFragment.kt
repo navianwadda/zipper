@@ -360,6 +360,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        lastSubmittedChannels = null
         _binding = null
     }
 }

@@ -297,13 +297,9 @@ class MainActivity : AppCompatActivity() {
         fun navigate(destinationId: Int) {
             val currentId = navController.currentDestination?.id ?: return
             if (currentId == destinationId) return
-            if (destinationId == R.id.homeFragment &&
-                (currentId == R.id.categoryChannelsFragment || currentId == R.id.homeFragment)) {
+            if (destinationId == R.id.homeFragment) {
                 navController.popBackStack(R.id.homeFragment, false)
                 return
-            }
-            if (currentId == R.id.categoryChannelsFragment) {
-                navController.popBackStack(R.id.homeFragment, false)
             }
             val navOptions = NavOptions.Builder()
                 .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)

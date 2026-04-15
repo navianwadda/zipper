@@ -545,8 +545,8 @@ class MainActivity : AppCompatActivity() {
         val headerView = navigationView.getHeaderView(0) ?: return
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(navigationView) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            androidx.core.view.ViewCompat.updatePaddingRelative(view, bottom = systemBars.bottom)
-            androidx.core.view.ViewCompat.updatePaddingRelative(headerView, top = systemBars.top)
+            androidx.core.view.ViewCompat.setPaddingRelative(view, view.paddingStart, view.paddingTop, view.paddingEnd, systemBars.bottom)
+            androidx.core.view.ViewCompat.setPaddingRelative(headerView, headerView.paddingStart, systemBars.top, headerView.paddingEnd, headerView.paddingBottom)
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(navigationView)

@@ -188,7 +188,6 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="#E0121212"
-        android:fitsSystemWindows="true"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/drawer_menu"
         style="@style/Sidebar.NavigationView" />

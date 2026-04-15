@@ -188,6 +188,17 @@ object SupportDialog {
 
         dialog.show()
 
+        val dm = context.resources.displayMetrics
+        val swDp = context.resources.configuration.smallestScreenWidthDp
+        val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val dialogWidth = when {
+            swDp >= 720 -> (dm.widthPixels * 0.45f).toInt()
+            swDp >= 600 -> (dm.widthPixels * 0.55f).toInt()
+            isLandscape -> (dm.widthPixels * 0.55f).toInt()
+            else        -> (dm.widthPixels * 0.88f).toInt()
+        }
+        dialog.window?.setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+
         dialog.window?.setBackgroundDrawable(object : android.graphics.drawable.Drawable() {
             private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                 color = 0xCC0D0D0D.toInt()

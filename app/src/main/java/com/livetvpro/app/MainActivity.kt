@@ -197,7 +197,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyInsets() {
-        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val root = binding.root
         val appBarLayout = root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
         val bottomNavigation = root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
@@ -205,6 +204,8 @@ class MainActivity : AppCompatActivity() {
         val headerView = navigationView?.getHeaderView(0)
 
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            // Read orientation live inside the callback so rotation is always reflected
+            val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
             val statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
 

@@ -541,14 +541,6 @@ class MainActivity : AppCompatActivity() {
         }
         drawerToggle?.let { drawerLayout.addDrawerListener(it) }
 
-        val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view) ?: return
-        val headerView = navigationView.getHeaderView(0) ?: return
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(headerView) { view, insets ->
-            val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-            view.setPadding(view.paddingLeft, topInset, view.paddingRight, view.paddingBottom)
-            insets
-        }
-        androidx.core.view.ViewCompat.requestApplyInsets(headerView)
     }
 
     private fun setupNavigation() {

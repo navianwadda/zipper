@@ -271,7 +271,13 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                     if (_binding != null) channelAdapter.refreshItem(channel.id)
                 }
             },
-            onFavoriteToggle = { channel -> viewModel.toggleFavorite(channel) },
+            onFavoriteToggle = { channel ->
+                viewModel.toggleFavorite(channel)
+                MainScope().launch {
+                    delay(50)
+                    if (_binding != null) channelAdapter.refreshItem(channel.id)
+                }
+            },
             isFavorite = { channelId -> viewModel.isFavorite(channelId) }
         )
         val spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)

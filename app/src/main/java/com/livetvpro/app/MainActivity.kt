@@ -176,7 +176,7 @@ class MainActivity : AppCompatActivity() {
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.setDecorFitsSystemWindows(window, true)
 
         if (isLandscape) {
             windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
@@ -191,16 +191,6 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
             }
-        }
-
-        val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
-        if (appBarLayout != null) {
-            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(appBarLayout) { view, insets ->
-                val topInset = if (isLandscape) 0 else insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-                view.setPadding(0, topInset, 0, 0)
-                insets
-            }
-            androidx.core.view.ViewCompat.requestApplyInsets(appBarLayout)
         }
     }
 
@@ -542,14 +532,6 @@ class MainActivity : AppCompatActivity() {
         drawerToggle?.let { drawerLayout.addDrawerListener(it) }
 
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view) ?: return
-        val headerView = navigationView.getHeaderView(0) ?: return
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(navigationView) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            androidx.core.view.ViewCompat.setPaddingRelative(view, view.paddingStart, view.paddingTop, view.paddingEnd, systemBars.bottom)
-            androidx.core.view.ViewCompat.setPaddingRelative(headerView, headerView.paddingStart, systemBars.top, headerView.paddingEnd, headerView.paddingBottom)
-            insets
-        }
-        androidx.core.view.ViewCompat.requestApplyInsets(navigationView)
     }
 
     private fun setupNavigation() {

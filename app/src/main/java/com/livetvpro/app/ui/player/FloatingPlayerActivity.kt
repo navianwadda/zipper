@@ -121,7 +121,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private var allEventLinks = listOf<LiveEventLink>()
     private var currentLinkIndex = 0
     private var contentId: String = ""
-    private var contentName: String = ""
+    private var contentName: String by mutableStateOf("")
     private var streamUrl: String = ""
     private var intentCategoryId: String? = null
     private var intentSelectedGroup: String? = null

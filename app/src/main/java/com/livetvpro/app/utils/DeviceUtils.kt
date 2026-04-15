@@ -58,6 +58,7 @@ object DeviceUtils {
     }
 
     private fun isTvHardware(pm: PackageManager, context: Context): Boolean {
+        if (pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) return false
         if (hasPhysicalTouchscreen()) return false
         if (context.resources.configuration.smallestScreenWidthDp < 450) return false
         val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager

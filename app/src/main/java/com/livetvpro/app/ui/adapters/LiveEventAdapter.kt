@@ -91,6 +91,7 @@ class LiveEventAdapter(
         val binding = holder.binding
 
         binding.leagueName.text = event.league ?: "Unknown League"
+        binding.leagueName.isSelected = true
 
         binding.categoryTag.text = event.category.ifEmpty {
             event.eventCategoryName.ifEmpty { "Sports" }

@@ -8,8 +8,7 @@
     android:paddingStart="16dp"
     android:paddingEnd="16dp"
     android:paddingBottom="16dp"
-    android:paddingTop="40dp"
-    android:fitsSystemWindows="true"
+    android:paddingTop="16dp"
     android:theme="@style/ThemeOverlay.AppCompat.Dark">
 
     <ImageView

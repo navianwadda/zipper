@@ -177,6 +177,9 @@ class MainActivity : AppCompatActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = androidx.core.content.ContextCompat.getColor(this, R.color.background_dark)
+
         windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         windowInsetsController.isAppearanceLightStatusBars = false

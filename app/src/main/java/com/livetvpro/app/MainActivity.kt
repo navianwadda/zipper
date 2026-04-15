@@ -15,6 +15,9 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,8 +61,6 @@ class MainActivity : AppCompatActivity() {
     private var showRefreshIcon = false
     private var backPressedTime = 0L
 
-
-
     private var phoneToolbar: com.google.android.material.appbar.MaterialToolbar? = null
     private var phoneToolbarTitle: android.widget.TextView? = null
     private var phoneBtnSearch: android.widget.ImageButton? = null
@@ -67,8 +68,14 @@ class MainActivity : AppCompatActivity() {
     private var phoneSearchView: androidx.appcompat.widget.SearchView? = null
     private var phoneBtnSearchClear: android.widget.ImageButton? = null
 
+    private var navBarHeight = 0
+    private var floatingNavAnimator: ValueAnimator? = null
+    private var isFloatingNavVisible = true
+
     companion object {
         private const val REQUEST_CODE_OVERLAY_PERMISSION = 1001
+        private const val NAV_BOTTOM_MARGIN_DP = 12
+        private const val NAV_ANIM_DURATION = 380L
     }
 
     private val overlayPermissionLauncher = registerForActivityResult(
@@ -178,7 +185,7 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = androidx.core.content.ContextCompat.getColor(this, R.color.background_dark)
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
         windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
@@ -193,7 +200,8 @@ class MainActivity : AppCompatActivity() {
     private fun applyInsets() {
         val root = binding.root
         val appBarLayout = root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
-        val bottomNavigation = root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        val bottomNavWrapper = root.findViewById<FrameLayout>(R.id.bottom_nav_wrapper)
+        val bottomNavigation = root.findViewById<BottomNavigationView>(R.id.bottom_navigation)
         val navigationView = root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val headerView = navigationView?.getHeaderView(0)
 
@@ -201,13 +209,13 @@ class MainActivity : AppCompatActivity() {
             val statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
 
-            
+            navBarHeight = navBars.bottom
+
             appBarLayout?.setPadding(0, statusBars.top, 0, 0)
 
-            
-            bottomNavigation?.setPadding(0, 0, 0, navBars.bottom)
+            val navMarginDp = (NAV_BOTTOM_MARGIN_DP * resources.displayMetrics.density).toInt()
+            bottomNavWrapper?.setPadding(0, 0, 0, navBars.bottom)
 
-            
             headerView?.setPadding(
                 headerView.paddingLeft,
                 statusBars.top,
@@ -215,12 +223,59 @@ class MainActivity : AppCompatActivity() {
                 headerView.paddingBottom
             )
 
-            // Sidebar list: bottom padding for nav bar in all orientations
             navigationView?.setPadding(0, 0, 0, navBars.bottom)
 
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
+    }
+
+    fun setFloatingNavVisible(visible: Boolean, animated: Boolean = true) {
+        if (isFloatingNavVisible == visible) return
+        isFloatingNavVisible = visible
+
+        val bottomNavigation = binding.root.findViewById<BottomNavigationView>(R.id.bottom_navigation) ?: return
+        val density = resources.displayMetrics.density
+        val hiddenTranslation = (40 * density)
+
+        floatingNavAnimator?.cancel()
+
+        if (!animated) {
+            bottomNavigation.alpha = if (visible) 1f else 0f
+            bottomNavigation.scaleX = if (visible) 1f else 0.85f
+            bottomNavigation.scaleY = if (visible) 1f else 0.85f
+            bottomNavigation.translationY = if (visible) 0f else hiddenTranslation
+            bottomNavigation.visibility = if (visible) View.VISIBLE else View.GONE
+            return
+        }
+
+        if (visible) bottomNavigation.visibility = View.VISIBLE
+
+        val startAlpha = bottomNavigation.alpha
+        val endAlpha = if (visible) 1f else 0f
+        val startScale = bottomNavigation.scaleX
+        val endScale = if (visible) 1f else 0.85f
+        val startTransY = bottomNavigation.translationY
+        val endTransY = if (visible) 0f else hiddenTranslation
+
+        floatingNavAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = NAV_ANIM_DURATION
+            interpolator = DecelerateInterpolator(2f)
+            addUpdateListener { va ->
+                val f = va.animatedValue as Float
+                bottomNavigation.alpha = startAlpha + (endAlpha - startAlpha) * f
+                val s = startScale + (endScale - startScale) * f
+                bottomNavigation.scaleX = s
+                bottomNavigation.scaleY = s
+                bottomNavigation.translationY = startTransY + (endTransY - startTransY) * f
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    if (!visible) bottomNavigation.visibility = View.GONE
+                }
+            })
+            start()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -465,8 +520,8 @@ class MainActivity : AppCompatActivity() {
         val lp = tvSearchBar.layoutParams as? android.widget.LinearLayout.LayoutParams ?: return
         ValueAnimator.ofFloat(from, to).apply {
             duration = 220
-            interpolator = if (to > from) android.view.animation.DecelerateInterpolator()
-            else android.view.animation.AccelerateInterpolator()
+            interpolator = if (to > from) DecelerateInterpolator()
+            else AccelerateInterpolator()
             addUpdateListener { va ->
                 lp.weight = va.animatedValue as Float
                 tvSearchBar.layoutParams = lp
@@ -564,7 +619,7 @@ class MainActivity : AppCompatActivity() {
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
-        val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        val bottomNavigation = binding.root.findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
@@ -707,6 +762,8 @@ class MainActivity : AppCompatActivity() {
                 btnSearch?.visibility = View.VISIBLE
                 btnFavorites?.visibility = View.VISIBLE
             }
+
+            setFloatingNavVisible(isTopLevel, animated = true)
 
             if (isTopLevel) {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
@@ -979,7 +1036,7 @@ class MainActivity : AppCompatActivity() {
         animator.addUpdateListener { valueAnimator ->
             drawerToggle?.drawerArrowDrawable?.progress = valueAnimator.animatedValue as Float
         }
-        animator.interpolator = android.view.animation.DecelerateInterpolator()
+        animator.interpolator = DecelerateInterpolator()
         animator.duration = 300
         animator.start()
     }
@@ -1026,7 +1083,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
-
         if (ev.action == android.view.MotionEvent.ACTION_DOWN
             && ev.isFromSource(android.view.InputDevice.SOURCE_TOUCHSCREEN)
         ) {
@@ -1063,7 +1119,6 @@ class MainActivity : AppCompatActivity() {
         }
         window.setBackgroundDrawable(glassBg)
     }
-
 }
 
 private class CustomTypefaceSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("") {

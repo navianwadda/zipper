@@ -176,7 +176,7 @@ class MainActivity : AppCompatActivity() {
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         if (isLandscape) {
             windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
@@ -192,6 +192,42 @@ class MainActivity : AppCompatActivity() {
                 window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
             }
         }
+
+        applyInsets()
+    }
+
+    private fun applyInsets() {
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val root = binding.root
+        val appBarLayout = root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
+        val bottomNavigation = root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        val navigationView = root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
+        val headerView = navigationView?.getHeaderView(0)
+
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+            val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+
+            // AppBarLayout: top padding only in portrait (status bar visible)
+            appBarLayout?.setPadding(0, if (isLandscape) 0 else statusBars.top, 0, 0)
+
+            // BottomNavigationView: bottom padding for nav bar in all orientations
+            bottomNavigation?.setPadding(0, 0, 0, navBars.bottom)
+
+            // Sidebar header: top padding only in portrait
+            headerView?.setPadding(
+                headerView.paddingLeft,
+                if (isLandscape) 0 else statusBars.top,
+                headerView.paddingRight,
+                headerView.paddingBottom
+            )
+
+            // Sidebar list: bottom padding for nav bar in all orientations
+            navigationView?.setPadding(0, 0, 0, navBars.bottom)
+
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(root)
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {

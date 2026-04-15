@@ -736,9 +736,7 @@ class MainActivity : AppCompatActivity() {
             val currentId = navController.currentDestination?.id ?: graphStartDestinationId
             if (currentId != R.id.favoritesFragment) {
                 val navOptions = NavOptions.Builder()
-                    .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
                     .setLaunchSingleTop(true)
-                    .setRestoreState(true)
                     .build()
                 navController.navigate(R.id.favoritesFragment, null, navOptions)
             }

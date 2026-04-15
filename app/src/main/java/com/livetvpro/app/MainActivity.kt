@@ -212,6 +212,7 @@ class MainActivity : AppCompatActivity() {
                 headerView.paddingBottom
             )
 
+            // Sidebar list: bottom padding for nav bar in all orientations
             navigationView?.setPadding(0, 0, 0, navBars.bottom)
 
             insets
@@ -285,10 +286,6 @@ class MainActivity : AppCompatActivity() {
         fun navigate(destinationId: Int) {
             val currentId = navController.currentDestination?.id ?: return
             if (currentId == destinationId) return
-            if (destinationId == R.id.homeFragment) {
-                navController.popBackStack(R.id.homeFragment, false)
-                return
-            }
             val navOptions = NavOptions.Builder()
                 .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
                 .setLaunchSingleTop(true)
@@ -577,10 +574,6 @@ class MainActivity : AppCompatActivity() {
         val navigateTopLevel = fun(destinationId: Int) {
             val currentId = navController.currentDestination?.id ?: graphStartDestinationId
             if (currentId != destinationId) {
-                if (currentId == R.id.categoryChannelsFragment || currentId == R.id.homeFragment) {
-                    navController.popBackStack(R.id.homeFragment, false)
-                    if (destinationId == R.id.homeFragment) return
-                }
                 val navOptions = NavOptions.Builder()
                     .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
                     .setLaunchSingleTop(true)

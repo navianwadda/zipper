@@ -87,8 +87,8 @@ class NativeDataRepository @Inject constructor(
     private var q3: String = ""
     private var q4: String = ""
 
-    // In-memory cache so getChannels() never re-parses JSON on repeated calls
     private val channelCache = AtomicReference<List<Channel>?>(null)
+    private val sportsCache = AtomicReference<List<Channel>?>(null)
 
     init {
         try {
@@ -138,7 +138,8 @@ class NativeDataRepository @Inject constructor(
                     val ok = p5(body)
                     if (ok) {
                         q3 = body
-                        channelCache.set(null) // invalidate cache on new data
+                        channelCache.set(null) 
+                        sportsCache.set(null)
                         return@withContext true
                     } else return@withContext q5()
                 }
@@ -173,12 +174,20 @@ class NativeDataRepository @Inject constructor(
         val j = p10(); if (j.isEmpty() || j == "[]") emptyList() else gson.fromJson(j, Array<EventCategory>::class.java).toList()
     } catch (e: Exception) { emptyList() }
 
-    fun getSports(): List<Channel> = try {
-        val j = p11(); if (j.isEmpty() || j == "[]") emptyList()
-        else gson.fromJson(j, Array<Channel>::class.java).toList().map { ch ->
-            if (ch.categoryId.isEmpty()) ch.copy(categoryId = k_ss, categoryName = k_sp) else ch
-        }
-    } catch (e: Exception) { emptyList() }
+    fun getSports(): List<Channel> {
+        sportsCache.get()?.let { return it }
+        return try {
+            val j = p11()
+            if (j.isEmpty() || j == "[]") emptyList()
+            else {
+                val parsed = gson.fromJson(j, Array<Channel>::class.java).toList().map { ch ->
+                    if (ch.categoryId.isEmpty()) ch.copy(categoryId = k_ss, categoryName = k_sp) else ch
+                }
+                sportsCache.set(parsed)
+                parsed
+            }
+        } catch (e: Exception) { emptyList() }
+    }
 
     fun getExternalLiveEvents(): List<LiveEvent> = try {
         val j = if (q1) nativeGetExternalLiveEvents() else "[]"

@@ -405,6 +405,7 @@ class MainActivity : AppCompatActivity() {
             val isTopLevel = destination.id in topLevelDestinations
             if (isTopLevel) {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
+                drawerToggle?.isDrawerIndicatorEnabled = true
                 animateNavigationIcon(0f)
                 tvToolbar?.setNavigationOnClickListener {
                     if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
@@ -415,6 +416,7 @@ class MainActivity : AppCompatActivity() {
                 }
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+                drawerToggle?.isDrawerIndicatorEnabled = true
                 animateNavigationIcon(1f)
                 tvToolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
@@ -698,19 +700,23 @@ class MainActivity : AppCompatActivity() {
 
             if (isTopLevel) {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
-                animateNavigationIcon(0f)
-                toolbar?.setNavigationOnClickListener {
-                    if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
-                        drawerLayout.closeDrawer(GravityCompat.START)
-                    } else {
-                        drawerLayout?.openDrawer(GravityCompat.START)
+                if (!isSearchVisible) {
+                    animateNavigationIcon(0f)
+                    toolbar?.setNavigationOnClickListener {
+                        if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
+                            drawerLayout.closeDrawer(GravityCompat.START)
+                        } else {
+                            drawerLayout?.openDrawer(GravityCompat.START)
+                        }
                     }
                 }
                 bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                animateNavigationIcon(1f)
-                toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+                if (!isSearchVisible) {
+                    animateNavigationIcon(1f)
+                    toolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+                }
             }
 
             if (isSearchVisible) hideSearch()

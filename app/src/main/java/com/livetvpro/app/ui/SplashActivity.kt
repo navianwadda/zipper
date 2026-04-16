@@ -239,8 +239,7 @@ class SplashActivity : AppCompatActivity() {
 
     private suspend fun fetchData(): Boolean {
         return try {
-            val configFetched = dataRepository.fetchRemoteConfig()
-            if (!configFetched) return false
+            dataRepository.fetchRemoteConfig()
             dataRepository.refreshData()
         } catch (e: Exception) {
             false

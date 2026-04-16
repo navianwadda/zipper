@@ -183,10 +183,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupFloatingNav() {
         val nav = binding.root.findViewById<FloatingNavBar>(R.id.floating_nav_bar) ?: return
-        val scrim = binding.root.findViewById<View>(R.id.nav_fade_scrim) ?: return
 
         floatingNavBar = nav
-        floatingNavController = FloatingNavController(nav, scrim)
+        floatingNavController = FloatingNavController(nav)
 
         nav.setTabs(*navTabs.toTypedArray())
         nav.setSelectedIndex(0, animated = false)
@@ -256,7 +255,6 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = root.findViewById<androidx.fragment.app.FragmentContainerView>(R.id.nav_host_fragment)
         val globalErrorOverlay = root.findViewById<android.widget.LinearLayout>(R.id.global_error_overlay)
         val floatingNav = root.findViewById<FloatingNavBar>(R.id.floating_nav_bar)
-        val scrim = root.findViewById<View>(R.id.nav_fade_scrim)
         val navigationView = root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val headerView = navigationView?.getHeaderView(0)
 
@@ -294,14 +292,6 @@ class MainActivity : AppCompatActivity() {
                 val lp = it.layoutParams as? android.widget.FrameLayout.LayoutParams
                 if (lp != null) {
                     lp.bottomMargin = marginBottomPx
-                    it.layoutParams = lp
-                }
-            }
-
-            scrim?.let {
-                val lp = it.layoutParams as? android.widget.FrameLayout.LayoutParams
-                if (lp != null) {
-                    lp.height = (100 * density).toInt() + navBars.bottom
                     it.layoutParams = lp
                 }
             }

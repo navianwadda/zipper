@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
             FloatingNavBar.Tab(
                 id = R.id.homeFragment,
                 iconResSelected = R.drawable.ic_tv_filled,
-                iconResUnselected = R.drawable.ic_home,
+                iconResUnselected = R.drawable.ic_tv,
                 label = "Home"
             ),
             FloatingNavBar.Tab(

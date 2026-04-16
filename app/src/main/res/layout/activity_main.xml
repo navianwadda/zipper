@@ -161,13 +161,6 @@
 
         </LinearLayout>
 
-        <View
-            android:id="@+id/nav_fade_scrim"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_gravity="bottom"
-            android:visibility="visible" />
-
         <com.livetvpro.app.ui.widget.FloatingNavBar
             android:id="@+id/floating_nav_bar"
             android:layout_width="328dp"

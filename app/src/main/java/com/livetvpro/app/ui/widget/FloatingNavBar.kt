@@ -96,8 +96,6 @@ class FloatingNavBar @JvmOverloads constructor(
 
     init {
         isClickable = true
-        clipChildren = false
-        clipToPadding = false
         setLayerType(LAYER_TYPE_HARDWARE, null)
     }
 

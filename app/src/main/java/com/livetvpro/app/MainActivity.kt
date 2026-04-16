@@ -306,6 +306,7 @@ class MainActivity : AppCompatActivity() {
                 contentBottomPadding
             )
             navHostFragment?.clipToPadding = false
+            navHostFragment?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
 
             headerView?.setPadding(
                 headerView.paddingLeft,

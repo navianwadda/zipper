@@ -287,6 +287,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             val density = resources.displayMetrics.density
+            val navBarHeightPx = (56 * density).toInt()
             val marginBottomPx = (12 * density).toInt() + navBars.bottom
             floatingNav?.let {
                 val lp = it.layoutParams as? android.widget.FrameLayout.LayoutParams
@@ -295,6 +296,16 @@ class MainActivity : AppCompatActivity() {
                     it.layoutParams = lp
                 }
             }
+
+            // Give the fragment container bottom padding so content isn't hidden behind the floating nav
+            val contentBottomPadding = navBarHeightPx + marginBottomPx + (8 * density).toInt()
+            navHostFragment?.setPadding(
+                navHostFragment.paddingLeft,
+                navHostFragment.paddingTop,
+                navHostFragment.paddingRight,
+                contentBottomPadding
+            )
+            navHostFragment?.clipToPadding = false
 
             headerView?.setPadding(
                 headerView.paddingLeft,

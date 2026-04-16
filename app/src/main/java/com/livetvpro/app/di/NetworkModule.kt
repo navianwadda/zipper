@@ -36,7 +36,7 @@ object NetworkModule {
             .build()
 
         val builder = OkHttpClient.Builder()
-            .connectionSpecs(listOf(tlsSpec, ConnectionSpec.CLEARTEXT))
+            .connectionSpecs(listOf(tlsSpec, ConnectionSpec.COMPATIBLE_TLS, ConnectionSpec.CLEARTEXT))
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

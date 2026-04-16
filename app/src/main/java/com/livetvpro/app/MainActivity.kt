@@ -10,19 +10,17 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.SpannableString
-import android.text.style.StyleSpan
+import android.view.FrameLayout
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
-import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBarDrawerToggle
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.GravityCompat
@@ -31,11 +29,13 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.databinding.ActivityMainBinding
 import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog
+import com.livetvpro.app.ui.widget.FloatingNavBar
+import com.livetvpro.app.ui.widget.FloatingNavController
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.Refreshable
@@ -68,14 +68,36 @@ class MainActivity : AppCompatActivity() {
     private var phoneSearchView: androidx.appcompat.widget.SearchView? = null
     private var phoneBtnSearchClear: android.widget.ImageButton? = null
 
-    private var navBarHeight = 0
-    private var floatingNavAnimator: ValueAnimator? = null
-    private var isFloatingNavVisible = true
+    private var floatingNavBar: FloatingNavBar? = null
+    private var floatingNavController: FloatingNavController? = null
+
+    private val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
+
+    private val navTabs by lazy {
+        listOf(
+            FloatingNavBar.Tab(
+                id = R.id.liveEventsFragment,
+                iconResSelected = R.drawable.ic_live_events_filled,
+                iconResUnselected = R.drawable.ic_live_events,
+                label = "Live"
+            ),
+            FloatingNavBar.Tab(
+                id = R.id.homeFragment,
+                iconResSelected = R.drawable.ic_home_filled,
+                iconResUnselected = R.drawable.ic_home,
+                label = "Home"
+            ),
+            FloatingNavBar.Tab(
+                id = R.id.sportsFragment,
+                iconResSelected = R.drawable.ic_sports_filled,
+                iconResUnselected = R.drawable.ic_sports,
+                label = "Sports"
+            )
+        )
+    }
 
     companion object {
         private const val REQUEST_CODE_OVERLAY_PERMISSION = 1001
-        private const val NAV_BOTTOM_MARGIN_DP = 12
-        private const val NAV_ANIM_DURATION = 380L
     }
 
     private val overlayPermissionLauncher = registerForActivityResult(
@@ -110,6 +132,7 @@ class MainActivity : AppCompatActivity() {
             handleStatusBarForOrientation()
             setupToolbar()
             setupDrawer()
+            setupFloatingNav()
             setupNavigation()
             setupSearch()
         }
@@ -121,12 +144,12 @@ class MainActivity : AppCompatActivity() {
                 val drawerLayout = binding.root.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
                 val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
                 val currentDestId = navHostFragment?.navController?.currentDestination?.id
-                val topLevelDestinations = if (DeviceUtils.isTvDevice) {
+                val allTopLevel = if (DeviceUtils.isTvDevice) {
                     setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment, R.id.favoritesFragment)
                 } else {
-                    setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
+                    topLevelDestinations
                 }
-                val isTopLevel = currentDestId in topLevelDestinations
+                val isTopLevel = currentDestId in allTopLevel
 
                 when {
                     drawerLayout?.isDrawerOpen(GravityCompat.START) == true ->
@@ -158,6 +181,40 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun setupFloatingNav() {
+        val nav = binding.root.findViewById<FloatingNavBar>(R.id.floating_nav_bar) ?: return
+        val scrim = binding.root.findViewById<View>(R.id.nav_fade_scrim) ?: return
+
+        floatingNavBar = nav
+        floatingNavController = FloatingNavController(nav, scrim)
+
+        nav.setTabs(*navTabs.toTypedArray())
+        nav.setSelectedIndex(0, animated = false)
+
+        nav.setOnTabSelectedListener(object : FloatingNavBar.OnTabSelectedListener {
+            override fun onTabSelected(tab: FloatingNavBar.Tab) {
+                val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment ?: return
+                val navController = navHostFragment.navController
+                val currentId = navController.currentDestination?.id
+                if (currentId == tab.id) return
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
+                    .setLaunchSingleTop(true)
+                    .setRestoreState(true)
+                    .build()
+                navController.navigate(tab.id, null, navOptions)
+            }
+        })
+    }
+
+    private fun syncFloatingNavSelection(destinationId: Int) {
+        val nav = floatingNavBar ?: return
+        val tabIndex = navTabs.indexOfFirst { it.id == destinationId }
+        if (tabIndex >= 0 && tabIndex != nav.getSelectedIndex()) {
+            nav.setSelectedIndex(tabIndex, animated = true)
+        }
+    }
+
     private fun applyBergenSansToNavigationMenu() {
         val bergenSans = ResourcesCompat.getFont(this, R.font.bergen_sans) ?: return
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view) ?: return
@@ -181,27 +238,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleStatusBarForOrientation() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
         windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         windowInsetsController.isAppearanceLightStatusBars = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
         }
-
         applyInsets()
     }
 
     private fun applyInsets() {
         val root = binding.root
         val appBarLayout = root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
-        val bottomNavWrapper = root.findViewById<FrameLayout>(R.id.bottom_nav_wrapper)
-        val bottomNavigation = root.findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        val floatingNav = root.findViewById<FloatingNavBar>(R.id.floating_nav_bar)
+        val scrim = root.findViewById<View>(R.id.nav_fade_scrim)
         val navigationView = root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val headerView = navigationView?.getHeaderView(0)
 
@@ -209,12 +262,25 @@ class MainActivity : AppCompatActivity() {
             val statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
 
-            navBarHeight = navBars.bottom
-
             appBarLayout?.setPadding(0, statusBars.top, 0, 0)
 
-            val navMarginDp = (NAV_BOTTOM_MARGIN_DP * resources.displayMetrics.density).toInt()
-            bottomNavWrapper?.setPadding(0, 0, 0, navBars.bottom)
+            val density = resources.displayMetrics.density
+            val marginBottomPx = (12 * density).toInt() + navBars.bottom
+            floatingNav?.let {
+                val lp = it.layoutParams as? android.widget.FrameLayout.LayoutParams
+                if (lp != null) {
+                    lp.bottomMargin = marginBottomPx
+                    it.layoutParams = lp
+                }
+            }
+
+            scrim?.let {
+                val lp = it.layoutParams as? android.widget.FrameLayout.LayoutParams
+                if (lp != null) {
+                    lp.height = (100 * density).toInt() + navBars.bottom
+                    it.layoutParams = lp
+                }
+            }
 
             headerView?.setPadding(
                 headerView.paddingLeft,
@@ -228,54 +294,6 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
-    }
-
-    fun setFloatingNavVisible(visible: Boolean, animated: Boolean = true) {
-        if (isFloatingNavVisible == visible) return
-        isFloatingNavVisible = visible
-
-        val bottomNavigation = binding.root.findViewById<BottomNavigationView>(R.id.bottom_navigation) ?: return
-        val density = resources.displayMetrics.density
-        val hiddenTranslation = (40 * density)
-
-        floatingNavAnimator?.cancel()
-
-        if (!animated) {
-            bottomNavigation.alpha = if (visible) 1f else 0f
-            bottomNavigation.scaleX = if (visible) 1f else 0.85f
-            bottomNavigation.scaleY = if (visible) 1f else 0.85f
-            bottomNavigation.translationY = if (visible) 0f else hiddenTranslation
-            bottomNavigation.visibility = if (visible) View.VISIBLE else View.GONE
-            return
-        }
-
-        if (visible) bottomNavigation.visibility = View.VISIBLE
-
-        val startAlpha = bottomNavigation.alpha
-        val endAlpha = if (visible) 1f else 0f
-        val startScale = bottomNavigation.scaleX
-        val endScale = if (visible) 1f else 0.85f
-        val startTransY = bottomNavigation.translationY
-        val endTransY = if (visible) 0f else hiddenTranslation
-
-        floatingNavAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = NAV_ANIM_DURATION
-            interpolator = DecelerateInterpolator(2f)
-            addUpdateListener { va ->
-                val f = va.animatedValue as Float
-                bottomNavigation.alpha = startAlpha + (endAlpha - startAlpha) * f
-                val s = startScale + (endScale - startScale) * f
-                bottomNavigation.scaleX = s
-                bottomNavigation.scaleY = s
-                bottomNavigation.translationY = startTransY + (endTransY - startTransY) * f
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: android.animation.Animator) {
-                    if (!visible) bottomNavigation.visibility = View.GONE
-                }
-            })
-            start()
-        }
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -300,7 +318,6 @@ class MainActivity : AppCompatActivity() {
 
         navigationView?.isFocusable = true
         navigationView?.descendantFocusability = android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS
-
         navigationView?.menu?.findItem(R.id.floating_player_settings)?.isVisible = false
         navigationView?.menu?.findItem(R.id.nav_share_app)?.isVisible = false
 
@@ -369,117 +386,32 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val topLevelDestinations = setOf(
-            R.id.homeFragment,
-            R.id.liveEventsFragment,
-            R.id.sportsFragment,
-            R.id.favoritesFragment
-        )
+        val tvTopLevel = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment, R.id.favoritesFragment)
+        val drawerFragments = setOf(R.id.networkStreamFragment, R.id.playlistsFragment, R.id.cricketScoreFragment, R.id.footballScoreFragment, R.id.deviceIdFragment)
+        val globalErrorOverlay = binding.root.findViewById<android.view.View>(R.id.global_error_overlay)
 
         navigationView?.setNavigationItemSelectedListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.floating_player_settings -> {
-                    showFloatingPlayerDialog()
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    false
-                }
-                R.id.nav_save_states -> {
-                    showSaveStatesDialog()
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    false
-                }
-                R.id.nav_copyright -> {
-                    showCopyrightDialog()
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    false
-                }
-                R.id.nav_notice -> {
-                    showNoticeDialog()
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    false
-                }
-                R.id.nav_exit -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    drawerLayout?.postDelayed({ finishAffinity() }, 250)
-                    false
-                }
-                R.id.nav_share_app -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    shareApp()
-                    false
-                }
-                R.id.nav_contact_browser -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    val contactUrl = listenerManager.getContactUrl().takeIf { it.isNotBlank() }
-                    if (contactUrl != null) startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(contactUrl)))
-                    false
-                }
-                R.id.nav_website -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    val webUrl = listenerManager.getWebUrl().takeIf { it.isNotBlank() }
-                    if (webUrl != null) startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(webUrl)))
-                    false
-                }
-                R.id.nav_email_us -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    val email = listenerManager.getEmailUs().takeIf { it.isNotBlank() }
-                    if (email != null) {
-                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email")).apply {
-                            putExtra(Intent.EXTRA_SUBJECT, "LiveTVPro Support")
-                        }
-                        startActivity(Intent.createChooser(intent, "Send Email"))
-                    }
-                    false
-                }
-                R.id.networkStreamFragment, R.id.playlistsFragment,
-                R.id.cricketScoreFragment, R.id.footballScoreFragment,
-                R.id.deviceIdFragment -> {
-                    val destId = menuItem.itemId
-                    navigateAfterDrawerClose(drawerLayout, GravityCompat.START) {
-                        navController.navigate(destId, null, null)
-                    }
-                    true
-                }
-                else -> {
-                    if (menuItem.itemId in topLevelDestinations) navigate(menuItem.itemId)
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    true
-                }
-            }
+            handleDrawerItemSelected(menuItem, navController, drawerLayout, navigationView, tvTopLevel) { navigate(it) }
         }
-
-        val drawerFragments = setOf(
-            R.id.networkStreamFragment, R.id.playlistsFragment,
-            R.id.cricketScoreFragment, R.id.footballScoreFragment,
-            R.id.deviceIdFragment
-        )
-
-        val globalErrorOverlay = binding.root.findViewById<android.view.View>(R.id.global_error_overlay)
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             globalErrorOverlay?.visibility = android.view.View.GONE
-
             val activeDestId = when (destination.id) {
                 R.id.categoryChannelsFragment -> R.id.homeFragment
                 else -> destination.id
             }
             selectTab(activeDestId)
-
             if (destination.id !in drawerFragments) {
                 navigationView?.checkedItem?.isChecked = false
             }
-
-            val isTopLevel = destination.id in topLevelDestinations
+            val isTopLevel = destination.id in tvTopLevel
             if (isTopLevel) {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 drawerToggle?.isDrawerIndicatorEnabled = true
                 animateNavigationIcon(0f)
                 tvToolbar?.setNavigationOnClickListener {
-                    if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
-                        drawerLayout.closeDrawer(GravityCompat.START)
-                    } else {
-                        drawerLayout?.openDrawer(GravityCompat.START)
-                    }
+                    if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) drawerLayout.closeDrawer(GravityCompat.START)
+                    else drawerLayout?.openDrawer(GravityCompat.START)
                 }
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
@@ -487,7 +419,6 @@ class MainActivity : AppCompatActivity() {
                 animateNavigationIcon(1f)
                 tvToolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             }
-
             if (isSearchVisible) hideTvSearch()
         }
 
@@ -511,8 +442,86 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         })
-
         tvClearBtn?.setOnClickListener { hideTvSearch() }
+    }
+
+    private fun handleDrawerItemSelected(
+        menuItem: android.view.MenuItem,
+        navController: androidx.navigation.NavController,
+        drawerLayout: androidx.drawerlayout.widget.DrawerLayout?,
+        navigationView: com.google.android.material.navigation.NavigationView?,
+        topLevelDests: Set<Int>,
+        navigate: (Int) -> Unit
+    ): Boolean {
+        return when (menuItem.itemId) {
+            R.id.floating_player_settings -> {
+                showFloatingPlayerDialog()
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                false
+            }
+            R.id.nav_save_states -> {
+                showSaveStatesDialog()
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                false
+            }
+            R.id.nav_copyright -> {
+                showCopyrightDialog()
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                false
+            }
+            R.id.nav_notice -> {
+                showNoticeDialog()
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                false
+            }
+            R.id.nav_exit -> {
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                drawerLayout?.postDelayed({ finishAffinity() }, 250)
+                false
+            }
+            R.id.nav_share_app -> {
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                shareApp()
+                false
+            }
+            R.id.nav_contact_browser -> {
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                val contactUrl = listenerManager.getContactUrl().takeIf { it.isNotBlank() }
+                if (contactUrl != null) startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(contactUrl)))
+                false
+            }
+            R.id.nav_website -> {
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                val webUrl = listenerManager.getWebUrl().takeIf { it.isNotBlank() }
+                if (webUrl != null) startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(webUrl)))
+                false
+            }
+            R.id.nav_email_us -> {
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                val email = listenerManager.getEmailUs().takeIf { it.isNotBlank() }
+                if (email != null) {
+                    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email")).apply {
+                        putExtra(Intent.EXTRA_SUBJECT, "LiveTVPro Support")
+                    }
+                    startActivity(Intent.createChooser(intent, "Send Email"))
+                }
+                false
+            }
+            R.id.networkStreamFragment, R.id.playlistsFragment,
+            R.id.cricketScoreFragment, R.id.footballScoreFragment,
+            R.id.deviceIdFragment -> {
+                val destId = menuItem.itemId
+                navigateAfterDrawerClose(drawerLayout, GravityCompat.START) {
+                    navController.navigate(destId, null, null)
+                }
+                true
+            }
+            else -> {
+                if (menuItem.itemId in topLevelDests) navigate(menuItem.itemId)
+                drawerLayout?.closeDrawer(GravityCompat.START)
+                true
+            }
+        }
     }
 
     private fun animateTvSearchWeight(from: Float, to: Float, onEnd: (() -> Unit)? = null) {
@@ -520,8 +529,7 @@ class MainActivity : AppCompatActivity() {
         val lp = tvSearchBar.layoutParams as? android.widget.LinearLayout.LayoutParams ?: return
         ValueAnimator.ofFloat(from, to).apply {
             duration = 220
-            interpolator = if (to > from) DecelerateInterpolator()
-            else AccelerateInterpolator()
+            interpolator = if (to > from) DecelerateInterpolator() else AccelerateInterpolator()
             addUpdateListener { va ->
                 lp.weight = va.animatedValue as Float
                 tvSearchBar.layoutParams = lp
@@ -607,8 +615,6 @@ class MainActivity : AppCompatActivity() {
             syncState()
         }
         drawerToggle?.let { drawerLayout.addDrawerListener(it) }
-
-        val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view) ?: return
     }
 
     private fun setupNavigation() {
@@ -619,14 +625,10 @@ class MainActivity : AppCompatActivity() {
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
-        val bottomNavigation = binding.root.findViewById<BottomNavigationView>(R.id.bottom_navigation)
-
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
         val searchView = binding.root.findViewById<androidx.appcompat.widget.SearchView>(R.id.search_view)
         val btnSearchClear = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search_clear)
-
-        val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
         val graphStartDestinationId = navController.graph.startDestinationId
 
         val navigateTopLevel = fun(destinationId: Int) {
@@ -642,93 +644,19 @@ class MainActivity : AppCompatActivity() {
         }
 
         navigationView?.setNavigationItemSelectedListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.floating_player_settings -> {
-                    showFloatingPlayerDialog()
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    false
-                }
-                R.id.nav_save_states -> {
-                    showSaveStatesDialog()
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    false
-                }
-                R.id.nav_copyright -> {
-                    showCopyrightDialog()
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    false
-                }
-                R.id.nav_notice -> {
-                    showNoticeDialog()
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    false
-                }
-                R.id.nav_exit -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    drawerLayout?.postDelayed({ finishAffinity() }, 250)
-                    false
-                }
-                R.id.nav_share_app -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    shareApp()
-                    false
-                }
-                R.id.nav_contact_browser -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    val contactUrl = listenerManager.getContactUrl().takeIf { it.isNotBlank() }
-                    if (contactUrl != null) startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(contactUrl)))
-                    false
-                }
-                R.id.nav_website -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    val webUrl = listenerManager.getWebUrl().takeIf { it.isNotBlank() }
-                    if (webUrl != null) startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(webUrl)))
-                    false
-                }
-                R.id.nav_email_us -> {
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    val email = listenerManager.getEmailUs().takeIf { it.isNotBlank() }
-                    if (email != null) {
-                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email")).apply {
-                            putExtra(Intent.EXTRA_SUBJECT, "LiveTVPro Support")
-                        }
-                        startActivity(Intent.createChooser(intent, "Send Email"))
-                    }
-                    false
-                }
-                R.id.networkStreamFragment, R.id.playlistsFragment,
-                R.id.cricketScoreFragment, R.id.footballScoreFragment,
-                R.id.deviceIdFragment -> {
-                    val destId = menuItem.itemId
-                    navigateAfterDrawerClose(drawerLayout, GravityCompat.START) {
-                        navController.navigate(destId, null, null)
-                    }
-                    true
-                }
-                else -> {
-                    if (menuItem.itemId in topLevelDestinations) navigateTopLevel(menuItem.itemId)
-                    drawerLayout?.closeDrawer(GravityCompat.START)
-                    true
-                }
+            handleDrawerItemSelected(menuItem, navController, drawerLayout, navigationView, topLevelDestinations) {
+                navigateTopLevel(it)
             }
         }
 
-        bottomNavigation?.setOnItemSelectedListener { menuItem ->
-            if (menuItem.itemId in topLevelDestinations) {
-                navigateTopLevel(menuItem.itemId)
-                return@setOnItemSelectedListener true
-            }
-            return@setOnItemSelectedListener false
-        }
-
-        val drawerFragments2 = setOf(
+        val drawerFragments = setOf(
             R.id.networkStreamFragment, R.id.playlistsFragment,
             R.id.cricketScoreFragment, R.id.footballScoreFragment,
             R.id.deviceIdFragment
         )
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            if (destination.id !in drawerFragments2) {
+            if (destination.id !in drawerFragments) {
                 navigationView?.checkedItem?.isChecked = false
             }
             toolbarTitle?.text = when (destination.id) {
@@ -763,21 +691,18 @@ class MainActivity : AppCompatActivity() {
                 btnFavorites?.visibility = View.VISIBLE
             }
 
-            setFloatingNavVisible(isTopLevel, animated = true)
+            floatingNavController?.setVisible(isTopLevel, animated = true)
 
             if (isTopLevel) {
+                syncFloatingNavSelection(destination.id)
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 if (!isSearchVisible) {
                     animateNavigationIcon(0f)
                     toolbar?.setNavigationOnClickListener {
-                        if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
-                            drawerLayout.closeDrawer(GravityCompat.START)
-                        } else {
-                            drawerLayout?.openDrawer(GravityCompat.START)
-                        }
+                        if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) drawerLayout.closeDrawer(GravityCompat.START)
+                        else drawerLayout?.openDrawer(GravityCompat.START)
                     }
                 }
-                bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
             } else {
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
                 if (!isSearchVisible) {
@@ -792,9 +717,7 @@ class MainActivity : AppCompatActivity() {
         btnFavorites?.setOnClickListener {
             val currentId = navController.currentDestination?.id ?: graphStartDestinationId
             if (currentId != R.id.favoritesFragment) {
-                val navOptions = NavOptions.Builder()
-                    .setLaunchSingleTop(true)
-                    .build()
+                val navOptions = NavOptions.Builder().setLaunchSingleTop(true).build()
                 navController.navigate(R.id.favoritesFragment, null, navOptions)
             }
         }
@@ -924,10 +847,7 @@ class MainActivity : AppCompatActivity() {
         }
         val maxHeight = (dm.heightPixels * 0.85f).toInt()
         dialog.window?.setLayout(dialogWidth, maxHeight.coerceAtMost(android.view.ViewGroup.LayoutParams.WRAP_CONTENT))
-
-        if (DeviceUtils.isTvDevice) {
-            btnApply.requestFocus()
-        }
+        if (DeviceUtils.isTvDevice) btnApply.requestFocus()
     }
 
     private fun showFloatingPlayerDialog() {
@@ -1010,7 +930,6 @@ class MainActivity : AppCompatActivity() {
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
         val currentId = navHostFragment?.navController?.currentDestination?.id
-        val topLevelDestinations = setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
         val isTopLevel = currentId in topLevelDestinations
 
         animateNavigationIcon(if (isTopLevel) 0f else 1f)
@@ -1018,11 +937,8 @@ class MainActivity : AppCompatActivity() {
         val drawerLayout = binding.root.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
         if (isTopLevel) {
             phoneToolbar?.setNavigationOnClickListener {
-                if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) {
-                    drawerLayout.closeDrawer(GravityCompat.START)
-                } else {
-                    drawerLayout?.openDrawer(GravityCompat.START)
-                }
+                if (drawerLayout?.isDrawerOpen(GravityCompat.START) == true) drawerLayout.closeDrawer(GravityCompat.START)
+                else drawerLayout?.openDrawer(GravityCompat.START)
             }
         } else {
             phoneToolbar?.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }

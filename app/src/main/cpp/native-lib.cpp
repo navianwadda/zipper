@@ -75,7 +75,7 @@ static bool isTracerPidNonZero() {
 }
 
 static bool isTampered() {
-    return isFridaPortOpen() || isFridaInMaps() || isFridaPipePresent();
+    return isFridaInMaps() || isFridaPipePresent();
 }
 
 static const uint8_t kX = 0xA7;

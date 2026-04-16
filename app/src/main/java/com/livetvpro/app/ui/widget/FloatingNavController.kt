@@ -1,12 +1,10 @@
 package com.livetvpro.app.ui.widget
 
 import android.animation.ValueAnimator
-import android.view.View
 import android.view.animation.DecelerateInterpolator
 
 class FloatingNavController(
-    private val navBar: FloatingNavBar,
-    private val fadeScrimView: View
+    private val navBar: FloatingNavBar
 ) {
 
     private var isVisible = true
@@ -59,9 +57,6 @@ class FloatingNavController(
         navBar.scaleX = scale
         navBar.scaleY = scale
         navBar.translationY = hiddenTransY * (1f - factor)
-
-        fadeScrimView.alpha = factor
-        fadeScrimView.visibility = if (factor > 0f) View.VISIBLE else View.GONE
     }
 
     fun isVisible() = isVisible

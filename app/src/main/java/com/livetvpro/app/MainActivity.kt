@@ -253,6 +253,8 @@ class MainActivity : AppCompatActivity() {
     private fun applyInsets() {
         val root = binding.root
         val appBarLayout = root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
+        val navHostFragment = root.findViewById<androidx.fragment.app.FragmentContainerView>(R.id.nav_host_fragment)
+        val globalErrorOverlay = root.findViewById<android.widget.LinearLayout>(R.id.global_error_overlay)
         val floatingNav = root.findViewById<FloatingNavBar>(R.id.floating_nav_bar)
         val scrim = root.findViewById<View>(R.id.nav_fade_scrim)
         val navigationView = root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
@@ -263,6 +265,28 @@ class MainActivity : AppCompatActivity() {
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
 
             appBarLayout?.setPadding(0, statusBars.top, 0, 0)
+
+            val actionBarSizePx = run {
+                val ta = theme.obtainStyledAttributes(intArrayOf(android.R.attr.actionBarSize))
+                val size = ta.getDimensionPixelSize(0, 0)
+                ta.recycle()
+                size
+            }
+            val topOffset = actionBarSizePx + statusBars.top
+            navHostFragment?.let {
+                val lp = it.layoutParams as? android.widget.FrameLayout.LayoutParams
+                if (lp != null) {
+                    lp.topMargin = topOffset
+                    it.layoutParams = lp
+                }
+            }
+            globalErrorOverlay?.let {
+                val lp = it.layoutParams as? android.widget.FrameLayout.LayoutParams
+                if (lp != null) {
+                    lp.topMargin = topOffset
+                    it.layoutParams = lp
+                }
+            }
 
             val density = resources.displayMetrics.density
             val marginBottomPx = (12 * density).toInt() + navBars.bottom

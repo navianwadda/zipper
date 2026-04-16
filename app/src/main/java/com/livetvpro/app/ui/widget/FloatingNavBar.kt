@@ -10,6 +10,7 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import com.livetvpro.app.R
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -62,14 +63,18 @@ class FloatingNavBar @JvmOverloads constructor(
         colorFilter = PorterDuffColorFilter(Color.parseColor("#80FFFFFF"), PorterDuff.Mode.SRC_IN)
         alpha = 153
     }
+    private val bergenSans: Typeface? = ResourcesCompat.getFont(context, R.font.bergen_sans)
+
     private val selectedLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
+        bergenSans?.let { typeface = it }
     }
     private val unselectedLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#80FFFFFF")
         textAlign = Paint.Align.CENTER
+        bergenSans?.let { typeface = it }
     }
     private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#FF3B30")

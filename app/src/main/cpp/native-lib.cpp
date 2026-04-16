@@ -35,7 +35,7 @@ static bool isFridaInMaps() {
     FILE* f = fopen("/proc/self/maps", "r");
     if (!f) return false;
     char line[512]; bool found = false;
-    const char* m[] = {"frida","gum-js-loop","gmain","linjector","frida-agent","frida-gadget",
+    const char* m[] = {"frida","gum-js-loop","linjector","frida-agent","frida-gadget",
                        "re.frida","frida-helper","frida-node",nullptr};
     while (fgets(line, sizeof(line), f)) {
         for (int i = 0; m[i]; i++) if (strstr(line, m[i])) { found = true; break; }
@@ -75,7 +75,7 @@ static bool isTracerPidNonZero() {
 }
 
 static bool isTampered() {
-    return isFridaPortOpen() || isFridaInMaps() || isFridaPipePresent() || isTracerPidNonZero();
+    return isFridaPortOpen() || isFridaInMaps() || isFridaPipePresent();
 }
 
 static const uint8_t kX = 0xA7;

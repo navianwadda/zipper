@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.SpannableString
-import android.view.FrameLayout
+import android.widget.FrameLayout
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -77,13 +77,13 @@ class MainActivity : AppCompatActivity() {
         listOf(
             FloatingNavBar.Tab(
                 id = R.id.liveEventsFragment,
-                iconResSelected = R.drawable.ic_live_events_filled,
-                iconResUnselected = R.drawable.ic_live_events,
+                iconResSelected = R.drawable.ic_live_filled,
+                iconResUnselected = R.drawable.ic_live,
                 label = "Live"
             ),
             FloatingNavBar.Tab(
                 id = R.id.homeFragment,
-                iconResSelected = R.drawable.ic_home_filled,
+                iconResSelected = R.drawable.ic_tv_filled,
                 iconResUnselected = R.drawable.ic_home,
                 label = "Home"
             ),

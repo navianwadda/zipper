@@ -56,7 +56,6 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE channels ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
             }
         }
-
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
             }

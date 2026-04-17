@@ -79,6 +79,7 @@ import com.livetvpro.app.ui.player.compose.GestureState
 import android.media.AudioManager
 import com.livetvpro.app.ui.theme.AppTheme
 import com.livetvpro.app.utils.DeviceUtils
+import com.livetvpro.app.ui.player.ChannelListCache
 import kotlinx.coroutines.delay
 
 @UnstableApi
@@ -165,7 +166,7 @@ class PlayerActivity : AppCompatActivity() {
         private const val EXTRA_RELATED_CHANNELS = "extra_related_channels"
         private const val EXTRA_CATEGORY_ID = "extra_category_id"
         private const val EXTRA_IS_SPORTS = "extra_is_sports"
-        private const val EXTRA_CHANNEL_LIST = "extra_channel_list"
+        private const val EXTRA_CHANNEL_LIST_KEY = "extra_channel_list_key"
         private const val EXTRA_SELECTED_GROUP = "extra_selected_group"
 
         private const val ACTION_MEDIA_CONTROL = "com.livetvpro.app.MEDIA_CONTROL"
@@ -186,7 +187,7 @@ class PlayerActivity : AppCompatActivity() {
 
         var isInPip: Boolean = false
 
-        fun startWithChannel(context: Context, channel: Channel, linkIndex: Int = -1, relatedChannels: ArrayList<Channel>? = null, categoryId: String? = null, selectedGroup: String? = null, isSports: Boolean = false, channelList: ArrayList<Channel>? = null) {
+        fun startWithChannel(context: Context, channel: Channel, linkIndex: Int = -1, relatedChannels: ArrayList<Channel>? = null, categoryId: String? = null, selectedGroup: String? = null, isSports: Boolean = false, channelList: ArrayList<Channel>? = null, channelListCacheKey: String? = null) {
             val intent = Intent(context, PlayerActivity::class.java).apply {
                 putExtra(EXTRA_CHANNEL, channel as Parcelable)
                 putExtra(EXTRA_SELECTED_LINK_INDEX, linkIndex)
@@ -196,7 +197,12 @@ class PlayerActivity : AppCompatActivity() {
                 categoryId?.let { putExtra(EXTRA_CATEGORY_ID, it) }
                 selectedGroup?.let { putExtra(EXTRA_SELECTED_GROUP, it) }
                 putExtra(EXTRA_IS_SPORTS, isSports)
-                channelList?.let { putParcelableArrayListExtra(EXTRA_CHANNEL_LIST, it) }
+                val key = channelListCacheKey ?: channelList?.let { list ->
+                    val k = categoryId ?: channel.categoryId.takeIf { it.isNotEmpty() } ?: channel.id
+                    ChannelListCache.put(k, list)
+                    k
+                }
+                key?.let { putExtra(EXTRA_CHANNEL_LIST_KEY, it) }
                 addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                 if (isInPip) addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
@@ -277,14 +283,10 @@ class PlayerActivity : AppCompatActivity() {
 
         if (contentType == ContentType.CHANNEL && contentId.isNotEmpty()) {
             viewModel.refreshChannelData(contentId)
-            val passedChannelList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST, Channel::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST)
-            }
-            if (!passedChannelList.isNullOrEmpty()) {
-                viewModel.setChannelList(passedChannelList)
+            val cacheKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+            val cachedList = cacheKey?.let { ChannelListCache.get(it) }
+            if (!cachedList.isNullOrEmpty()) {
+                viewModel.setChannelList(cachedList)
             } else {
                 viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
             }

@@ -300,6 +300,9 @@ class MainActivity : AppCompatActivity() {
         tabDestinations.forEach { (viewId, destId) ->
             val tab = binding.root.findViewById<android.widget.TextView>(viewId)
             tab?.setOnClickListener { navigate(destId) }
+            tab?.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) navigate(destId)
+            }
             tab?.setOnKeyListener { _, keyCode, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
                 when (keyCode) {

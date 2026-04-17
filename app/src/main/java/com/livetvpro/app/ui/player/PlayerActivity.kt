@@ -284,13 +284,22 @@ class PlayerActivity : AppCompatActivity() {
         parseIntent()
 
         if (contentType == ContentType.CHANNEL && contentId.isNotEmpty()) {
-            viewModel.refreshChannelData(contentId)
             val cacheKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
             val cachedList = cacheKey?.let { ChannelListCache.get(it) }
             if (!cachedList.isNullOrEmpty()) {
+                // Cache hit: list is ready, safe to also refresh channel data
+                // (getChannels() result will be served from NativeDataRepository cache)
                 viewModel.setChannelList(cachedList)
+                viewModel.refreshChannelData(contentId)
             } else {
-                viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
+                // No cache: loadAllChannelsForList will call getChannels() —
+                // do NOT also call refreshChannelData concurrently on Android 7
+                // low-RAM devices as the double parse causes OOM crash.
+                // Pass contentId so refresh fires after the list load completes.
+                viewModel.loadAllChannelsForList(
+                    categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "",
+                    refreshChannelId = contentId
+                )
             }
         }
 

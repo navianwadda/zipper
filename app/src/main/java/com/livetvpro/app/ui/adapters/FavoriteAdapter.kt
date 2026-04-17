@@ -184,17 +184,22 @@ class FavoriteAdapter(
                 }
                 try {
                     val cacheKey = "favorites_${channelWithUrl.id}"
-                    val favoriteChannelList = currentList.map { fav ->
-                        val liveChannel = getLiveChannel?.invoke(fav.id)
-                        liveChannel ?: Channel(
-                            id = fav.id,
-                            name = fav.name,
-                            logoUrl = fav.logoUrl,
-                            streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
-                            categoryId = fav.categoryId,
-                            categoryName = fav.categoryName,
-                            links = fav.links
-                        )
+                    val favoriteChannelList = try {
+                        currentList.map { fav ->
+                            val liveChannel = getLiveChannel?.invoke(fav.id)
+                            liveChannel ?: Channel(
+                                id = fav.id,
+                                name = fav.name,
+                                logoUrl = fav.logoUrl,
+                                streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
+                                categoryId = fav.categoryId,
+                                categoryName = fav.categoryName,
+                                links = fav.links
+                            )
+                        }
+                    } catch (e: OutOfMemoryError) {
+                        System.gc()
+                        listOf(channelWithUrl)
                     }
                     if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
                     FloatingPlayerHelper.launchFloatingPlayer(context, channelWithUrl, linkIndex, channelListCacheKey = cacheKey)
@@ -247,17 +252,22 @@ class FavoriteAdapter(
                 }
                 try {
                     val cacheKey = "favorites_${channel.id}"
-                    val favoriteChannelList = currentList.map { fav ->
-                        val liveChannel = getLiveChannel?.invoke(fav.id)
-                        liveChannel ?: Channel(
-                            id = fav.id,
-                            name = fav.name,
-                            logoUrl = fav.logoUrl,
-                            streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
-                            categoryId = fav.categoryId,
-                            categoryName = fav.categoryName,
-                            links = fav.links
-                        )
+                    val favoriteChannelList = try {
+                        currentList.map { fav ->
+                            val liveChannel = getLiveChannel?.invoke(fav.id)
+                            liveChannel ?: Channel(
+                                id = fav.id,
+                                name = fav.name,
+                                logoUrl = fav.logoUrl,
+                                streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
+                                categoryId = fav.categoryId,
+                                categoryName = fav.categoryName,
+                                links = fav.links
+                            )
+                        }
+                    } catch (e: OutOfMemoryError) {
+                        System.gc()
+                        listOf(channel)
                     }
                     if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
                     FloatingPlayerHelper.launchFloatingPlayer(context, channel, -1, channelListCacheKey = cacheKey)

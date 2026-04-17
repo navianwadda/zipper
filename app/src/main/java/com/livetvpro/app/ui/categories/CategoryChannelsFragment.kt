@@ -45,6 +45,7 @@ import com.livetvpro.app.utils.RetryHandler
 import com.livetvpro.app.utils.Refreshable
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.utils.FloatingPlayerHelper
+import com.livetvpro.app.ui.player.ChannelListCache
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -253,13 +254,15 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     }
 
     private fun launchPlayer(channel: Channel, linkIndex: Int) {
-        val channelList = ArrayList(channelAdapter.snapshot().items)
+        val cacheKey = currentCategoryId ?: channel.categoryId.takeIf { it.isNotEmpty() } ?: channel.id
+        val channelList = channelAdapter.snapshot().items
+        if (channelList.isNotEmpty()) ChannelListCache.put(cacheKey, channelList)
         if (DeviceUtils.isTvDevice) {
             PlayerActivity.startWithChannel(
                 requireContext(), channel, linkIndex,
                 categoryId = currentCategoryId,
                 selectedGroup = viewModel.currentGroup.value,
-                channelList = channelList
+                channelListCacheKey = cacheKey
             )
             return
         }
@@ -271,18 +274,18 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                     requireContext(), channel, linkIndex,
                     categoryId = currentCategoryId,
                     selectedGroup = viewModel.currentGroup.value,
-                    channelList = channelList
+                    channelListCacheKey = cacheKey
                 )
                 return
             }
             try {
-                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, channelList = channelList)
+                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
             } catch (_: Exception) {
                 PlayerActivity.startWithChannel(
                     requireContext(), channel, linkIndex,
                     categoryId = currentCategoryId,
                     selectedGroup = viewModel.currentGroup.value,
-                    channelList = channelList
+                    channelListCacheKey = cacheKey
                 )
             }
         } else {
@@ -290,7 +293,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 requireContext(), channel, linkIndex,
                 categoryId = currentCategoryId,
                 selectedGroup = viewModel.currentGroup.value,
-                channelList = channelList
+                channelListCacheKey = cacheKey
             )
         }
     }

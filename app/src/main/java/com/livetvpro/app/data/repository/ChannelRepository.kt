@@ -95,13 +95,17 @@ class ChannelRepository @Inject constructor(
         channelDao.deleteByCategory(playlistId)
 
         if (isFile) {
-            val uri = android.net.Uri.parse(source)
-            val content = application.contentResolver.openInputStream(uri)
-                ?.bufferedReader()?.use { it.readText() } ?: return@withContext
-            val parsed = M3uParser.parseM3uContent(content)
-            M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
-                .chunked(INSERT_CHUNK)
-                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+            try {
+                val uri = android.net.Uri.parse(source)
+                val content = application.contentResolver.openInputStream(uri)
+                    ?.bufferedReader()?.use { it.readText() } ?: return@withContext
+                val parsed = M3uParser.parseM3uContent(content)
+                M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
+                    .chunked(INSERT_CHUNK)
+                    .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+            }
         } else {
             streamInsertM3u(source, playlistId, playlistTitle)
         }

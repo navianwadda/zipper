@@ -58,14 +58,15 @@ object DeviceUtils {
     }
 
     private fun isTvHardware(pm: PackageManager, context: Context): Boolean {
+        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+        if (uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION) return true
+        if (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) return true
+        if (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)) return true
+        if (pm.hasSystemFeature("amazon.hardware.fire_tv")) return true
         if (pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) return false
         if (hasPhysicalTouchscreen()) return false
         if (context.resources.configuration.smallestScreenWidthDp < 450) return false
-        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
-        if (uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION) return true
-        return pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-            || pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)
-            || pm.hasSystemFeature("amazon.hardware.fire_tv")
+        return false
     }
 
     private fun hasPhysicalTouchscreen(): Boolean {

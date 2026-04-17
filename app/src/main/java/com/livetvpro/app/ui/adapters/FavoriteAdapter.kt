@@ -16,6 +16,7 @@ import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.databinding.ItemFavoriteBinding
 import com.livetvpro.app.ui.player.PlayerActivity
 import com.livetvpro.app.utils.FloatingPlayerHelper
+import com.livetvpro.app.ui.player.ChannelListCache
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -182,7 +183,8 @@ class FavoriteAdapter(
                     return
                 }
                 try {
-                    val favoriteChannelList = ArrayList(currentList.map { fav ->
+                    val cacheKey = "favorites_${channelWithUrl.id}"
+                    val favoriteChannelList = currentList.map { fav ->
                         val liveChannel = getLiveChannel?.invoke(fav.id)
                         liveChannel ?: Channel(
                             id = fav.id,
@@ -193,8 +195,9 @@ class FavoriteAdapter(
                             categoryName = fav.categoryName,
                             links = fav.links
                         )
-                    })
-                    FloatingPlayerHelper.launchFloatingPlayer(context, channelWithUrl, linkIndex, channelList = favoriteChannelList)
+                    }
+                    if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
+                    FloatingPlayerHelper.launchFloatingPlayer(context, channelWithUrl, linkIndex, channelListCacheKey = cacheKey)
                 } catch (e: Exception) {
                     PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex)
                 }
@@ -243,7 +246,8 @@ class FavoriteAdapter(
                     return
                 }
                 try {
-                    val favoriteChannelList = ArrayList(currentList.map { fav ->
+                    val cacheKey = "favorites_${channel.id}"
+                    val favoriteChannelList = currentList.map { fav ->
                         val liveChannel = getLiveChannel?.invoke(fav.id)
                         liveChannel ?: Channel(
                             id = fav.id,
@@ -254,8 +258,9 @@ class FavoriteAdapter(
                             categoryName = fav.categoryName,
                             links = fav.links
                         )
-                    })
-                    FloatingPlayerHelper.launchFloatingPlayer(context, channel, -1, channelList = favoriteChannelList)
+                    }
+                    if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
+                    FloatingPlayerHelper.launchFloatingPlayer(context, channel, -1, channelListCacheKey = cacheKey)
                 } catch (e: Exception) {
                     PlayerActivity.startWithChannel(context, channel, -1)
                 }

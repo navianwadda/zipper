@@ -23,7 +23,7 @@ class ChannelRepository @Inject constructor(
 ) {
     companion object {
         private const val PAGE_SIZE = 50
-        private const val INSERT_CHUNK = 500
+        private const val INSERT_CHUNK = 100
         private val gson = com.google.gson.Gson()
     }
 
@@ -69,9 +69,14 @@ class ChannelRepository @Inject constructor(
 
         channelDao.deleteByCategory(categoryId)
 
-        val staticChannels = dataRepository.getChannels().filter { it.categoryId == categoryId }
-        staticChannels.chunked(INSERT_CHUNK).forEach { chunk ->
-            channelDao.insertAll(chunk.map { it.toEntity() })
+        try {
+            val staticChannels = dataRepository.getChannels().filter { it.categoryId == categoryId }
+            staticChannels.chunked(INSERT_CHUNK).forEach { chunk ->
+                channelDao.insertAll(chunk.map { it.toEntity() })
+            }
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            return@withContext
         }
 
         val category = categoryRepository.getCategories().find { it.id == categoryId }
@@ -103,10 +108,14 @@ class ChannelRepository @Inject constructor(
     }
 
     private suspend fun streamInsertM3u(url: String, categoryId: String, categoryName: String) {
-        val raw = M3uParser.parseM3uFromUrl(url)
-        M3uParser.convertToChannels(raw, categoryId, categoryName)
-            .chunked(INSERT_CHUNK)
-            .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+        try {
+            val raw = M3uParser.parseM3uFromUrl(url)
+            M3uParser.convertToChannels(raw, categoryId, categoryName)
+                .chunked(INSERT_CHUNK)
+                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+        }
     }
 
     suspend fun isCategorySynced(categoryId: String): Boolean =

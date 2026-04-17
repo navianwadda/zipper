@@ -53,11 +53,16 @@ class PlayerViewModel @Inject constructor(
     private var cachedChannelListCategoryId: String? = null
     private var cachedChannelList: List<Channel>? = null
 
-    fun loadAllChannelsForList(categoryId: String) {
+    private val _pendingRefreshChannelId = MutableLiveData<String?>(null)
+    val pendingRefreshChannelId: LiveData<String?> = _pendingRefreshChannelId
+
+    fun loadAllChannelsForList(categoryId: String, refreshChannelId: String? = null) {
 
         val existing = cachedChannelList
         if (existing != null && cachedChannelListCategoryId == categoryId) {
             _channelListItems.postValue(existing)
+            // Cache hit — safe to refresh now
+            refreshChannelId?.let { refreshChannelData(it) }
             return
         }
         viewModelScope.launch {
@@ -79,6 +84,12 @@ class PlayerViewModel @Inject constructor(
                 cachedChannelListCategoryId = categoryId
                 cachedChannelList = channels
                 _channelListItems.postValue(channels)
+                // Now that channels are loaded and cached, refresh channel data safely
+                // (getChannels() will be served from AtomicReference cache, no re-parse)
+                refreshChannelId?.let { refreshChannelData(it) }
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                _channelListItems.postValue(emptyList())
             } catch (e: Exception) {
                 _channelListItems.postValue(emptyList())
             }
@@ -99,6 +110,8 @@ class PlayerViewModel @Inject constructor(
                 if (freshChannel != null) {
                     _refreshedChannel.postValue(freshChannel)
                 }
+            } catch (e: OutOfMemoryError) {
+                System.gc()
             } catch (e: Exception) {
             }
         }
@@ -192,6 +205,10 @@ class PlayerViewModel @Inject constructor(
 
                 _relatedItems.postValue(randomChannels)
 
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                Log.e("PlayerViewModel", "OOM loading related channels")
+                _relatedItems.postValue(emptyList())
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error loading random channels", e)
                 _relatedItems.postValue(emptyList())
@@ -209,6 +226,9 @@ class PlayerViewModel @Inject constructor(
                 }
                 val targetCount = minOf(9, available.size)
                 _relatedItems.postValue(available.shuffled().take(targetCount))
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                _relatedItems.postValue(emptyList())
             } catch (e: Exception) {
                 _relatedItems.postValue(emptyList())
             }
@@ -256,6 +276,9 @@ class PlayerViewModel @Inject constructor(
                 }
 
                 _relatedItems.postValue(related)
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                _relatedItems.postValue(emptyList())
             } catch (e: Exception) {
                 _relatedItems.postValue(emptyList())
             }
@@ -318,6 +341,10 @@ class PlayerViewModel @Inject constructor(
                     categoryId = playlist.id,
                     categoryName = playlist.title
                 )
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                Log.e("PlayerViewModel", "OOM loading playlist channels")
+                emptyList()
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error loading playlist channels", e)
                 emptyList()

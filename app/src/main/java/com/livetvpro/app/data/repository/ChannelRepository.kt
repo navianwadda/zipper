@@ -4,6 +4,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import com.google.gson.Gson
 import com.livetvpro.app.data.local.dao.ChannelDao
 import com.livetvpro.app.data.local.entity.toEntity
 import com.livetvpro.app.data.models.Channel
@@ -19,12 +20,12 @@ import javax.inject.Singleton
 class ChannelRepository @Inject constructor(
     private val dataRepository: NativeDataRepository,
     private val categoryRepository: CategoryRepository,
-    private val channelDao: ChannelDao
+    private val channelDao: ChannelDao,
+    private val gson: Gson
 ) {
     companion object {
         private const val PAGE_SIZE = 50
         private const val INSERT_CHUNK = 2000
-        private val gson = com.google.gson.Gson()
     }
 
     fun getChannelsPaged(
@@ -90,7 +91,6 @@ class ChannelRepository @Inject constructor(
         channelDao.deleteByCategory(playlistId)
 
         if (isFile) {
-
             val uri = android.net.Uri.parse(source)
             val inputStream = application.contentResolver.openInputStream(uri) ?: return@withContext
             val reader = java.io.BufferedReader(java.io.InputStreamReader(inputStream, Charsets.UTF_8), 256 * 1024)
@@ -103,12 +103,13 @@ class ChannelRepository @Inject constructor(
         }
     }
 
-    private suspend fun streamInsertM3u(url: String, categoryId: String, categoryName: String) {
-        val raw = M3uParser.parseM3uFromUrl(url)
-        M3uParser.convertToChannels(raw, categoryId, categoryName)
-            .chunked(INSERT_CHUNK)
-            .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
-    }
+    private suspend fun streamInsertM3u(url: String, categoryId: String, categoryName: String) =
+        withContext(Dispatchers.IO) {
+            val raw = M3uParser.parseM3uFromUrl(url)
+            M3uParser.convertToChannels(raw, categoryId, categoryName)
+                .chunked(INSERT_CHUNK)
+                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+        }
 
     suspend fun isCategorySynced(categoryId: String): Boolean =
         channelDao.countByCategory(categoryId) > 0

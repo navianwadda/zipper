@@ -275,6 +275,7 @@ object M3uParser {
                     ))
                 }
             }
+        } catch (e: Exception) { }
         return channels
     }
 

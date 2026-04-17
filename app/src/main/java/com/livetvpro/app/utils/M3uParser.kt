@@ -113,12 +113,10 @@ object M3uParser {
             return parseJsonPlaylist(trimmedUrl)
         }
 
-        android.util.Log.d("M3uParser", "Fetching playlist from: $trimmedUrl")
 
         var lastException: java.io.IOException? = null
 
         for (userAgent in USER_AGENT_FALLBACKS) {
-            android.util.Log.d("M3uParser", "Trying User-Agent: $userAgent")
             try {
                 val result = fetchWithUserAgent(trimmedUrl, userAgent)
                 if (result != null) return result
@@ -152,10 +150,8 @@ object M3uParser {
         HttpURLConnection.setFollowRedirects(true)
 
         val responseCode = connection.responseCode
-        android.util.Log.d("M3uParser", "Response code: $responseCode (UA: $userAgent)")
 
         if (responseCode == HttpURLConnection.HTTP_FORBIDDEN) {
-            android.util.Log.w("M3uParser", "403 blocked with UA: $userAgent — trying next")
             connection.disconnect()
             return null
         }
@@ -171,8 +167,6 @@ object M3uParser {
             val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8), 256 * 1024)
             return try {
                 val channels = parseM3uReader(reader)
-                android.util.Log.d("M3uParser", "Successfully parsed ${channels.size} channels (UA: $userAgent)")
-                if (channels.isEmpty()) android.util.Log.w("M3uParser", "No channels found in playlist")
                 channels
             } finally {
                 reader.close()
@@ -281,7 +275,6 @@ object M3uParser {
                     ))
                 }
             }
-        } catch (e: Exception) { android.util.Log.e("M3uParser", "Failed to parse JSON playlist", e) }
         return channels
     }
 

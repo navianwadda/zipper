@@ -436,7 +436,7 @@ class MainActivity : AppCompatActivity() {
             if (isSearchVisible) hideTvSearch()
         }
 
-        selectTab(navController.graph.startDestinationId)
+        binding.root.post { selectTab(navController.currentDestination?.id ?: navController.graph.startDestinationId) }
 
         binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
             ?.setOnClickListener { if (isSearchVisible) hideTvSearch() else showTvSearch() }

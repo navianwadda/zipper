@@ -281,7 +281,7 @@ object M3uParser {
                     ))
                 }
             }
-        } catch (e: Exception) { }
+        } catch (e: Exception) { android.util.Log.e("M3uParser", "Failed to parse JSON playlist", e) }
         return channels
     }
 

@@ -22,6 +22,9 @@ class FavoritesViewModel @Inject constructor(
     fun getLiveChannel(channelId: String): Channel? {
         return try {
             nativeDataRepository.getChannels().find { it.id == channelId }
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            null
         } catch (e: Exception) {
             null
         }

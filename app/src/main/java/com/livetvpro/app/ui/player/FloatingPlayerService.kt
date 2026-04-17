@@ -41,6 +41,7 @@ import androidx.media3.ui.PlayerView
 import java.util.UUID
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
+import com.livetvpro.app.ui.player.ChannelListCache
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -101,7 +102,7 @@ class FloatingPlayerService : Service() {
     companion object {
         const val EXTRA_CHANNEL = "extra_channel"
         const val EXTRA_EVENT = "extra_event"
-        const val EXTRA_CHANNEL_LIST = "extra_channel_list"
+        const val EXTRA_CHANNEL_LIST_KEY = "extra_channel_list_key"
         const val EXTRA_STREAM_URL = "extra_stream_url"
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_PLAYBACK_POSITION = "extra_playback_position"
@@ -147,7 +148,7 @@ class FloatingPlayerService : Service() {
             channel: Channel? = null,
             event: com.livetvpro.app.data.models.LiveEvent? = null,
             linkIndex: Int = 0,
-            channelList: ArrayList<Channel>? = null,
+            channelListCacheKey: String? = null,
             isSports: Boolean = false
         ): Boolean {
             try {
@@ -162,7 +163,7 @@ class FloatingPlayerService : Service() {
                     putExtra(EXTRA_TITLE, title)
                     putExtra(EXTRA_PLAYBACK_POSITION, 0L)
                     putExtra(EXTRA_LINK_INDEX, linkIndex)
-                    if (channelList != null) putParcelableArrayListExtra(EXTRA_CHANNEL_LIST, channelList)
+                    channelListCacheKey?.let { putExtra(EXTRA_CHANNEL_LIST_KEY, it) }
                     putExtra("EXTRA_IS_SPORTS", isSports)
                 }
 
@@ -221,13 +222,13 @@ class FloatingPlayerService : Service() {
             }
         }
 
-        fun updateFloatingPlayer(context: Context, instanceId: String, channel: Channel, linkIndex: Int, channelList: ArrayList<Channel>? = null) {
+        fun updateFloatingPlayer(context: Context, instanceId: String, channel: Channel, linkIndex: Int, channelListCacheKey: String? = null) {
             val intent = Intent(context, FloatingPlayerService::class.java).apply {
                 action = ACTION_UPDATE_STREAM
                 putExtra(EXTRA_INSTANCE_ID, instanceId)
                 putExtra(EXTRA_CHANNEL, channel)
                 putExtra(EXTRA_LINK_INDEX, linkIndex)
-                if (channelList != null) putParcelableArrayListExtra(EXTRA_CHANNEL_LIST, channelList)
+                channelListCacheKey?.let { putExtra(EXTRA_CHANNEL_LIST_KEY, it) }
             }
             context.startService(intent)
         }
@@ -330,15 +331,10 @@ class FloatingPlayerService : Service() {
                     intent.getParcelableExtra<com.livetvpro.app.data.models.LiveEvent>(EXTRA_EVENT)
                 }
                 val linkIndex = intent.getIntExtra(EXTRA_LINK_INDEX, 0)
-                val updatedChannelList: List<Channel>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST, Channel::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    intent.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST)
-                }
+                val updatedCacheKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
                 if (instanceId != null && (channel != null || event != null)) {
-                    if (updatedChannelList != null) {
-                        activeInstances[instanceId]?.channelList = updatedChannelList
+                    if (updatedCacheKey != null) {
+                        ChannelListCache.get(updatedCacheKey)?.let { activeInstances[instanceId]?.channelList = it }
                     }
                     updateInstanceStream(instanceId, channel, event, linkIndex)
                 }
@@ -418,12 +414,8 @@ class FloatingPlayerService : Service() {
             intent?.getParcelableExtra(EXTRA_EVENT)
         }
 
-        val parsedChannelList: List<Channel>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent?.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST, Channel::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent?.getParcelableArrayListExtra(EXTRA_CHANNEL_LIST)
-        }
+        val parsedChannelListKey = intent?.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+        val parsedChannelList: List<Channel>? = parsedChannelListKey?.let { ChannelListCache.get(it) }
 
         val linkIndex = intent?.getIntExtra(EXTRA_LINK_INDEX, 0) ?: 0
         val playbackPosition = intent?.getLongExtra(EXTRA_PLAYBACK_POSITION, 0L) ?: 0L

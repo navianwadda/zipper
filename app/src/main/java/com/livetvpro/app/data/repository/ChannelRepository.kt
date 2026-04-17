@@ -23,7 +23,7 @@ class ChannelRepository @Inject constructor(
 ) {
     companion object {
         private const val PAGE_SIZE = 50
-        private const val INSERT_CHUNK = 500
+        private const val INSERT_CHUNK = 2000
         private val gson = com.google.gson.Gson()
     }
 
@@ -90,10 +90,11 @@ class ChannelRepository @Inject constructor(
         channelDao.deleteByCategory(playlistId)
 
         if (isFile) {
+
             val uri = android.net.Uri.parse(source)
-            val content = application.contentResolver.openInputStream(uri)
-                ?.bufferedReader()?.use { it.readText() } ?: return@withContext
-            val parsed = M3uParser.parseM3uContent(content)
+            val inputStream = application.contentResolver.openInputStream(uri) ?: return@withContext
+            val reader = java.io.BufferedReader(java.io.InputStreamReader(inputStream, Charsets.UTF_8), 256 * 1024)
+            val parsed = try { M3uParser.parseM3uReader(reader) } finally { reader.close() }
             M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
                 .chunked(INSERT_CHUNK)
                 .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }

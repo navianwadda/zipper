@@ -50,18 +50,25 @@ class PlayerViewModel @Inject constructor(
     private val _channelListItems = MutableLiveData<List<Channel>>(emptyList())
     val channelListItems: LiveData<List<Channel>> = _channelListItems
 
+    private var cachedChannelListCategoryId: String? = null
+    private var cachedChannelList: List<Channel>? = null
+
     fun loadAllChannelsForList(categoryId: String) {
+
+        val existing = cachedChannelList
+        if (existing != null && cachedChannelListCategoryId == categoryId) {
+            _channelListItems.postValue(existing)
+            return
+        }
         viewModelScope.launch {
             try {
                 val channels = when {
                     categoryId == "sports_slug" -> nativeDataRepository.getSports()
                     categoryId.isNotEmpty() -> {
-                        
                         val cached = channelRepository.getChannelsByCategory(categoryId)
                         if (cached.isNotEmpty()) {
                             cached
                         } else {
-                            
                             val playlist = playlistRepository.getPlaylistById(categoryId)
                             if (playlist != null) loadChannelsFromPlaylist(playlist)
                             else channelRepository.getChannelsByCategory(categoryId)
@@ -69,6 +76,8 @@ class PlayerViewModel @Inject constructor(
                     }
                     else -> withContext(Dispatchers.IO) { nativeDataRepository.getChannels() }
                 }
+                cachedChannelListCategoryId = categoryId
+                cachedChannelList = channels
                 _channelListItems.postValue(channels)
             } catch (e: Exception) {
                 _channelListItems.postValue(emptyList())
@@ -77,6 +86,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun setChannelList(channels: List<Channel>) {
+
+        cachedChannelList = channels
         _channelListItems.postValue(channels)
     }
 
@@ -147,10 +158,18 @@ class PlayerViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                
-                var allChannels = channelRepository.getChannelsByCategory(categoryId)
+
+                var allChannels = if (cachedChannelListCategoryId == categoryId && cachedChannelList != null) {
+                    cachedChannelList!!
+                } else {
+                    channelRepository.getChannelsByCategory(categoryId).also { loaded ->
+                        if (loaded.isEmpty()) {
+                            val playlist = playlistRepository.getPlaylistById(categoryId)
+                            if (playlist != null) return@also
+                        }
+                    }
+                }
                 if (allChannels.isEmpty()) {
-                    
                     val playlist = playlistRepository.getPlaylistById(categoryId)
                     if (playlist != null) allChannels = loadChannelsFromPlaylist(playlist)
                 }

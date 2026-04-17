@@ -12,6 +12,7 @@ import com.livetvpro.app.ui.player.FloatingPlayerActivity
 import com.livetvpro.app.ui.player.FloatingPlayerService
 import com.livetvpro.app.utils.DeviceUtils
 import java.util.UUID
+import com.livetvpro.app.ui.player.ChannelListCache
 
 object FloatingPlayerHelper {
 
@@ -41,9 +42,14 @@ object FloatingPlayerHelper {
         }
     }
 
-    fun launchFloatingPlayer(context: Context, channel: Channel, linkIndex: Int = 0, eventId: String? = null, isSports: Boolean = false, channelList: ArrayList<Channel>? = null) {
+    fun launchFloatingPlayer(context: Context, channel: Channel, linkIndex: Int = 0, eventId: String? = null, isSports: Boolean = false, channelList: ArrayList<Channel>? = null, channelListCacheKey: String? = null) {
         if (DeviceUtils.isTvDevice) {
-            FloatingPlayerActivity.startWithChannel(context, channel, linkIndex, categoryId = channel.categoryId.takeIf { it.isNotEmpty() }, isSports = isSports, channelList = channelList)
+            val key = channelListCacheKey ?: channelList?.let { list ->
+                val k = channel.categoryId.takeIf { it.isNotEmpty() } ?: channel.id
+                ChannelListCache.put(k, list)
+                k
+            }
+            FloatingPlayerActivity.startWithChannel(context, channel, linkIndex, categoryId = channel.categoryId.takeIf { it.isNotEmpty() }, isSports = isSports, channelListCacheKey = key)
             return
         }
 
@@ -60,16 +66,16 @@ object FloatingPlayerHelper {
         val existingInstanceId = eventToInstanceMap[actualEventId]
 
         if (existingInstanceId != null && FloatingPlayerManager.hasPlayer(existingInstanceId)) {
-            updateFloatingPlayer(context, existingInstanceId, resolvedChannel, linkIndex, channelList)
+            updateFloatingPlayer(context, existingInstanceId, resolvedChannel, linkIndex, channelList, channelListCacheKey)
         } else if (FloatingPlayerManager.canAddNewPlayer()) {
-            createNewFloatingPlayer(context, channel = resolvedChannel, linkIndex = linkIndex, eventId = actualEventId, channelList = channelList, isSports = isSports)
+            createNewFloatingPlayer(context, channel = resolvedChannel, linkIndex = linkIndex, eventId = actualEventId, channelList = channelList, channelListCacheKey = channelListCacheKey, isSports = isSports)
         } else {
             val lastId = FloatingPlayerManager.getLastPlayerId()
             if (lastId != null) {
                 val oldEventKey = eventToInstanceMap.entries.find { it.value == lastId }?.key
                 if (oldEventKey != null) eventToInstanceMap.remove(oldEventKey)
                 eventToInstanceMap[actualEventId] = lastId
-                updateFloatingPlayer(context, lastId, resolvedChannel, linkIndex, channelList)
+                updateFloatingPlayer(context, lastId, resolvedChannel, linkIndex, channelList, channelListCacheKey)
             }
         }
     }
@@ -170,7 +176,7 @@ object FloatingPlayerHelper {
         }
     }
 
-    private fun updateFloatingPlayer(context: Context, instanceId: String, channel: Channel, linkIndex: Int, channelList: ArrayList<Channel>? = null) {
+    private fun updateFloatingPlayer(context: Context, instanceId: String, channel: Channel, linkIndex: Int, channelList: ArrayList<Channel>? = null, channelListCacheKey: String? = null) {
         try {
             val resolvedChannel = if (channel.links.isNullOrEmpty()) {
                 if (channel.streamUrl.isBlank()) return
@@ -178,7 +184,12 @@ object FloatingPlayerHelper {
             } else {
                 channel
             }
-            FloatingPlayerService.updateFloatingPlayer(context, instanceId, resolvedChannel, linkIndex, channelList)
+            val key = channelListCacheKey ?: channelList?.let { list ->
+                val k = resolvedChannel.categoryId.takeIf { it.isNotEmpty() } ?: resolvedChannel.id
+                ChannelListCache.put(k, list)
+                k
+            }
+            FloatingPlayerService.updateFloatingPlayer(context, instanceId, resolvedChannel, linkIndex, key)
         } catch (e: Exception) {
 
         }
@@ -205,6 +216,7 @@ object FloatingPlayerHelper {
         linkIndex: Int = 0,
         eventId: String? = null,
         channelList: ArrayList<Channel>? = null,
+        channelListCacheKey: String? = null,
         isSports: Boolean = false
     ): String? {
         if (!FloatingPlayerManager.canAddNewPlayer()) return null
@@ -226,7 +238,12 @@ object FloatingPlayerHelper {
         }
 
         return try {
-            val started = FloatingPlayerService.startFloatingPlayer(context, instanceId, channel, event, linkIndex, channelList, isSports)
+            val key = channelListCacheKey ?: channelList?.let { list ->
+            val k = channel?.categoryId?.takeIf { it.isNotEmpty() } ?: channel?.id ?: ""
+            if (k.isNotEmpty()) ChannelListCache.put(k, list)
+            k.takeIf { it.isNotEmpty() }
+        }
+        val started = FloatingPlayerService.startFloatingPlayer(context, instanceId, channel, event, linkIndex, key, isSports)
             if (started) {
                 createdInstances.add(instanceId)
                 instanceId

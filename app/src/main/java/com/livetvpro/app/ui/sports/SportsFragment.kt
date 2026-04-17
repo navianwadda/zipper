@@ -32,6 +32,7 @@ import com.livetvpro.app.utils.RetryHandler
 import com.livetvpro.app.utils.Refreshable
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.utils.FloatingPlayerHelper
+import com.livetvpro.app.ui.player.ChannelListCache
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.PagingData
 import dagger.hilt.android.AndroidEntryPoint
@@ -289,24 +290,27 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
     }
 
     private fun launchPlayer(channel: Channel, linkIndex: Int) {
+        val cacheKey = "sports_${channel.id}"
+        val channelList = channelAdapter.snapshot().items
+        if (channelList.isNotEmpty()) ChannelListCache.put(cacheKey, channelList)
         if (DeviceUtils.isTvDevice) {
-            PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true)
+            PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true, channelListCacheKey = cacheKey)
             return
         }
         val floatingEnabled = preferencesManager.isFloatingPlayerEnabled()
         val hasPermission = FloatingPlayerHelper.hasOverlayPermission(requireContext())
         if (floatingEnabled) {
             if (!hasPermission) {
-                PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true)
+                PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true, channelListCacheKey = cacheKey)
                 return
             }
             try {
-                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, isSports = true, channelList = ArrayList(channelAdapter.snapshot().items))
+                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, isSports = true, channelListCacheKey = cacheKey)
             } catch (e: Exception) {
-                PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true)
+                PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true, channelListCacheKey = cacheKey)
             }
         } else {
-            PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true)
+            PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true, channelListCacheKey = cacheKey)
         }
     }
 

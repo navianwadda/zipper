@@ -26,6 +26,8 @@ object DatabaseModule {
             "live_tv_pro_database"
         )
             .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+          
+            .addCallback(AppDatabase.openCallback)
             .build()
     }
 

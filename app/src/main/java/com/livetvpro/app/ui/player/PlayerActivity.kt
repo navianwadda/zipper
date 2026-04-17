@@ -163,7 +163,7 @@ class PlayerActivity : AppCompatActivity() {
         private const val EXTRA_CHANNEL = "extra_channel"
         private const val EXTRA_EVENT = "extra_event"
         private const val EXTRA_SELECTED_LINK_INDEX = "extra_selected_link_index"
-        private const val EXTRA_RELATED_CHANNELS = "extra_related_channels"
+        private const val EXTRA_RELATED_CHANNELS_KEY = "extra_related_channels_key"
         private const val EXTRA_CATEGORY_ID = "extra_category_id"
         private const val EXTRA_IS_SPORTS = "extra_is_sports"
         private const val EXTRA_CHANNEL_LIST_KEY = "extra_channel_list_key"
@@ -192,7 +192,9 @@ class PlayerActivity : AppCompatActivity() {
                 putExtra(EXTRA_CHANNEL, channel as Parcelable)
                 putExtra(EXTRA_SELECTED_LINK_INDEX, linkIndex)
                 relatedChannels?.let {
-                    putParcelableArrayListExtra(EXTRA_RELATED_CHANNELS, it)
+                    val key = "related_${channel.id}"
+                    ChannelListCache.put(key, it)
+                    putExtra(EXTRA_RELATED_CHANNELS_KEY, key)
                 }
                 categoryId?.let { putExtra(EXTRA_CATEGORY_ID, it) }
                 selectedGroup?.let { putExtra(EXTRA_SELECTED_GROUP, it) }
@@ -1496,12 +1498,8 @@ class PlayerActivity : AppCompatActivity() {
         intentSelectedGroup = intent.getStringExtra(EXTRA_SELECTED_GROUP)
         intentIsSports = intent.getBooleanExtra(EXTRA_IS_SPORTS, false)
 
-        val passedRelatedChannels: List<Channel>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableArrayListExtra(EXTRA_RELATED_CHANNELS, Channel::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent.getParcelableArrayListExtra(EXTRA_RELATED_CHANNELS)
-        }
+        val passedRelatedChannels: List<Channel>? =
+            intent.getStringExtra(EXTRA_RELATED_CHANNELS_KEY)?.let { ChannelListCache.get(it) }
 
         if (channelData != null) {
             contentType = ContentType.CHANNEL
@@ -1667,12 +1665,8 @@ class PlayerActivity : AppCompatActivity() {
         when (contentType) {
             ContentType.CHANNEL -> {
                 channelData?.let { channel ->
-                    val passedRelatedChannels: List<Channel>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableArrayListExtra(EXTRA_RELATED_CHANNELS, Channel::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableArrayListExtra(EXTRA_RELATED_CHANNELS)
-                    }
+                    val passedRelatedChannels: List<Channel>? =
+                        intent.getStringExtra(EXTRA_RELATED_CHANNELS_KEY)?.let { ChannelListCache.get(it) }
 
                     if (passedRelatedChannels != null && passedRelatedChannels.isNotEmpty()) {
                         val filteredChannels = passedRelatedChannels.filter { it.id != channel.id }

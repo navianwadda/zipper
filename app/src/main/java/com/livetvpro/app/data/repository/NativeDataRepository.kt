@@ -163,6 +163,9 @@ class NativeDataRepository @Inject constructor(
                 channelCache.set(parsed)
                 parsed
             }
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            emptyList()
         } catch (e: Exception) { emptyList() }
     }
 
@@ -186,6 +189,9 @@ class NativeDataRepository @Inject constructor(
                 sportsCache.set(parsed)
                 parsed
             }
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            emptyList()
         } catch (e: Exception) { emptyList() }
     }
 

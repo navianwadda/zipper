@@ -1,6 +1,7 @@
 package com.livetvpro.app
 
 import android.app.Application
+import com.google.android.gms.security.ProviderInstaller
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.repository.NativeDataRepository
@@ -33,6 +34,10 @@ class LiveTVProApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        try {
+            ProviderInstaller.installIfNeeded(this)
+        } catch (e: Exception) {
+        }
         DeviceUtils.init(this)
         FloatingPlayerManager.initialize(preferencesManager)
         themeManager.applyTheme()

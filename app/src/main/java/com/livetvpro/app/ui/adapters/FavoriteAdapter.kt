@@ -164,8 +164,28 @@ class FavoriteAdapter(
                 links = channel.links
             )
 
+            val cacheKey = "favorites_${channelWithUrl.id}"
+            val favoriteChannelList = try {
+                currentList.map { fav ->
+                    val liveChannel = getLiveChannel?.invoke(fav.id)
+                    liveChannel ?: Channel(
+                        id = fav.id,
+                        name = fav.name,
+                        logoUrl = fav.logoUrl,
+                        streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
+                        categoryId = fav.categoryId,
+                        categoryName = fav.categoryName,
+                        links = fav.links
+                    )
+                }
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                listOf(channelWithUrl)
+            }
+            if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
+
             if (DeviceUtils.isTvDevice) {
-                PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex)
+                PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex, channelListCacheKey = cacheKey)
                 return
             }
 
@@ -179,35 +199,16 @@ class FavoriteAdapter(
                         "Overlay permission required for floating player. Opening normally instead.",
                         android.widget.Toast.LENGTH_LONG
                     ).show()
-                    PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex)
+                    PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex, channelListCacheKey = cacheKey)
                     return
                 }
                 try {
-                    val cacheKey = "favorites_${channelWithUrl.id}"
-                    val favoriteChannelList = try {
-                        currentList.map { fav ->
-                            val liveChannel = getLiveChannel?.invoke(fav.id)
-                            liveChannel ?: Channel(
-                                id = fav.id,
-                                name = fav.name,
-                                logoUrl = fav.logoUrl,
-                                streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
-                                categoryId = fav.categoryId,
-                                categoryName = fav.categoryName,
-                                links = fav.links
-                            )
-                        }
-                    } catch (e: OutOfMemoryError) {
-                        System.gc()
-                        listOf(channelWithUrl)
-                    }
-                    if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
                     FloatingPlayerHelper.launchFloatingPlayer(context, channelWithUrl, linkIndex, channelListCacheKey = cacheKey)
                 } catch (e: Exception) {
-                    PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex)
+                    PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex, channelListCacheKey = cacheKey)
                 }
             } else {
-                PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex)
+                PlayerActivity.startWithChannel(context, channelWithUrl, linkIndex, channelListCacheKey = cacheKey)
             }
         }
 
@@ -232,8 +233,28 @@ class FavoriteAdapter(
         private fun launchPlayerWithUrl(channel: Channel, url: String) {
             val context = binding.root.context
 
+            val cacheKey = "favorites_${channel.id}"
+            val favoriteChannelList = try {
+                currentList.map { fav ->
+                    val liveChannel = getLiveChannel?.invoke(fav.id)
+                    liveChannel ?: Channel(
+                        id = fav.id,
+                        name = fav.name,
+                        logoUrl = fav.logoUrl,
+                        streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
+                        categoryId = fav.categoryId,
+                        categoryName = fav.categoryName,
+                        links = fav.links
+                    )
+                }
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                listOf(channel)
+            }
+            if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
+
             if (DeviceUtils.isTvDevice) {
-                PlayerActivity.startWithChannel(context, channel, -1)
+                PlayerActivity.startWithChannel(context, channel, -1, channelListCacheKey = cacheKey)
                 return
             }
 
@@ -247,35 +268,16 @@ class FavoriteAdapter(
                         "Overlay permission required for floating player. Opening normally instead.",
                         android.widget.Toast.LENGTH_LONG
                     ).show()
-                    PlayerActivity.startWithChannel(context, channel, -1)
+                    PlayerActivity.startWithChannel(context, channel, -1, channelListCacheKey = cacheKey)
                     return
                 }
                 try {
-                    val cacheKey = "favorites_${channel.id}"
-                    val favoriteChannelList = try {
-                        currentList.map { fav ->
-                            val liveChannel = getLiveChannel?.invoke(fav.id)
-                            liveChannel ?: Channel(
-                                id = fav.id,
-                                name = fav.name,
-                                logoUrl = fav.logoUrl,
-                                streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
-                                categoryId = fav.categoryId,
-                                categoryName = fav.categoryName,
-                                links = fav.links
-                            )
-                        }
-                    } catch (e: OutOfMemoryError) {
-                        System.gc()
-                        listOf(channel)
-                    }
-                    if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
                     FloatingPlayerHelper.launchFloatingPlayer(context, channel, -1, channelListCacheKey = cacheKey)
                 } catch (e: Exception) {
-                    PlayerActivity.startWithChannel(context, channel, -1)
+                    PlayerActivity.startWithChannel(context, channel, -1, channelListCacheKey = cacheKey)
                 }
             } else {
-                PlayerActivity.startWithChannel(context, channel, -1)
+                PlayerActivity.startWithChannel(context, channel, -1, channelListCacheKey = cacheKey)
             }
         }
     }

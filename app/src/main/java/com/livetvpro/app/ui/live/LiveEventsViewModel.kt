@@ -59,6 +59,11 @@ class LiveEventsViewModel @Inject constructor(
                 finishLoading(dataIsEmpty = events.isEmpty())
 
                 filterEvents(pendingStatusFilter, pendingCategoryId)
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                Timber.e("OOM loading live events")
+                _events.value = emptyList()
+                finishLoading(dataIsEmpty = true, error = Exception("Low memory. Please close other apps and try again."))
             } catch (e: Exception) {
                 Timber.e(e, "Error loading live events")
                 _events.value = emptyList()
@@ -75,6 +80,10 @@ class LiveEventsViewModel @Inject constructor(
                 val categories = liveEventRepository.getEventCategories()
                 _eventCategories.value = categories
                 Timber.d("Loaded ${categories.size} event categories")
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                Timber.e("OOM loading event categories")
+                _eventCategories.value = emptyList()
             } catch (e: Exception) {
                 Timber.e(e, "Error loading event categories")
             }

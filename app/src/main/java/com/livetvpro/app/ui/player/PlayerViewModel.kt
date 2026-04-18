@@ -32,7 +32,8 @@ class PlayerViewModel @Inject constructor(
     private val channelRepository: ChannelRepository,
     private val liveEventRepository: LiveEventRepository,
     private val nativeDataRepository: NativeDataRepository,
-    private val playlistRepository: PlaylistRepository
+    private val playlistRepository: PlaylistRepository,
+    private val okHttpClient: OkHttpClient
 ) : ViewModel() {
 
     private val _relatedItems = MutableLiveData<List<Channel>>()
@@ -368,7 +369,7 @@ class PlayerViewModel @Inject constructor(
     private suspend fun fetchUrlContent(url: String): String {
         return withContext(Dispatchers.IO) {
             try {
-                val client = OkHttpClient.Builder()
+                val client = okHttpClient.newBuilder()
                     .followRedirects(true)
                     .followSslRedirects(true)
                     .build()

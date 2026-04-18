@@ -171,10 +171,16 @@ class NativeDataRepository @Inject constructor(
 
     fun getLiveEvents(): List<LiveEvent> = try {
         val j = p8(); if (j.isEmpty() || j == "[]") emptyList() else gson.fromJson(j, Array<LiveEvent>::class.java).toList()
+    } catch (e: OutOfMemoryError) {
+        System.gc()
+        emptyList()
     } catch (e: Exception) { emptyList() }
 
     fun getEventCategories(): List<EventCategory> = try {
         val j = p10(); if (j.isEmpty() || j == "[]") emptyList() else gson.fromJson(j, Array<EventCategory>::class.java).toList()
+    } catch (e: OutOfMemoryError) {
+        System.gc()
+        emptyList()
     } catch (e: Exception) { emptyList() }
 
     fun getSports(): List<Channel> {
@@ -199,6 +205,9 @@ class NativeDataRepository @Inject constructor(
         val j = if (q1) nativeGetExternalLiveEvents() else "[]"
         if (j.isEmpty() || j == "[]") emptyList()
         else gson.fromJson(j, Array<NewExternalEventRow>::class.java).toList().toGroupedLiveEvents()
+    } catch (e: OutOfMemoryError) {
+        System.gc()
+        emptyList()
     } catch (e: Exception) { emptyList() }
 
     fun isDataLoaded(): Boolean {

@@ -78,6 +78,13 @@ class SportsViewModel @Inject constructor(
                 _channels.value = sports
                 applyFilter()
                 finishLoading(dataIsEmpty = sports.isEmpty())
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                if (!hasExisting) {
+                    _channels.value = emptyList()
+                    applyFilter()
+                    finishLoading(dataIsEmpty = true, error = Exception("Low memory. Please close other apps and try again."))
+                }
             } catch (e: Exception) {
                 if (!hasExisting) {
                     _channels.value = emptyList()

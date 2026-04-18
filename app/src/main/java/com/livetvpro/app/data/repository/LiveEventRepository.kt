@@ -12,31 +12,46 @@ class LiveEventRepository @Inject constructor(
     private val dataRepository: NativeDataRepository
 ) {
     suspend fun getLiveEvents(): List<LiveEvent> = withContext(Dispatchers.IO) {
-        val nativeEvents = if (dataRepository.isDataLoaded()) dataRepository.getLiveEvents() else emptyList()
-        val externalEvents = dataRepository.getExternalLiveEvents()
-        val externalIds = externalEvents.map { it.id }.toSet()
-        externalEvents + nativeEvents.filter { it.id !in externalIds }
+        try {
+            val nativeEvents = if (dataRepository.isDataLoaded()) dataRepository.getLiveEvents() else emptyList()
+            val externalEvents = dataRepository.getExternalLiveEvents()
+            val externalIds = externalEvents.map { it.id }.toSet()
+            externalEvents + nativeEvents.filter { it.id !in externalIds }
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            emptyList()
+        }
     }
 
     suspend fun getEventById(eventId: String): LiveEvent? = withContext(Dispatchers.IO) {
-        getLiveEvents().find { it.id == eventId }
+        try {
+            getLiveEvents().find { it.id == eventId }
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            null
+        }
     }
 
     suspend fun getEventCategories(): List<EventCategory> = withContext(Dispatchers.IO) {
-        val nativeCategories = if (dataRepository.isDataLoaded()) dataRepository.getEventCategories() else emptyList()
-        val externalCategories = dataRepository.getExternalLiveEvents()
-            .map { it.eventCategoryName }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .map { catName ->
-                EventCategory(
-                    id      = catName,
-                    name    = catName,
-                    slug    = catName.lowercase().replace(" ", "_"),
-                    logoUrl = ""
-                )
-            }
-        val nativeIds = nativeCategories.map { it.id }.toSet()
-        nativeCategories + externalCategories.filter { it.id !in nativeIds }
+        try {
+            val nativeCategories = if (dataRepository.isDataLoaded()) dataRepository.getEventCategories() else emptyList()
+            val externalCategories = dataRepository.getExternalLiveEvents()
+                .map { it.eventCategoryName }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .map { catName ->
+                    EventCategory(
+                        id      = catName,
+                        name    = catName,
+                        slug    = catName.lowercase().replace(" ", "_"),
+                        logoUrl = ""
+                    )
+                }
+            val nativeIds = nativeCategories.map { it.id }.toSet()
+            nativeCategories + externalCategories.filter { it.id !in nativeIds }
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            emptyList()
+        }
     }
 }

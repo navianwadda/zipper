@@ -12,7 +12,17 @@ import java.io.InputStream
 class SvgDecoder : ResourceDecoder<InputStream, SVG> {
 
     override fun handles(source: InputStream, options: Options): Boolean {
-        return true
+                return try {
+            val header = ByteArray(256)
+            val bytesRead = source.read(header)
+            if (bytesRead <= 0) return false
+            val headerStr = String(header, 0, bytesRead, Charsets.UTF_8)
+            headerStr.contains("<svg", ignoreCase = true) ||
+                headerStr.contains("<?xml", ignoreCase = true) ||
+                headerStr.contains("<!DOCTYPE svg", ignoreCase = true)
+        } catch (e: Exception) {
+            false
+        }
     }
 
     @Throws(IOException::class)

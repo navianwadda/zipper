@@ -119,6 +119,10 @@ class CategoryChannelsViewModel @Inject constructor(
                 _categoryId.value = categoryId
                 loadGroups(categoryId)
                 finishLoading(dataIsEmpty = false)
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                _categoryId.value = null
+                finishLoading(dataIsEmpty = true, error = Exception("Low memory. Please close other apps and try again."))
             } catch (e: Exception) {
                 _categoryId.value = null
                 finishLoading(dataIsEmpty = true, error = e)
@@ -159,6 +163,9 @@ class CategoryChannelsViewModel @Inject constructor(
                 }
                 loadGroups(categoryId)
                 finishLoading(dataIsEmpty = false)
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                finishLoading(dataIsEmpty = true, error = Exception("Low memory. Please close other apps and try again."))
             } catch (e: Exception) {
                 finishLoading(dataIsEmpty = true, error = e)
             }

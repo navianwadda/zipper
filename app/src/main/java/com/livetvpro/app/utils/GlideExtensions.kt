@@ -29,10 +29,10 @@ object GlideExtensions {
         val isSvg = url.contains(".svg", ignoreCase = true)
 
         if (isSvg) {
-            val request = Glide.with(imageView.context)
+            var request = Glide.with(imageView.context)
                 .`as`(Drawable::class.java)
                 .load(url)
-                .diskCacheStrategy(DiskCacheStrategy.DATA)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
                         if (errorResId != null) imageView.setImageResource(errorResId)
@@ -43,6 +43,7 @@ object GlideExtensions {
                     }
                 })
 
+            if (placeholderResId != null) request = request.placeholder(placeholderResId)
             if (isCircular) {
                 request.apply(RequestOptions.bitmapTransform(CircleCrop())).into(imageView)
             } else {

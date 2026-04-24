@@ -1465,7 +1465,7 @@ class PlayerActivity : AppCompatActivity() {
                 val origin = intent.getStringExtra("ORIGIN") ?: ""
                 val drmLicense = intent.getStringExtra("DRM_LICENSE") ?: ""
                 val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
-                val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
+                val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "none"
 
                 allEventLinks = listOf(
                     LiveEventLink(
@@ -1956,7 +1956,7 @@ class PlayerActivity : AppCompatActivity() {
         link.origin?.let { if (it.isNotEmpty()) params.add("origin=$it") }
         link.userAgent?.let { if (it.isNotEmpty()) params.add("user-agent=$it") }
         link.xForwardedFor?.let { if (it.isNotEmpty()) params.add("x-forwarded-for=$it") }
-        link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
+        link.drmScheme?.let { if (it.isNotEmpty() && it != "none") params.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
 
         if (params.isNotEmpty()) {
@@ -1995,7 +1995,8 @@ class PlayerActivity : AppCompatActivity() {
                 return
             }
             val headers = streamInfo.headers.toMutableMap()
-            if (!headers.containsKey("User-Agent")) {
+            val ua = headers["User-Agent"]
+            if (ua.isNullOrBlank() || ua == "Default") {
                 headers["User-Agent"] = "okhttp/4.12.0"
             }
 

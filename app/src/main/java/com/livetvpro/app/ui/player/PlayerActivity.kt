@@ -46,7 +46,6 @@ import androidx.media3.exoplayer.drm.FrameworkMediaDrm
 import androidx.media3.exoplayer.drm.HttpMediaDrmCallback
 import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -2038,18 +2037,8 @@ class PlayerActivity : AppCompatActivity() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
 
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(
-                    15_000,
-                    50_000,
-                    3_000,
-                    6_000
-                )
-                .build()
-
             player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
-                .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector!!)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setSeekBackIncrementMs(skipMs)

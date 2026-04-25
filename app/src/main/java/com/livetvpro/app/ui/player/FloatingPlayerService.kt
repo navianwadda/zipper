@@ -30,7 +30,6 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.drm.FrameworkMediaDrm
@@ -545,9 +544,6 @@ class FloatingPlayerService : Service() {
             val renderersFactory = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
-                .build()
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
                     .setAllowVideoMixedMimeTypeAdaptiveness(true)
@@ -557,7 +553,6 @@ class FloatingPlayerService : Service() {
             }
             val player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
-                .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -907,9 +902,6 @@ class FloatingPlayerService : Service() {
             val renderersFactory = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
-                .build()
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
                     .setAllowVideoMixedMimeTypeAdaptiveness(true)
@@ -919,7 +911,6 @@ class FloatingPlayerService : Service() {
             }
             val player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
-                .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(nsMediaSourceFactory)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -1054,9 +1045,6 @@ class FloatingPlayerService : Service() {
             val renderersFactory2 = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
-            val loadControl2 = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
-                .build()
             val trackSelector2 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
                     .setAllowVideoMixedMimeTypeAdaptiveness(true)
@@ -1066,7 +1054,6 @@ class FloatingPlayerService : Service() {
             }
             val newPlayer = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory2)
-                .setLoadControl(loadControl2)
                 .setTrackSelector(trackSelector2)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -1142,9 +1129,6 @@ class FloatingPlayerService : Service() {
             val renderersFactory = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
-                .build()
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
                     .setAllowVideoMixedMimeTypeAdaptiveness(true)
@@ -1154,7 +1138,6 @@ class FloatingPlayerService : Service() {
             }
             val newPlayer = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
-                .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -1221,7 +1204,6 @@ class FloatingPlayerService : Service() {
         val btnNextChannel = playerView.findViewById<ImageButton>(R.id.btn_next_channel)
         val btnResize = floatingView.findViewById<ImageButton>(R.id.btn_resize)
 
-        // Apply center controls mode visibility
         val centerMode = preferencesManager.getCenterControlsMode()
         val isNetworkStream = (channel == null && event == null)
         val showSeeks = centerMode == com.livetvpro.app.data.local.PreferencesManager.CENTER_MODE_SEEKS_ONLY ||
@@ -1701,9 +1683,6 @@ class FloatingPlayerService : Service() {
                 val renderersFactory3 = DefaultRenderersFactory(this)
                     .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                     .setEnableDecoderFallback(true)
-                val loadControl3 = DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
-                    .build()
                 val trackSelector3 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                     parameters = buildUponParameters()
                         .setAllowVideoMixedMimeTypeAdaptiveness(true)
@@ -1713,7 +1692,6 @@ class FloatingPlayerService : Service() {
                 }
                 val newPlayer = ExoPlayer.Builder(this)
                     .setRenderersFactory(renderersFactory3)
-                    .setLoadControl(loadControl3)
                     .setTrackSelector(trackSelector3)
                     .setMediaSourceFactory(mediaSourceFactory)
                     .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -1866,7 +1844,6 @@ class FloatingPlayerService : Service() {
         val drmLicenseUrl: String?
     )
 
-
     private fun buildLinkPipeUrl(
         url: String,
         cookie: String?,
@@ -1941,7 +1918,6 @@ class FloatingPlayerService : Service() {
         }
         return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
     }
-
 
     private fun buildStreamInfoFromDrmFields(
         url: String,
@@ -2154,3 +2130,4 @@ class FloatingPlayerService : Service() {
         return builder.build()
     }
 }
+

@@ -40,6 +40,7 @@ class FavoritesFragment : Fragment() {
     private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
+    private var initialFocusDone = false
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
@@ -186,7 +187,8 @@ class FavoritesFragment : Fragment() {
             binding.emptyView.visibility = if (isEmpty) View.VISIBLE else View.GONE
             binding.recyclerViewFavorites.visibility = if (isEmpty) View.GONE else View.VISIBLE
             binding.clearAllButton.visibility = if (isEmpty) View.GONE else View.VISIBLE
-            if (DeviceUtils.isTvDevice && favorites.isNotEmpty()) {
+            if (DeviceUtils.isTvDevice && favorites.isNotEmpty() && !initialFocusDone) {
+                initialFocusDone = true
                 binding.recyclerViewFavorites.post {
                     binding.recyclerViewFavorites
                         .findViewHolderForAdapterPosition(0)

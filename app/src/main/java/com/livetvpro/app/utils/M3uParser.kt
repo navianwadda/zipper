@@ -541,7 +541,12 @@ object M3uParser {
                             userAgent   = currentUserAgent,
                             httpHeaders = finalHeaders,
                             drmScheme   = inlineDrmInfo.first  ?: currentDrmScheme
-                                ?: if ((inlineDrmInfo.second ?: currentDrmKeyId) != null) "clearkey" else null,
+                                ?: run {
+                                    val keyId = inlineDrmInfo.second ?: currentDrmKeyId
+                                    val key   = inlineDrmInfo.third  ?: currentDrmKey
+                                    if (keyId != null && key != null && key != "LICENSE_URL") "clearkey"
+                                    else null
+                                },
                             drmKeyId    = inlineDrmInfo.second ?: currentDrmKeyId,
                             drmKey      = inlineDrmInfo.third  ?: currentDrmKey
                         ))

@@ -329,6 +329,7 @@ object M3uParser {
             }
 
         } catch (e: Exception) {
+            android.util.Log.e("M3uParser", "Failed to parse JSON playlist: ${e.message}", e)
         }
         return channels
     }
@@ -476,6 +477,9 @@ object M3uParser {
                 trimmedLine.startsWith("#EXTINF:") -> {
                     currentUserAgent = null
                     currentHeaders   = mutableMapOf()
+                    currentDrmScheme = null
+                    currentDrmKeyId  = null
+                    currentDrmKey    = null
                     currentName      = extractChannelName(trimmedLine)
                     currentLogo      = extractAttribute(trimmedLine, "tvg-logo")
                     currentGroup     = extractAttribute(trimmedLine, "group-title")
@@ -816,7 +820,7 @@ object M3uParser {
     private fun normalizeDrmScheme(scheme: String): String {
         val lower = scheme.lowercase()
         return when {
-            lower.contains("clearkey") || lower == "org.w3.clearkey" || lower == "cenc" -> "clearkey"
+            lower.contains("clearkey") || lower == "org.w3.clearkey" -> "clearkey"
             lower.contains("widevine") || lower == "com.widevine.alpha"                 -> "widevine"
             lower.contains("playready") || lower == "com.microsoft.playready"           -> "playready"
             lower.contains("fairplay") || lower == "com.apple.fps" || lower == "fps"   -> "fairplay"
@@ -834,6 +838,7 @@ object M3uParser {
         val headers  = mutableMapOf<String, String>()
         var cleanUrl = url
 
+        val hasPipe = url.contains('|')
         for ((_, pair) in COMMON_HEADER_PATTERNS) {
             val (headerName, pattern) = pair
             val match = pattern.find(cleanUrl) ?: continue
@@ -848,7 +853,9 @@ object M3uParser {
                 } else {
                     headers[headerName] = value
                 }
-                cleanUrl = cleanUrl.replace(match.value, "")
+                if (hasPipe) {
+                    cleanUrl = cleanUrl.replace(match.value, "")
+                }
             } catch (e: Exception) {}
         }
 

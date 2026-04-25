@@ -246,6 +246,8 @@ dependencies {
     // Lottie Animations
     implementation("com.airbnb.android:lottie:6.6.0")
 
+    implementation("com.google.zxing:core:3.5.3")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

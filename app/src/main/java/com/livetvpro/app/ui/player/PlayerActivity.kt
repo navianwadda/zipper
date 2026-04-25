@@ -287,9 +287,11 @@ class PlayerActivity : AppCompatActivity() {
             val cacheKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
             val cachedList = cacheKey?.let { ChannelListCache.get(it) }
             if (!cachedList.isNullOrEmpty()) {
+
                 viewModel.setChannelList(cachedList)
                 viewModel.refreshChannelData(contentId)
             } else {
+
                 viewModel.loadAllChannelsForList(
                     categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "",
                     refreshChannelId = contentId
@@ -1881,8 +1883,8 @@ class PlayerActivity : AppCompatActivity() {
             for (segment in rawParams.split("|")) {
                 val eqIdx = segment.indexOf('=')
                 val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
-                if (value.startsWith("http:
-                    value.startsWith("https:
+                if (value.startsWith("http://", ignoreCase = true) ||
+                    value.startsWith("https://", ignoreCase = true)) {
                     add(segment)
                 } else {
                     addAll(segment.split("&"))
@@ -1906,8 +1908,8 @@ class PlayerActivity : AppCompatActivity() {
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
                 "drmlicense" -> {
-                    if (value.startsWith("http:
-                        value.startsWith("https:
+                    if (value.startsWith("http://", ignoreCase = true) ||
+                        value.startsWith("https://", ignoreCase = true)) {
                         drmLicenseUrl = value
                     } else if (value.trimStart().startsWith("{")) {
                         drmLicenseUrl = value
@@ -2093,9 +2095,9 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType("audio/mpeg")
                         urlLower.contains(".aac") ->
                             mediaItemBuilder.setMimeType("audio/aac")
-                        urlLower.startsWith("rtmp:
+                        urlLower.startsWith("rtmp://") || urlLower.startsWith("rtmps://") ->
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
-                        urlLower.startsWith("rtsp:
+                        urlLower.startsWith("rtsp://") ->
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
                     }
 
@@ -2735,3 +2737,4 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 }
+

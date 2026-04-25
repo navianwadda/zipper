@@ -13,6 +13,10 @@ import android.provider.Settings
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -295,6 +299,63 @@ class SplashActivity : AppCompatActivity() {
         } else {
             updateScreen.visibility = View.VISIBLE
             updateScreenLand.visibility = View.GONE
+        }
+        if (DeviceUtils.isTvDevice) {
+            val url = listenerManager.getDownloadUrl().ifBlank { listenerManager.getWebUrl() }
+            if (url.isNotBlank()) {
+                try {
+                    val hints = mapOf(com.google.zxing.EncodeHintType.MARGIN to 1)
+                    val bits = com.google.zxing.qrcode.QRCodeWriter()
+                        .encode(url, com.google.zxing.BarcodeFormat.QR_CODE, 240, 240, hints)
+                    val bmp = Bitmap.createBitmap(240, 240, Bitmap.Config.RGB_565)
+                    for (y in 0 until 240) for (x in 0 until 240)
+                        bmp.setPixel(x, y, if (bits[x, y]) Color.BLACK else Color.WHITE)
+
+                    val iconView = findViewById<ImageView>(R.id.update_app_icon_land)
+                    val parent = iconView.parent as? androidx.constraintlayout.widget.ConstraintLayout
+                        ?: return
+
+                    val existing = parent.findViewWithTag<View>("tv_qr_block")
+                    if (existing != null) return
+
+                    val qrImage = ImageView(this).apply {
+                        setImageBitmap(bmp)
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+                            resources.getDimensionPixelSize(R.dimen.splash_icon_size),
+                            resources.getDimensionPixelSize(R.dimen.splash_icon_size)
+                        )
+                    }
+                    val qrLabel = android.widget.TextView(this).apply {
+                        text = "Scan to download"
+                        textSize = 11f
+                        setTextColor(Color.WHITE)
+                        gravity = android.view.Gravity.CENTER
+                        layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+                            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.WRAP_CONTENT
+                        )
+                    }
+                    val block = LinearLayout(this).apply {
+                        id = View.generateViewId()
+                        tag = "tv_qr_block"
+                        orientation = LinearLayout.VERTICAL
+                        gravity = android.view.Gravity.CENTER_HORIZONTAL
+                        addView(qrImage)
+                        addView(qrLabel)
+                        layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+                            0,
+                            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.WRAP_CONTENT
+                        ).also { lp ->
+                            lp.topToBottom = iconView.id
+                            lp.startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                            lp.endToStart = R.id.guide_center
+                            lp.topMargin = resources.getDimensionPixelSize(R.dimen.splash_icon_size) / 4
+                        }
+                    }
+                    parent.addView(block)
+                } catch (e: Exception) { }
+            }
         }
     }
 

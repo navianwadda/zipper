@@ -113,7 +113,7 @@ object FloatingPlayerHelper {
         referer: String = "",
         origin: String = "",
         drmLicense: String = "",
-        userAgent: String = "Default",
+        userAgent: String = "",
         drmScheme: String = "clearkey",
         streamName: String = "Network Stream",
         xForwardedFor: String = ""
@@ -292,12 +292,13 @@ object FloatingPlayerHelper {
     fun getInstanceIdForEvent(eventId: String): String? = eventToInstanceMap[eventId]
 
     private fun parseLinkFromStreamUrl(streamUrl: String): ChannelLink {
-        val pipeIndex = streamUrl.indexOf('|')
+        val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
+        val pipeIndex = normalizedUrl.indexOf('|')
         if (pipeIndex == -1) {
-            return ChannelLink(quality = "Default", url = streamUrl)
+            return ChannelLink(quality = "Default", url = normalizedUrl)
         }
-        val url = streamUrl.substring(0, pipeIndex).trim()
-        val rawParams = streamUrl.substring(pipeIndex + 1)
+        val url = normalizedUrl.substring(0, pipeIndex).trim()
+        val rawParams = normalizedUrl.substring(pipeIndex + 1)
 
         var cookie: String? = null
         var referer: String? = null

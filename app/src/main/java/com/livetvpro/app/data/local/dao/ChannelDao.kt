@@ -37,6 +37,12 @@ interface ChannelDao {
     @Query("DELETE FROM channels WHERE categoryId = :categoryId")
     suspend fun deleteByCategory(categoryId: String)
 
+    @Transaction
+    suspend fun replaceCategoryChannels(categoryId: String, channels: List<ChannelEntity>) {
+        deleteByCategory(categoryId)
+        insertAll(channels)
+    }
+
     @Query("DELETE FROM channels")
     suspend fun deleteAll()
 

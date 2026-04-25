@@ -67,16 +67,13 @@ class ChannelRepository @Inject constructor(
     suspend fun syncCategory(categoryId: String) = withContext(Dispatchers.IO) {
         if (!dataRepository.isDataLoaded()) return@withContext
 
-        channelDao.deleteByCategory(categoryId)
-
         try {
             val staticChannels = dataRepository.getChannels().filter { it.categoryId == categoryId }
-            staticChannels.chunked(INSERT_CHUNK).forEach { chunk ->
-                channelDao.insertAll(chunk.map { it.toEntity() })
-            }
+            val entities = staticChannels.map { it.toEntity() }
+            channelDao.replaceCategoryChannels(categoryId, entities)
         } catch (e: OutOfMemoryError) {
             System.gc()
-            return@withContext
+            throw Exception("Low memory while syncing category")
         }
 
         val category = categoryRepository.getCategories().find { it.id == categoryId }
@@ -92,19 +89,18 @@ class ChannelRepository @Inject constructor(
         isFile: Boolean,
         application: android.app.Application
     ) = withContext(Dispatchers.IO) {
-        channelDao.deleteByCategory(playlistId)
-
         if (isFile) {
             try {
                 val uri = android.net.Uri.parse(source)
                 val content = application.contentResolver.openInputStream(uri)
                     ?.bufferedReader()?.use { it.readText() } ?: return@withContext
-                val parsed = M3uParser.parseM3uContent(content)
-                M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
-                    .chunked(INSERT_CHUNK)
-                    .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+                val channels = M3uParser.convertToChannels(
+                    M3uParser.parseM3uContent(content), playlistId, playlistTitle
+                )
+                channelDao.replaceCategoryChannels(playlistId, channels.map { it.toEntity() })
             } catch (e: OutOfMemoryError) {
                 System.gc()
+                throw Exception("Low memory while loading playlist")
             }
         } else {
             streamInsertM3u(source, playlistId, playlistTitle)
@@ -113,12 +109,13 @@ class ChannelRepository @Inject constructor(
 
     private suspend fun streamInsertM3u(url: String, categoryId: String, categoryName: String) {
         try {
-            val raw = M3uParser.parseM3uFromUrl(url)
-            M3uParser.convertToChannels(raw, categoryId, categoryName)
-                .chunked(INSERT_CHUNK)
-                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+            val channels = M3uParser.convertToChannels(
+                M3uParser.parseM3uFromUrl(url), categoryId, categoryName
+            )
+            channelDao.replaceCategoryChannels(categoryId, channels.map { it.toEntity() })
         } catch (e: OutOfMemoryError) {
             System.gc()
+            throw Exception("Low memory while loading M3U")
         }
     }
 

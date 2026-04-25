@@ -9,6 +9,8 @@ import com.livetvpro.app.data.models.Playlist
 import com.livetvpro.app.data.repository.PlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,10 +20,12 @@ class PlaylistsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val playlists: LiveData<List<Playlist>> = playlistRepository.getAllPlaylists()
+        .onStart { _isLoading.postValue(true) }
         .catch { e ->
             _error.postValue("Failed to load playlists: ${e.message}")
             emit(emptyList())
         }
+        .onEach { _isLoading.postValue(false) }
         .asLiveData()
 
     private val _error = MutableLiveData<String?>()

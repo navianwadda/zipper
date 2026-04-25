@@ -477,9 +477,6 @@ object M3uParser {
                 trimmedLine.startsWith("#EXTINF:") -> {
                     currentUserAgent = null
                     currentHeaders   = mutableMapOf()
-                    currentDrmScheme = null
-                    currentDrmKeyId  = null
-                    currentDrmKey    = null
                     currentName      = extractChannelName(trimmedLine)
                     currentLogo      = extractAttribute(trimmedLine, "tvg-logo")
                     currentGroup     = extractAttribute(trimmedLine, "group-title")
@@ -544,7 +541,8 @@ object M3uParser {
                             groupTitle  = currentGroup,
                             userAgent   = currentUserAgent,
                             httpHeaders = finalHeaders,
-                            drmScheme   = inlineDrmInfo.first  ?: currentDrmScheme,
+                            drmScheme   = inlineDrmInfo.first  ?: currentDrmScheme
+                                ?: if ((inlineDrmInfo.second ?: currentDrmKeyId) != null) "clearkey" else null,
                             drmKeyId    = inlineDrmInfo.second ?: currentDrmKeyId,
                             drmKey      = inlineDrmInfo.third  ?: currentDrmKey
                         ))

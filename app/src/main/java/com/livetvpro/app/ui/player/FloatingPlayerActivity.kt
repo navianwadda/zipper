@@ -39,7 +39,6 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.drm.FrameworkMediaDrm
@@ -1403,12 +1402,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
             val renderersFactory = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 3_000, 6_000)
-                .build()
             player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
-                .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector ?: return)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setSeekBackIncrementMs(skipMs)
@@ -2384,3 +2379,4 @@ class FloatingPlayerActivity : AppCompatActivity() {
         }
     }
 }
+

@@ -278,8 +278,8 @@ class PlaylistsFragment : Fragment() {
     private fun openFilePicker() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/x-mpegURL", "audio/x-mpegurl", "application/vnd.apple.mpegurl", "*/*"))
+            type = "application/x-mpegURL"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/x-mpegURL", "audio/x-mpegurl", "application/vnd.apple.mpegurl"))
         }
         filePickerLauncher.launch(intent)
     }
@@ -305,7 +305,7 @@ class PlaylistsFragment : Fragment() {
             urlInput.isEnabled = false
             if (fileUri != null) {
                 val displayName = requireContext().contentResolver.query(fileUri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) cursor.getString(0) else null
+                    if (cursor.moveToFirst()) cursor.getString(cursor.getColumnIndexOrThrow(android.provider.OpenableColumns.DISPLAY_NAME)) else null
                 } ?: fileUri.lastPathSegment ?: fileUri.toString()
                 titleInput.setText(displayName)
                 urlInput.setText(fileUri.toString())
@@ -399,6 +399,12 @@ class PlaylistsFragment : Fragment() {
             .setTitle("Delete Playlist")
             .setMessage("Are you sure you want to delete \"${playlist.title}\"?")
             .setPositiveButton("Delete") { dialog, _ ->
+                if (playlist.isFile && playlist.filePath.isNotEmpty()) {
+                    try {
+                        val uri = Uri.parse(playlist.filePath)
+                        requireContext().contentResolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    } catch (e: Exception) {}
+                }
                 viewModel.deletePlaylist(playlist)
                 dialog.dismiss()
             }

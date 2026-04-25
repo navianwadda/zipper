@@ -287,15 +287,9 @@ class PlayerActivity : AppCompatActivity() {
             val cacheKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
             val cachedList = cacheKey?.let { ChannelListCache.get(it) }
             if (!cachedList.isNullOrEmpty()) {
-                // Cache hit: list is ready, safe to also refresh channel data
-                // (getChannels() result will be served from NativeDataRepository cache)
                 viewModel.setChannelList(cachedList)
                 viewModel.refreshChannelData(contentId)
             } else {
-                // No cache: loadAllChannelsForList will call getChannels() —
-                // do NOT also call refreshChannelData concurrently on Android 7
-                // low-RAM devices as the double parse causes OOM crash.
-                // Pass contentId so refresh fires after the list load completes.
                 viewModel.loadAllChannelsForList(
                     categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "",
                     refreshChannelId = contentId
@@ -1887,8 +1881,8 @@ class PlayerActivity : AppCompatActivity() {
             for (segment in rawParams.split("|")) {
                 val eqIdx = segment.indexOf('=')
                 val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
-                if (value.startsWith("http://", ignoreCase = true) ||
-                    value.startsWith("https://", ignoreCase = true)) {
+                if (value.startsWith("http:
+                    value.startsWith("https:
                     add(segment)
                 } else {
                     addAll(segment.split("&"))
@@ -1912,8 +1906,8 @@ class PlayerActivity : AppCompatActivity() {
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
                 "drmlicense" -> {
-                    if (value.startsWith("http://", ignoreCase = true) ||
-                        value.startsWith("https://", ignoreCase = true)) {
+                    if (value.startsWith("http:
+                        value.startsWith("https:
                         drmLicenseUrl = value
                     } else if (value.trimStart().startsWith("{")) {
                         drmLicenseUrl = value
@@ -2042,18 +2036,8 @@ class PlayerActivity : AppCompatActivity() {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
 
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(
-                    15_000,
-                    50_000,
-                    3_000,
-                    6_000
-                )
-                .build()
-
             player = ExoPlayer.Builder(this)
                 .setRenderersFactory(renderersFactory)
-                .setLoadControl(loadControl)
                 .setTrackSelector(trackSelector!!)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .setSeekBackIncrementMs(skipMs)
@@ -2109,9 +2093,9 @@ class PlayerActivity : AppCompatActivity() {
                             mediaItemBuilder.setMimeType("audio/mpeg")
                         urlLower.contains(".aac") ->
                             mediaItemBuilder.setMimeType("audio/aac")
-                        urlLower.startsWith("rtmp://") || urlLower.startsWith("rtmps://") ->
+                        urlLower.startsWith("rtmp:
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
-                        urlLower.startsWith("rtsp://") ->
+                        urlLower.startsWith("rtsp:
                             mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
                     }
 

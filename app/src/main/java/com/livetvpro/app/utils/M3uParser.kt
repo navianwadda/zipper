@@ -233,7 +233,6 @@ object M3uParser {
         }
     }
 
-
     fun parseJsonPlaylist(jsonContent: String): List<M3uChannel> {
         val channels = mutableListOf<M3uChannel>()
         try {
@@ -965,3 +964,4 @@ object M3uParser {
         return if (parts.size > 1) parts.joinToString("|") else parts[0]
     }
 }
+

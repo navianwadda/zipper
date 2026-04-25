@@ -188,7 +188,7 @@ class FloatingPlayerService : Service() {
             referer: String = "",
             origin: String = "",
             drmLicense: String = "",
-            userAgent: String = "Default",
+            userAgent: String = "",
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
             xForwardedFor: String = ""
@@ -252,7 +252,7 @@ class FloatingPlayerService : Service() {
             referer: String = "",
             origin: String = "",
             drmLicense: String = "",
-            userAgent: String = "Default",
+            userAgent: String = "",
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
             xForwardedFor: String = ""
@@ -358,7 +358,7 @@ class FloatingPlayerService : Service() {
                 val referer = intent.getStringExtra("REFERER") ?: ""
                 val origin = intent.getStringExtra("ORIGIN") ?: ""
                 val drmLicense = intent.getStringExtra("DRM_LICENSE") ?: ""
-                val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
+                val userAgent = intent.getStringExtra("USER_AGENT") ?: ""
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
                 val streamName = intent.getStringExtra("CHANNEL_NAME") ?: "Network Stream"
                 val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
@@ -383,7 +383,7 @@ class FloatingPlayerService : Service() {
             val referer = intent?.getStringExtra("REFERER") ?: ""
             val origin = intent?.getStringExtra("ORIGIN") ?: ""
             val drmLicense = intent?.getStringExtra("DRM_LICENSE") ?: ""
-            val userAgent = intent?.getStringExtra("USER_AGENT") ?: "Default"
+            val userAgent = intent?.getStringExtra("USER_AGENT") ?: ""
             val drmScheme = intent?.getStringExtra("DRM_SCHEME") ?: "clearkey"
             val streamName = intent?.getStringExtra("CHANNEL_NAME") ?: "Network Stream"
             val xForwardedFor = intent?.getStringExtra("X_FORWARDED_FOR") ?: ""
@@ -529,7 +529,8 @@ class FloatingPlayerService : Service() {
             val parsedStream = parseStreamUrl(resolvedPipeUrl2)
             val actualUrl = parsedStream.url
             val headers = parsedStream.headers.toMutableMap()
-            if (!headers.containsKey("User-Agent")) {
+            val ua = headers["User-Agent"]
+            if (ua.isNullOrBlank() || ua == "Default") {
                 headers["User-Agent"] = "okhttp/4.12.0"
             }
             val effectiveStreamInfo = parsedStream
@@ -1015,7 +1016,8 @@ class FloatingPlayerService : Service() {
 
             val parsedStream = parseStreamUrl(resolvedPipeUrl)
             val headers = parsedStream.headers.toMutableMap()
-            if (!headers.containsKey("User-Agent")) {
+            val ua = headers["User-Agent"]
+            if (ua.isNullOrBlank() || ua == "Default") {
                 headers["User-Agent"] = "okhttp/4.12.0"
             }
 
@@ -1887,12 +1889,13 @@ class FloatingPlayerService : Service() {
     }
 
     private fun parseStreamUrl(streamUrl: String): StreamInfo {
-        val pipeIndex = streamUrl.indexOf('|')
-        if (pipeIndex == -1) return StreamInfo(streamUrl, mapOf(), null, null, null, null)
+        val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
+        val pipeIndex = normalizedUrl.indexOf('|')
+        if (pipeIndex == -1) return StreamInfo(normalizedUrl, mapOf(), null, null, null, null)
 
-        val url = streamUrl.substring(0, pipeIndex).trim().trimEnd('?')
+        val url = normalizedUrl.substring(0, pipeIndex).trim().trimEnd('?')
         val parts = buildList {
-            for (segment in streamUrl.substring(pipeIndex + 1).split("|")) {
+            for (segment in normalizedUrl.substring(pipeIndex + 1).split("|")) {
                 val eqIdx = segment.indexOf('=')
                 val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
                 if (value.startsWith("http://", ignoreCase = true) ||

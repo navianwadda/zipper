@@ -1465,7 +1465,7 @@ class PlayerActivity : AppCompatActivity() {
                 val origin = intent.getStringExtra("ORIGIN") ?: ""
                 val drmLicense = intent.getStringExtra("DRM_LICENSE") ?: ""
                 val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
-                val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "none"
+                val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
 
                 allEventLinks = listOf(
                     LiveEventLink(
@@ -1874,13 +1874,14 @@ class PlayerActivity : AppCompatActivity() {
     )
 
     private fun parseStreamUrl(streamUrl: String): StreamInfo {
-        val pipeIndex = streamUrl.indexOf('|')
+        val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
+        val pipeIndex = normalizedUrl.indexOf('|')
         if (pipeIndex == -1) {
-            return StreamInfo(streamUrl, mapOf(), null, null, null, null)
+            return StreamInfo(normalizedUrl, mapOf(), null, null, null, null)
         }
 
-        val url = streamUrl.substring(0, pipeIndex).trim()
-        val rawParams = streamUrl.substring(pipeIndex + 1).trim()
+        val url = normalizedUrl.substring(0, pipeIndex).trim()
+        val rawParams = normalizedUrl.substring(pipeIndex + 1).trim()
 
         val parts = buildList {
             for (segment in rawParams.split("|")) {
@@ -1956,7 +1957,7 @@ class PlayerActivity : AppCompatActivity() {
         link.origin?.let { if (it.isNotEmpty()) params.add("origin=$it") }
         link.userAgent?.let { if (it.isNotEmpty()) params.add("user-agent=$it") }
         link.xForwardedFor?.let { if (it.isNotEmpty()) params.add("x-forwarded-for=$it") }
-        link.drmScheme?.let { if (it.isNotEmpty() && it != "none") params.add("drmScheme=$it") }
+        link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
 
         if (params.isNotEmpty()) {

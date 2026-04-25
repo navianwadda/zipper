@@ -299,7 +299,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     }
 
     private fun showLinkSelectionDialog(channel: Channel) {
-        val links = channel.links ?: return
+        val links = channel.links?.takeIf { it.isNotEmpty() } ?: return
         val linkLabels = links.map { it.quality }.toTypedArray()
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle("Multiple Links Available")

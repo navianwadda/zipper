@@ -103,28 +103,30 @@ class CategoryChannelsViewModel @Inject constructor(
 
             try {
                 val playlist = playlistRepository.getPlaylistById(categoryId)
+                val alreadySynced = channelRepository.isCategorySynced(categoryId)
 
-                if (playlist != null) {
-                    channelRepository.syncPlaylist(
-                        playlistId    = playlist.id,
-                        playlistTitle = playlist.title,
-                        source        = if (playlist.isFile) playlist.filePath else playlist.url,
-                        isFile        = playlist.isFile,
-                        application   = getApplication()
-                    )
-                } else {
-                    channelRepository.syncCategory(categoryId)
+                if (!alreadySynced) {
+                    if (playlist != null) {
+                        channelRepository.syncPlaylist(
+                            playlistId    = playlist.id,
+                            playlistTitle = playlist.title,
+                            source        = if (playlist.isFile) playlist.filePath else playlist.url,
+                            isFile        = playlist.isFile,
+                            application   = getApplication()
+                        )
+                    } else {
+                        channelRepository.syncCategory(categoryId)
+                    }
                 }
 
                 _categoryId.value = categoryId
                 loadGroups(categoryId)
-                finishLoading(dataIsEmpty = false)
+                val isEmpty = !channelRepository.isCategorySynced(categoryId)
+                finishLoading(dataIsEmpty = isEmpty)
             } catch (e: OutOfMemoryError) {
                 System.gc()
-                _categoryId.value = null
                 finishLoading(dataIsEmpty = true, error = Exception("Low memory. Please close other apps and try again."))
             } catch (e: Exception) {
-                _categoryId.value = null
                 finishLoading(dataIsEmpty = true, error = e)
             }
         }
@@ -162,7 +164,8 @@ class CategoryChannelsViewModel @Inject constructor(
                     channelRepository.syncCategory(categoryId)
                 }
                 loadGroups(categoryId)
-                finishLoading(dataIsEmpty = false)
+                val isEmpty = !channelRepository.isCategorySynced(categoryId)
+                finishLoading(dataIsEmpty = isEmpty)
             } catch (e: OutOfMemoryError) {
                 System.gc()
                 finishLoading(dataIsEmpty = true, error = Exception("Low memory. Please close other apps and try again."))

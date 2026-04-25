@@ -195,7 +195,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             referer: String = "",
             origin: String = "",
             drmLicense: String = "",
-            userAgent: String = "Default",
+            userAgent: String = "",
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
             xForwardedFor: String = "",
@@ -712,7 +712,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     cookie = parsed.headers["Cookie"] ?: "",
                     referer = parsed.headers["Referer"] ?: "",
                     origin = parsed.headers["Origin"] ?: "",
-                    userAgent = parsed.headers["User-Agent"] ?: intent.getStringExtra("USER_AGENT") ?: "Default",
+                    userAgent = parsed.headers["User-Agent"] ?: intent.getStringExtra("USER_AGENT") ?: "",
                     xForwardedFor = parsed.headers["X-Forwarded-For"],
                     drmScheme = resolvedDrmScheme,
                     drmLicenseUrl = resolvedDrmLicenseUrl
@@ -726,7 +726,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 val referer = intent.getStringExtra("REFERER") ?: ""
                 val origin = intent.getStringExtra("ORIGIN") ?: ""
                 val drmLicense = intent.getStringExtra("DRM_LICENSE") ?: ""
-                val userAgent = intent.getStringExtra("USER_AGENT") ?: "Default"
+                val userAgent = intent.getStringExtra("USER_AGENT") ?: ""
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
                 val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
 
@@ -1154,13 +1154,14 @@ class FloatingPlayerActivity : AppCompatActivity() {
     )
 
     private fun parseStreamUrl(streamUrl: String): StreamInfo {
-        val pipeIndex = streamUrl.indexOf('|')
+        val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
+        val pipeIndex = normalizedUrl.indexOf('|')
         if (pipeIndex == -1) {
-            return StreamInfo(streamUrl, mapOf(), null, null, null, null)
+            return StreamInfo(normalizedUrl, mapOf(), null, null, null, null)
         }
 
-        val url = streamUrl.substring(0, pipeIndex).trim()
-        val rawParams = streamUrl.substring(pipeIndex + 1).trim()
+        val url = normalizedUrl.substring(0, pipeIndex).trim()
+        val rawParams = normalizedUrl.substring(pipeIndex + 1).trim()
 
         val parts = buildList {
             for (segment in rawParams.split("|")) {
@@ -1367,7 +1368,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
             }
 
             val headers = streamInfo.headers.toMutableMap()
-            if (!headers.containsKey("User-Agent")) {
+            val ua = headers["User-Agent"]
+            if (ua.isNullOrBlank() || ua == "Default") {
                 headers["User-Agent"] = "okhttp/4.12.0"
             }
 
@@ -1815,7 +1817,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                         putExtra("REFERER", link?.referer ?: "")
                                         putExtra("ORIGIN", link?.origin ?: "")
                                         putExtra("DRM_LICENSE", link?.drmLicenseUrl ?: "")
-                                        putExtra("USER_AGENT", link?.userAgent ?: "Default")
+                                        putExtra("USER_AGENT", link?.userAgent ?: "")
                                         putExtra("DRM_SCHEME", link?.drmScheme ?: "clearkey")
                                         putExtra("CHANNEL_NAME", currentName)
                                         putExtra(FloatingPlayerService.EXTRA_RESTORE_POSITION, true)

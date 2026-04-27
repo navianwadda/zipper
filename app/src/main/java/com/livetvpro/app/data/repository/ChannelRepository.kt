@@ -68,9 +68,10 @@ class ChannelRepository @Inject constructor(
         if (!dataRepository.isDataLoaded()) return@withContext
 
         try {
-            val staticChannels = dataRepository.getChannels().filter { it.categoryId == categoryId }
-            val entities = staticChannels.map { it.toEntity() }
-            channelDao.replaceCategoryChannels(categoryId, entities)
+            val nativeChannels = dataRepository.getChannels().filter { it.categoryId == categoryId }
+            if (nativeChannels.isNotEmpty()) {
+                channelDao.replaceCategoryChannels(categoryId, nativeChannels.map { it.toEntity() })
+            }
         } catch (e: OutOfMemoryError) {
             System.gc()
             throw Exception("Low memory while syncing category")

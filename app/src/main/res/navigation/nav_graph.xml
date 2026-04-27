@@ -10,7 +10,11 @@
         android:label="Home">
         <action
             android:id="@+id/action_home_to_category"
-            app:destination="@id/categoryChannelsFragment" />
+            app:destination="@id/categoryChannelsFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false"
+            app:popUpToSaveState="true"
+            app:restoreState="true" />
         <action
             android:id="@+id/action_home_to_favorites"
             app:destination="@id/favoritesFragment" />
@@ -153,7 +157,11 @@
             app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_playlists_to_category"
-            app:destination="@id/categoryChannelsFragment" />
+            app:destination="@id/categoryChannelsFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false"
+            app:popUpToSaveState="true"
+            app:restoreState="true" />
     </fragment>
 
     <fragment

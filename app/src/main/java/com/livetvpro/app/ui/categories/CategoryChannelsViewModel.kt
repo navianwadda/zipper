@@ -55,7 +55,8 @@ class CategoryChannelsViewModel @Inject constructor(
     private val _currentGroup = MutableLiveData<String>("All")
     val currentGroup: LiveData<String> = _currentGroup
 
-    private var lastLoadedCategoryId: String? = null
+    var lastLoadedCategoryId: String? = null
+        private set
 
     val channelsPaged: Flow<PagingData<Channel>> = combine(
         _categoryId,

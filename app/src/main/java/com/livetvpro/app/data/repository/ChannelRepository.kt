@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,6 +27,8 @@ class ChannelRepository @Inject constructor(
         private const val INSERT_CHUNK = 100
         private val gson = com.google.gson.Gson()
     }
+
+    private val channelCache = ConcurrentHashMap<String, List<Channel>>()
 
     fun getChannelsPaged(
         categoryId: String,
@@ -53,13 +56,15 @@ class ChannelRepository @Inject constructor(
         }
     }
 
-    suspend fun getChannelsByCategory(categoryId: String): List<Channel> =
-        channelDao.getChannelsByCategory(categoryId).map { entity ->
+    suspend fun getChannelsByCategory(categoryId: String): List<Channel> {
+        channelCache[categoryId]?.let { return it }
+        return channelDao.getChannelsByCategory(categoryId).map { entity ->
             val links = entity.linksJson?.let {
                 gson.fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
             }
             entity.toChannel(links)
-        }
+        }.also { channelCache[categoryId] = it }
+    }
 
     suspend fun getGroups(categoryId: String): List<String> =
         channelDao.getGroups(categoryId)
@@ -71,6 +76,7 @@ class ChannelRepository @Inject constructor(
             val staticChannels = dataRepository.getChannels().filter { it.categoryId == categoryId }
             val entities = staticChannels.map { it.toEntity() }
             channelDao.replaceCategoryChannels(categoryId, entities)
+            channelCache.remove(categoryId)
         } catch (e: OutOfMemoryError) {
             System.gc()
             throw Exception("Low memory while syncing category")
@@ -98,6 +104,7 @@ class ChannelRepository @Inject constructor(
                     M3uParser.parseM3uContent(content), playlistId, playlistTitle
                 )
                 channelDao.replaceCategoryChannels(playlistId, channels.map { it.toEntity() })
+                channelCache.remove(playlistId)
             } catch (e: OutOfMemoryError) {
                 System.gc()
                 throw Exception("Low memory while loading playlist")
@@ -113,6 +120,7 @@ class ChannelRepository @Inject constructor(
                 M3uParser.parseM3uFromUrl(url), categoryId, categoryName
             )
             channelDao.replaceCategoryChannels(categoryId, channels.map { it.toEntity() })
+            channelCache.remove(categoryId)
         } catch (e: OutOfMemoryError) {
             System.gc()
             throw Exception("Low memory while loading M3U")

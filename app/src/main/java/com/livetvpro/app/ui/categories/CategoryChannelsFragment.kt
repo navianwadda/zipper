@@ -141,7 +141,9 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         } else {
             binding.swipeRefresh.isEnabled = true
         }
-        currentCategoryId?.let { viewModel.loadChannels(it) }
+        currentCategoryId?.let { id ->
+            if (id != viewModel.lastLoadedCategoryId) viewModel.loadChannels(id)
+        }
         if (DeviceUtils.isTvDevice) {
             setupTvNumpadSearch()
         }

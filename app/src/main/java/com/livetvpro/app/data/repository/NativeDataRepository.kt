@@ -89,6 +89,7 @@ class NativeDataRepository @Inject constructor(
 
     private val channelCache = AtomicReference<List<Channel>?>(null)
     private val sportsCache = AtomicReference<List<Channel>?>(null)
+    @Volatile private var sessionDataLoaded = false
 
     init {
         try {
@@ -138,8 +139,9 @@ class NativeDataRepository @Inject constructor(
                     val ok = p5(body)
                     if (ok) {
                         q3 = body
-                        channelCache.set(null) 
+                        channelCache.set(null)
                         sportsCache.set(null)
+                        sessionDataLoaded = true
                         return@withContext true
                     } else return@withContext q5()
                 }
@@ -210,11 +212,7 @@ class NativeDataRepository @Inject constructor(
         emptyList()
     } catch (e: Exception) { emptyList() }
 
-    fun isDataLoaded(): Boolean {
-        if (p9()) return true
-        if (q3.isNotBlank()) return p5(q3)
-        return false
-    }
+    fun isDataLoaded(): Boolean = sessionDataLoaded
 
     private fun isDebugBuild(): Boolean =
         context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0

@@ -289,12 +289,15 @@ class MainActivity : AppCompatActivity() {
         fun navigate(destinationId: Int) {
             val currentId = navController.currentDestination?.id ?: return
             if (currentId == destinationId) return
-            val navOptions = NavOptions.Builder()
-                .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
-                .setLaunchSingleTop(true)
-                .setRestoreState(true)
-                .build()
-            navController.navigate(destinationId, null, navOptions)
+            val popped = navController.popBackStack(destinationId, false)
+            if (!popped) {
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
+                    .setLaunchSingleTop(true)
+                    .setRestoreState(true)
+                    .build()
+                navController.navigate(destinationId, null, navOptions)
+            }
         }
 
         tabDestinations.forEach { (viewId, destId) ->
@@ -579,7 +582,9 @@ class MainActivity : AppCompatActivity() {
 
         val navigateTopLevel = fun(destinationId: Int) {
             val currentId = navController.currentDestination?.id ?: graphStartDestinationId
-            if (currentId != destinationId) {
+            if (currentId == destinationId) return
+            val popped = navController.popBackStack(destinationId, false)
+            if (!popped) {
                 val navOptions = NavOptions.Builder()
                     .setPopUpTo(navController.graph.startDestinationId, false, saveState = true)
                     .setLaunchSingleTop(true)

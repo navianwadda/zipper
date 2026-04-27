@@ -75,8 +75,10 @@ class SportsViewModel @Inject constructor(
             try {
                 if (!hasExisting) startLoading()
                 val sports = repository.getSports()
-                _channels.value = sports
-                applyFilter()
+                if (sports != _channels.value) {
+                    _channels.value = sports
+                    applyFilter()
+                }
                 finishLoading(dataIsEmpty = sports.isEmpty())
             } catch (e: OutOfMemoryError) {
                 System.gc()

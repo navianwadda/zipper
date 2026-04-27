@@ -310,8 +310,6 @@ object M3uParser {
 
                 if (drmScheme != null) {
                     drmScheme = normalizeDrmScheme(drmScheme)
-                } else if (drmKeyId != null && drmKey != null && drmKey != "LICENSE_URL") {
-                    drmScheme = "clearkey"
                 }
 
                 if (link.isNotEmpty()) {
@@ -463,7 +461,6 @@ object M3uParser {
                             if (parts.size == 2) {
                                 currentDrmKeyId = parts[0].trim()
                                 currentDrmKey   = parts[1].trim()
-                                if (currentDrmScheme == null) currentDrmScheme = "clearkey"
                             }
                         }
                         keyValue.startsWith("{") -> {
@@ -471,7 +468,6 @@ object M3uParser {
                             if (keyId != null && key != null) {
                                 currentDrmKeyId = keyId
                                 currentDrmKey   = key
-                                if (currentDrmScheme == null) currentDrmScheme = "clearkey"
                             }
                         }
                     }
@@ -480,6 +476,9 @@ object M3uParser {
                 trimmedLine.startsWith("#EXTINF:") -> {
                     currentUserAgent = null
                     currentHeaders   = mutableMapOf()
+                    currentDrmScheme = null
+                    currentDrmKeyId  = null
+                    currentDrmKey    = null
                     currentName      = extractChannelName(trimmedLine)
                     currentLogo      = extractAttribute(trimmedLine, "tvg-logo")
                     currentGroup     = extractAttribute(trimmedLine, "group-title")
@@ -544,13 +543,7 @@ object M3uParser {
                             groupTitle  = currentGroup,
                             userAgent   = currentUserAgent,
                             httpHeaders = finalHeaders,
-                            drmScheme   = inlineDrmInfo.first  ?: currentDrmScheme
-                                ?: run {
-                                    val keyId = inlineDrmInfo.second ?: currentDrmKeyId
-                                    val key   = inlineDrmInfo.third  ?: currentDrmKey
-                                    if (keyId != null && key != null && key != "LICENSE_URL") "clearkey"
-                                    else null
-                                },
+                            drmScheme   = inlineDrmInfo.first  ?: currentDrmScheme,
                             drmKeyId    = inlineDrmInfo.second ?: currentDrmKeyId,
                             drmKey      = inlineDrmInfo.third  ?: currentDrmKey
                         ))
@@ -795,7 +788,7 @@ object M3uParser {
                         else -> if (key.startsWith("x-", ignoreCase = true) ||
                                     key.startsWith("sec-", ignoreCase = true) ||
                                     key.contains("-")) {
-                                headers[key] = value
+                            headers[key] = value
                         }
                     }
                 }
@@ -973,3 +966,4 @@ object M3uParser {
         return if (parts.size > 1) parts.joinToString("|") else parts[0]
     }
 }
+

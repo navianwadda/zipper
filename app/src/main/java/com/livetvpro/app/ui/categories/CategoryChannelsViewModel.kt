@@ -39,10 +39,6 @@ class CategoryChannelsViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle
 ) : AndroidRetryViewModel(application) {
 
-    companion object {
-        private val syncedThisSession = mutableSetOf<String>()
-    }
-
     private val _searchQuery   = MutableStateFlow("")
     private val _selectedGroup = MutableStateFlow("All")
     private val _categoryId    = MutableStateFlow<String?>(null)
@@ -107,21 +103,17 @@ class CategoryChannelsViewModel @Inject constructor(
 
             try {
                 val playlist = playlistRepository.getPlaylistById(categoryId)
-                val alreadySyncedThisSession = syncedThisSession.contains(categoryId)
 
-                if (!alreadySyncedThisSession) {
-                    if (playlist != null) {
-                        channelRepository.syncPlaylist(
-                            playlistId    = playlist.id,
-                            playlistTitle = playlist.title,
-                            source        = if (playlist.isFile) playlist.filePath else playlist.url,
-                            isFile        = playlist.isFile,
-                            application   = getApplication()
-                        )
-                    } else {
-                        channelRepository.syncCategory(categoryId)
-                    }
-                    syncedThisSession.add(categoryId)
+                if (playlist != null) {
+                    channelRepository.syncPlaylist(
+                        playlistId    = playlist.id,
+                        playlistTitle = playlist.title,
+                        source        = if (playlist.isFile) playlist.filePath else playlist.url,
+                        isFile        = playlist.isFile,
+                        application   = getApplication()
+                    )
+                } else {
+                    channelRepository.syncCategory(categoryId)
                 }
 
                 _categoryId.value = categoryId

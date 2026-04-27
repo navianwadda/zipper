@@ -19,7 +19,11 @@
             app:destination="@id/liveEventsFragment" />
         <action
             android:id="@+id/action_home_to_sports"
-            app:destination="@id/sportsFragment" />
+            app:destination="@id/sportsFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false"
+            app:popUpToSaveState="true"
+            app:restoreState="true" />
         <action
             android:id="@+id/action_home_to_network_stream"
             app:destination="@id/networkStreamFragment" />
@@ -65,7 +69,11 @@
             app:destination="@id/liveEventsFragment" />
         <action
             android:id="@+id/action_favorites_to_sports"
-            app:destination="@id/sportsFragment" />
+            app:destination="@id/sportsFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false"
+            app:popUpToSaveState="true"
+            app:restoreState="true" />
     </fragment>
 
     <fragment
@@ -82,7 +90,11 @@
             app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_live_to_sports"
-            app:destination="@id/sportsFragment" />
+            app:destination="@id/sportsFragment"
+            app:popUpTo="@id/liveEventsFragment"
+            app:popUpToInclusive="false"
+            app:popUpToSaveState="true"
+            app:restoreState="true" />
     </fragment>
 
     <fragment

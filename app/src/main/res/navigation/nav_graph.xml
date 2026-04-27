@@ -10,11 +10,7 @@
         android:label="Home">
         <action
             android:id="@+id/action_home_to_category"
-            app:destination="@id/categoryChannelsFragment"
-            app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:popUpToSaveState="true"
-            app:restoreState="true" />
+            app:destination="@id/categoryChannelsFragment" />
         <action
             android:id="@+id/action_home_to_favorites"
             app:destination="@id/favoritesFragment" />
@@ -24,10 +20,7 @@
         <action
             android:id="@+id/action_home_to_sports"
             app:destination="@id/sportsFragment"
-            app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:popUpToSaveState="true"
-            app:restoreState="true" />
+            app:launchSingleTop="true" />
         <action
             android:id="@+id/action_home_to_network_stream"
             app:destination="@id/networkStreamFragment" />
@@ -73,11 +66,7 @@
             app:destination="@id/liveEventsFragment" />
         <action
             android:id="@+id/action_favorites_to_sports"
-            app:destination="@id/sportsFragment"
-            app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:popUpToSaveState="true"
-            app:restoreState="true" />
+            app:destination="@id/sportsFragment" />
     </fragment>
 
     <fragment
@@ -94,11 +83,7 @@
             app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_live_to_sports"
-            app:destination="@id/sportsFragment"
-            app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:popUpToSaveState="true"
-            app:restoreState="true" />
+            app:destination="@id/sportsFragment" />
     </fragment>
 
     <fragment
@@ -157,11 +142,7 @@
             app:popUpToInclusive="false" />
         <action
             android:id="@+id/action_playlists_to_category"
-            app:destination="@id/categoryChannelsFragment"
-            app:popUpTo="@id/liveEventsFragment"
-            app:popUpToInclusive="false"
-            app:popUpToSaveState="true"
-            app:restoreState="true" />
+            app:destination="@id/categoryChannelsFragment" />
     </fragment>
 
     <fragment

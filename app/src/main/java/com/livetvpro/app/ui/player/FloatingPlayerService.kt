@@ -93,7 +93,7 @@ class FloatingPlayerService : Service() {
     @javax.inject.Inject
     lateinit var categoryRepository: com.livetvpro.app.data.repository.CategoryRepository
 
-    private fun getMinWidth() = dpToPx(270)
+    private fun getMinWidth() = dpToPx(260)
     private fun getMaxWidth() = dpToPx(400)
     private fun getMinHeight() = getMinWidth() * 9 / 16
     private fun getMaxHeight() = getMaxWidth() * 9 / 16

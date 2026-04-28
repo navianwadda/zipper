@@ -1526,7 +1526,7 @@ class FloatingPlayerService : Service() {
                                 hasMoved = true
                                 val minVisible = p.width / 4
                                 val screenW = getScreenWidth()
-                                val screenH = getScreenHeight()
+                                val screenH = getScreenHeight() - getNavBarHeight()
                                 p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
                                 p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
                                 windowManager?.updateViewLayout(floatingView, p)
@@ -1572,7 +1572,7 @@ class FloatingPlayerService : Service() {
                                 hasMoved = true
                                 val minVisible = p.width / 4
                                 val screenW = getScreenWidth()
-                                val screenH = getScreenHeight()
+                                val screenH = getScreenHeight() - getNavBarHeight()
                                 p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
                                 p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
                                 windowManager?.updateViewLayout(floatingView, p)
@@ -1825,6 +1825,11 @@ class FloatingPlayerService : Service() {
             display?.getSize(size)
             size.y
         }
+    }
+
+    private fun getNavBarHeight(): Int {
+        val resId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+        return if (resId > 0) resources.getDimensionPixelSize(resId) else 0
     }
 
     override fun onDestroy() {

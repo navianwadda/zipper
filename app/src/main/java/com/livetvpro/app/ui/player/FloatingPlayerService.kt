@@ -309,7 +309,8 @@ class FloatingPlayerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+        if (intent == null) return START_STICKY
+        when (intent.action) {
             ACTION_STOP -> {
                 stopAllInstances()
                 stopSelf()

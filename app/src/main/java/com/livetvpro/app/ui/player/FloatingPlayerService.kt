@@ -1534,6 +1534,8 @@ class FloatingPlayerService : Service() {
                                 val screenH = getScreenHeight() - getNavBarHeight()
                                 p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
                                 p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
+                                lastScreenW = screenW
+                                lastScreenH = screenH
                                 windowManager?.updateViewLayout(floatingView, p)
                             }
                             true
@@ -1580,6 +1582,8 @@ class FloatingPlayerService : Service() {
                                 val screenH = getScreenHeight() - getNavBarHeight()
                                 p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
                                 p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
+                                lastScreenW = screenW
+                                lastScreenH = screenH
                                 windowManager?.updateViewLayout(floatingView, p)
                             }
                             isDragging

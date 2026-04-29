@@ -606,7 +606,11 @@ class FloatingPlayerService : Service() {
 
             if (activeInstances.size == 1) {
                 val notification = createNotification(title)
-                startForeground(NOTIFICATION_ID, notification)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
             }
 
         } catch (e: Exception) {
@@ -706,7 +710,11 @@ class FloatingPlayerService : Service() {
 
             if (activeInstances.size == 1) {
                 val notification = createNotification(contentName)
-                startForeground(NOTIFICATION_ID, notification)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
             }
 
         } catch (e: Exception) {
@@ -818,7 +826,11 @@ class FloatingPlayerService : Service() {
 
             if (activeInstances.size == 1) {
                 val notification = createNotification(streamName)
-                startForeground(NOTIFICATION_ID, notification)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
             }
 
         } catch (e: Exception) {
@@ -973,7 +985,11 @@ class FloatingPlayerService : Service() {
 
             if (activeInstances.size == 1) {
                 val notification = createNotification(streamName)
-                startForeground(NOTIFICATION_ID, notification)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
             }
 
         } catch (e: Exception) {
@@ -1778,9 +1794,11 @@ class FloatingPlayerService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Floating Player",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Floating player service notification"
+                setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
@@ -1797,13 +1815,20 @@ class FloatingPlayerService : Service() {
         )
 
         val hasActiveInstances = activeInstances.isNotEmpty()
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Floating Player")
             .setContentText(title)
             .setSmallIcon(R.drawable.ic_play)
             .addAction(R.drawable.ic_close, "Stop All", stopPendingIntent)
             .setOngoing(hasActiveInstances)
-            .build()
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        }
+
+        val notification = builder.build()
 
         if (hasActiveInstances) {
             notification.flags = notification.flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT

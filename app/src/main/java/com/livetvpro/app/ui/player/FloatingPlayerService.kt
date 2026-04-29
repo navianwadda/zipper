@@ -474,11 +474,15 @@ class FloatingPlayerService : Service() {
                 if (resId > 0) resources.getDimensionPixelSize(resId) else 0
             }
 
-            val initialWidth = getMinWidth()
-            val initialHeight = getMinHeight()
+            val savedWidth = preferencesManager.getFloatingPlayerWidth()
+            val savedHeight = preferencesManager.getFloatingPlayerHeight()
+            val initialWidth = if (restorePosition && savedWidth > 0) savedWidth.coerceIn(getMinWidth(), getMaxWidth()) else getMinWidth()
+            val initialHeight = if (restorePosition && savedHeight > 0) savedHeight.coerceIn(getMinHeight(), getMaxHeight()) else getMinHeight()
 
-            val initialX = (screenWidth - initialWidth) / 2
-            val initialY = statusBarHeight + (screenHeight - statusBarHeight - initialHeight) / 2
+            val savedX = preferencesManager.getFloatingPlayerX()
+            val savedY = preferencesManager.getFloatingPlayerY()
+            val initialX = if (restorePosition && savedX != Int.MIN_VALUE) savedX else (screenWidth - initialWidth) / 2
+            val initialY = if (restorePosition && savedY != Int.MIN_VALUE) savedY else statusBarHeight + (screenHeight - statusBarHeight - initialHeight) / 2
 
             val params = WindowManager.LayoutParams(
                 initialWidth,

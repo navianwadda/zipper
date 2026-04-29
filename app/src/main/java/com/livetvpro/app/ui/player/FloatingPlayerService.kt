@@ -81,6 +81,8 @@ class FloatingPlayerService : Service() {
 
     private var windowManager: WindowManager? = null
     private val activeInstances = mutableMapOf<String, FloatingPlayerInstance>()
+    private var lastScreenW: Int = 0
+    private var lastScreenH: Int = 0
     private val hideControlsHandlers = mutableMapOf<String, android.os.Handler>()
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -300,6 +302,8 @@ class FloatingPlayerService : Service() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
+        lastScreenW = getScreenWidth()
+        lastScreenH = getScreenHeight() - getNavBarHeight()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -1837,18 +1841,19 @@ class FloatingPlayerService : Service() {
         super.onConfigurationChanged(newConfig)
         val newScreenW = getScreenWidth()
         val newScreenH = getScreenHeight() - getNavBarHeight()
+        val oldScreenW = if (lastScreenW > 0) lastScreenW else newScreenW
+        val oldScreenH = if (lastScreenH > 0) lastScreenH else newScreenH
         activeInstances.values.forEach { instance ->
             val p = instance.params
             val minVisible = p.width / 4
-            // Remap position proportionally from old screen space to new screen space
-            val oldScreenW = if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) newScreenH else newScreenW
-            val oldScreenH = if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) newScreenW else newScreenH
             val ratioX = if (oldScreenW > 0) p.x.toFloat() / oldScreenW else 0.5f
             val ratioY = if (oldScreenH > 0) p.y.toFloat() / oldScreenH else 0.5f
             p.x = (ratioX * newScreenW).toInt().coerceIn(-(p.width - minVisible), newScreenW - minVisible)
             p.y = (ratioY * newScreenH).toInt().coerceIn(-(p.height - minVisible), newScreenH - minVisible)
             try { windowManager?.updateViewLayout(instance.floatingView, p) } catch (_: Exception) {}
         }
+        lastScreenW = newScreenW
+        lastScreenH = newScreenH
     }
 
     override fun onDestroy() {

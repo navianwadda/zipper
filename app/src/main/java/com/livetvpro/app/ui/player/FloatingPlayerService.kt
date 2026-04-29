@@ -1835,13 +1835,18 @@ class FloatingPlayerService : Service() {
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        val screenW = getScreenWidth()
-        val screenH = getScreenHeight() - getNavBarHeight()
+        val newScreenW = getScreenWidth()
+        val newScreenH = getScreenHeight() - getNavBarHeight()
         activeInstances.values.forEach { instance ->
             val p = instance.params
             val minVisible = p.width / 4
-            p.x = p.x.coerceIn(-(p.width - minVisible), screenW - minVisible)
-            p.y = p.y.coerceIn(-(p.height - minVisible), screenH - minVisible)
+            // Remap position proportionally from old screen space to new screen space
+            val oldScreenW = if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) newScreenH else newScreenW
+            val oldScreenH = if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) newScreenW else newScreenH
+            val ratioX = if (oldScreenW > 0) p.x.toFloat() / oldScreenW else 0.5f
+            val ratioY = if (oldScreenH > 0) p.y.toFloat() / oldScreenH else 0.5f
+            p.x = (ratioX * newScreenW).toInt().coerceIn(-(p.width - minVisible), newScreenW - minVisible)
+            p.y = (ratioY * newScreenH).toInt().coerceIn(-(p.height - minVisible), newScreenH - minVisible)
             try { windowManager?.updateViewLayout(instance.floatingView, p) } catch (_: Exception) {}
         }
     }

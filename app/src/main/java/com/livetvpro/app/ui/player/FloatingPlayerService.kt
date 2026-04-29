@@ -879,13 +879,17 @@ class FloatingPlayerService : Service() {
                 y = initialY
             }
 
+            val parsedPipe = parseStreamUrl(streamUrl)
             val headers = mutableMapOf<String, String>()
+            headers.putAll(parsedPipe.headers)
             if (cookie.isNotEmpty()) headers["Cookie"] = cookie
             if (referer.isNotEmpty()) headers["Referer"] = referer
             if (origin.isNotEmpty()) headers["Origin"] = origin
             if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                userAgent else "okhttp/4.12.0"
+                userAgent
+            else
+                headers["User-Agent"] ?: "okhttp/4.12.0"
             headers["User-Agent"] = effectiveUserAgent
 
             val nsDataSourceFactory = DefaultHttpDataSource.Factory()
@@ -896,7 +900,7 @@ class FloatingPlayerService : Service() {
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
+            val nsStreamInfo = resolveNetworkStreamInfo(parsedPipe.url, headers, drmScheme, drmLicense)
             val nsMediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, nsDataSourceFactory, headers)
 
             val renderersFactory = DefaultRenderersFactory(this)
@@ -1830,6 +1834,19 @@ class FloatingPlayerService : Service() {
     private fun getNavBarHeight(): Int {
         val resId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
         return if (resId > 0) resources.getDimensionPixelSize(resId) else 0
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val screenW = getScreenWidth()
+        val screenH = getScreenHeight() - getNavBarHeight()
+        activeInstances.values.forEach { instance ->
+            val p = instance.params
+            val minVisible = p.width / 4
+            p.x = p.x.coerceIn(-(p.width - minVisible), screenW - minVisible)
+            p.y = p.y.coerceIn(-(p.height - minVisible), screenH - minVisible)
+            try { windowManager?.updateViewLayout(instance.floatingView, p) } catch (_: Exception) {}
+        }
     }
 
     override fun onDestroy() {

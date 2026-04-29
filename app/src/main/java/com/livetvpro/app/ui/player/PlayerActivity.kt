@@ -1875,7 +1875,7 @@ class PlayerActivity : AppCompatActivity() {
             return StreamInfo(normalizedUrl, mapOf(), null, null, null, null)
         }
 
-        val url = normalizedUrl.substring(0, pipeIndex).trim()
+        val url = normalizedUrl.substring(0, pipeIndex).trim().trimEnd('?')
         val rawParams = normalizedUrl.substring(pipeIndex + 1).trim()
 
         val parts = buildList {

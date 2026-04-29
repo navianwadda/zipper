@@ -481,19 +481,8 @@ class FloatingPlayerService : Service() {
                 if (resId > 0) resources.getDimensionPixelSize(resId) else 0
             }
 
-            val savedWidth = preferencesManager.getFloatingPlayerWidth()
-            val savedHeight = preferencesManager.getFloatingPlayerHeight()
-
-            val initialWidth: Int
-            val initialHeight: Int
-
-            if (savedWidth > 0 && savedHeight > 0) {
-                initialWidth = savedWidth.coerceIn(getMinWidth(), getMaxWidth())
-                initialHeight = savedHeight.coerceIn(getMinHeight(), getMaxHeight())
-            } else {
-                initialWidth = (screenWidth * 0.6f).toInt().coerceIn(getMinWidth(), getMaxWidth())
-                initialHeight = initialWidth * 9 / 16
-            }
+            val initialWidth = getMinWidth()
+            val initialHeight = getMinHeight()
 
             val initialX = (screenWidth - initialWidth) / 2
             val initialY = statusBarHeight + (screenHeight - statusBarHeight - initialHeight) / 2
@@ -650,12 +639,8 @@ class FloatingPlayerService : Service() {
                 if (resId > 0) resources.getDimensionPixelSize(resId) else 0
             }
 
-            val savedWidth = preferencesManager.getFloatingPlayerWidth()
-            val savedHeight = preferencesManager.getFloatingPlayerHeight()
-            val initialWidth = if (savedWidth > 0) savedWidth.coerceIn(getMinWidth(), getMaxWidth())
-                               else (screenWidth * 0.6f).toInt().coerceIn(getMinWidth(), getMaxWidth())
-            val initialHeight = if (savedHeight > 0) savedHeight.coerceIn(getMinHeight(), getMaxHeight())
-                                else initialWidth * 9 / 16
+            val initialWidth = getMinWidth()
+            val initialHeight = getMinHeight()
 
             val savedX = preferencesManager.getFloatingPlayerX()
             val savedY = preferencesManager.getFloatingPlayerY()
@@ -760,12 +745,8 @@ class FloatingPlayerService : Service() {
                 if (resId > 0) resources.getDimensionPixelSize(resId) else 0
             }
 
-            val savedWidth = preferencesManager.getFloatingPlayerWidth()
-            val savedHeight = preferencesManager.getFloatingPlayerHeight()
-            val initialWidth = if (savedWidth > 0) savedWidth.coerceIn(getMinWidth(), getMaxWidth())
-                               else (screenWidth * 0.6f).toInt().coerceIn(getMinWidth(), getMaxWidth())
-            val initialHeight = if (savedHeight > 0) savedHeight.coerceIn(getMinHeight(), getMaxHeight())
-                                else initialWidth * 9 / 16
+            val initialWidth = getMinWidth()
+            val initialHeight = getMinHeight()
 
             val savedX = preferencesManager.getFloatingPlayerX()
             val savedY = preferencesManager.getFloatingPlayerY()
@@ -866,12 +847,8 @@ class FloatingPlayerService : Service() {
                 if (resId > 0) resources.getDimensionPixelSize(resId) else 0
             }
 
-            val savedWidth = preferencesManager.getFloatingPlayerWidth()
-            val savedHeight = preferencesManager.getFloatingPlayerHeight()
-            val initialWidth = if (savedWidth > 0) savedWidth.coerceIn(getMinWidth(), getMaxWidth())
-                               else (screenWidth * 0.6f).toInt().coerceIn(getMinWidth(), getMaxWidth())
-            val initialHeight = if (savedHeight > 0) savedHeight.coerceIn(getMinHeight(), getMaxHeight())
-                                else initialWidth * 9 / 16
+            val initialWidth = getMinWidth()
+            val initialHeight = getMinHeight()
 
             val savedX = preferencesManager.getFloatingPlayerX()
             val savedY = preferencesManager.getFloatingPlayerY()

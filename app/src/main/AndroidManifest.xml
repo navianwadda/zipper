@@ -145,6 +145,7 @@
             android:name=".ui.player.FloatingPlayerService"
             android:enabled="true"
             android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:foregroundServiceType="mediaPlayback" />
 
         <service

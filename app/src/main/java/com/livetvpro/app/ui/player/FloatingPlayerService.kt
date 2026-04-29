@@ -109,7 +109,6 @@ class FloatingPlayerService : Service() {
         const val EXTRA_INSTANCE_ID = "extra_instance_id"
         const val EXTRA_RESTORE_POSITION = "extra_restore_position"
         const val ACTION_STOP = "action_stop"
-        const val ACTION_NOTIFICATION_CANCELLED = "action_notification_cancelled"
         const val ACTION_STOP_INSTANCE = "action_stop_instance"
         const val ACTION_UPDATE_STREAM = "action_update_stream"
         const val ACTION_HIDE_OTHERS = "action_hide_others"
@@ -301,12 +300,6 @@ class FloatingPlayerService : Service() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
-        val filter = android.content.IntentFilter(ACTION_NOTIFICATION_CANCELLED)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(notificationDismissReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(notificationDismissReceiver, filter)
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -1778,11 +1771,9 @@ class FloatingPlayerService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Floating Player",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Floating player service notification"
-                setShowBadge(false)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
@@ -1798,34 +1789,13 @@ class FloatingPlayerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val hasActiveInstances = activeInstances.isNotEmpty()
-        val dismissIntent = Intent(ACTION_NOTIFICATION_CANCELLED).setPackage(packageName)
-        val dismissPendingIntent = PendingIntent.getBroadcast(
-            this, 1, dismissIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Floating Player")
             .setContentText(title)
             .setSmallIcon(R.drawable.ic_play)
             .addAction(R.drawable.ic_close, "Stop All", stopPendingIntent)
-            .setOngoing(hasActiveInstances)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setDeleteIntent(dismissPendingIntent)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            builder.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-        }
-
-        val notification = builder.build()
-
-        if (hasActiveInstances) {
-            notification.flags = notification.flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
-        }
-
-        return notification
+            .setOngoing(true)
+            .build()
     }
 
     private fun dpToPx(dp: Int): Int {
@@ -1874,17 +1844,8 @@ class FloatingPlayerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        try { unregisterReceiver(notificationDismissReceiver) } catch (_: Exception) {}
         serviceScope.cancel()
         stopAllInstances()
-    }
-
-    private val notificationDismissReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == ACTION_NOTIFICATION_CANCELLED && activeInstances.isNotEmpty()) {
-                updateNotification()
-            }
-        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

@@ -1796,13 +1796,20 @@ class FloatingPlayerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val hasActiveInstances = activeInstances.isNotEmpty()
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Floating Player")
             .setContentText(title)
             .setSmallIcon(R.drawable.ic_play)
             .addAction(R.drawable.ic_close, "Stop All", stopPendingIntent)
-            .setOngoing(true)
+            .setOngoing(hasActiveInstances)
             .build()
+
+        if (hasActiveInstances) {
+            notification.flags = notification.flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
+        }
+
+        return notification
     }
 
     private fun dpToPx(dp: Int): Int {

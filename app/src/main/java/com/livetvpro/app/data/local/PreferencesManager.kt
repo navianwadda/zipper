@@ -30,7 +30,6 @@ class PreferencesManager @Inject constructor(
         private const val KEY_FORCE_LOWEST_QUALITY = "force_lowest_quality"
         private const val KEY_CENTER_CONTROLS_MODE = "center_controls_mode"
 
-        // Center controls mode values
         const val CENTER_MODE_SEEKS_ONLY       = 0
         const val CENTER_MODE_SEEKS_AND_NAV    = 1
         const val CENTER_MODE_NAV_ONLY         = 2
@@ -62,6 +61,12 @@ class PreferencesManager @Inject constructor(
 
     fun getFloatingPlayerY(): Int = prefs.getInt(KEY_FLOATING_PLAYER_Y, Int.MIN_VALUE)
     fun setFloatingPlayerY(y: Int) = prefs.edit().putInt(KEY_FLOATING_PLAYER_Y, y).apply()
+
+    fun getFloatingPlayerXRatio(): Float = java.lang.Float.intBitsToFloat(prefs.getInt(KEY_FLOATING_PLAYER_X + "_ratio", java.lang.Float.floatToIntBits(-1f)))
+    fun setFloatingPlayerXRatio(ratio: Float) = prefs.edit().putInt(KEY_FLOATING_PLAYER_X + "_ratio", java.lang.Float.floatToIntBits(ratio)).apply()
+
+    fun getFloatingPlayerYRatio(): Float = java.lang.Float.intBitsToFloat(prefs.getInt(KEY_FLOATING_PLAYER_Y + "_ratio", java.lang.Float.floatToIntBits(-1f)))
+    fun setFloatingPlayerYRatio(ratio: Float) = prefs.edit().putInt(KEY_FLOATING_PLAYER_Y + "_ratio", java.lang.Float.floatToIntBits(ratio)).apply()
 
     fun clearAll() = prefs.edit().clear().apply()
 

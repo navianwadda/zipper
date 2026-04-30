@@ -390,13 +390,14 @@ class FloatingPlayerService : Service() {
             val streamName = intent?.getStringExtra("CHANNEL_NAME") ?: "Network Stream"
             val xForwardedFor = intent?.getStringExtra("X_FORWARDED_FOR") ?: ""
 
+            val restorePosition = intent?.getBooleanExtra(EXTRA_RESTORE_POSITION, false) ?: false
             if (isRestoredFromFullscreen && PlayerHolder.player != null) {
                 createFloatingPlayerInstanceFromNetworkStreamTransfer(
-                    instanceId, streamName, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, xForwardedFor
+                    instanceId, streamName, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, xForwardedFor, restorePosition = restorePosition
                 )
                 updateNotification()
             } else if (streamUrl.isNotBlank()) {
-                createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor)
+                createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, restorePosition = restorePosition)
                 updateNotification()
             }
             return START_STICKY
@@ -639,13 +640,15 @@ class FloatingPlayerService : Service() {
                 if (resId > 0) resources.getDimensionPixelSize(resId) else 0
             }
 
-            val initialWidth = getMinWidth()
-            val initialHeight = getMinHeight()
+            val savedWidth = preferencesManager.getFloatingPlayerWidth()
+            val savedHeight = preferencesManager.getFloatingPlayerHeight()
+            val initialWidth = if (restorePosition && savedWidth > 0) savedWidth.coerceIn(getMinWidth(), getMaxWidth()) else getMinWidth()
+            val initialHeight = if (restorePosition && savedHeight > 0) savedHeight.coerceIn(getMinHeight(), getMaxHeight()) else getMinHeight()
 
             val savedX = preferencesManager.getFloatingPlayerX()
             val savedY = preferencesManager.getFloatingPlayerY()
-            val initialX = if (savedX != Int.MIN_VALUE) savedX else (screenWidth - initialWidth) / 2
-            val initialY = if (savedY != Int.MIN_VALUE) savedY
+            val initialX = if (restorePosition && savedX != Int.MIN_VALUE) savedX else (screenWidth - initialWidth) / 2
+            val initialY = if (restorePosition && savedY != Int.MIN_VALUE) savedY
                            else statusBarHeight + (screenHeight - statusBarHeight - initialHeight) / 2
 
             val params = WindowManager.LayoutParams(
@@ -723,13 +726,14 @@ class FloatingPlayerService : Service() {
         drmLicense: String,
         userAgent: String,
         drmScheme: String,
-        xForwardedFor: String = ""
+        xForwardedFor: String = "",
+        restorePosition: Boolean = false
     ) {
         try {
             val transferredPlayer = PlayerHolder.player
             if (transferredPlayer == null) {
                 createFloatingPlayerInstanceForNetworkStream(
-                    instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor
+                    instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, restorePosition = restorePosition
                 )
                 return
             }
@@ -835,7 +839,8 @@ class FloatingPlayerService : Service() {
         userAgent: String,
         drmScheme: String,
         streamName: String,
-        xForwardedFor: String = ""
+        xForwardedFor: String = "",
+        restorePosition: Boolean = false
     ) {
         try {
             val floatingView = LayoutInflater.from(this).inflate(R.layout.floating_player_window, null)
@@ -847,13 +852,15 @@ class FloatingPlayerService : Service() {
                 if (resId > 0) resources.getDimensionPixelSize(resId) else 0
             }
 
-            val initialWidth = getMinWidth()
-            val initialHeight = getMinHeight()
+            val savedWidth = preferencesManager.getFloatingPlayerWidth()
+            val savedHeight = preferencesManager.getFloatingPlayerHeight()
+            val initialWidth = if (restorePosition && savedWidth > 0) savedWidth.coerceIn(getMinWidth(), getMaxWidth()) else getMinWidth()
+            val initialHeight = if (restorePosition && savedHeight > 0) savedHeight.coerceIn(getMinHeight(), getMaxHeight()) else getMinHeight()
 
             val savedX = preferencesManager.getFloatingPlayerX()
             val savedY = preferencesManager.getFloatingPlayerY()
-            val initialX = if (savedX != Int.MIN_VALUE) savedX else (screenWidth - initialWidth) / 2
-            val initialY = if (savedY != Int.MIN_VALUE) savedY
+            val initialX = if (restorePosition && savedX != Int.MIN_VALUE) savedX else (screenWidth - initialWidth) / 2
+            val initialY = if (restorePosition && savedY != Int.MIN_VALUE) savedY
                            else statusBarHeight + (screenHeight - statusBarHeight - initialHeight) / 2
 
             val layoutParams = WindowManager.LayoutParams(
@@ -1745,8 +1752,6 @@ class FloatingPlayerService : Service() {
         com.livetvpro.app.utils.FloatingPlayerManager.removePlayer(instanceId)
 
         if (activeInstances.isEmpty()) {
-            preferencesManager.setFloatingPlayerWidth(0)
-            preferencesManager.setFloatingPlayerHeight(0)
             preferencesManager.setFloatingPlayerX(Int.MIN_VALUE)
             preferencesManager.setFloatingPlayerY(Int.MIN_VALUE)
         }

@@ -527,10 +527,15 @@ class FloatingPlayerActivity : AppCompatActivity() {
         } else {
 
             if (contentType == ContentType.NETWORK_STREAM) {
+                val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    window.decorView.rootWindowInsets?.getInsets(WindowInsets.Type.systemBars())?.top ?: 0
+                } else {
+                    @Suppress("DEPRECATION") window.decorView.rootWindowInsets?.systemWindowInsetTop ?: 0
+                }
                 val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.topMargin = 0
+                params.topMargin = topInset
                 params.bottomMargin = 0
                 params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                 params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID

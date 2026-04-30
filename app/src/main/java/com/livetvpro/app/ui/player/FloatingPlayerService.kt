@@ -59,10 +59,6 @@ class FloatingPlayerService : Service() {
         val playerView: PlayerView,
         val params: WindowManager.LayoutParams,
         var currentChannel: Channel?,
-        var lastX: Int = 0,
-        var lastY: Int = 0,
-        var lastScreenW: Int = 0,
-        var lastScreenH: Int = 0,
         var currentEvent: com.livetvpro.app.data.models.LiveEvent? = null,
         var controlsLocked: Boolean = false,
         var isMuted: Boolean = false,
@@ -594,10 +590,6 @@ class FloatingPlayerService : Service() {
                 playerView = playerView,
                 params = params,
                 currentChannel = channel,
-                lastX = params.x,
-                lastY = params.y,
-                lastScreenW = getScreenWidth(),
-                lastScreenH = getScreenHeight() - getNavBarHeight(),
                 currentEvent = event,
                 lockOverlay = lockOverlay,
                 unlockButton = unlockButton,
@@ -696,10 +688,6 @@ class FloatingPlayerService : Service() {
                 playerView = playerView,
                 params = params,
                 currentChannel = channel,
-                lastX = params.x,
-                lastY = params.y,
-                lastScreenW = getScreenWidth(),
-                lastScreenH = getScreenHeight() - getNavBarHeight(),
                 currentEvent = event,
                 lockOverlay = lockOverlay,
                 unlockButton = unlockButton,
@@ -967,10 +955,6 @@ class FloatingPlayerService : Service() {
                 playerView = playerView,
                 params = layoutParams,
                 currentChannel = null,
-                lastX = layoutParams.x,
-                lastY = layoutParams.y,
-                lastScreenW = getScreenWidth(),
-                lastScreenH = getScreenHeight() - getNavBarHeight(),
                 currentEvent = null,
                 lockOverlay = lockOverlay,
                 unlockButton = unlockButton,
@@ -1553,10 +1537,6 @@ class FloatingPlayerService : Service() {
                                 val screenH = getScreenHeight() - getNavBarHeight()
                                 p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
                                 p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
-                                instance.lastX = p.x
-                                instance.lastY = p.y
-                                instance.lastScreenW = screenW
-                                instance.lastScreenH = screenH
                                 windowManager?.updateViewLayout(floatingView, p)
                             }
                             true
@@ -1571,6 +1551,8 @@ class FloatingPlayerService : Service() {
                             } else {
                                 preferencesManager.setFloatingPlayerX(p.x)
                                 preferencesManager.setFloatingPlayerY(p.y)
+                                preferencesManager.setFloatingPlayerXRatio(p.x.toFloat() / getScreenWidth())
+                                preferencesManager.setFloatingPlayerYRatio(p.y.toFloat() / (getScreenHeight() - getNavBarHeight()))
                             }
                             isDragging = false
                             hasMoved = false
@@ -1603,10 +1585,6 @@ class FloatingPlayerService : Service() {
                                 val screenH = getScreenHeight() - getNavBarHeight()
                                 p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
                                 p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
-                                instance.lastX = p.x
-                                instance.lastY = p.y
-                                instance.lastScreenW = screenW
-                                instance.lastScreenH = screenH
                                 windowManager?.updateViewLayout(floatingView, p)
                             }
                             isDragging
@@ -1622,6 +1600,8 @@ class FloatingPlayerService : Service() {
                             } else {
                                 preferencesManager.setFloatingPlayerX(p.x)
                                 preferencesManager.setFloatingPlayerY(p.y)
+                                preferencesManager.setFloatingPlayerXRatio(p.x.toFloat() / getScreenWidth())
+                                preferencesManager.setFloatingPlayerYRatio(p.y.toFloat() / (getScreenHeight() - getNavBarHeight()))
                             }
                             val wasMoving = hasMoved
                             isDragging = false
@@ -1868,27 +1848,15 @@ class FloatingPlayerService : Service() {
         super.onConfigurationChanged(newConfig)
         val newScreenW = getScreenWidth()
         val newScreenH = getScreenHeight() - getNavBarHeight()
+        val ratioX = preferencesManager.getFloatingPlayerXRatio()
+        val ratioY = preferencesManager.getFloatingPlayerYRatio()
+        if (ratioX < 0f || ratioY < 0f) return
         activeInstances.values.forEach { instance ->
             val p = instance.params
             val minVisible = p.width / 4
-            val oldScreenW = if (instance.lastScreenW > 0) instance.lastScreenW else newScreenW
-            val oldScreenH = if (instance.lastScreenH > 0) instance.lastScreenH else newScreenH
-            val srcX = if (instance.lastScreenW > 0) instance.lastX else p.x
-            val srcY = if (instance.lastScreenH > 0) instance.lastY else p.y
-            val ratioX = srcX.toFloat() / oldScreenW
-            val ratioY = srcY.toFloat() / oldScreenH
             p.x = (ratioX * newScreenW).toInt().coerceIn(-(p.width - minVisible), newScreenW - minVisible)
             p.y = (ratioY * newScreenH).toInt().coerceIn(-(p.height - minVisible), newScreenH - minVisible)
-            instance.lastX = p.x
-            instance.lastY = p.y
-            instance.lastScreenW = newScreenW
-            instance.lastScreenH = newScreenH
-            try {
-                windowManager?.removeView(instance.floatingView)
-            } catch (_: Exception) {}
-            try {
-                windowManager?.addView(instance.floatingView, p)
-            } catch (_: Exception) {}
+            try { windowManager?.updateViewLayout(instance.floatingView, p) } catch (_: Exception) {}
         }
     }
 

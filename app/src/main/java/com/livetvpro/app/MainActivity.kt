@@ -205,9 +205,6 @@ class MainActivity : AppCompatActivity() {
             appBarLayout?.setPadding(0, statusBars.top, 0, 0)
 
             
-            bottomNavigation?.setPadding(0, 0, 0, navBars.bottom)
-
-            
             headerView?.setPadding(
                 headerView.paddingLeft,
                 statusBars.top,
@@ -751,6 +748,13 @@ class MainActivity : AppCompatActivity() {
         phoneBtnFavorites = btnFavorites
         phoneSearchView = searchView
         phoneBtnSearchClear = btnSearchClear
+
+        bottomNavigation?.post {
+            val density = resources.displayMetrics.density
+            val bottomMarginPx = (16 * density + 0.5f).toInt()
+            val totalPad = bottomNavigation.height + bottomMarginPx
+            binding.root.findViewById<View>(R.id.nav_host_fragment)?.setPadding(0, 0, 0, totalPad)
+        }
     }
 
     private fun showCopyrightDialog() {

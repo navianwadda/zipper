@@ -1,156 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.LiveTVPro" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">#1F1F1F</item>
-        <item name="colorPrimaryVariant">#0A0A0A</item>
-        <item name="colorSecondary">@color/secondary_dark</item>
-
-        <item name="android:colorBackground">@color/background_dark</item>
-        <item name="colorSurface">@color/surface_dark</item>
-
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorOnSecondary">@color/white</item>
-        <item name="colorOnBackground">@color/text_primary_dark</item>
-        <item name="colorOnSurface">@color/text_secondary_dark</item>
-
-        <item name="colorAccent">@color/accent</item>
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.LiveTVPro.Dialog</item>
-
-        <item name="android:statusBarColor">@color/transparent</item>
-        <item name="android:navigationBarColor">@color/background_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
+    <!-- Base Theme -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_variant</item>
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorError">@color/error_dark</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorOnSecondary">@color/on_secondary</item>
+        <item name="colorOnBackground">@color/on_background</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorOnError">@color/on_error</item>
+        <item name="android:statusBarColor">@color/status_bar</item>
+        <item name="android:navigationBarColor">@color/background</item>
     </style>
 
-    <style name="Theme.LiveTVPro.Light" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">#FFFFFF</item>
-        <item name="colorPrimaryVariant">#F5F5F5</item>
-        <item name="colorSecondary">#2196F3</item>
-
-        <item name="android:colorBackground">#FAFAFA</item>
-        <item name="colorSurface">#FFFFFF</item>
-
-        <item name="colorOnPrimary">#000000</item>
-        <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="colorOnBackground">#000000</item>
-        <item name="colorOnSurface">#666666</item>
-
-        <item name="colorAccent">@color/accent</item>
-
-        <item name="android:statusBarColor">#FFFFFF</item>
-        <item name="android:navigationBarColor">#FAFAFA</item>
-        <item name="android:windowLightStatusBar">true</item>
+    <!-- Telegram-style Bottom Navigation -->
+    <style name="TelegramBottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="elevation">0dp</item>
+        <item name="itemIconTint">@color/telegram_nav_item_color</item>
+        <item name="itemTextColor">@color/telegram_nav_item_color</item>
     </style>
 
-    <style name="Theme.LiveTVPro.Fullscreen" parent="Theme.LiveTVPro">
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowNoTitle">true</item>
+    <style name="TelegramBottomNav.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:background">@drawable/telegram_nav_indicator</item>
+        <item name="itemIconTint">@color/telegram_nav_selected</item>
+        <item name="itemTextColor">@color/telegram_nav_selected</item>
     </style>
 
-    <style name="Theme.LiveTVPro.Splash" parent="Theme.LiveTVPro">
-        <item name="android:windowBackground">@color/background_dark</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowFullscreen">false</item>
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:statusBarColor">@color/background_dark</item>
+    <style name="TelegramBottomNav.TextAppearance" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">11sp</item>
     </style>
 
-    <style name="TabTextStyle" parent="TextAppearance.Design.Tab">
-        <item name="android:textSize">13sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.08</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+    <!-- Bottom Nav Text Appearance -->
+    <style name="BottomNav.TextAppearance" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">12sp</item>
     </style>
 
-    <style name="NetworkStreamEditText" parent="Widget.Material3.TextInputEditText.OutlinedBox">
-        <item name="android:textCursorDrawable">@null</item>
-    </style>
-
-    <style name="ThemeOverlay.NetworkStream.AmberHandles" parent="">
-        <item name="colorControlActivated">#EF4444</item>
-        <item name="colorAccent">#EF4444</item>
-        <item name="colorPrimary">#EF4444</item>
-        <item name="colorOnSurface">#FFFFFF</item>
-        <item name="colorOutline">#666666</item>
-        <item name="android:textColorPrimary">#FFFFFF</item>
-        <item name="android:textColorHint">#888888</item>
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-    </style>
-
-    <style name="BottomNav.TextAppearance" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-    </style>
-
-    <style name="ThemeOverlay.LiveTVPro.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="colorSurface">#1F1F1F</item>
-        <item name="colorOnSurface">#FFFFFF</item>
-        <item name="colorPrimary">#EF4444</item>
-        <item name="colorControlActivated">#EF4444</item>
-        <item name="colorAccent">#EF4444</item>
-        <item name="colorOutline">#666666</item>
-        <item name="android:textColorPrimary">#FFFFFF</item>
-        <item name="android:textColorSecondary">#CCCCCC</item>
-        <item name="android:textColorHint">#888888</item>
-        <item name="android:textColorAlertDialogListItem">#FFFFFF</item>
-        <item name="materialAlertDialogTitleTextStyle">@style/Dialog.TitleText</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/Dialog.BodyText</item>
-        <item name="buttonBarPositiveButtonStyle">@style/Dialog.ButtonText</item>
-        <item name="buttonBarNegativeButtonStyle">@style/Dialog.ButtonText</item>
-        <item name="buttonBarNeutralButtonStyle">@style/Dialog.ButtonText</item>
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-    </style>
-
-    <style name="Dialog.TitleText" parent="MaterialAlertDialog.Material3.Title.Text">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-        <item name="android:textColor">#FFFFFF</item>
-    </style>
-
-    <style name="Dialog.BodyText" parent="MaterialAlertDialog.Material3.Body.Text">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-        <item name="android:textColor">#CCCCCC</item>
-    </style>
-
-    <style name="Dialog.ButtonText" parent="Widget.Material3.Button.TextButton.Dialog">
-        <item name="android:fontFamily">@font/bergen_sans</item>
-        <item name="fontFamily">@font/bergen_sans</item>
-        <item name="android:textColor">#EF4444</item>
-        <item name="android:backgroundTint">#1AEF4444</item>
-        <item name="backgroundTint">#1AEF4444</item>
-        <item name="rippleColor">#33EF4444</item>
-        <item name="materialThemeOverlay">@style/Dialog.ButtonText.ColorOverlay</item>
-    </style>
-
-    <style name="ThemeOverlay.LiveTVPro.Dialog.NoGlow" parent="ThemeOverlay.LiveTVPro.Dialog">
-        <item name="colorPrimary">#1F1F1F</item>
-        <item name="colorOutline">#00000000</item>
-    </style>
-
-    <style name="ThemeOverlay.LiveTVPro.Dialog.Transparent" parent="ThemeOverlay.LiveTVPro.Dialog">
-        <item name="colorSurface">#E0121212</item>
-        <item name="colorSurfaceContainerHigh">#E0121212</item>
-        <item name="colorSurfaceContainerHighest">#E0121212</item>
-        <item name="colorSurfaceContainer">#E0121212</item>
-        <item name="android:colorBackground">#E0121212</item>
-    </style>
-
-    <style name="Dialog.ButtonText.ColorOverlay" parent="">
-        <item name="colorPrimary">#EF4444</item>
-    </style>
-
+    <!-- Sidebar Navigation View Style -->
     <style name="Sidebar.NavigationView" parent="Widget.Material3.NavigationView">
-        <item name="shapeAppearance">@style/Sidebar.ShapeAppearance</item>
-        <item name="shapeAppearanceOverlay">@null</item>
+        <item name="itemTextColor">@color/text_primary</item>
+        <item name="itemIconTint">@color/text_primary</item>
     </style>
-
-    <style name="Sidebar.ShapeAppearance" parent="ShapeAppearance.Material3.Corner.None">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">0dp</item>
-    </style>
-
 </resources>

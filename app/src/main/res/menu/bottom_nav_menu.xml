@@ -4,14 +4,16 @@
         android:id="@+id/liveEventsFragment"
         android:icon="@drawable/ic_live"
         android:title="@string/nav_live" />
-
     <item
-        android:id="@+id/homeFragment"
+        android:id="@b+id/homeFragment"
         android:icon="@drawable/ic_tv"
         android:title="@string/nav_home" />
-
     <item
         android:id="@+id/sportsFragment"
         android:icon="@drawable/ic_sports"
         android:title="@string/nav_sports" />
+    <item
+        android:id="@b+id/settingsFragment"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/nav_settings" />
 </menu>

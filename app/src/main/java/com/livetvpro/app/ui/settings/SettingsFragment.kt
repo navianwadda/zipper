@@ -15,6 +15,14 @@ import com.livetvpro.app.utils.NativeListenerManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+interface SettingsActions {
+    fun onSettingsSaveStates()
+    fun onSettingsCopyright()
+    fun onSettingsNotice()
+    fun onSettingsShareApp()
+    fun onSettingsFloatingPlayer()
+}
+
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
 
@@ -35,124 +43,75 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        // Network Stream
+
         binding.cardNetworkStream.setOnClickListener {
             findNavController().navigate(R.id.networkStreamFragment)
         }
-        
-        // Playlists
+
         binding.cardPlaylists.setOnClickListener {
             findNavController().navigate(R.id.playlistsFragment)
         }
-        
-        // Cricket Score
+
         binding.cardCricketScore.setOnClickListener {
             findNavController().navigate(R.id.cricketScoreFragment)
         }
-        
-        // Football Score
+
         binding.cardFootballScore.setOnClickListener {
             findNavController().navigate(R.id.footballScoreFragment)
         }
-        
-        // Device ID
+
         binding.cardDeviceId.setOnClickListener {
             findNavController().navigate(R.id.deviceIdFragment)
         }
-        
-        // Floating Player
+
         binding.cardFloatingPlayer.setOnClickListener {
-            FloatingPlayerDialog.newInstance().show(childFragmentManager, FloatingPlayerDialog.TAG)
+            (activity as? SettingsActions)?.onSettingsFloatingPlayer()
+                ?: FloatingPlayerDialog.newInstance().show(childFragmentManager, FloatingPlayerDialog.TAG)
         }
-        
-        // Save States
+
         binding.cardSaveStates.setOnClickListener {
-            showSaveStatesDialog()
+            (activity as? SettingsActions)?.onSettingsSaveStates()
         }
-        
-        // Share App
+
         binding.cardShareApp.setOnClickListener {
-            shareApp()
+            (activity as? SettingsActions)?.onSettingsShareApp()
         }
-        
-        // Contact
+
         binding.cardContact.setOnClickListener {
-            val contactUrl = listenerManager.getContactUrl()
-            if (contactUrl.isNotBlank()) {
+            val contactUrl = listenerManager.getContactUrl().takeIf { it.isNotBlank() }
+            if (contactUrl != null) {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(contactUrl)))
             }
         }
-        
-        // Website
+
         binding.cardWebsite.setOnClickListener {
-            val webUrl = listenerManager.getWebUrl()
-            if (webUrl.isNotBlank()) {
+            val webUrl = listenerManager.getWebUrl().takeIf { it.isNotBlank() }
+            if (webUrl != null) {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(webUrl)))
             }
         }
-        
-        // Email
+
         binding.cardEmail.setOnClickListener {
-            val email = listenerManager.getEmailUs()
-            if (email.isNotBlank()) {
+            val email = listenerManager.getEmailUs().takeIf { it.isNotBlank() }
+            if (email != null) {
                 val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email")).apply {
                     putExtra(Intent.EXTRA_SUBJECT, "LiveTVPro Support")
                 }
                 startActivity(Intent.createChooser(intent, "Send Email"))
             }
         }
-        
-        // Copyright
+
         binding.cardCopyright.setOnClickListener {
-            showCopyrightDialog()
+            (activity as? SettingsActions)?.onSettingsCopyright()
         }
-        
-        // Notice
+
         binding.cardNotice.setOnClickListener {
-            showNoticeDialog()
+            (activity as? SettingsActions)?.onSettingsNotice()
         }
-        
-        // Exit
+
         binding.cardExit.setOnClickListener {
             activity?.finishAffinity()
         }
-    }
-
-    private fun showSaveStatesDialog() {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Save States")
-            .setMessage("Save current playback states?")
-            .setPositiveButton("Save") { _, _ ->
-                // Save states logic
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun shareApp() {
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "Live TV Pro")
-            putExtra(Intent.EXTRA_TEXT, "Check out Live TV Pro app!")
-        }
-        startActivity(Intent.createChooser(shareIntent, "Share via"))
-    }
-
-    private fun showCopyrightDialog() {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Copyright")
-            .setMessage("© 2024 Live TV Pro. All rights reserved.")
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-    private fun showNoticeDialog() {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Notice")
-            .setMessage("This app is for demonstration purposes only.")
-            .setPositiveButton("OK", null)
-            .show()
     }
 
     override fun onDestroyView() {

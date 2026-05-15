@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.LiveTVPro" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.LiveTVPro" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_variant</item>
         <item name="colorSecondary">@color/secondary</item>
@@ -29,7 +29,7 @@
 
     <style name="AppTheme" parent="Theme.LiveTVPro" />
 
-    <style name="ThemeOverlay.LiveTVPro.Dialog.Transparent" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+    <style name="ThemeOverlay.LiveTVPro.Dialog.Transparent" parent="ThemeOverlay.Material3.Dialog.Alert">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>

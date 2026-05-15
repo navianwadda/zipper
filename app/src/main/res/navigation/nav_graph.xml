@@ -55,7 +55,11 @@
     <fragment
         android:id="@+id/playlistsFragment"
         android:name="com.livetvpro.app.ui.playlists.PlaylistsFragment"
-        android:label="Playlists" />
+        android:label="Playlists">
+        <action
+            android:id="@+id/action_playlistsFragment_to_categoryChannelsFragment"
+            app:destination="@id/categoryChannelsFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/networkStreamFragment"

@@ -1,7 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?><selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state="actived_component" android:color="#2481CC" />
-    <item android:state="component_pressed" android:color="#24813C" />
-    <item android:state="selected" android:color="#2481CC" />
-    <item android:state="focused" android:color="#24813C" />
-    <item android:state="hovered" android:color="#24813C" />
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#2481CC" android:state_checked="true" />
+    <item android:color="#8E8E93" />
 </selector>

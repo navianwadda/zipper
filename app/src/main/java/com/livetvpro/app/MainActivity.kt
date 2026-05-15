@@ -685,7 +685,6 @@ class MainActivity : AppCompatActivity() {
                 R.id.liveEventsFragment -> getString(R.string.app_name)
                 R.id.favoritesFragment -> "Favorites"
                 R.id.sportsFragment -> "Sports"
-                R.id.contactFragment -> "Contact"
                 R.id.networkStreamFragment -> "Network Stream"
                 R.id.playlistsFragment -> "Playlists"
                 R.id.cricketScoreFragment -> "Cricket Score"

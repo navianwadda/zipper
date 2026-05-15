@@ -1,4 +1,5 @@
 package com.livetvpro.app
+import com.livetvpro.app.ui.settings.SettingsActions
 
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -44,7 +45,7 @@ interface SearchableFragment {
 }
 
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SettingsActions {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -215,7 +216,6 @@ class MainActivity : AppCompatActivity() {
                 headerView.paddingBottom
             )
 
-            // Sidebar list: bottom padding for nav bar in all orientations
             navigationView?.setPadding(0, 0, 0, navBars.bottom)
 
             insets
@@ -327,22 +327,22 @@ class MainActivity : AppCompatActivity() {
         navigationView?.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.floating_player_settings -> {
-                    showFloatingPlayerDialog()
+                    onSettingsFloatingPlayer()
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
                 R.id.nav_save_states -> {
-                    showSaveStatesDialog()
+                    onSettingsSaveStates()
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
                 R.id.nav_copyright -> {
-                    showCopyrightDialog()
+                    onSettingsCopyright()
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
                 R.id.nav_notice -> {
-                    showNoticeDialog()
+                    onSettingsNotice()
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
@@ -353,7 +353,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_share_app -> {
                     drawerLayout?.closeDrawer(GravityCompat.START)
-                    shareApp()
+                    onSettingsShareApp()
                     false
                 }
                 R.id.nav_contact_browser -> {
@@ -592,22 +592,22 @@ class MainActivity : AppCompatActivity() {
         navigationView?.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.floating_player_settings -> {
-                    showFloatingPlayerDialog()
+                    onSettingsFloatingPlayer()
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
                 R.id.nav_save_states -> {
-                    showSaveStatesDialog()
+                    onSettingsSaveStates()
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
                 R.id.nav_copyright -> {
-                    showCopyrightDialog()
+                    onSettingsCopyright()
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
                 R.id.nav_notice -> {
-                    showNoticeDialog()
+                    onSettingsNotice()
                     drawerLayout?.closeDrawer(GravityCompat.START)
                     false
                 }
@@ -618,7 +618,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_share_app -> {
                     drawerLayout?.closeDrawer(GravityCompat.START)
-                    shareApp()
+                    onSettingsShareApp()
                     false
                 }
                 R.id.nav_contact_browser -> {
@@ -752,7 +752,7 @@ class MainActivity : AppCompatActivity() {
         phoneBtnSearchClear = btnSearchClear
     }
 
-    private fun showCopyrightDialog() {
+    override fun onSettingsCopyright() {
         val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
             .setTitle("Copyright")
             .setMessage("Live TV Pro does not stream any of the channels included in this application, all the streaming links are from third party websites available freely on the internet. We're just giving way to stream and all content is the copyright of their owner.")
@@ -773,7 +773,7 @@ class MainActivity : AppCompatActivity() {
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
-    private fun showNoticeDialog() {
+    override fun onSettingsNotice() {
         val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
             .setTitle("Important Notice")
             .setMessage(
@@ -797,7 +797,7 @@ class MainActivity : AppCompatActivity() {
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
-    private fun shareApp() {
+    override fun onSettingsShareApp() {
         try {
             val apkPath = packageManager.getApplicationInfo(packageName, 0).sourceDir
             val apkFile = java.io.File(apkPath)
@@ -817,7 +817,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showSaveStatesDialog() {
+    override fun onSettingsSaveStates() {
         val view = layoutInflater.inflate(R.layout.dialog_save_states, null)
         val switchAspectRatio = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_remember_aspect_ratio)
         val switchLowestQuality = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_force_lowest_quality)
@@ -875,7 +875,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showFloatingPlayerDialog() {
+    override fun onSettingsFloatingPlayer() {
         if (DeviceUtils.isTvDevice) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             val dialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)

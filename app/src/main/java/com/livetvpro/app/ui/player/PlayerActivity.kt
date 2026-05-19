@@ -1883,15 +1883,21 @@ class PlayerActivity : AppCompatActivity() {
         val url = normalizedUrl.substring(0, pipeIndex).trim().trimEnd('?')
         val rawParams = normalizedUrl.substring(pipeIndex + 1).trim()
 
+        // Split on | first, then only split on & when the value is a simple scalar
+        // (no embedded = sign). This prevents complex tokens like accountinfo=~~V2.0~...
+        // from being shredded into garbage key/value pairs.
         val parts = buildList {
             for (segment in rawParams.split("|")) {
                 val eqIdx = segment.indexOf('=')
                 val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
-                if (value.startsWith("http://", ignoreCase = true) ||
-                    value.startsWith("https://", ignoreCase = true)) {
-                    add(segment)
-                } else {
-                    addAll(segment.split("&"))
+                when {
+                    // URL values — never split
+                    value.startsWith("http://", ignoreCase = true) ||
+                    value.startsWith("https://", ignoreCase = true) -> add(segment)
+                    // Values that contain '=' are complex tokens — never split on &
+                    value.contains('=') -> add(segment)
+                    // Simple scalar values — safe to split on &
+                    else -> addAll(segment.split("&"))
                 }
             }
         }
@@ -1911,6 +1917,7 @@ class PlayerActivity : AppCompatActivity() {
 
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
+                // Legacy colon-joined format: drmLicense=<kid>:<key>
                 "drmlicense" -> {
                     if (value.startsWith("http://", ignoreCase = true) ||
                         value.startsWith("https://", ignoreCase = true)) {
@@ -1925,6 +1932,9 @@ class PlayerActivity : AppCompatActivity() {
                         }
                     }
                 }
+                // New explicit separate params (avoids colon ambiguity)
+                "drmkeyid" -> drmKeyId = value
+                "drmkey"   -> drmKey   = value
                 "referer", "referrer" -> headers["Referer"] = value
                 "user-agent", "useragent" -> headers["User-Agent"] = value
                 "origin" -> headers["Origin"] = value
@@ -2035,6 +2045,16 @@ class PlayerActivity : AppCompatActivity() {
                     .setDataSourceFactory(baseDataSourceFactory)
                     .setDrmSessionManagerProvider { clearKeyMgr }
             } else {
+                if (streamInfo.drmScheme == "clearkey") {
+                    // Keys were declared but failed to build — playing without DRM will
+                    // result in an encrypted stream with no decryption keys. Fail fast
+                    // with a clear error rather than a cryptic decoder exception.
+                    android.util.Log.e("PlayerActivity",
+                        "ClearKey DRM required but key material is missing or invalid. " +
+                        "keyId=${streamInfo.drmKeyId} key=${streamInfo.drmKey} branch=$clearKeyBranch")
+                    showError("DRM Error: ClearKey material invalid")
+                    return
+                }
                 DefaultMediaSourceFactory(this)
                     .setDataSourceFactory(baseDataSourceFactory)
             }
@@ -2282,6 +2302,7 @@ class PlayerActivity : AppCompatActivity() {
             val keyIdBytes = hexToBytes(keyIdHex)
             val keyBytes   = hexToBytes(keyHex)
             if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) {
+                android.util.Log.e("PlayerActivity", "ClearKey: failed to decode hex — keyId=${keyIdHex.take(8)}... key=${keyHex.take(8)}...")
                 return null
             }
             val keyBase64 = android.util.Base64.encodeToString(
@@ -2295,9 +2316,13 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
+                // Allow clear (unencrypted) samples to render before the DRM key exchange
+                // completes. Critical for live DASH streams where the first segments are
+                // unencrypted — without this the player stalls indefinitely on a black screen.
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(adaptiveCallback)
         } catch (e: Exception) {
+            android.util.Log.e("PlayerActivity", "buildClearKeyInlineManager failed: ${e.message}", e)
             null
         }
     }
@@ -2307,9 +2332,10 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(drmCallback)
         } catch (e: Exception) {
+            android.util.Log.e("PlayerActivity", "buildClearKeyJwkManager failed: ${e.message}", e)
             null
         }
     }
@@ -2327,9 +2353,10 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(callback)
         } catch (e: Exception) {
+            android.util.Log.e("PlayerActivity", "buildClearKeyServerManager failed: ${e.message}", e)
             null
         }
     }

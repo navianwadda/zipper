@@ -762,8 +762,9 @@ object M3uParser {
                                 }
                             }
                         }
-                        "drmkey","drm-key","drm_key","kid" -> drmKeyId = value
-                        "key","k"                          -> if (drmKeyId != null) drmKey = value
+                        "drmkeyid","drm-key-id","drm_key_id","kid" -> drmKeyId = value
+                        "drmkey","drm_key_val","drm-key-val" -> drmKey = value
+                        "key","k" -> if (drmKeyId != null) drmKey = value
                         "user-agent","useragent","user_agent","ua" -> headers["User-Agent"] = value
                         "referer","referrer","ref"         -> headers["Referer"]        = value
                         "origin","org"                     -> headers["Origin"]         = value
@@ -956,7 +957,10 @@ object M3uParser {
                     m3u.drmKeyId.startsWith("https://", ignoreCase = true)) {
                     parts.add("drmLicense=${m3u.drmKeyId}")
                 } else {
-                    parts.add("drmLicense=${m3u.drmKeyId}:${m3u.drmKey}")
+                    // Store as two separate pipe params to avoid colon ambiguity
+                    // with complex URLs that already contain colons (e.g. accountinfo tokens)
+                    parts.add("drmKeyId=${m3u.drmKeyId}")
+                    parts.add("drmKey=${m3u.drmKey}")
                 }
             }
         }

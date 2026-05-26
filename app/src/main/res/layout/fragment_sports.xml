@@ -28,8 +28,11 @@
             android:id="@+id/recycler_view_channels"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="90dp"
             android:clipToPadding="false"
-            android:padding="4dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -68,3 +71,4 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+

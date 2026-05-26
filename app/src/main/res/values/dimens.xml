@@ -11,4 +11,5 @@
     <dimen name="nav_drawer_width">260dp</dimen>
     <dimen name="nav_header_height">176dp</dimen>
     <dimen name="nav_bottom_margin">12dp</dimen>
+    <dimen name="nav_height">60dp</dimen>
 </resources>

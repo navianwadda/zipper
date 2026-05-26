@@ -173,7 +173,6 @@
             android:layout_height="60dp"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
-            android:layout_marginBottom="12dp"
             android:background="@drawable/bg_floating_nav"
             android:elevation="8dp"
             app:layout_constraintBottom_toBottomOf="parent"

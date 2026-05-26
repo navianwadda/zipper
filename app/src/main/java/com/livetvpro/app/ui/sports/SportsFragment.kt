@@ -216,6 +216,12 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerViewChannels) { v, insets ->
+            val navBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
+            val bottom = navBars.bottom + v.resources.getDimensionPixelSize(com.livetvpro.app.R.dimen.nav_bottom_margin) + v.resources.getDimensionPixelSize(com.livetvpro.app.R.dimen.nav_height)
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, bottom)
+            insets
+        }
         setupRecyclerView()
         setupRetryHandling()
         if (DeviceUtils.isTvDevice) {

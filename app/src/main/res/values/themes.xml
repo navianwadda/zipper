@@ -51,14 +51,24 @@
         <item name="elevation">0dp</item>
         <item name="itemIconTint">@color/telegram_nav_item_color</item>
         <item name="itemTextColor">@color/telegram_nav_item_color</item>
+        <item name="itemPaddingTop">6dp</item>
+        <item name="itemPaddingBottom">6dp</item>
+        <item name="itemIconSize">24dp</item>
     </style>
 
     <style name="TelegramBottomNav.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
         <item name="android:background">@drawable/telegram_nav_indicator</item>
+        <item name="android:width">56dp</item>
+        <item name="android:height">32dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.TelegramNav.Indicator</item>
     </style>
 
+    <style name="ShapeAppearance.TelegramNav.Indicator" parent="ShapeAppearance.Material3.Corner.Full" />
+
     <style name="TelegramBottomNav.TextAppearance" parent="TextAppearance.Material3.LabelSmall">
-        <item name="android:textSize">11sp</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:fontFamily">@font/bergen_sans</item>
+        <item name="android:letterSpacing">0</item>
     </style>
 
     <style name="BottomNav.TextAppearance" parent="TextAppearance.Material3.LabelSmall">

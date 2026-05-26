@@ -205,16 +205,11 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
             appBarLayout?.setPadding(0, statusBars.top, 0, 0)
 
-            val navHostFragment = root.findViewById<androidx.fragment.app.FragmentContainerView>(R.id.nav_host_fragment)
-
             bottomNavigation?.let { nav ->
                 val lp = nav.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
                 if (lp != null) {
-                    val bottomMargin = navBars.bottom + nav.resources.getDimensionPixelSize(R.dimen.nav_bottom_margin)
-                    lp.bottomMargin = bottomMargin
+                    lp.bottomMargin = navBars.bottom + nav.resources.getDimensionPixelSize(R.dimen.nav_bottom_margin)
                     nav.layoutParams = lp
-                    val navHeight = nav.resources.getDimensionPixelSize(R.dimen.nav_height)
-                    navHostFragment?.setPadding(0, 0, 0, bottomMargin + navHeight)
                 }
             }
 

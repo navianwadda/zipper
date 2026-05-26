@@ -208,7 +208,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             bottomNavigation?.let { nav ->
                 val lp = nav.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
                 if (lp != null) {
-                    lp.bottomMargin = navBars.bottom + nav.resources.getDimensionPixelSize(R.dimen.nav_bottom_margin)
+                    val navMargin = navBars.bottom + nav.resources.getDimensionPixelSize(R.dimen.nav_bottom_margin)
+                    lp.bottomMargin = navMargin
                     nav.layoutParams = lp
                 }
             }

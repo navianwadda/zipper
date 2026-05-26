@@ -32,18 +32,25 @@ object NetworkModule {
         @ApplicationContext context: Context
     ): OkHttpClient {
         val tlsSpec = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
-            .tlsVersions(TlsVersion.TLS_1_3, TlsVersion.TLS_1_2, TlsVersion.TLS_1_1, TlsVersion.TLS_1_0)
+            .tlsVersions(TlsVersion.TLS_1_3, TlsVersion.TLS_1_2)
             .build()
 
         val builder = OkHttpClient.Builder()
-            .connectionSpecs(listOf(tlsSpec, ConnectionSpec.CLEARTEXT))
+            .connectionSpecs(listOf(tlsSpec))
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .addNetworkInterceptor { chain ->
+                val original = chain.request()
+                val sanitized = original.newBuilder()
+                    .removeHeader("Authorization")
+                    .build()
+                chain.proceed(sanitized)
+            }
 
         if (BuildConfig.DEBUG) {
             val loggingInterceptor = HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                level = HttpLoggingInterceptor.Level.HEADERS
             }
             builder.addInterceptor(loggingInterceptor)
         }

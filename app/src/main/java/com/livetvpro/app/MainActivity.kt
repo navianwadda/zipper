@@ -29,7 +29,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import android.widget.ImageView
+import android.widget.TextView
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.databinding.ActivityMainBinding
@@ -194,7 +195,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private fun applyInsets() {
         val root = binding.root
         val appBarLayout = root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
-        val bottomNavigation = root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        val bottomNavigation = root.findViewById<android.widget.LinearLayout>(R.id.bottom_navigation)
         val navigationView = root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val headerView = navigationView?.getHeaderView(0)
 
@@ -202,13 +203,16 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             val statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
 
-            
             appBarLayout?.setPadding(0, statusBars.top, 0, 0)
 
-            
-            bottomNavigation?.setPadding(0, 0, 0, navBars.bottom)
+            bottomNavigation?.let { nav ->
+                val lp = nav.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+                if (lp != null) {
+                    lp.bottomMargin = navBars.bottom + nav.resources.getDimensionPixelSize(R.dimen.nav_bottom_margin)
+                    nav.layoutParams = lp
+                }
+            }
 
-            
             headerView?.setPadding(
                 headerView.paddingLeft,
                 statusBars.top,
@@ -567,7 +571,54 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
-        val bottomNavigation = binding.root.findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        val bottomNavigation = binding.root.findViewById<android.widget.LinearLayout>(R.id.bottom_navigation)
+        val navItemLive = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_item_live)
+        val navItemHome = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_item_home)
+        val navItemSports = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_item_sports)
+        val navItemSettings = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_item_settings)
+
+        val navIconLive = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_live)
+        val navIconHome = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_home)
+        val navIconSports = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_sports)
+        val navIconSettings = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_settings)
+
+        val navLabelLive = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_live)
+        val navLabelHome = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_home)
+        val navLabelSports = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_sports)
+        val navLabelSettings = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_settings)
+
+        val navItems = mapOf(
+            R.id.liveEventsFragment to Triple(navItemLive, navIconLive, navLabelLive),
+            R.id.homeFragment to Triple(navItemHome, navIconHome, navLabelHome),
+            R.id.sportsFragment to Triple(navItemSports, navIconSports, navLabelSports),
+            R.id.settingsFragment to Triple(navItemSettings, navIconSettings, navLabelSettings)
+        )
+
+        val navFilledIcons = mapOf(
+            R.id.liveEventsFragment to R.drawable.ic_live_filled,
+            R.id.homeFragment to R.drawable.ic_tv_filled,
+            R.id.sportsFragment to R.drawable.ic_sports_filled,
+            R.id.settingsFragment to R.drawable.ic_settings
+        )
+
+        val navOutlineIcons = mapOf(
+            R.id.liveEventsFragment to R.drawable.ic_live_outline,
+            R.id.homeFragment to R.drawable.ic_tv_outline,
+            R.id.sportsFragment to R.drawable.ic_sports_outline,
+            R.id.settingsFragment to R.drawable.ic_settings
+        )
+
+        fun updateNavSelection(selectedId: Int) {
+            for ((destId, triple) in navItems) {
+                val (_, icon, label) = triple
+                val isSelected = destId == selectedId
+                val activeColor = android.graphics.Color.parseColor("#2AABEE")
+                val inactiveColor = android.graphics.Color.parseColor("#6B7280")
+                icon.setImageResource(if (isSelected) navFilledIcons[destId]!! else navOutlineIcons[destId]!!)
+                icon.setColorFilter(if (isSelected) activeColor else inactiveColor, android.graphics.PorterDuff.Mode.SRC_IN)
+                label.setTextColor(if (isSelected) activeColor else inactiveColor)
+            }
+        }
 
         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
@@ -661,13 +712,10 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             }
         }
 
-        bottomNavigation?.setOnItemSelectedListener { menuItem ->
-            if (menuItem.itemId in topLevelDestinations) {
-                navigateTopLevel(menuItem.itemId)
-                return@setOnItemSelectedListener true
-            }
-            return@setOnItemSelectedListener false
-        }
+        navItemLive?.setOnClickListener { navigateTopLevel(R.id.liveEventsFragment) }
+        navItemHome?.setOnClickListener { navigateTopLevel(R.id.homeFragment) }
+        navItemSports?.setOnClickListener { navigateTopLevel(R.id.sportsFragment) }
+        navItemSettings?.setOnClickListener { navigateTopLevel(R.id.settingsFragment) }
 
         val drawerFragments2 = setOf(
             R.id.networkStreamFragment, R.id.playlistsFragment,
@@ -711,6 +759,14 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             }
 
             if (isTopLevel) {
+                updateNavSelection(destination.id)
+                bottomNavigation?.let { nav ->
+                    if (nav.translationY != 0f || nav.visibility != View.VISIBLE) {
+                        nav.visibility = View.VISIBLE
+                        nav.animate().translationY(0f).setDuration(220)
+                            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                    }
+                }
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED)
                 if (!isSearchVisible) {
                     animateNavigationIcon(0f)
@@ -722,8 +778,12 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                         }
                     }
                 }
-                bottomNavigation?.menu?.findItem(destination.id)?.isChecked = true
             } else {
+                bottomNavigation?.let { nav ->
+                    nav.animate().translationY(nav.height.toFloat() + 80f).setDuration(180)
+                        .setInterpolator(android.view.animation.AccelerateInterpolator())
+                        .withEndAction { nav.visibility = View.GONE }.start()
+                }
                 drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
                 if (!isSearchVisible) {
                     animateNavigationIcon(1f)

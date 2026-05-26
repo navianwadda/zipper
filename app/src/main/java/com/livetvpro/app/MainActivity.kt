@@ -571,65 +571,28 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         val navigationView = binding.root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
-        val bottomNavigation = binding.root.findViewById<android.widget.LinearLayout>(R.id.bottom_navigation)
-        val navItemLive = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_item_live)
-        val navItemHome = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_item_home)
-        val navItemSports = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_item_sports)
-        val navItemSettings = binding.root.findViewById<android.widget.LinearLayout>(R.id.nav_item_settings)
+        val floatingNav = binding.root.findViewById<com.livetvpro.app.ui.components.FloatingNavView>(R.id.bottom_navigation)
 
-        val navIconLive = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_live)
-        val navIconHome = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_home)
-        val navIconSports = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_sports)
-        val navIconSettings = binding.root.findViewById<android.widget.ImageView>(R.id.nav_icon_settings)
-
-        val navLabelLive = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_live)
-        val navLabelHome = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_home)
-        val navLabelSports = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_sports)
-        val navLabelSettings = binding.root.findViewById<android.widget.TextView>(R.id.nav_label_settings)
-
-        val navItems = mapOf(
-            R.id.liveEventsFragment to Triple(navItemLive, navIconLive, navLabelLive),
-            R.id.homeFragment to Triple(navItemHome, navIconHome, navLabelHome),
-            R.id.sportsFragment to Triple(navItemSports, navIconSports, navLabelSports),
-            R.id.settingsFragment to Triple(navItemSettings, navIconSettings, navLabelSettings)
-        )
-
-        val navFilledIcons = mapOf(
-            R.id.liveEventsFragment to R.drawable.ic_live_filled,
-            R.id.homeFragment to R.drawable.ic_tv_filled,
-            R.id.sportsFragment to R.drawable.ic_sports_filled,
-            R.id.settingsFragment to R.drawable.ic_settings
-        )
-
-        val navOutlineIcons = mapOf(
-            R.id.liveEventsFragment to R.drawable.ic_live_outline,
-            R.id.homeFragment to R.drawable.ic_tv_outline,
-            R.id.sportsFragment to R.drawable.ic_sports_outline,
-            R.id.settingsFragment to R.drawable.ic_settings
-        )
-
-        val floatingNav = bottomNavigation as? com.livetvpro.app.ui.components.FloatingNavView
-        floatingNav?.setTabCount(navItems.size)
-
-        val tabIndexMap = mapOf(
+        val destToIndex = mapOf(
             R.id.liveEventsFragment to 0,
             R.id.homeFragment to 1,
             R.id.sportsFragment to 2,
             R.id.settingsFragment to 3
         )
+        val indexToDest = destToIndex.entries.associate { (k, v) -> v to k }
         var firstSelection = true
 
+        floatingNav?.setTabs(
+            com.livetvpro.app.ui.components.FloatingNavView.Tab(R.drawable.ic_live_filled, R.drawable.ic_live_outline, getString(R.string.nav_live)),
+            com.livetvpro.app.ui.components.FloatingNavView.Tab(R.drawable.ic_tv_filled, R.drawable.ic_tv_outline, getString(R.string.nav_home)),
+            com.livetvpro.app.ui.components.FloatingNavView.Tab(R.drawable.ic_sports_filled, R.drawable.ic_sports_outline, getString(R.string.nav_sports)),
+            com.livetvpro.app.ui.components.FloatingNavView.Tab(R.drawable.ic_settings, R.drawable.ic_settings, "Settings")
+        )
+
+        val bottomNavigation = floatingNav
+
         fun updateNavSelection(selectedId: Int) {
-            for ((destId, triple) in navItems) {
-                val (_, icon, label) = triple
-                val isSelected = destId == selectedId
-                val activeColor = android.graphics.Color.parseColor("#2AABEE")
-                val inactiveColor = android.graphics.Color.parseColor("#6B7280")
-                icon.setImageResource(if (isSelected) navFilledIcons[destId]!! else navOutlineIcons[destId]!!)
-                icon.setColorFilter(if (isSelected) activeColor else inactiveColor, android.graphics.PorterDuff.Mode.SRC_IN)
-                label.setTextColor(if (isSelected) activeColor else inactiveColor)
-            }
-            tabIndexMap[selectedId]?.let { index ->
+            destToIndex[selectedId]?.let { index ->
                 floatingNav?.selectTab(index, animate = !firstSelection)
                 firstSelection = false
             }
@@ -727,10 +690,9 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             }
         }
 
-        navItemLive?.setOnClickListener { navigateTopLevel(R.id.liveEventsFragment) }
-        navItemHome?.setOnClickListener { navigateTopLevel(R.id.homeFragment) }
-        navItemSports?.setOnClickListener { navigateTopLevel(R.id.sportsFragment) }
-        navItemSettings?.setOnClickListener { navigateTopLevel(R.id.settingsFragment) }
+        floatingNav?.onTabSelected = { index ->
+            indexToDest[index]?.let { destId -> navigateTopLevel(destId) }
+        }
 
         val drawerFragments2 = setOf(
             R.id.networkStreamFragment, R.id.playlistsFragment,

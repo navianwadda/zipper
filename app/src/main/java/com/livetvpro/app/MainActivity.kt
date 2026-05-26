@@ -608,71 +608,30 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             R.id.settingsFragment to R.drawable.ic_settings
         )
 
-        val navPillIndicator = binding.root.findViewById<android.view.View>(R.id.nav_pill_indicator)
-        var pillAnimator: android.animation.ValueAnimator? = null
+        val floatingNav = bottomNavigation as? com.livetvpro.app.ui.components.FloatingNavView
+        floatingNav?.setTabCount(navItems.size)
 
-        fun animatePillTo(targetItem: android.widget.LinearLayout) {
-            targetItem.post {
-                val pill = navPillIndicator ?: return@post
-                val parent = pill.parent as? android.widget.FrameLayout ?: return@post
-                val navBar = bottomNavigation ?: return@post
-
-                // Target pill bounds in FrameLayout coords
-                val itemW = targetItem.width.toFloat()
-                val itemH = navBar.height.toFloat()
-                val pillW = itemW * 0.72f
-                val pillH = itemH * 0.78f
-                val itemLeft = targetItem.left.toFloat() // relative to LinearLayout
-                val targetX = itemLeft + (itemW - pillW) / 2f
-                val targetY = (itemH - pillH) / 2f
-
-                if (pill.width == 0) {
-                    // First time — set size and position immediately
-                    val lp = android.widget.FrameLayout.LayoutParams(pillW.toInt(), pillH.toInt())
-                    pill.layoutParams = lp
-                    pill.translationX = targetX
-                    pill.translationY = targetY
-                    pill.visibility = android.view.View.VISIBLE
-                    return@post
-                }
-
-                pill.visibility = android.view.View.VISIBLE
-                pillAnimator?.cancel()
-                val startX = pill.translationX
-                val startY = pill.translationY
-                val startW = pill.width.toFloat()
-                val startH = pill.height.toFloat()
-
-                pillAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                    duration = 280
-                    interpolator = android.view.animation.DecelerateInterpolator(1.5f)
-                    addUpdateListener { anim ->
-                        val t = anim.animatedFraction
-                        val curX = startX + (targetX - startX) * t
-                        val curW = startW + (pillW - startW) * t
-                        val curH = startH + (pillH - startH) * t
-                        val lp = pill.layoutParams as android.widget.FrameLayout.LayoutParams
-                        lp.width = curW.toInt()
-                        lp.height = curH.toInt()
-                        pill.layoutParams = lp
-                        pill.translationX = curX
-                        pill.translationY = targetY
-                    }
-                    start()
-                }
-            }
-        }
+        val tabIndexMap = mapOf(
+            R.id.liveEventsFragment to 0,
+            R.id.homeFragment to 1,
+            R.id.sportsFragment to 2,
+            R.id.settingsFragment to 3
+        )
+        var firstSelection = true
 
         fun updateNavSelection(selectedId: Int) {
             for ((destId, triple) in navItems) {
-                val (item, icon, label) = triple
+                val (_, icon, label) = triple
                 val isSelected = destId == selectedId
                 val activeColor = android.graphics.Color.parseColor("#2AABEE")
                 val inactiveColor = android.graphics.Color.parseColor("#6B7280")
                 icon.setImageResource(if (isSelected) navFilledIcons[destId]!! else navOutlineIcons[destId]!!)
                 icon.setColorFilter(if (isSelected) activeColor else inactiveColor, android.graphics.PorterDuff.Mode.SRC_IN)
                 label.setTextColor(if (isSelected) activeColor else inactiveColor)
-                if (isSelected) animatePillTo(item)
+            }
+            tabIndexMap[selectedId]?.let { index ->
+                floatingNav?.selectTab(index, animate = !firstSelection)
+                firstSelection = false
             }
         }
 

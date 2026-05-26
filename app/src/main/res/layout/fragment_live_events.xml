@@ -124,6 +124,7 @@
             android:layout_width="match_parent" 
             android:layout_height="match_parent"
             android:layout_marginTop="4dp"
+            android:paddingBottom="90dp"
             android:clipToPadding="false" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
@@ -152,3 +153,4 @@
         app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+

@@ -75,7 +75,6 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:padding="4dp"
-            android:paddingBottom="90dp"
             android:clipToPadding="false"
             app:layout_constraintTop_toBottomOf="@id/header_divider"
             app:layout_constraintBottom_toBottomOf="parent"

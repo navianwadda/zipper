@@ -195,7 +195,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private fun applyInsets() {
         val root = binding.root
         val appBarLayout = root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
-        val bottomNavigation = root.findViewById<android.widget.LinearLayout>(R.id.bottom_navigation)
+        val bottomNavigation = root.findViewById<com.livetvpro.app.ui.components.FloatingNavView>(R.id.bottom_navigation)
         val navigationView = root.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
         val headerView = navigationView?.getHeaderView(0)
 

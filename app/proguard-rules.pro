@@ -1,3 +1,13 @@
+-keepattributes *Annotation*,Signature,Exceptions,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+-optimizationpasses 5
+-allowaccessmodification
+-overloadaggressively
+
+-dontwarn **
+-ignorewarnings
+
 -keepclassmembers class kotlin.Metadata { *; }
 
 -keep class dagger.hilt.** { *; }
@@ -5,10 +15,6 @@
 -keep class javax.inject.** { *; }
 
 -keepclassmembers class com.livetvpro.app.data.models.** { *; }
-
--keepclasseswithmembernames class * {
-    native <methods>;
-}
 
 -keep class com.livetvpro.app.data.repository.NativeDataRepository {
     <init>(...);
@@ -20,14 +26,9 @@
     native <methods>;
 }
 
--allowaccessmodification
--overloadaggressively
-
--optimizationpasses 5
-
--renamesourcefileattribute SourceFile
--keepattributes SourceFile,LineNumberTable
--keepattributes *Annotation*,Signature,Exceptions
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
 
 -keep public class * extends android.app.Activity
 -keep public class * extends android.app.Service
@@ -47,17 +48,16 @@
 }
 
 -keep class androidx.media3.** { *; }
--dontwarn androidx.media3.**
-
 -keep class androidx.media3.decoder.ffmpeg.** { *; }
 -keep class androidx.media3.exoplayer.DefaultRenderersFactory { *; }
 
--dontwarn okhttp3.**
--dontwarn okio.**
--keep class okhttp3.** { *; }
--keep interface okhttp3.** { *; }
+-keep class okhttp3.OkHttpClient { *; }
+-keep class okhttp3.Request { *; }
+-keep class okhttp3.Response { *; }
+-keep class okhttp3.CertificatePinner { *; }
+-keep interface okhttp3.Interceptor { *; }
+-keep interface okhttp3.Call { *; }
 
--keepattributes Signature
 -keep class retrofit2.** { *; }
 -keepclasseswithmembers class * {
     @retrofit2.http.* <methods>;
@@ -77,13 +77,10 @@
     public *;
 }
 -keep class com.bumptech.glide.** { *; }
--dontwarn com.bumptech.glide.**
 
 -keep class com.caverock.androidsvg.** { *; }
--dontwarn com.caverock.androidsvg.**
 
 -keep class com.google.firebase.** { *; }
--dontwarn com.google.firebase.**
 
 -assumenosideeffects class timber.log.Timber {
     public static *** d(...);
@@ -100,6 +97,3 @@
     public static *** w(...);
     public static *** e(...);
 }
-
--dontwarn **
--ignorewarnings

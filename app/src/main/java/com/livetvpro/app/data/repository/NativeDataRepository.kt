@@ -130,6 +130,7 @@ class NativeDataRepository @Inject constructor(
                 if (!p1()) return@withContext q5()
                 val url = p4()
                 if (url.isBlank()) return@withContext q5()
+                if (!url.startsWith("https://", ignoreCase = true)) return@withContext q5()
                 val req = Request.Builder().url(url).build()
                 httpClient.newCall(req).execute().use { resp ->
                     if (!resp.isSuccessful) return@withContext q5()
@@ -138,7 +139,7 @@ class NativeDataRepository @Inject constructor(
                     val ok = p5(body)
                     if (ok) {
                         q3 = body
-                        channelCache.set(null) 
+                        channelCache.set(null)
                         sportsCache.set(null)
                         return@withContext true
                     } else return@withContext q5()

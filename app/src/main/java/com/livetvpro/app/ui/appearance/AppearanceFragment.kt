@@ -1,128 +1,518 @@
-package com.livetvpro.app.ui.appearance
+package com.livetvpro.app.ui.settings
 
-import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MultiChoiceSegmentedButtonRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.livetvpro.app.R
 import com.livetvpro.app.data.local.ThemeManager
-import com.livetvpro.app.databinding.FragmentAppearanceBinding
 import com.livetvpro.app.ui.theme.AppColorTheme
+import com.livetvpro.app.ui.theme.LiveTVProTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class AppearanceFragment : Fragment() {
 
-    private var _binding: FragmentAppearanceBinding? = null
-    private val binding get() = _binding!!
-
-    @Inject
-    lateinit var themeManager: ThemeManager
-
-    private var adapter: ThemePreviewAdapter? = null
+    @Inject lateinit var themeManager: ThemeManager
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?,
-    ): View {
-        _binding = FragmentAppearanceBinding.inflate(inflater, container, false)
-        return binding.root
+    ): View = ComposeView(requireContext()).apply {
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        setContent {
+            LiveTVProTheme(themeManager) {
+                AppearanceScreen(
+                    themeManager = themeManager,
+                    onBack       = { parentFragmentManager.popBackStack() },
+                    onRecreate   = { requireActivity().recreate() },
+                )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Screen  (mirrors Marlboro AppearancePreferencesScreen exactly)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppearanceScreen(
+    themeManager: ThemeManager,
+    onBack: () -> Unit,
+    onRecreate: () -> Unit,
+) {
+    val systemDarkTheme = isSystemInDarkTheme()
+
+    var themeMode  by remember { mutableIntStateOf(themeManager.getThemeMode()) }
+    var colorTheme by remember { mutableStateOf(themeManager.getColorTheme()) }
+    var amoledMode by remember { mutableStateOf(themeManager.isAmoledMode()) }
+
+    val isDarkMode = when (themeMode) {
+        ThemeManager.THEME_DARK  -> true
+        ThemeManager.THEME_LIGHT -> false
+        else                     -> systemDarkTheme
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text       = "Appearance",
+                        style      = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color      = MaterialTheme.colorScheme.primary,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
 
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.appearanceScroll) { v, insets ->
-            val navBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
-            val bottomPad = navBars.bottom +
-                    v.resources.getDimensionPixelSize(R.dimen.nav_bottom_margin) +
-                    v.resources.getDimensionPixelSize(R.dimen.nav_height)
-            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, bottomPad)
-            insets
+            // ── Section header ─────────────────────────────────────────────
+            item {
+                PreferenceSectionHeader(title = "Theme")
+            }
+
+            // ── Theme card ─────────────────────────────────────────────────
+            item {
+                PreferenceCard {
+
+                    // Dark / Light / System segmented button
+                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        MultiChoiceSegmentedButton(
+                            choices = listOf("Dark", "Light", "System"),
+                            selectedIndices = listOf(themeMode),
+                            // Marlboro maps: Dark=0, Light=1, System=2
+                            // Our ThemeManager: DARK=2, LIGHT=1, AUTO=0
+                            // Map UI index → ThemeManager constant:
+                            onClick = { uiIndex ->
+                                val mode = when (uiIndex) {
+                                    0    -> ThemeManager.THEME_DARK
+                                    1    -> ThemeManager.THEME_LIGHT
+                                    else -> ThemeManager.THEME_AUTO
+                                }
+                                themeMode = mode
+                                themeManager.setThemeMode(mode)
+                                onRecreate()
+                            },
+                        )
+                    }
+
+                    PreferenceDivider()
+
+                    // Theme picker
+                    ThemePicker(
+                        currentTheme     = colorTheme,
+                        isDarkMode       = isDarkMode,
+                        onThemeSelected  = { chosen ->
+                            colorTheme = chosen
+                            themeManager.setColorTheme(chosen)
+                            onRecreate()
+                        },
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+
+                    PreferenceDivider()
+
+                    // AMOLED toggle
+                    SwitchPreferenceRow(
+                        title   = "AMOLED Black Mode",
+                        summary = "Use pure black background for dark themes",
+                        checked = amoledMode,
+                        enabled = themeMode != ThemeManager.THEME_LIGHT,
+                        onCheckedChange = { newValue ->
+                            amoledMode = newValue
+                            themeManager.setAmoledMode(newValue)
+                            onRecreate()
+                        },
+                    )
+                }
+            }
         }
+    }
+}
 
-        binding.toolbarAppearance.setNavigationOnClickListener {
-            findNavController().navigateUp()
+// ─────────────────────────────────────────────────────────────────────────────
+// ThemePicker  (exact port of Marlboro ThemePicker.kt)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun ThemePicker(
+    currentTheme: AppColorTheme,
+    isDarkMode: Boolean,
+    onThemeSelected: (AppColorTheme) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        val index = AppColorTheme.entries.indexOf(currentTheme)
+        if (index >= 0) {
+            listState.animateScrollToItem(maxOf(0, index - 1))
         }
+    }
 
-        val currentMode = themeManager.getThemeMode()
-        updateDarkModeButtons(currentMode)
-
-        binding.btnDark.setOnClickListener   { setDarkMode(ThemeManager.THEME_DARK) }
-        binding.btnLight.setOnClickListener  { setDarkMode(ThemeManager.THEME_LIGHT) }
-        binding.btnSystem.setOnClickListener { setDarkMode(ThemeManager.THEME_AUTO) }
-
-        binding.switchAmoled.isChecked = themeManager.isAmoledMode()
-        binding.switchAmoled.setOnCheckedChangeListener { _, isChecked ->
-            themeManager.setAmoledMode(isChecked)
-            applyAndRecreate()
-        }
-
-        val isDark = when (themeManager.getThemeMode()) {
-            ThemeManager.THEME_LIGHT -> false
-            ThemeManager.THEME_DARK  -> true
-            else -> (resources.configuration.uiMode and
-                    Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        }
-
-        adapter = ThemePreviewAdapter(
-            isDark        = isDark,
-            selectedTheme = themeManager.getColorTheme(),
-            onThemeSelected = { theme ->
-                themeManager.setColorTheme(theme)
-                adapter?.updateSelection(theme)
-                applyAndRecreate()
-            },
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text     = "App Theme",
+            style    = MaterialTheme.typography.labelMedium,
+            color    = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
         )
 
-        binding.rvThemes.layoutManager = LinearLayoutManager(
-            requireContext(), LinearLayoutManager.HORIZONTAL, false
-        )
-        binding.rvThemes.adapter = adapter
+        LazyRow(
+            modifier              = Modifier.fillMaxWidth(),
+            state                 = listState,
+            contentPadding        = PaddingValues(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            items(AppColorTheme.entries) { theme ->
+                ThemePreviewCard(
+                    theme      = theme,
+                    isSelected = theme == currentTheme,
+                    isDarkMode = isDarkMode,
+                    onClick    = { onThemeSelected(theme) },
+                )
+            }
+        }
 
-        val selectedIndex = AppColorTheme.entries.indexOf(themeManager.getColorTheme())
-        if (selectedIndex > 0) {
-            binding.rvThemes.scrollToPosition(selectedIndex)
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ThemePreviewCard  (exact port of Marlboro ThemePreviewCard.kt)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun ThemePreviewCard(
+    theme: AppColorTheme,
+    isSelected: Boolean,
+    isDarkMode: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme    = if (isDarkMode) theme.getDarkColorScheme() else theme.getLightColorScheme()
+    val selectionColor = MaterialTheme.colorScheme.primary
+    val borderWidth    = if (isSelected) 3.dp else 1.dp
+    val borderColor    = if (isSelected) selectionColor else Color.Transparent
+    val elevation      = if (isSelected) 8.dp else 2.dp
+
+    Column(
+        modifier            = modifier
+            .width(100.dp)
+            .pointerInput(Unit) { detectTapGestures { onClick() } },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 90.dp, height = 140.dp)
+                .shadow(
+                    elevation    = elevation,
+                    shape        = RoundedCornerShape(12.dp),
+                    ambientColor = if (isSelected) selectionColor.copy(alpha = 0.3f)
+                                   else Color.Black.copy(alpha = 0.2f),
+                    spotColor    = if (isSelected) selectionColor.copy(alpha = 0.3f)
+                                   else Color.Black.copy(alpha = 0.2f),
+                )
+                .clip(RoundedCornerShape(12.dp))
+                .background(colorScheme.surface)
+                .border(
+                    width = borderWidth,
+                    color = borderColor,
+                    shape = RoundedCornerShape(12.dp),
+                ),
+        ) {
+            Column(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(if (isSelected) 3.dp else 1.dp)
+                    .clip(RoundedCornerShape(if (isSelected) 9.dp else 11.dp))
+                    .background(colorScheme.background)
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                // Top bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(colorScheme.surfaceVariant),
+                )
+
+                // Middle card with toggle + accent dot
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp),
+                    color    = colorScheme.surfaceVariant,
+                    shape    = RoundedCornerShape(6.dp),
+                ) {
+                    Row(
+                        modifier              = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 24.dp, height = 12.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(colorScheme.primary),
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.tertiary),
+                        )
+                    }
+                }
+
+                // Bottom bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(colorScheme.surfaceVariant),
+                )
+
+                // Bottom secondary dot
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(colorScheme.secondary),
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text       = theme.displayName,
+            style      = MaterialTheme.typography.bodySmall,
+            fontSize   = 11.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color      = if (isSelected) MaterialTheme.colorScheme.primary
+                         else MaterialTheme.colorScheme.onSurface,
+            textAlign  = TextAlign.Center,
+            maxLines   = 2,
+            overflow   = TextOverflow.Ellipsis,
+            modifier   = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PreferenceCard  (exact port of Marlboro PreferenceCard.kt)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun PreferenceCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape     = RoundedCornerShape(28.dp),
+        colors    = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier            = Modifier.padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+        ) {
+            content()
         }
     }
+}
 
-    private fun setDarkMode(mode: Int) {
-        themeManager.setThemeMode(mode)
-        updateDarkModeButtons(mode)
-        applyAndRecreate()
+// ─────────────────────────────────────────────────────────────────────────────
+// PreferenceDivider  (exact port)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun PreferenceDivider(modifier: Modifier = Modifier) {
+    HorizontalDivider(
+        modifier = modifier.padding(horizontal = 16.dp),
+        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PreferenceSectionHeader  (exact port)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun PreferenceSectionHeader(title: String, modifier: Modifier = Modifier) {
+    Text(
+        text     = title,
+        style    = MaterialTheme.typography.labelLarge,
+        color    = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(horizontal = 32.dp, vertical = 16.dp),
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MultiChoiceSegmentedButton  (exact port of Marlboro's version)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun MultiChoiceSegmentedButton(
+    choices: List<String>,
+    selectedIndices: List<Int>,
+    onClick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    MultiChoiceSegmentedButtonRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+    ) {
+        choices.forEachIndexed { index, choice ->
+            SegmentedButton(
+                checked        = selectedIndices.contains(index),
+                onCheckedChange = { onClick(index) },
+                shape          = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
+            ) {
+                Text(text = choice)
+            }
+        }
     }
+}
 
-    private fun updateDarkModeButtons(mode: Int) {
-        binding.btnDark.isSelected   = mode == ThemeManager.THEME_DARK
-        binding.btnLight.isSelected  = mode == ThemeManager.THEME_LIGHT
-        binding.btnSystem.isSelected = mode == ThemeManager.THEME_AUTO
+// ─────────────────────────────────────────────────────────────────────────────
+// SwitchPreferenceRow  (replaces me.zhanghai SwitchPreference, same look)
+// ─────────────────────────────────────────────────────────────────────────────
 
-        val primary = requireContext().getColor(R.color.primary)
-        val white   = android.graphics.Color.WHITE
-        val dimWhite = android.graphics.Color.parseColor("#66FFFFFF")
-
-        binding.iconDark.setColorFilter  (if (mode == ThemeManager.THEME_DARK)  primary else white)
-        binding.iconLight.setColorFilter (if (mode == ThemeManager.THEME_LIGHT) primary else white)
-        binding.iconSystem.setColorFilter(if (mode == ThemeManager.THEME_AUTO)  primary else white)
-
-        binding.textDark.setTextColor  (if (mode == ThemeManager.THEME_DARK)  primary else dimWhite)
-        binding.textLight.setTextColor (if (mode == ThemeManager.THEME_LIGHT) primary else dimWhite)
-        binding.textSystem.setTextColor(if (mode == ThemeManager.THEME_AUTO)  primary else dimWhite)
-    }
-
-    private fun applyAndRecreate() {
-        themeManager.applyTheme()
-        activity?.recreate()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+@Composable
+fun SwitchPreferenceRow(
+    title: String,
+    summary: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Row(
+        modifier          = modifier
+            .fillMaxWidth()
+            .pointerInput(enabled) {
+                if (enabled) detectTapGestures { onCheckedChange(!checked) }
+            }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text  = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            )
+            Text(
+                text  = summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline.copy(
+                    alpha = if (enabled) 1f else 0.38f,
+                ),
+            )
+        }
+        Switch(
+            checked         = checked,
+            onCheckedChange = onCheckedChange,
+            enabled         = enabled,
+        )
     }
 }

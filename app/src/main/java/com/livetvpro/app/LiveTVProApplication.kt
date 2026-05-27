@@ -1,6 +1,7 @@
 package com.livetvpro.app
 
 import android.app.Application
+import android.content.Context
 import com.google.android.gms.security.ProviderInstaller
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -38,6 +39,18 @@ class LiveTVProApplication : Application() {
         }
     }
 
+    /**
+     * FIX: Apply dark/light mode HERE, before any Activity is created.
+     * attachBaseContext runs before Hilt injection, so we read prefs directly.
+     */
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        // Read prefs directly (Hilt not yet injected at this point)
+        val prefs = base.getSharedPreferences("live_tv_pro_prefs", Context.MODE_PRIVATE)
+        val mode = prefs.getInt("theme_mode", ThemeManager.THEME_AUTO)
+        ThemeManager.applyThemeStatic(mode)
+    }
+
     override fun onCreate() {
         super.onCreate()
         setupCrashLogger()
@@ -47,7 +60,7 @@ class LiveTVProApplication : Application() {
         }
         DeviceUtils.init(this)
         FloatingPlayerManager.initialize(preferencesManager)
-        themeManager.applyTheme()
+        // themeManager.applyTheme() is no longer needed here — attachBaseContext handles it.
 
         applicationScope.launch {
             try {

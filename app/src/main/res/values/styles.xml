@@ -28,10 +28,10 @@
         <item name="cornerSize">50%</item>
     </style>
 
-</resources>
-
     <style name="AppearanceToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:fontFamily">@font/bergen_sans</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">20sp</item>
     </style>
+
+</resources>

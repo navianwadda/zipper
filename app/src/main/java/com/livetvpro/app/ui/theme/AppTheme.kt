@@ -10,17 +10,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.livetvpro.app.data.local.ThemeManager
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import dagger.hilt.EntryPoint
 
-/**
- * The single Compose theme wrapper for the entire app.
- *
- * Reads ThemeManager for dark-mode mode, color theme, and AMOLED flag.
- * Every ComposeView / setContent block should be wrapped in this.
- *
- * Because ThemeManager reads SharedPreferences synchronously there is
- * no loading delay — the correct colours are applied on the very first
- * composition frame.
- */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface ThemeManagerEntryPoint {
+    fun themeManager(): ThemeManager
+}
+
 @Composable
 fun LiveTVProTheme(
     themeManager: ThemeManager,
@@ -32,14 +31,13 @@ fun LiveTVProTheme(
     val useDark = when (themeManager.getThemeMode()) {
         ThemeManager.THEME_DARK  -> true
         ThemeManager.THEME_LIGHT -> false
-        else                     -> systemDark   // THEME_AUTO → follow system
+        else                     -> systemDark
     }
 
     val colorTheme = themeManager.getColorTheme()
     val amoled     = themeManager.isAmoledMode()
 
     val colorScheme = when {
-        // Dynamic colour on Android 12+
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
             useDark && amoled -> dynamicDarkColorScheme(context).copy(
                 background             = Color.Black,
@@ -61,4 +59,16 @@ fun LiveTVProTheme(
         typography  = Typography(),
         content     = content,
     )
+}
+
+@Composable
+fun AppTheme(
+    content: @Composable () -> Unit,
+) {
+    val appContext = LocalContext.current.applicationContext
+    val themeManager = EntryPointAccessors.fromApplication(
+        appContext,
+        ThemeManagerEntryPoint::class.java,
+    ).themeManager()
+    LiveTVProTheme(themeManager = themeManager, content = content)
 }

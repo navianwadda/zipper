@@ -1,4 +1,4 @@
-package com.livetvpro.app.ui.settings
+package com.livetvpro.app.ui.appearance
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -94,9 +94,6 @@ class AppearanceFragment : Fragment() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Screen  (mirrors Marlboro AppearancePreferencesScreen exactly)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,23 +143,17 @@ fun AppearanceScreen(
                 .padding(padding),
         ) {
 
-            // ── Section header ─────────────────────────────────────────────
             item {
                 PreferenceSectionHeader(title = "Theme")
             }
 
-            // ── Theme card ─────────────────────────────────────────────────
             item {
                 PreferenceCard {
 
-                    // Dark / Light / System segmented button
                     Column(modifier = Modifier.padding(vertical = 8.dp)) {
                         MultiChoiceSegmentedButton(
                             choices = listOf("Dark", "Light", "System"),
                             selectedIndices = listOf(themeMode),
-                            // Marlboro maps: Dark=0, Light=1, System=2
-                            // Our ThemeManager: DARK=2, LIGHT=1, AUTO=0
-                            // Map UI index → ThemeManager constant:
                             onClick = { uiIndex ->
                                 val mode = when (uiIndex) {
                                     0    -> ThemeManager.THEME_DARK
@@ -178,7 +169,6 @@ fun AppearanceScreen(
 
                     PreferenceDivider()
 
-                    // Theme picker
                     ThemePicker(
                         currentTheme     = colorTheme,
                         isDarkMode       = isDarkMode,
@@ -192,7 +182,6 @@ fun AppearanceScreen(
 
                     PreferenceDivider()
 
-                    // AMOLED toggle
                     SwitchPreferenceRow(
                         title   = "AMOLED Black Mode",
                         summary = "Use pure black background for dark themes",
@@ -210,9 +199,6 @@ fun AppearanceScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ThemePicker  (exact port of Marlboro ThemePicker.kt)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ThemePicker(
@@ -258,9 +244,6 @@ fun ThemePicker(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ThemePreviewCard  (exact port of Marlboro ThemePreviewCard.kt)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ThemePreviewCard(
@@ -310,7 +293,6 @@ fun ThemePreviewCard(
                     .padding(8.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                // Top bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -319,7 +301,6 @@ fun ThemePreviewCard(
                         .background(colorScheme.surfaceVariant),
                 )
 
-                // Middle card with toggle + accent dot
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -349,7 +330,6 @@ fun ThemePreviewCard(
                     }
                 }
 
-                // Bottom bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -358,7 +338,6 @@ fun ThemePreviewCard(
                         .background(colorScheme.surfaceVariant),
                 )
 
-                // Bottom secondary dot
                 Row(
                     modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -390,9 +369,6 @@ fun ThemePreviewCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PreferenceCard  (exact port of Marlboro PreferenceCard.kt)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun PreferenceCard(
@@ -418,9 +394,6 @@ fun PreferenceCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PreferenceDivider  (exact port)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun PreferenceDivider(modifier: Modifier = Modifier) {
@@ -430,9 +403,6 @@ fun PreferenceDivider(modifier: Modifier = Modifier) {
     )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PreferenceSectionHeader  (exact port)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun PreferenceSectionHeader(title: String, modifier: Modifier = Modifier) {
@@ -444,9 +414,6 @@ fun PreferenceSectionHeader(title: String, modifier: Modifier = Modifier) {
     )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MultiChoiceSegmentedButton  (exact port of Marlboro's version)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun MultiChoiceSegmentedButton(
@@ -472,9 +439,6 @@ fun MultiChoiceSegmentedButton(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SwitchPreferenceRow  (replaces me.zhanghai SwitchPreference, same look)
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun SwitchPreferenceRow(

@@ -50,6 +50,10 @@ class SettingsFragment : Fragment() {
             insets
         }
 
+        binding.cardAppearance.setOnClickListener {
+            findNavController().navigate(R.id.action_settings_to_appearance)
+        }
+
         binding.cardNetworkStream.setOnClickListener {
             findNavController().navigate(R.id.networkStreamFragment)
         }

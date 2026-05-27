@@ -1,4 +1,5 @@
 package com.livetvpro.app.ui.components
+
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
@@ -9,34 +10,40 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import androidx.core.content.ContextCompat
 import com.livetvpro.app.R
+
 class FloatingNavView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
+
     data class Tab(
         val filledIcon: Int,
         val outlineIcon: Int,
         val label: String
     )
+
     private val tabs = mutableListOf<Tab>()
     private val iconDrawables = mutableListOf<Drawable?>()
+
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = dp(10f)
         typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.CENTER
     }
+
     private val clearPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
-    private val pillBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#1A2AABEE")
-    }
+
+    private val pillBgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val navBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#F0111111")
     }
+
     private val pillRect = RectF()
     private val pillRadius = dp(15f)
     private val iconSize = dp(24f).toInt()
+
     private var pillLeft = 0f
     private var pillRight = 0f
     private var pillTop = 0f
@@ -44,10 +51,22 @@ class FloatingNavView @JvmOverloads constructor(
     private var initialized = false
     private var selectedIndex = 0
     private var pillAnimator: ValueAnimator? = null
-    private val activeColor = Color.parseColor("#2AABEE")
+
+    private var activeColor = Color.parseColor("#2AABEE")
     private val inactiveColor = Color.parseColor("#6B7280")
-    private val pillContentColor = Color.parseColor("#EF4444")
+
     var onTabSelected: ((Int) -> Unit)? = null
+
+    fun setActiveColor(color: Int) {
+        activeColor = color
+        val r = Color.red(color)
+        val g = Color.green(color)
+        val b = Color.blue(color)
+        pillBgPaint.color = Color.argb(26, r, g, b)
+        reloadIcons()
+        invalidate()
+    }
+
     fun setTabs(vararg tabList: Tab) {
         tabs.clear()
         tabs.addAll(tabList)
@@ -55,6 +74,7 @@ class FloatingNavView @JvmOverloads constructor(
         tabs.forEach { iconDrawables.add(null) }
         invalidate()
     }
+
     fun selectTab(index: Int, animate: Boolean) {
         if (tabs.isEmpty() || width == 0) {
             post { selectTab(index, animate) }
@@ -112,6 +132,7 @@ class FloatingNavView @JvmOverloads constructor(
             start()
         }
     }
+
     private fun reloadIcons() {
         tabs.forEachIndexed { i, tab ->
             val res = if (i == selectedIndex) tab.filledIcon else tab.outlineIcon
@@ -121,6 +142,7 @@ class FloatingNavView @JvmOverloads constructor(
             iconDrawables[i] = d
         }
     }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         reloadIcons()
@@ -128,6 +150,7 @@ class FloatingNavView @JvmOverloads constructor(
             selectTab(selectedIndex, false)
         }
     }
+
     override fun onDraw(canvas: Canvas) {
         if (tabs.isEmpty()) return
         val w = width.toFloat()
@@ -175,6 +198,7 @@ class FloatingNavView @JvmOverloads constructor(
         canvas.drawPath(invertPath, clearPaint)
         canvas.restoreToCount(layer)
     }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_UP && tabs.isNotEmpty()) {
             val index = (event.x / (width.toFloat() / tabs.size)).toInt().coerceIn(0, tabs.size - 1)
@@ -184,5 +208,6 @@ class FloatingNavView @JvmOverloads constructor(
         }
         return true
     }
+
     private fun dp(value: Float) = value * resources.displayMetrics.density
 }

@@ -40,6 +40,9 @@ import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.Refreshable
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.flow.collectLatest
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 interface SearchableFragment {
     fun onSearchQuery(query: String)
@@ -106,6 +109,15 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             setupToolbar()
             setupDrawer()
             setupNavigation()
+            themeManager.initPrimaryColor()
+            lifecycleScope.launch {
+                themeManager.primaryColorFlow.collectLatest { color ->
+                    if (color != 0) {
+                        val floatingNav = binding.root.findViewById<com.livetvpro.app.ui.components.FloatingNavView>(R.id.bottom_navigation)
+                        floatingNav?.setActiveColor(color)
+                    }
+                }
+            }
             setupSearch()
         }
 
@@ -691,6 +703,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             }
         }
 
+
         floatingNav?.onTabSelected = { index ->
             indexToDest[index]?.let { destId -> navigateTopLevel(destId) }
         }
@@ -724,6 +737,10 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 else -> false
             }
             invalidateOptionsMenu()
+
+            val isAppearance = destination.id == R.id.appearanceFragment
+            val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
+            appBarLayout?.visibility = if (isAppearance) View.GONE else View.VISIBLE
 
             val isTopLevel = destination.id in topLevelDestinations
             val isNetworkStream = destination.id == R.id.networkStreamFragment

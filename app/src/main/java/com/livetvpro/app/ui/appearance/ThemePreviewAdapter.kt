@@ -54,7 +54,7 @@ class ThemePreviewAdapter(
             val secondary = if (isDark) theme.secondaryDark else theme.secondaryLight
             val tertiary  = if (isDark) theme.tertiaryDark  else theme.tertiaryLight
             val bg        = if (isDark) theme.backgroundDark else theme.backgroundLight
-            val surface   = if (isDark) theme.surfaceDark    else theme.surfaceLight
+            val surface   = if (isDark) theme.backgroundDark else theme.backgroundLight
 
             val primaryInt   = colorToInt(primary)
             val secondaryInt = colorToInt(secondary)

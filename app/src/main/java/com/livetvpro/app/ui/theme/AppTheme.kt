@@ -10,15 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.livetvpro.app.data.local.ThemeManager
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
-import dagger.hilt.EntryPoint
-
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface ThemeManagerEntryPoint {
-    fun themeManager(): ThemeManager
-}
 
 @Composable
 fun LiveTVProTheme(
@@ -59,16 +50,4 @@ fun LiveTVProTheme(
         typography  = Typography(),
         content     = content,
     )
-}
-
-@Composable
-fun AppTheme(
-    content: @Composable () -> Unit,
-) {
-    val appContext = LocalContext.current.applicationContext
-    val themeManager = EntryPointAccessors.fromApplication(
-        appContext,
-        ThemeManagerEntryPoint::class.java,
-    ).themeManager()
-    LiveTVProTheme(themeManager = themeManager, content = content)
 }

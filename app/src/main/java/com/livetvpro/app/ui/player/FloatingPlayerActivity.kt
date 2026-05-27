@@ -75,7 +75,8 @@ import com.livetvpro.app.ui.player.compose.PlayerControls
 import com.livetvpro.app.ui.player.compose.PlayerControlsState
 import com.livetvpro.app.ui.player.compose.GestureState
 import android.media.AudioManager
-import com.livetvpro.app.ui.theme.AppTheme
+import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.ui.player.ChannelListCache
 import kotlinx.coroutines.delay
@@ -89,6 +90,9 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private var player: ExoPlayer? = null
     private var trackSelector: DefaultTrackSelector? = null
     private var playerListener: Player.Listener? = null
+
+    @javax.inject.Inject
+    lateinit var themeManager: ThemeManager
 
     @javax.inject.Inject
     lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
@@ -1740,7 +1744,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         binding.playerControlsCompose.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                AppTheme {
+                LiveTVProTheme(themeManager = themeManager) {
                     val isPlaying by produceState(initialValue = false, player) {
                         while (true) {
                             value = player?.isPlaying == true

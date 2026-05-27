@@ -2,9 +2,12 @@ package com.livetvpro.app.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatDelegate
 import com.livetvpro.app.ui.theme.AppColorTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,10 +29,6 @@ class ThemeManager @Inject constructor(
         private const val KEY_COLOR_THEME = "color_theme"
         private const val KEY_AMOLED_MODE = "amoled_mode"
 
-        /**
-         * Static version — safe to call from Application.attachBaseContext()
-         * before Hilt injects the ThemeManager instance.
-         */
         fun applyThemeStatic(mode: Int) {
             AppCompatDelegate.setDefaultNightMode(
                 when (mode) {
@@ -41,24 +40,18 @@ class ThemeManager @Inject constructor(
         }
     }
 
-    // ── Dark / light mode ─────────────────────────────────────────────────────
+    private val _primaryColorFlow = MutableStateFlow(0)
+    val primaryColorFlow: StateFlow<Int> = _primaryColorFlow
 
     fun getThemeMode(): Int = prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
 
-    /**
-     * Persist and apply a new dark/light mode.
-     * The activity must call recreate() afterwards so XML layouts re-inflate
-     * with the updated night mode.
-     */
     fun setThemeMode(mode: Int) {
         prefs.edit().putInt(KEY_THEME_MODE, mode).apply()
         applyThemeStatic(mode)
+        _primaryColorFlow.value = getPrimaryColor()
     }
 
-    /** Instance wrapper kept for backwards compat. */
     fun applyTheme(mode: Int = getThemeMode()) = applyThemeStatic(mode)
-
-    // ── Colour theme ──────────────────────────────────────────────────────────
 
     fun getColorTheme(): AppColorTheme =
         AppColorTheme.fromName(
@@ -66,20 +59,35 @@ class ThemeManager @Inject constructor(
                 ?: AppColorTheme.Default.name,
         )
 
-    /**
-     * Persist a new color theme.
-     * Callers MUST call Activity.recreate() so the Compose MaterialTheme
-     * and any XML-based colour references are refreshed.
-     */
     fun setColorTheme(theme: AppColorTheme) {
         prefs.edit().putString(KEY_COLOR_THEME, theme.name).apply()
+        _primaryColorFlow.value = getPrimaryColor()
     }
-
-    // ── AMOLED mode ───────────────────────────────────────────────────────────
 
     fun isAmoledMode(): Boolean = prefs.getBoolean(KEY_AMOLED_MODE, false)
 
     fun setAmoledMode(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_AMOLED_MODE, enabled).apply()
+        _primaryColorFlow.value = getPrimaryColor()
+    }
+
+    fun getPrimaryColor(): Int {
+        val theme = getColorTheme()
+        val isDark = when (getThemeMode()) {
+            THEME_DARK  -> true
+            THEME_LIGHT -> false
+            else        -> AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_NO
+        }
+        val color = if (isDark) theme.primaryDark else theme.primaryLight
+        return Color.argb(
+            (color.alpha * 255).toInt(),
+            (color.red   * 255).toInt(),
+            (color.green * 255).toInt(),
+            (color.blue  * 255).toInt(),
+        )
+    }
+
+    fun initPrimaryColor() {
+        _primaryColorFlow.value = getPrimaryColor()
     }
 }

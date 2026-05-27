@@ -2,8 +2,8 @@ package com.livetvpro.app.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import com.livetvpro.app.ui.theme.AppColorTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,35 +18,41 @@ class ThemeManager @Inject constructor(
     )
 
     companion object {
-        private const val KEY_THEME_MODE = "theme_mode"
-        const val THEME_AUTO = 0
+        private const val KEY_THEME_MODE    = "theme_mode"
+        private const val KEY_COLOR_THEME   = "color_theme"
+        private const val KEY_AMOLED_MODE   = "amoled_mode"
+        const val THEME_AUTO  = 0
         const val THEME_LIGHT = 1
-        const val THEME_DARK = 2
+        const val THEME_DARK  = 2
     }
 
-    fun getThemeMode(): Int {
-        return prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
-    }
+    fun getThemeMode(): Int = prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
 
     fun setThemeMode(mode: Int) {
         prefs.edit().putInt(KEY_THEME_MODE, mode).apply()
         applyTheme(mode)
-        recreateActivity()
     }
 
     fun applyTheme(mode: Int = getThemeMode()) {
-        when (mode) {
-            THEME_AUTO -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-            THEME_LIGHT -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            THEME_DARK -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-        }
+        AppCompatDelegate.setDefaultNightMode(
+            when (mode) {
+                THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+                THEME_DARK  -> AppCompatDelegate.MODE_NIGHT_YES
+                else        -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            }
+        )
     }
 
-    private fun recreateActivity() {
-        try {
-            val activity = context as? AppCompatActivity
-            activity?.recreate()
-        } catch (e: Exception) {
-        }
+    fun getColorTheme(): AppColorTheme =
+        AppColorTheme.fromName(prefs.getString(KEY_COLOR_THEME, AppColorTheme.Default.name) ?: AppColorTheme.Default.name)
+
+    fun setColorTheme(theme: AppColorTheme) {
+        prefs.edit().putString(KEY_COLOR_THEME, theme.name).apply()
+    }
+
+    fun isAmoledMode(): Boolean = prefs.getBoolean(KEY_AMOLED_MODE, false)
+
+    fun setAmoledMode(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AMOLED_MODE, enabled).apply()
     }
 }

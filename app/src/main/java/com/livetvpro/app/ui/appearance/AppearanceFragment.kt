@@ -27,23 +27,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MultiChoiceSegmentedButtonRow
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -86,7 +80,6 @@ class AppearanceFragment : Fragment() {
             LiveTVProTheme(themeManager) {
                 AppearanceScreen(
                     themeManager = themeManager,
-                    onBack       = { parentFragmentManager.popBackStack() },
                     onRecreate   = { requireActivity().recreate() },
                 )
             }
@@ -99,7 +92,6 @@ class AppearanceFragment : Fragment() {
 @Composable
 fun AppearanceScreen(
     themeManager: ThemeManager,
-    onBack: () -> Unit,
     onRecreate: () -> Unit,
 ) {
     val systemDarkTheme = isSystemInDarkTheme()
@@ -114,84 +106,58 @@ fun AppearanceScreen(
         else                     -> systemDarkTheme
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text       = "Appearance",
-                        style      = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color      = MaterialTheme.colorScheme.primary,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+    ) {
 
-            item {
-                PreferenceSectionHeader(title = "Theme")
-            }
+        item {
+            PreferenceSectionHeader(title = "Theme")
+        }
 
-            item {
-                PreferenceCard {
+        item {
+            PreferenceCard {
 
-                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                        MultiChoiceSegmentedButton(
-                            choices = listOf("Dark", "Light", "System"),
-                            selectedIndices = listOf(themeMode),
-                            onClick = { uiIndex ->
-                                val mode = when (uiIndex) {
-                                    0    -> ThemeManager.THEME_DARK
-                                    1    -> ThemeManager.THEME_LIGHT
-                                    else -> ThemeManager.THEME_AUTO
-                                }
-                                themeMode = mode
-                                themeManager.setThemeMode(mode)
-                                onRecreate()
-                            },
-                        )
-                    }
-
-                    PreferenceDivider()
-
-                    ThemePicker(
-                        currentTheme     = colorTheme,
-                        isDarkMode       = isDarkMode,
-                        onThemeSelected  = { chosen ->
-                            colorTheme = chosen
-                            themeManager.setColorTheme(chosen)
-                        },
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
-
-                    PreferenceDivider()
-
-                    SwitchPreferenceRow(
-                        title   = "AMOLED Black Mode",
-                        summary = "Use pure black background for dark themes",
-                        checked = amoledMode,
-                        enabled = themeMode != ThemeManager.THEME_LIGHT,
-                        onCheckedChange = { newValue ->
-                            amoledMode = newValue
-                            themeManager.setAmoledMode(newValue)
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    MultiChoiceSegmentedButton(
+                        choices = listOf("Dark", "Light", "System"),
+                        selectedIndices = listOf(themeMode),
+                        onClick = { uiIndex ->
+                            val mode = when (uiIndex) {
+                                0    -> ThemeManager.THEME_DARK
+                                1    -> ThemeManager.THEME_LIGHT
+                                else -> ThemeManager.THEME_AUTO
+                            }
+                            themeMode = mode
+                            themeManager.setThemeMode(mode)
+                            onRecreate()
                         },
                     )
                 }
+
+                PreferenceDivider()
+
+                ThemePicker(
+                    currentTheme     = colorTheme,
+                    isDarkMode       = isDarkMode,
+                    onThemeSelected  = { chosen ->
+                        colorTheme = chosen
+                        themeManager.setColorTheme(chosen)
+                    },
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+
+                PreferenceDivider()
+
+                SwitchPreferenceRow(
+                    title   = "AMOLED Black Mode",
+                    summary = "Use pure black background for dark themes",
+                    checked = amoledMode,
+                    enabled = themeMode != ThemeManager.THEME_LIGHT,
+                    onCheckedChange = { newValue ->
+                        amoledMode = newValue
+                        themeManager.setAmoledMode(newValue)
+                    },
+                )
             }
         }
     }

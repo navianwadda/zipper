@@ -1,5 +1,6 @@
 package com.livetvpro.app.ui.appearance
 
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -171,13 +172,17 @@ fun ThemePicker(
     onThemeSelected: (AppColorTheme) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+    val themes = AppColorTheme.entries.filter {
+        it != AppColorTheme.Dynamic || isDynamicAvailable
+    }
+
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
-        val index = AppColorTheme.entries.indexOf(currentTheme)
-        if (index >= 0) {
-            listState.animateScrollToItem(maxOf(0, index - 1))
-        }
+        val index = themes.indexOf(currentTheme)
+        if (index >= 0) listState.animateScrollToItem(maxOf(0, index - 1))
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -194,7 +199,7 @@ fun ThemePicker(
             contentPadding        = PaddingValues(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            items(AppColorTheme.entries) { theme ->
+            items(themes) { theme ->
                 ThemePreviewCard(
                     theme      = theme,
                     isSelected = theme == currentTheme,

@@ -116,6 +116,10 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     if (color != 0) {
                         val floatingNav = binding.root.findViewById<com.livetvpro.app.ui.components.FloatingNavView>(R.id.bottom_navigation)
                         floatingNav?.setActiveColor(color)
+                        val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
+                        val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+                        appBarLayout?.setBackgroundColor(color)
+                        toolbar?.setBackgroundColor(color)
                     }
                 }
             }

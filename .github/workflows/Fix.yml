@@ -1,0 +1,317 @@
+name: Apply Light Theme Fix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apply-theme-fix:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create values-night directory
+        run: mkdir -p app/src/main/res/values-night
+
+      - name: Write values-night/colors.xml
+        run: |
+          cat > app/src/main/res/values-night/colors.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="background">#0D1117</color>
+              <color name="surface">#1A1A1A</color>
+              <color name="on_background">#FFFFFF</color>
+              <color name="on_surface">#FFFFFF</color>
+              <color name="text_primary">#FFFFFF</color>
+              <color name="input_background">#1A1A1A</color>
+              <color name="input_stroke">#3A3A3A</color>
+              <color name="input_hint">#888888</color>
+              <color name="input_text">#FFFFFF</color>
+              <color name="divider_dark">#393939</color>
+              <color name="border_dark">#393939</color>
+              <color name="chip_background_normal">#2A2A2A</color>
+              <color name="chip_background_selected">#1AEF4444</color>
+              <color name="chip_stroke_normal">#3A3A3A</color>
+              <color name="chip_stroke_selected">#EF4444</color>
+              <color name="chip_text_normal">#CCCCCC</color>
+              <color name="chip_text_selected">#FFFFFF</color>
+              <color name="chip_ripple_color">#40FFFFFF</color>
+              <color name="player_channel_stroke">#2A2A2A</color>
+          </resources>
+          XMLEOF
+
+      - name: Write values-night/chip_colors.xml
+        run: |
+          cat > app/src/main/res/values-night/chip_colors.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="chip_background_normal">#2A2A2A</color>
+              <color name="chip_background_selected">#1AEF4444</color>
+              <color name="chip_stroke_normal">#3A3A3A</color>
+              <color name="chip_stroke_selected">#EF4444</color>
+              <color name="chip_text_normal">#CCCCCC</color>
+              <color name="chip_text_selected">#FFFFFF</color>
+              <color name="chip_ripple_color">#40FFFFFF</color>
+          </resources>
+          XMLEOF
+
+      - name: Write values-night/styles.xml
+        run: |
+          cat > app/src/main/res/values-night/styles.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LinkSelectionDialogTheme" parent="Theme.Material3.Dark.Dialog.Alert">
+                  <item name="android:backgroundDimAmount">0.7</item>
+                  <item name="android:colorBackground">#2A2A2A</item>
+                  <item name="colorSurface">#2A2A2A</item>
+                  <item name="android:textColorPrimary">#FFFFFF</item>
+                  <item name="android:textColorSecondary">#E0E0E0</item>
+                  <item name="colorPrimary">#EF4444</item>
+                  <item name="colorAccent">#EF4444</item>
+              </style>
+          </resources>
+          XMLEOF
+
+      - name: Update values/colors.xml
+        run: |
+          cat > app/src/main/res/values/colors.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="primary">#2AABEE</color>
+              <color name="primary_variant">#1A8AB8</color>
+              <color name="secondary">#229ED0</color>
+              <color name="error_dark">#EF4444</color>
+              <color name="on_primary">#FFFFFF</color>
+              <color name="on_secondary">#FFFFFF</color>
+              <color name="on_error">#FFFFFF</color>
+              <color name="status_bar">#00000000</color>
+              <color name="ic_launcher_background">#121212</color>
+              <color name="background">#F5F5F5</color>
+              <color name="surface">#FFFFFF</color>
+              <color name="on_background">#000000</color>
+              <color name="on_surface">#000000</color>
+              <color name="text_primary">#000000</color>
+              <color name="input_background">#FFFFFF</color>
+              <color name="input_stroke">#CCCCCC</color>
+              <color name="input_hint">#888888</color>
+              <color name="input_text">#000000</color>
+              <color name="input_cursor">#FFB300</color>
+              <color name="divider_dark">#DDDDDD</color>
+              <color name="border_dark">#DDDDDD</color>
+              <color name="chip_background_normal">#EEEEEE</color>
+              <color name="chip_background_selected">#1AEF4444</color>
+              <color name="chip_stroke_normal">#CCCCCC</color>
+              <color name="chip_stroke_selected">#EF4444</color>
+              <color name="chip_text_normal">#333333</color>
+              <color name="chip_text_selected">#000000</color>
+              <color name="chip_ripple_color">#40000000</color>
+              <color name="player_channel_stroke">#DDDDDD</color>
+              <color name="primary_dark">#229ED0</color>
+              <color name="primary_dark_variant">#1A8AB8</color>
+              <color name="accent">#2AABEE</color>
+              <color name="accent_dark">#1A7AB8</color>
+              <color name="accent_variant">#2AABEE</color>
+              <color name="background_dark">#0D1117</color>
+              <color name="background_light">#F5F5F5</color>
+              <color name="surface_dark">#1A1A1A</color>
+              <color name="surface_light">#FFFFFF</color>
+              <color name="on_surface_dark">#FFFFFF</color>
+              <color name="on_surface_light">#000000</color>
+              <color name="text_primary_dark">#FFFFFF</color>
+              <color name="text_secondary_dark">#B0B0B0</color>
+              <color name="text_primary_light">#000000</color>
+              <color name="text_secondary_light">#757575</color>
+              <color name="primary_dark_bright">#2AABEE</color>
+              <color name="accent_light">#6FB4E8</color>
+              <color name="on_surface_dark_bright">#FFFFFF</color>
+              <color name="disabled_text">#888888</color>
+              <color name="hint_dark">#2AABEE</color>
+              <color name="hint_light">#2AABEE</color>
+              <color name="hint_secondary">#444444</color>
+              <color name="divider_light">#888888</color>
+              <color name="divider_secondary">#575757</color>
+              <color name="background_theme_dark">#101010</color>
+              <color name="background_theme_light">#F5F5FF</color>
+              <color name="border_light">#575757</color>
+              <color name="border_secondary">#575757</color>
+              <color name="button_primary_dark">#1A8AB8</color>
+              <color name="button_primary_light">#229ED0</color>
+              <color name="button_secondary_dark">#1A8AB8</color>
+              <color name="button_secondary_light">#229ED0</color>
+              <color name="button_tertiary">#2AABEE</color>
+              <color name="color_button_primary">#1A8AB8</color>
+              <color name="color_button_secondary">#1A8AB8</color>
+              <color name="color_button_tertiary">#2AABEE</color>
+              <color name="color_button_primary_dark">#161616</color>
+              <color name="color_button_secondary_dark">#222222</color>
+              <color name="color_button_secondary_light">#333333</color>
+              <color name="color_button_tertiary_dark">#161616</color>
+              <color name="color_button_tertiary_light">#333333</color>
+              <color name="color_button_focus">#1A8AB8</color>
+              <color name="color_button_hover">#161616</color>
+              <color name="color_button_pressed">#1A8AB8</color>
+              <color name="color_button_disabled">#888888</color>
+              <color name="color_button_primary_disabled">#1A8AB8</color>
+              <color name="color_button_secondary_disabled">#1A8AB8</color>
+              <color name="color_button_tertiary_disabled">#2AABEE</color>
+              <color name="gray_primary_dark">#1A8AB8</color>
+              <color name="gray_primary_light">#229ED0</color>
+              <color name="gray_secondary_dark">#393939</color>
+              <color name="gray_secondary_light">#575757</color>
+              <color name="red_primary_dark">#1A8AB8</color>
+              <color name="red_primary_light">#229ED0</color>
+              <color name="red_secondary_dark">#1A8AB8</color>
+              <color name="red_secondary_light">#229ED0</color>
+              <color name="telegram_primary">#229ED0</color>
+              <color name="telegram_light">#6FB4E8</color>
+              <color name="telegram_dark">#1A8A8A</color>
+              <color name="telegram_bg">#00AA88</color>
+              <color name="telegram_surface">#1A1A28</color>
+              <color name="telegram_text">#FFFFFF</color>
+              <color name="telegram_accent">#2AABEE</color>
+              <color name="telegram_nav_selected">#2481CC</color>
+              <color name="white">#FFFFFF</color>
+              <color name="accent_amber">#FFB300</color>
+          </resources>
+          XMLEOF
+
+      - name: Update values/chip_colors.xml
+        run: |
+          cat > app/src/main/res/values/chip_colors.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="chip_background_normal">#EEEEEE</color>
+              <color name="chip_background_selected">#1AEF4444</color>
+              <color name="chip_stroke_normal">#CCCCCC</color>
+              <color name="chip_stroke_selected">#EF4444</color>
+              <color name="chip_text_normal">#333333</color>
+              <color name="chip_text_selected">#000000</color>
+              <color name="chip_ripple_color">#40000000</color>
+          </resources>
+          XMLEOF
+
+      - name: Update values/styles.xml
+        run: |
+          cat > app/src/main/res/values/styles.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="LinkSelectionDialogTheme" parent="Theme.Material3.Light.Dialog.Alert">
+                  <item name="android:backgroundDimAmount">0.7</item>
+                  <item name="android:colorBackground">#FFFFFF</item>
+                  <item name="colorSurface">#FFFFFF</item>
+                  <item name="android:textColorPrimary">#000000</item>
+                  <item name="android:textColorSecondary">#444444</item>
+                  <item name="colorPrimary">#EF4444</item>
+                  <item name="colorAccent">#EF4444</item>
+              </style>
+              <style name="Widget.Material3.TextInputLayout.OutlinedExposedDropdownMenu" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu" />
+              <style name="CircleImageView" parent="">
+                  <item name="cornerFamily">rounded</item>
+                  <item name="cornerSize">50%</item>
+              </style>
+              <style name="NavigationBarActiveIndicator" parent="">
+                  <item name="android:color">@android:color/transparent</item>
+                  <item name="android:width">0dp</item>
+                  <item name="android:height">0dp</item>
+              </style>
+              <style name="NavigationBarActiveIndicatorShape" parent="ShapeAppearance.Material3.Corner.Full">
+                  <item name="cornerSize">50%</item>
+              </style>
+              <style name="AppearanceToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
+                  <item name="android:fontFamily">@font/bergen_sans</item>
+                  <item name="android:textStyle">bold</item>
+                  <item name="android:textSize">20sp</item>
+              </style>
+          </resources>
+          XMLEOF
+
+      - name: Update color/bottom_nav_colors.xml
+        run: |
+          cat > app/src/main/res/color/bottom_nav_colors.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <selector xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:color="?attr/colorPrimary" android:state_checked="true"/>
+              <item android:color="?attr/colorOnSurfaceVariant" android:state_checked="false"/>
+          </selector>
+          XMLEOF
+
+      - name: Update drawable/bottom_nav_text_colors.xml
+        run: |
+          cat > app/src/main/res/drawable/bottom_nav_text_colors.xml << 'XMLEOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <selector xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:color="?attr/colorPrimary" android:state_checked="true"/>
+              <item android:color="?attr/colorOnSurfaceVariant" android:state_checked="false"/>
+          </selector>
+          XMLEOF
+
+      - name: Verify files
+        run: |
+          echo "Checking all patched files"
+          files=(
+            "app/src/main/res/values-night/colors.xml"
+            "app/src/main/res/values-night/chip_colors.xml"
+            "app/src/main/res/values-night/styles.xml"
+            "app/src/main/res/values/colors.xml"
+            "app/src/main/res/values/chip_colors.xml"
+            "app/src/main/res/values/styles.xml"
+            "app/src/main/res/color/bottom_nav_colors.xml"
+            "app/src/main/res/drawable/bottom_nav_text_colors.xml"
+          )
+          all_ok=true
+          for f in "${files[@]}"; do
+            if [ -f "$f" ]; then
+              echo "  $f"
+            else
+              echo "  MISSING: $f"
+              all_ok=false
+            fi
+          done
+          if [ "$all_ok" = false ]; then
+            echo "One or more files are missing — aborting."
+            exit 1
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add \
+            app/src/main/res/values-night/colors.xml \
+            app/src/main/res/values-night/chip_colors.xml \
+            app/src/main/res/values-night/styles.xml \
+            app/src/main/res/values/colors.xml \
+            app/src/main/res/values/chip_colors.xml \
+            app/src/main/res/values/styles.xml \
+            app/src/main/res/color/bottom_nav_colors.xml \
+            app/src/main/res/drawable/bottom_nav_text_colors.xml
+          if git diff --cached --quiet; then
+            echo "No changes to commit — files are already up to date."
+          else
+            git commit -m "fix: add values-night resources for proper light/dark theming"
+            git push
+            echo "Changes committed and pushed."
+          fi
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Light Theme Fix" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files written:" >> $GITHUB_STEP_SUMMARY
+          echo "| Action | File |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Created | \`values-night/colors.xml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Created | \`values-night/chip_colors.xml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Created | \`values-night/styles.xml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`values/colors.xml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`values/chip_colors.xml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`values/styles.xml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`color/bottom_nav_colors.xml\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | \`drawable/bottom_nav_text_colors.xml\` |" >> $GITHUB_STEP_SUMMARY

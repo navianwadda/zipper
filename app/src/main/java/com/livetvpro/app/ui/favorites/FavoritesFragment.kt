@@ -2,218 +2,197 @@ package com.livetvpro.app.ui.favorites
 
 import android.content.DialogInterface
 import android.content.Intent
-import androidx.activity.result.ActivityResultLauncher
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.models.ListenerConfig
-import com.livetvpro.app.utils.RedirectHelper
-import com.livetvpro.app.databinding.FragmentFavoritesBinding
-import com.livetvpro.app.ui.adapters.FavoriteAdapter
-import com.livetvpro.app.utils.DeviceUtils
+import com.livetvpro.app.ui.adapters.FavoriteCard
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
+import com.livetvpro.app.utils.RedirectHelper
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class FavoritesFragment : Fragment() {
-    private var _binding: FragmentFavoritesBinding? = null
-    private var pendingChannelAction: (() -> Unit)? = null
-    private var pendingExternalRedirect: Boolean = false
-    private val binding get() = _binding!!
+
     private val viewModel: FavoritesViewModel by viewModels()
-    private lateinit var favoriteAdapter: FavoriteAdapter
 
     @Inject lateinit var preferencesManager: PreferencesManager
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
-    private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
+    private var pendingChannelAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
-    private var initialFocusDone = false
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
-        super.onConfigurationChanged(newConfig)
-        val columnCount = resources.getInteger(R.integer.grid_column_count)
-        (binding.recyclerViewFavorites.layoutManager as? GridLayoutManager)?.spanCount = columnCount
-    }
-
-    override fun onResume() {
-        super.onResume()
-        RedirectHelper.executePendingActionOnResume(
-            pendingActionProvider = { pendingChannelAction },
-            clearPendingAction = { pendingChannelAction = null },
-            pendingExternalRedirect = pendingExternalRedirect,
-            clearPendingRedirect = { pendingExternalRedirect = false }
-        )
-    }
+    private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         redirectLauncher = RedirectHelper.registerLauncher(
-            fragment = this,
-            cooldownMgr = cooldownManager,
+            fragment         = this,
+            cooldownMgr      = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
         )
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = FragmentFavoritesBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        setupRecyclerView()
-        setupButtons()
-        observeViewModel()
-    }
-
-    private fun setupRecyclerView() {
-        favoriteAdapter = FavoriteAdapter(
-            preferencesManager = preferencesManager,
-            onChannelClick = { favorite, playerAction ->
-                pendingChannelAction = playerAction
-                lastPageType = ListenerConfig.PAGE_FAVORITES
-                lastUniqueId = favorite.id
-                val result = RedirectHelper.tryRedirect(
-                    fragment    = this@FavoritesFragment,
-                    pageType    = ListenerConfig.PAGE_FAVORITES,
-                    uniqueId    = favorite.id,
-                    cooldownMgr = cooldownManager,
-                    listenerMgr = listenerManager,
-                    launcher    = redirectLauncher
-                )
-                if (result == RedirectHelper.RedirectResult.REDIRECTED) {
-                    if (!listenerManager.isInAppRedirectEnabled()) {
-                        pendingExternalRedirect = true
-                    } else {
-                        pendingChannelAction = null
-                    }
-                } else {
-                    pendingChannelAction?.invoke()
-                    pendingChannelAction = null
-                }
-                result == RedirectHelper.RedirectResult.REDIRECTED
-            },
-            onFavoriteToggle = { favorite -> viewModel.removeFavorite(favorite.id) },
-            getLiveChannel = { channelId ->
-                viewModel.getLiveChannel(channelId)
-            }
+    override fun onResume() {
+        super.onResume()
+        RedirectHelper.executePendingActionOnResume(
+            pendingActionProvider   = { pendingChannelAction },
+            clearPendingAction      = { pendingChannelAction = null },
+            pendingExternalRedirect = pendingExternalRedirect,
+            clearPendingRedirect    = { pendingExternalRedirect = false }
         )
-        val columnCount = resources.getInteger(R.integer.grid_column_count)
-        binding.recyclerViewFavorites.apply {
-            layoutManager = GridLayoutManager(context, columnCount)
-            adapter = favoriteAdapter
-            itemAnimator = null
-        }
+    }
 
-        if (DeviceUtils.isTvDevice) {
-            binding.recyclerViewFavorites.setOnKeyListener { _, keyCode, event ->
-                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                if (keyCode == android.view.KeyEvent.KEYCODE_MENU ||
-                    keyCode == android.view.KeyEvent.KEYCODE_BUTTON_Y) {
-                    val focused = binding.recyclerViewFavorites.focusedChild
-                    val holder = binding.recyclerViewFavorites.findContainingViewHolder(focused ?: return@setOnKeyListener false)
-                    val pos = holder?.adapterPosition ?: return@setOnKeyListener false
-                    val item = favoriteAdapter.currentList.getOrNull(pos) ?: return@setOnKeyListener false
-                    showRemoveConfirmation(item)
-                    return@setOnKeyListener true
-                }
-                false
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View = ComposeView(requireContext()).apply {
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        setContent {
+            MaterialTheme {
+                FavoritesScreen(
+                    viewModel            = viewModel,
+                    preferencesManager   = preferencesManager,
+                    onChannelClick       = { favorite, playerAction -> handleChannelClick(favorite, playerAction) },
+                    onFavoriteToggle     = { viewModel.removeFavorite(it.id) },
+                    onClearAll           = { showClearAllDialog() },
+                )
             }
         }
     }
 
-    private fun setupButtons() {
-        binding.clearAllButton.setOnClickListener {
-            showClearAllDialog()
-        }
-        if (DeviceUtils.isTvDevice) {
-            binding.clearAllButton.setOnKeyListener { _, keyCode, event ->
-                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                when (keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-                    android.view.KeyEvent.KEYCODE_ENTER,
-                    android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                        showClearAllDialog()
-                        true
-                    }
-                    else -> false
-                }
+    private fun handleChannelClick(favorite: FavoriteChannel, playerAction: () -> Unit) {
+        pendingChannelAction = playerAction
+        lastPageType = ListenerConfig.PAGE_FAVORITES
+        lastUniqueId = favorite.id
+        val result = RedirectHelper.tryRedirect(
+            fragment    = this,
+            pageType    = ListenerConfig.PAGE_FAVORITES,
+            uniqueId    = favorite.id,
+            cooldownMgr = cooldownManager,
+            listenerMgr = listenerManager,
+            launcher    = redirectLauncher
+        )
+        when (result) {
+            RedirectHelper.RedirectResult.REDIRECTED -> {
+                if (!listenerManager.isInAppRedirectEnabled()) pendingExternalRedirect = true
+                else pendingChannelAction = null
+            }
+            else -> {
+                pendingChannelAction?.invoke()
+                pendingChannelAction = null
             }
         }
-    }
-
-    private fun showRemoveConfirmation(favorite: FavoriteChannel) {
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Remove Favorite")
-            .setMessage("Remove '${favorite.name}' from your favorites list?")
-            .setPositiveButton("Remove") { _, _ ->
-                viewModel.removeFavorite(favorite.id)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
     private fun showClearAllDialog() {
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle("Clear All Favorites")
             .setMessage("This will remove all channels from your list.")
-            .setPositiveButton("Clear All") { _, _ ->
-                viewModel.clearAll()
-            }
+            .setPositiveButton("Clear All") { _, _ -> viewModel.clearAll() }
             .setNegativeButton("Cancel", null)
             .show()
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
+}
 
-    private fun observeViewModel() {
-        viewModel.favorites.observe(viewLifecycleOwner) { favorites ->
-            favoriteAdapter.submitList(favorites)
-            val isEmpty = favorites.isEmpty()
-            binding.emptyView.visibility = if (isEmpty) View.VISIBLE else View.GONE
-            binding.recyclerViewFavorites.visibility = if (isEmpty) View.GONE else View.VISIBLE
-            binding.clearAllButton.visibility = if (isEmpty) View.GONE else View.VISIBLE
-            if (DeviceUtils.isTvDevice && favorites.isNotEmpty() && !initialFocusDone) {
-                initialFocusDone = true
-                binding.recyclerViewFavorites.post {
-                    binding.recyclerViewFavorites
-                        .findViewHolderForAdapterPosition(0)
-                        ?.itemView
-                        ?.requestFocus()
+@Composable
+fun FavoritesScreen(
+    viewModel: FavoritesViewModel,
+    preferencesManager: PreferencesManager,
+    onChannelClick: (FavoriteChannel, () -> Unit) -> Unit,
+    onFavoriteToggle: (FavoriteChannel) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    val favorites by viewModel.favorites.observeAsState(emptyList())
+
+    val configuration = LocalConfiguration.current
+    val columns = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 4 else 2
+
+    if (favorites.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text  = "No favorites available",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    } else {
+        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+            val (grid, btn) = createRefs()
+
+            LazyVerticalGrid(
+                columns  = GridCells.Fixed(columns),
+                modifier = Modifier
+                    .constrainAs(grid) {
+                        top.linkTo(parent.top)
+                        bottom.linkTo(btn.top)
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                        height = Dimension.fillToConstraints
+                    }
+                    .padding(4.dp),
+            ) {
+                items(favorites) { favorite ->
+                    FavoriteCard(
+                        favorite           = favorite,
+                        preferencesManager = preferencesManager,
+                        getLiveChannel     = { viewModel.getLiveChannel(it) },
+                        onChannelClick     = { action -> onChannelClick(favorite, action) },
+                        onFavoriteToggle   = { onFavoriteToggle(favorite) },
+                    )
                 }
             }
+
+            Button(
+                onClick  = onClearAll,
+                modifier = Modifier
+                    .constrainAs(btn) {
+                        bottom.linkTo(parent.bottom, margin = 8.dp)
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                    }
+                    .padding(bottom = 8.dp),
+            ) {
+                Text(text = "Clear All")
+            }
         }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        val layoutManager = _binding?.recyclerViewFavorites?.layoutManager as? GridLayoutManager
-        layoutManager?.onSaveInstanceState()?.let { outState.putParcelable("rv_fav_state", it) }
-    }
-
-    override fun onViewStateRestored(savedInstanceState: Bundle?) {
-        super.onViewStateRestored(savedInstanceState)
-        savedInstanceState?.getParcelable<android.os.Parcelable>("rv_fav_state")?.let {
-            binding.recyclerViewFavorites.layoutManager?.onRestoreInstanceState(it)
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }

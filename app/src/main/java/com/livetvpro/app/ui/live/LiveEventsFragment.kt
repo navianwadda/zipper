@@ -12,10 +12,8 @@ import android.view.ViewGroup
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -25,10 +23,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -81,13 +77,13 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     private val updateHandler  = Handler(Looper.getMainLooper())
     private val updateRunnable = object : Runnable {
         override fun run() {
-            viewModel.filterEvents(viewModel.currentStatusFilter, viewModel.currentCategoryId)
+            viewModel.filterEvents(viewModel.pendingStatusFilter, viewModel.pendingCategoryId)
             updateHandler.postDelayed(this, 10_000)
         }
     }
 
     override fun refreshData() { viewModel.refresh() }
-    override fun onSearchQuery(query: String) { viewModel.setSearchQuery(query) }
+    override fun onSearchQuery(query: String) { viewModel.searchEvents(query) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -151,7 +147,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         )
         if (result == RedirectHelper.RedirectResult.REDIRECTED) {
             if (!listenerManager.isInAppRedirectEnabled()) {
-                pendingEventAction     = playerAction
+                pendingEventAction      = playerAction
                 pendingExternalRedirect = true
             }
         } else {
@@ -183,8 +179,6 @@ fun LiveEventsScreen(
     val events     by viewModel.filteredEvents.observeAsState(emptyList())
     val categories by viewModel.eventCategories.observeAsState(emptyList())
     val isLoading  by viewModel.isLoading.observeAsState(false)
-    val bannerMsg  by viewModel.messageBanner.observeAsState("")
-    val bannerUrl  by viewModel.messageBannerUrl.observeAsState("")
 
     var selectedStatusFilter by remember { mutableStateOf<EventStatus?>(null) }
     var selectedCategoryId   by remember { mutableStateOf("evt_cat_all") }
@@ -192,21 +186,15 @@ fun LiveEventsScreen(
     val context = LocalContext.current
     val spanCount = context.resources.getInteger(R.integer.event_span_count)
 
+    LaunchedEffect(Unit) {
+        viewModel.loadEventCategories()
+    }
+
     LaunchedEffect(selectedStatusFilter, selectedCategoryId) {
         viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (bannerMsg.isNotBlank()) {
-            MarqueeBanner(
-                text     = bannerMsg,
-                onClick  = { if (bannerUrl.isNotBlank()) onBannerClick(bannerUrl) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-            )
-        }
-
         if (categories.isNotEmpty()) {
             LazyRow(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                 items(categories) { category ->
@@ -221,7 +209,7 @@ fun LiveEventsScreen(
 
         LazyRow(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
             val filters = listOf(
-                null             to "All",
+                null                 to "All",
                 EventStatus.LIVE     to "Live",
                 EventStatus.UPCOMING to "Upcoming",
                 EventStatus.RECENT   to "Recent",

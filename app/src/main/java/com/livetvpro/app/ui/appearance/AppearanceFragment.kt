@@ -33,7 +33,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MultiChoiceSegmentedButtonRow
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Surface
@@ -121,7 +121,11 @@ fun AppearanceScreen(
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     MultiChoiceSegmentedButton(
                         choices = listOf("Dark", "Light", "System"),
-                        selectedIndices = listOf(themeMode),
+                        selectedIndices = listOf(when (themeMode) {
+                            ThemeManager.THEME_DARK  -> 0
+                            ThemeManager.THEME_LIGHT -> 1
+                            else                     -> 2
+                        }),
                         onClick = { uiIndex ->
                             val mode = when (uiIndex) {
                                 0    -> ThemeManager.THEME_DARK
@@ -391,15 +395,15 @@ fun MultiChoiceSegmentedButton(
     onClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    MultiChoiceSegmentedButtonRow(
+    SingleChoiceSegmentedButtonRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
     ) {
         choices.forEachIndexed { index, choice ->
             SegmentedButton(
-                checked        = selectedIndices.contains(index),
-                onCheckedChange = { onClick(index) },
+                selected       = selectedIndices.contains(index),
+                onClick        = { onClick(index) },
                 shape          = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
             ) {
                 Text(text = choice)

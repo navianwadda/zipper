@@ -5,10 +5,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-/**
- * Color themes for Live TV Pro.
- * Each theme generates proper Material 3 light / dark / AMOLED color schemes.
- */
 enum class AppColorTheme(
     val displayName: String,
     val primaryLight: Color,
@@ -30,6 +26,17 @@ enum class AppColorTheme(
         tertiaryDark    = Color(0xFFF5B7B0),
         backgroundLight = Color(0xFFFFF7FB),
         backgroundDark  = Color(0xFF161217),
+    ),
+    Dynamic(
+        displayName     = "Dynamic",
+        primaryLight    = Color(0xFF6750A4),
+        primaryDark     = Color(0xFFD0BCFF),
+        secondaryLight  = Color(0xFF625B71),
+        secondaryDark   = Color(0xFFCCC2DC),
+        tertiaryLight   = Color(0xFF7D5260),
+        tertiaryDark    = Color(0xFFEFB8C8),
+        backgroundLight = Color(0xFFFFFBFE),
+        backgroundDark  = Color(0xFF1C1B1F),
     ),
     Catppuccin(
         displayName     = "Catppuccin",
@@ -347,8 +354,6 @@ enum class AppColorTheme(
     }
 }
 
-// ── Colour helpers ────────────────────────────────────────────────────────────
-
 private fun Color.darken(factor: Float) = Color(
     red   = (red   * (1 - factor)).coerceIn(0f, 1f),
     green = (green * (1 - factor)).coerceIn(0f, 1f),
@@ -363,7 +368,6 @@ private fun Color.lighten(factor: Float) = Color(
     alpha = alpha,
 )
 
-/** Alpha-composite this colour over [background]. */
 private fun Color.over(background: Color): Color {
     val fgA = alpha
     val bgA = background.alpha

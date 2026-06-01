@@ -3,18 +3,32 @@
     <color name="primary">#2AABEE</color>
     <color name="primary_variant">#1A8AB8</color>
     <color name="secondary">#229ED0</color>
-    <color name="background">#0D1117</color>
-    <color name="surface">#1A1A1A</color>
     <color name="error_dark">#EF4444</color>
     <color name="on_primary">#FFFFFF</color>
     <color name="on_secondary">#FFFFFF</color>
-    <color name="on_background">#FFFFFF</color>
-    <color name="on_surface">#FFFFFF</color>
     <color name="on_error">#FFFFFF</color>
     <color name="status_bar">#00000000</color>
-    <color name="text_primary">#FFFFFF</color>
     <color name="ic_launcher_background">#121212</color>
-
+    <color name="background">#F5F5F5</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_background">#000000</color>
+    <color name="on_surface">#000000</color>
+    <color name="text_primary">#000000</color>
+    <color name="input_background">#FFFFFF</color>
+    <color name="input_stroke">#CCCCCC</color>
+    <color name="input_hint">#888888</color>
+    <color name="input_text">#000000</color>
+    <color name="input_cursor">#FFB300</color>
+    <color name="divider_dark">#DDDDDD</color>
+    <color name="border_dark">#DDDDDD</color>
+    <color name="chip_background_normal">#EEEEEE</color>
+    <color name="chip_background_selected">#1AEF4444</color>
+    <color name="chip_stroke_normal">#CCCCCC</color>
+    <color name="chip_stroke_selected">#EF4444</color>
+    <color name="chip_text_normal">#333333</color>
+    <color name="chip_text_selected">#000000</color>
+    <color name="chip_ripple_color">#40000000</color>
+    <color name="player_channel_stroke">#DDDDDD</color>
     <color name="primary_dark">#229ED0</color>
     <color name="primary_dark_variant">#1A8AB8</color>
     <color name="accent">#2AABEE</color>
@@ -37,12 +51,10 @@
     <color name="hint_dark">#2AABEE</color>
     <color name="hint_light">#2AABEE</color>
     <color name="hint_secondary">#444444</color>
-    <color name="divider_dark">#393939</color>
     <color name="divider_light">#888888</color>
     <color name="divider_secondary">#575757</color>
     <color name="background_theme_dark">#101010</color>
     <color name="background_theme_light">#F5F5FF</color>
-    <color name="border_dark">#393939</color>
     <color name="border_light">#575757</color>
     <color name="border_secondary">#575757</color>
     <color name="button_primary_dark">#1A8AB8</color>
@@ -81,13 +93,6 @@
     <color name="telegram_text">#FFFFFF</color>
     <color name="telegram_accent">#2AABEE</color>
     <color name="telegram_nav_selected">#2481CC</color>
-
-    <color name="player_channel_stroke">#2A2A2A</color>
-    <color name="input_background">#1A1A1A</color>
-    <color name="input_stroke">#3A3A3A</color>
-    <color name="input_hint">#888888</color>
-    <color name="input_text">#FFFFFF</color>
-    <color name="input_cursor">#FFB300</color>
     <color name="white">#FFFFFF</color>
     <color name="accent_amber">#FFB300</color>
 </resources>

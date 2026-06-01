@@ -1,37 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="LinkSelectionDialogTheme" parent="Theme.Material3.Dark.Dialog.Alert">
+    <style name="LinkSelectionDialogTheme" parent="Theme.Material3.Light.Dialog.Alert">
         <item name="android:backgroundDimAmount">0.7</item>
-        <item name="android:colorBackground">#2A2A2A</item>
-        <item name="colorSurface">#2A2A2A</item>
-        <item name="android:textColorPrimary">#FFFFFF</item>
-        <item name="android:textColorSecondary">#E0E0E0</item>
+        <item name="android:colorBackground">#FFFFFF</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="android:textColorPrimary">#000000</item>
+        <item name="android:textColorSecondary">#444444</item>
         <item name="colorPrimary">#EF4444</item>
         <item name="colorAccent">#EF4444</item>
     </style>
-
     <style name="Widget.Material3.TextInputLayout.OutlinedExposedDropdownMenu" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu" />
-
     <style name="CircleImageView" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
     </style>
-
     <style name="NavigationBarActiveIndicator" parent="">
         <item name="android:color">@android:color/transparent</item>
         <item name="android:width">0dp</item>
         <item name="android:height">0dp</item>
     </style>
-
     <style name="NavigationBarActiveIndicatorShape" parent="ShapeAppearance.Material3.Corner.Full">
         <item name="cornerSize">50%</item>
     </style>
-
     <style name="AppearanceToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:fontFamily">@font/bergen_sans</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">20sp</item>
     </style>
-
 </resources>

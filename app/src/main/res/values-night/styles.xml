@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="LinkSelectionDialogTheme" parent="Theme.Material3.Dark.Dialog.Alert">
+        <item name="android:backgroundDimAmount">0.7</item>
+        <item name="android:colorBackground">#2A2A2A</item>
+        <item name="colorSurface">#2A2A2A</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#E0E0E0</item>
+        <item name="colorPrimary">#EF4444</item>
+        <item name="colorAccent">#EF4444</item>
+    </style>
+</resources>

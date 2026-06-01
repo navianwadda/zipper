@@ -87,6 +87,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         themeManager.applyTheme()
+        lastUiNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         applyBergenSansToNavigationMenu()
@@ -240,9 +241,22 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         androidx.core.view.ViewCompat.requestApplyInsets(root)
     }
 
+    private var lastUiNightMode: Int = android.content.res.Configuration.UI_MODE_NIGHT_UNDEFINED
+
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         drawerToggle?.onConfigurationChanged(newConfig)
+
+        // Recreate when system dark/light mode changes and app is set to follow system
+        val newNightMode = newConfig.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        if (newNightMode != lastUiNightMode && lastUiNightMode != android.content.res.Configuration.UI_MODE_NIGHT_UNDEFINED) {
+            if (themeManager.getThemeMode() == com.livetvpro.app.data.local.ThemeManager.THEME_AUTO) {
+                recreate()
+                return
+            }
+        }
+        lastUiNightMode = newNightMode
+
         if (!DeviceUtils.isTvDevice) {
             if (newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && isSearchVisible) {
                 hideSearch()

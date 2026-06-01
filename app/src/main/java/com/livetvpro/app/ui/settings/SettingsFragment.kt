@@ -135,8 +135,8 @@ fun SettingsScreen(
         }
         item {
             SettingsSectionLabel("Preferences")
-            SettingsRow(icon = R.drawable.ic_appearance,      label = "Appearance",      onClick = onAppearance)
-            SettingsRow(icon = R.drawable.ic_floating_player, label = "Floating Player", onClick = onFloatingPlayer)
+            SettingsRow(icon = R.drawable.ic_theme_toggle,      label = "Appearance",      onClick = onAppearance)
+            SettingsRow(icon = R.drawable.ic_pip, label = "Floating Player", onClick = onFloatingPlayer)
             SettingsRow(icon = R.drawable.ic_save_states,     label = "Save States",     onClick = onSaveStates)
             SettingsRow(icon = R.drawable.ic_share,           label = "Share App",       onClick = onShareApp)
             Spacer(modifier = Modifier.height(16.dp))

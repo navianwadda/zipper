@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -29,12 +28,9 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
@@ -44,6 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -122,7 +121,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                         isFavorite       = { viewModel.isFavorite(it) },
                         onFavoriteToggle = { channel ->
                             viewModel.toggleFavorite(channel)
-                            lifecycleScope.launch { delay(50); viewModel.refreshFavoriteState(channel.id) }
                         },
                         onGroupsIconClick = { showGroupsDialog() },
                     )
@@ -282,9 +280,9 @@ fun CategoryChannelsScreen(
     onFavoriteToggle: (Channel) -> Unit,
     onGroupsIconClick: () -> Unit,
 ) {
-    val channels  by viewModel.channels.observeAsState(emptyList())
-    val isLoading by viewModel.isLoading.observeAsState(false)
-    val groups    by viewModel.categoryGroups.observeAsState(emptyList())
+    val channels     = viewModel.channelsPaged.collectAsLazyPagingItems()
+    val isLoading    by viewModel.isLoading.observeAsState(false)
+    val groups       by viewModel.categoryGroups.observeAsState(emptyList())
     val currentGroup by viewModel.currentGroup.observeAsState()
 
     val configuration = LocalConfiguration.current
@@ -315,7 +313,7 @@ fun CategoryChannelsScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             when {
                 isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                channels.isEmpty() -> Text(
+                channels.itemCount == 0 -> Text(
                     text     = "No channels available",
                     modifier = Modifier.align(Alignment.Center),
                     style    = MaterialTheme.typography.bodyLarge,
@@ -328,7 +326,11 @@ fun CategoryChannelsScreen(
                         .padding(4.dp)
                         .padding(bottom = 90.dp),
                 ) {
-                    items(channels) { channel ->
+                    items(
+                        count = channels.itemCount,
+                        key   = channels.itemKey { it.id },
+                    ) { index ->
+                        val channel = channels[index] ?: return@items
                         ChannelCard(
                             channel          = channel,
                             isFavorite       = isFavorite(channel.id),

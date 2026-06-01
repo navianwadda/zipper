@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.theme.AppColorTheme
+import com.livetvpro.app.ui.theme.LiveTVProTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -76,7 +77,7 @@ class AppearanceFragment : Fragment() {
     ): View = ComposeView(requireContext()).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
-            MaterialTheme {
+            LiveTVProTheme(themeManager) {
                 AppearanceScreen(
                     themeManager = themeManager,
                     onRecreate   = { requireActivity().recreate() },

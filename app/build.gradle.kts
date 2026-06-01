@@ -155,6 +155,7 @@ dependencies {
 
     val pagingVersion = "3.3.6"
     implementation("androidx.paging:paging-runtime-ktx:$pagingVersion")
+    implementation("androidx.paging:paging-compose:$pagingVersion")
 
     // Jetpack Compose - Required for PlayerActivity
     val composeBom = platform("androidx.compose:compose-bom:2025.06.01")
@@ -174,6 +175,9 @@ dependencies {
     
     // Activity Compose
     implementation("androidx.activity:activity-compose:1.10.1")
+
+    // ConstraintLayout for Compose
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.1.1")
     
     // Compose Runtime
     implementation("androidx.compose.runtime:runtime")
@@ -220,6 +224,7 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     ksp("com.github.bumptech.glide:ksp:4.16.0")
     implementation("com.github.bumptech.glide:okhttp3-integration:4.16.0")
+    implementation("com.github.bumptech.glide:compose:1.0.0-beta09")
     implementation("com.caverock:androidsvg-aar:1.4")
 
     // RecyclerView

@@ -2,6 +2,7 @@ package com.livetvpro.app.ui.live
 
 import android.content.DialogInterface
 import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -9,246 +10,370 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.ActivityResultLauncher
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livetvpro.app.R
-import com.livetvpro.app.SearchableFragment
-import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.models.EventCategory
 import com.livetvpro.app.data.models.EventStatus
 import com.livetvpro.app.data.models.ListenerConfig
+import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.data.models.LiveEvent
-import com.livetvpro.app.ui.adapters.EventCategoryChip
-import com.livetvpro.app.ui.adapters.LiveEventCard
-import com.livetvpro.app.ui.adapters.MarqueeBanner
+import com.livetvpro.app.databinding.FragmentLiveEventsBinding
+import com.livetvpro.app.ui.adapters.EventCategoryAdapter
+import com.livetvpro.app.ui.adapters.LiveEventAdapter
 import com.livetvpro.app.ui.player.PlayerActivity
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
-import com.livetvpro.app.utils.RedirectHelper
+import com.livetvpro.app.utils.RetryHandler
+import com.livetvpro.app.SearchableFragment
 import com.livetvpro.app.utils.Refreshable
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
-
+    private var _binding: FragmentLiveEventsBinding? = null
+    private var pendingEventAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
+    private val binding get() = _binding!!
     private val viewModel: LiveEventsViewModel by viewModels()
 
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
-    @Inject lateinit var preferencesManager: PreferencesManager
-
-    private var pendingEventAction: (() -> Unit)? = null
-    private var pendingExternalRedirect: Boolean = false
-    private var lastPageType: String? = null
-    private var lastUniqueId: String? = null
 
     private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
+    private var lastPageType: String? = null
+    private var lastUniqueId: String? = null
+    @Inject lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
 
-    private val updateHandler  = Handler(Looper.getMainLooper())
+    private var selectedCategoryId: String = "evt_cat_all"
+    private var selectedStatusFilter: EventStatus? = null
+    private var eventAdapter: LiveEventAdapter? = null
+    private var categoryAdapter: EventCategoryAdapter? = null
+
+    // Saved scroll position before search so cancel restores it naturally
+    private var savedScrollState: android.os.Parcelable? = null
+
+    private val updateHandler = Handler(Looper.getMainLooper())
     private val updateRunnable = object : Runnable {
         override fun run() {
-            viewModel.filterEvents(viewModel.pendingStatusFilter, viewModel.pendingCategoryId)
+            viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
             updateHandler.postDelayed(this, 10_000)
         }
     }
 
-    override fun refreshData() { viewModel.refresh() }
-    override fun onSearchQuery(query: String) { viewModel.searchEvents(query) }
+    override fun refreshData() {
+        viewModel.refresh()
+    }
+
+    override fun onSearchQuery(query: String) {
+        if (query.isBlank() && viewModel.pendingSearchQuery.isNotBlank()) {
+            // Cancelling search — snapshot scroll position before list expands
+            savedScrollState = binding.recyclerViewEvents.layoutManager?.onSaveInstanceState()
+        } else if (query.isNotBlank() && viewModel.pendingSearchQuery.isBlank()) {
+            // Starting search — snapshot so cancel can return here
+            savedScrollState = binding.recyclerViewEvents.layoutManager?.onSaveInstanceState()
+        }
+        viewModel.searchEvents(query)
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val spanCount = getEventSpanCount()
+        (binding.recyclerViewEvents.layoutManager as? GridLayoutManager)?.spanCount = spanCount
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         redirectLauncher = RedirectHelper.registerLauncher(
-            fragment         = this,
-            cooldownMgr      = cooldownManager,
+            fragment = this,
+            cooldownMgr = cooldownManager,
             pageTypeProvider = { lastPageType },
             uniqueIdProvider = { lastUniqueId }
         )
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View = ComposeView(requireContext()).apply {
-        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        setContent {
-            MaterialTheme {
-                LiveEventsScreen(
-                    viewModel          = viewModel,
-                    preferencesManager = preferencesManager,
-                    onEventInteraction = { event, playerAction -> handleEventInteraction(event, playerAction) },
-                    onBannerClick      = { url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
-                )
-            }
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentLiveEventsBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerViewEvents) { v, insets ->
+            val navBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
+            val bottom = navBars.bottom + v.resources.getDimensionPixelSize(com.livetvpro.app.R.dimen.nav_bottom_margin) + v.resources.getDimensionPixelSize(com.livetvpro.app.R.dimen.nav_height)
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, bottom)
+            insets
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        updateHandler.post(updateRunnable)
-        RedirectHelper.executePendingActionOnResume(
-            pendingActionProvider   = { pendingEventAction },
-            clearPendingAction      = { pendingEventAction = null },
-            pendingExternalRedirect = pendingExternalRedirect,
-            clearPendingRedirect    = { pendingExternalRedirect = false }
-        )
-    }
-
-    override fun onPause() {
-        super.onPause()
-        updateHandler.removeCallbacks(updateRunnable)
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        updateHandler.removeCallbacks(updateRunnable)
-    }
-
-    private fun handleEventInteraction(event: LiveEvent, playerAction: () -> Unit) {
-        lastPageType = ListenerConfig.PAGE_LIVE_EVENTS
-        lastUniqueId = event.id
-        val result = RedirectHelper.tryRedirect(
-            fragment    = this,
-            pageType    = ListenerConfig.PAGE_LIVE_EVENTS,
-            uniqueId    = event.id,
-            cooldownMgr = cooldownManager,
-            listenerMgr = listenerManager,
-            launcher    = redirectLauncher
-        )
-        if (result == RedirectHelper.RedirectResult.REDIRECTED) {
-            if (!listenerManager.isInAppRedirectEnabled()) {
-                pendingEventAction      = playerAction
-                pendingExternalRedirect = true
-            }
+        setupCategoryRecycler()
+        setupEventRecycler()
+        setupStatusFilters()
+        setupRetryHandling()
+        observeViewModel()
+        setupMessageBanner()
+        if (com.livetvpro.app.utils.DeviceUtils.isTvDevice) {
+            binding.swipeRefresh.isEnabled = false
+            setupTvChipNavigation()
+        }
+        viewModel.loadEventCategories()
+        if (viewModel.filteredEvents.value == null) {
+            viewModel.filterEvents(null, "evt_cat_all")
         } else {
-            pendingEventAction = null
+            selectedStatusFilter = viewModel.pendingStatusFilter
+            selectedCategoryId = viewModel.pendingCategoryId
+            restoreChipState()
+        }
+        startDynamicUpdates()
+        observeInitialFocus()
+    }
+
+    private fun observeInitialFocus() {
+        if (!com.livetvpro.app.utils.DeviceUtils.isTvDevice) return
+        viewModel.filteredEvents.observe(viewLifecycleOwner) { events ->
+            if (events.isNotEmpty()) {
+                binding.recyclerViewEvents.post {
+                    binding.recyclerViewEvents
+                        .findViewHolderForAdapterPosition(0)
+                        ?.itemView
+                        ?.requestFocus()
+                }
+            }
         }
     }
 
-    fun showLinkSelectionDialog(event: LiveEvent) {
+    private fun setupTvChipNavigation() {
+        val chips = listOf(binding.chipAll, binding.chipLive, binding.chipUpcoming, binding.chipRecent)
+        chips.forEach { chip ->
+            chip.isFocusable = true
+            chip.isFocusableInTouchMode = false
+            chip.setOnFocusChangeListener { v, hasFocus ->
+                v.animate().scaleX(if (hasFocus) 1.08f else 1f).scaleY(if (hasFocus) 1.08f else 1f).setDuration(100).start()
+            }
+            chip.setOnKeyListener { _, keyCode, event ->
+                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+                when (keyCode) {
+                    android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+                    android.view.KeyEvent.KEYCODE_ENTER,
+                    android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                        chip.performClick()
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
+    }
+
+    private fun setupMessageBanner() {
+        val message = listenerManager.getMessage()
+        if (message.isNotBlank()) {
+            binding.tvMessageBanner.text = message
+            binding.tvMessageBanner.visibility = View.VISIBLE
+            binding.tvMessageBanner.isSelected = true
+            val url = listenerManager.getMessageUrl()
+            if (url.isNotBlank()) {
+                binding.tvMessageBanner.setOnClickListener {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
+            }
+        }
+    }
+
+    private fun setupRetryHandling() {
+        RetryHandler.setupGlobal(
+            lifecycleOwner = viewLifecycleOwner,
+            viewModel = viewModel,
+            activity = requireActivity() as androidx.appcompat.app.AppCompatActivity,
+            contentView = binding.recyclerViewEvents,
+            swipeRefresh = binding.swipeRefresh,
+            progressBar = binding.progressBar,
+            emptyView = binding.emptyView
+        )
+    }
+
+    private fun startDynamicUpdates() {
+        updateHandler.removeCallbacks(updateRunnable)
+        updateHandler.post(updateRunnable)
+    }
+
+    private fun stopDynamicUpdates() {
+        updateHandler.removeCallbacks(updateRunnable)
+    }
+
+    private fun setupCategoryRecycler() {
+        if (categoryAdapter == null) {
+            categoryAdapter = EventCategoryAdapter { category ->
+                selectedCategoryId = category.id
+                viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
+            }
+        }
+        if (binding.categoryRecycler.adapter == null) {
+            binding.categoryRecycler.apply {
+                layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+                adapter = categoryAdapter
+            }
+        }
+    }
+
+    private fun getEventSpanCount(): Int {
+        return resources.getInteger(R.integer.event_span_count)
+    }
+
+    private fun setupEventRecycler() {
+        if (eventAdapter == null) {
+            eventAdapter = LiveEventAdapter(
+                context = requireContext(),
+                events = emptyList(),
+                preferencesManager = preferencesManager,
+                onEventInteraction = { event, playerAction ->
+                    lastPageType = ListenerConfig.PAGE_LIVE_EVENTS
+                    lastUniqueId = event.id
+                    val result = RedirectHelper.tryRedirect(
+                        fragment    = this@LiveEventsFragment,
+                        pageType    = ListenerConfig.PAGE_LIVE_EVENTS,
+                        uniqueId    = event.id,
+                        cooldownMgr = cooldownManager,
+                        listenerMgr = listenerManager,
+                        launcher    = redirectLauncher
+                    )
+                    if (result == RedirectHelper.RedirectResult.REDIRECTED) {
+                        if (!listenerManager.isInAppRedirectEnabled()) {
+                            pendingEventAction = playerAction
+                            pendingExternalRedirect = true
+                        }
+                    } else {
+                        pendingEventAction = null
+                    }
+                    result == RedirectHelper.RedirectResult.REDIRECTED
+                }
+            )
+        }
+        if (binding.recyclerViewEvents.adapter == null) {
+            val spanCount = getEventSpanCount()
+            binding.recyclerViewEvents.apply {
+                layoutManager = GridLayoutManager(context, spanCount)
+                adapter = eventAdapter
+                itemAnimator = null
+            }
+        }
+    }
+
+    private fun showLinkSelectionDialog(event: LiveEvent) {
         val linkLabels = event.links.map { it.quality }.toTypedArray()
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle("Multiple Links Available")
-            .setItems(linkLabels) { d, which ->
+            .setItems(linkLabels) { dialog, which ->
                 PlayerActivity.startWithEvent(requireContext(), event, which)
-                d.dismiss()
+                dialog.dismiss()
             }
             .setNegativeButton("Cancel", null)
             .show()
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.requestFocus()
     }
-}
 
-@Composable
-fun LiveEventsScreen(
-    viewModel: LiveEventsViewModel,
-    preferencesManager: PreferencesManager,
-    onEventInteraction: (LiveEvent, () -> Unit) -> Unit,
-    onBannerClick: (String) -> Unit,
-) {
-    val events     by viewModel.filteredEvents.observeAsState(emptyList())
-    val categories by viewModel.eventCategories.observeAsState(emptyList())
-    val isLoading  by viewModel.isLoading.observeAsState(false)
-
-    var selectedStatusFilter by remember { mutableStateOf<EventStatus?>(null) }
-    var selectedCategoryId   by remember { mutableStateOf("evt_cat_all") }
-
-    val context = LocalContext.current
-    val spanCount = context.resources.getInteger(R.integer.event_span_count)
-
-    LaunchedEffect(Unit) {
-        viewModel.loadEventCategories()
-    }
-
-    LaunchedEffect(selectedStatusFilter, selectedCategoryId) {
-        viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (categories.isNotEmpty()) {
-            LazyRow(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                items(categories) { category ->
-                    EventCategoryChip(
-                        category   = category,
-                        isSelected = category.id == selectedCategoryId,
-                        onClick    = { selectedCategoryId = category.id },
-                    )
+    private fun setupStatusFilters() {
+        val clickListener = View.OnClickListener { view ->
+            if ((view as Chip).isChecked) {
+                val status = when (view.id) {
+                    R.id.chip_all -> null
+                    R.id.chip_live -> EventStatus.LIVE
+                    R.id.chip_upcoming -> EventStatus.UPCOMING
+                    R.id.chip_recent -> EventStatus.RECENT
+                    else -> null
+                }
+                if (status != selectedStatusFilter) {
+                    selectedStatusFilter = status
+                    viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
+                    updateChipSelection(view)
                 }
             }
         }
+        binding.chipAll.setOnClickListener(clickListener)
+        binding.chipLive.setOnClickListener(clickListener)
+        binding.chipUpcoming.setOnClickListener(clickListener)
+        binding.chipRecent.setOnClickListener(clickListener)
+        binding.chipAll.isChecked = true
+        selectedStatusFilter = null
+    }
 
-        LazyRow(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-            val filters = listOf(
-                null                 to "All",
-                EventStatus.LIVE     to "Live",
-                EventStatus.UPCOMING to "Upcoming",
-                EventStatus.RECENT   to "Recent",
-            )
-            items(filters) { (status, label) ->
-                FilterChip(
-                    selected = selectedStatusFilter == status,
-                    onClick  = { selectedStatusFilter = status },
-                    label    = { Text(label) },
-                    modifier = Modifier.padding(end = 4.dp),
-                )
-            }
+    private fun updateChipSelection(selectedChip: Chip) {
+        listOf(binding.chipAll, binding.chipLive, binding.chipUpcoming, binding.chipRecent).forEach {
+            it.isChecked = (it == selectedChip)
         }
+    }
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                events.isEmpty() -> Text(
-                    text     = "No events available",
-                    modifier = Modifier.align(Alignment.Center),
-                    style    = MaterialTheme.typography.bodyLarge,
-                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                else -> LazyVerticalGrid(
-                    columns  = GridCells.Fixed(spanCount),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 4.dp)
-                        .padding(bottom = 90.dp),
-                ) {
-                    items(events) { event ->
-                        LiveEventCard(
-                            event              = event,
-                            preferencesManager = preferencesManager,
-                            onInteraction      = { playerAction -> onEventInteraction(event, playerAction) },
-                        )
-                    }
+    private fun observeViewModel() {
+        viewModel.eventCategories.observe(viewLifecycleOwner) { categories ->
+            binding.categoryRecycler.visibility = View.VISIBLE
+            categoryAdapter?.submitList(categories)
+        }
+        viewModel.filteredEvents.observe(viewLifecycleOwner) { events ->
+            val restoreState = if (viewModel.pendingSearchQuery.isBlank()) savedScrollState else null
+            eventAdapter?.updateData(events)
+            if (restoreState != null) {
+                // Post so the RecyclerView has re-laid-out after updateData's dispatchUpdatesTo
+                binding.recyclerViewEvents.post {
+                    binding.recyclerViewEvents.layoutManager?.onRestoreInstanceState(restoreState)
+                    savedScrollState = null
                 }
             }
         }
+    }
+
+    private fun restoreChipState() {
+        val chipToCheck = when (selectedStatusFilter) {
+            EventStatus.LIVE -> binding.chipLive
+            EventStatus.UPCOMING -> binding.chipUpcoming
+            EventStatus.RECENT -> binding.chipRecent
+            null -> binding.chipAll
+        }
+        listOf(binding.chipAll, binding.chipLive, binding.chipUpcoming, binding.chipRecent).forEach {
+            it.isChecked = (it == chipToCheck)
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        val rvState = _binding?.recyclerViewEvents?.layoutManager?.onSaveInstanceState()
+        val catState = _binding?.categoryRecycler?.layoutManager?.onSaveInstanceState()
+        rvState?.let { outState.putParcelable("rv_events_state", it) }
+        catState?.let { outState.putParcelable("rv_cat_state", it) }
+    }
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+        savedInstanceState?.getParcelable<android.os.Parcelable>("rv_events_state")?.let {
+            binding.recyclerViewEvents.layoutManager?.onRestoreInstanceState(it)
+        }
+        savedInstanceState?.getParcelable<android.os.Parcelable>("rv_cat_state")?.let {
+            binding.categoryRecycler.layoutManager?.onRestoreInstanceState(it)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startDynamicUpdates()
+        RedirectHelper.executePendingActionOnResume(
+            pendingActionProvider = { pendingEventAction },
+            clearPendingAction = { pendingEventAction = null },
+            pendingExternalRedirect = pendingExternalRedirect,
+            clearPendingRedirect = { pendingExternalRedirect = false }
+        )
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopDynamicUpdates()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        stopDynamicUpdates()
+        _binding = null
     }
 }

@@ -6,32 +6,30 @@ import androidx.lifecycle.viewModelScope
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ChannelLink
 import com.livetvpro.app.data.models.FavoriteChannel
-import com.livetvpro.app.data.repository.FavoritesRepository
 import com.livetvpro.app.data.repository.NativeDataRepository
+import com.livetvpro.app.data.repository.FavoritesRepository
 import com.livetvpro.app.utils.RetryViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+
 @HiltViewModel
 class SportsViewModel @Inject constructor(
-    private val nativeDataRepository: NativeDataRepository,
+    private val repository: NativeDataRepository,
     private val favoritesRepository: FavoritesRepository
 ) : RetryViewModel() {
-
-    private val _allChannels = MutableLiveData<List<Channel>>(emptyList())
-
-    private val _filteredChannels = MutableLiveData<List<Channel>>(emptyList())
+    private val _channels = MutableLiveData<List<Channel>>()
+    private val _filteredChannels = MutableLiveData<List<Channel>>()
     val filteredChannels: LiveData<List<Channel>> = _filteredChannels
-
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
-
-    private var currentQuery = ""
+    var currentQuery: String = ""
+        private set
 
     init {
-        loadFavoriteCache()
         loadData()
+        loadFavoriteCache()
     }
 
     private fun loadFavoriteCache() {
@@ -44,22 +42,34 @@ class SportsViewModel @Inject constructor(
 
     override fun loadData() {
         viewModelScope.launch {
-            startLoading()
+            val hasExisting = !_channels.value.isNullOrEmpty()
             try {
-                val channels = nativeDataRepository.getSports()
-                _allChannels.value = channels
-                applyFilter()
-                finishLoading(dataIsEmpty = channels.isEmpty())
+                if (!hasExisting) startLoading()
+                val sports = repository.getSports()
+                if (sports != _channels.value) {
+                    _channels.value = sports
+                    applyFilter()
+                }
+                finishLoading(dataIsEmpty = sports.isEmpty())
             } catch (e: OutOfMemoryError) {
                 System.gc()
-                finishLoading(dataIsEmpty = true, error = Exception("Low memory. Please close other apps and try again."))
+                if (!hasExisting) {
+                    _channels.value = emptyList()
+                    applyFilter()
+                    finishLoading(dataIsEmpty = true, error = Exception("Low memory. Please close other apps and try again."))
+                }
             } catch (e: Exception) {
-                finishLoading(dataIsEmpty = true, error = e)
+                if (!hasExisting) {
+                    _channels.value = emptyList()
+                    applyFilter()
+                    finishLoading(dataIsEmpty = true, error = e)
+                }
             }
         }
     }
 
-    override fun onResume() {}
+    override fun onResume() {
+    }
 
     fun searchSports(query: String) {
         currentQuery = query
@@ -67,51 +77,59 @@ class SportsViewModel @Inject constructor(
     }
 
     private fun applyFilter() {
-        val all = _allChannels.value ?: emptyList()
-        _filteredChannels.value = if (currentQuery.isBlank()) {
-            all
-        } else {
-            all.filter { it.name.contains(currentQuery, ignoreCase = true) }
-        }
+        val channels = _channels.value ?: emptyList()
+        _filteredChannels.value = if (currentQuery.isBlank()) channels
+        else channels.filter { it.name.contains(currentQuery, ignoreCase = true) }
     }
-
-    fun isFavorite(channelId: String): Boolean = _favoriteStatusCache.value.contains(channelId)
 
     fun toggleFavorite(channel: Channel) {
         viewModelScope.launch {
+            val favoriteLinks = channel.links?.map { channelLink ->
+                ChannelLink(
+                    quality = channelLink.quality,
+                    url = channelLink.url,
+                    cookie = channelLink.cookie,
+                    referer = channelLink.referer,
+                    origin = channelLink.origin,
+                    userAgent = channelLink.userAgent,
+                    xForwardedFor = channelLink.xForwardedFor,
+                    drmScheme = channelLink.drmScheme,
+                    drmLicenseUrl = channelLink.drmLicenseUrl
+                )
+            }
+            val streamUrlToSave = when {
+                channel.streamUrl.isNotEmpty() -> channel.streamUrl
+                !favoriteLinks.isNullOrEmpty() -> buildStreamUrlFromLink(favoriteLinks.first())
+                else -> ""
+            }
+            val favoriteChannel = FavoriteChannel(
+                id = channel.id,
+                name = channel.name,
+                logoUrl = channel.logoUrl,
+                streamUrl = streamUrlToSave,
+                categoryId = channel.categoryId,
+                categoryName = "Sports",
+                links = favoriteLinks
+            )
             if (favoritesRepository.isFavorite(channel.id)) {
                 favoritesRepository.removeFavorite(channel.id)
             } else {
-                val favoriteLinks = channel.links?.map { link ->
-                    ChannelLink(
-                        quality       = link.quality,
-                        url           = link.url,
-                        cookie        = link.cookie,
-                        referer       = link.referer,
-                        origin        = link.origin,
-                        userAgent     = link.userAgent,
-                        xForwardedFor = link.xForwardedFor,
-                        drmScheme     = link.drmScheme,
-                        drmLicenseUrl = link.drmLicenseUrl
-                    )
-                }
-                val streamUrlToSave = when {
-                    channel.streamUrl.isNotEmpty() -> channel.streamUrl
-                    !favoriteLinks.isNullOrEmpty()  -> favoriteLinks.first().url
-                    else                            -> ""
-                }
-                favoritesRepository.addFavorite(
-                    FavoriteChannel(
-                        id           = channel.id,
-                        name         = channel.name,
-                        logoUrl      = channel.logoUrl,
-                        streamUrl    = streamUrlToSave,
-                        categoryId   = channel.categoryId,
-                        categoryName = channel.categoryName,
-                        links        = favoriteLinks
-                    )
-                )
+                favoritesRepository.addFavorite(favoriteChannel)
             }
         }
     }
+
+    private fun buildStreamUrlFromLink(link: ChannelLink): String {
+        val parts = mutableListOf(link.url)
+        link.referer?.let { if (it.isNotEmpty()) parts.add("referer=$it") }
+        link.cookie?.let { if (it.isNotEmpty()) parts.add("cookie=$it") }
+        link.origin?.let { if (it.isNotEmpty()) parts.add("origin=$it") }
+        link.userAgent?.let { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
+        link.xForwardedFor?.let { if (it.isNotEmpty()) parts.add("X-Forwarded-For=$it") }
+        link.drmScheme?.let { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
+        link.drmLicenseUrl?.let { if (it.isNotEmpty()) parts.add("drmLicense=$it") }
+        return if (parts.size > 1) parts.joinToString("|") else parts[0]
+    }
+
+    fun isFavorite(channelId: String): Boolean = _favoriteStatusCache.value.contains(channelId)
 }

@@ -24,7 +24,7 @@
             android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="8dp"/>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_network_stream"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -41,7 +41,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_network_stream"/>
+                    android:src="@drawable/ic_network_stream"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -49,9 +50,9 @@
                     android:text="Network Stream"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_playlists"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -68,7 +69,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_playlist"/>
+                    android:src="@drawable/ic_playlist"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -76,9 +78,9 @@
                     android:text="Playlists"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_cricket_score"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -95,7 +97,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_cricket"/>
+                    android:src="@drawable/ic_cricket"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -103,9 +106,9 @@
                     android:text="Cricket Score"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_football_score"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -122,7 +125,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_football"/>
+                    android:src="@drawable/ic_football"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -130,9 +134,9 @@
                     android:text="Football Score"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_device_id"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -149,7 +153,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_device_id"/>
+                    android:src="@drawable/ic_device_id"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -157,7 +162,7 @@
                     android:text="Device ID"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
         
         <TextView
@@ -168,7 +173,7 @@
             android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="8dp"/>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_appearance"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -222,7 +227,7 @@
                     android:alpha="0.4"/>
 
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
                 
         <TextView
@@ -233,7 +238,7 @@
             android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="8dp"/>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_floating_player"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -250,7 +255,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_pip"/>
+                    android:src="@drawable/ic_pip"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -258,9 +264,9 @@
                     android:text="Floating Player"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_save_states"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -277,7 +283,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_save_states"/>
+                    android:src="@drawable/ic_save_states"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -285,9 +292,9 @@
                     android:text="Save States"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_share_app"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -304,7 +311,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_share"/>
+                    android:src="@drawable/ic_share"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -312,9 +320,9 @@
                     android:text="Share App"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_contact"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -331,7 +339,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_contact"/>
+                    android:src="@drawable/ic_contact"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -339,9 +348,9 @@
                     android:text="Contact"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_website"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -358,7 +367,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_website"/>
+                    android:src="@drawable/ic_website"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -366,9 +376,9 @@
                     android:text="Website"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_email"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -385,7 +395,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_email"/>
+                    android:src="@drawable/ic_email"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -393,9 +404,9 @@
                     android:text="Email Us"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_copyright"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -412,7 +423,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_copyright"/>
+                    android:src="@drawable/ic_copyright"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -420,9 +432,9 @@
                     android:text="Copyright"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_notice"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -439,7 +451,8 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_info"/>
+                    android:src="@drawable/ic_info"
+                    android:tint="?attr/colorOnSurface"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -447,9 +460,9 @@
                     android:text="Notice"
                     android:layout_marginStart="16dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_exit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -477,7 +490,7 @@
                     android:layout_marginStart="16dp"
                     android:textColor="@android:color/white"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

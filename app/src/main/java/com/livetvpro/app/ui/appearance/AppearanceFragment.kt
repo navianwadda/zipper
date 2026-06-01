@@ -57,6 +57,8 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
@@ -94,6 +96,7 @@ fun AppearanceScreen(
     themeManager: ThemeManager,
 ) {
     val systemDarkTheme = isSystemInDarkTheme()
+    val activity = LocalContext.current as? AppCompatActivity
 
     var themeMode  by remember { mutableIntStateOf(themeManager.getThemeMode()) }
     var colorTheme by remember { mutableStateOf(themeManager.getColorTheme()) }

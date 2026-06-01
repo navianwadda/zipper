@@ -43,6 +43,12 @@ class ThemeManager @Inject constructor(
     private val _primaryColorFlow = MutableStateFlow(0)
     val primaryColorFlow: StateFlow<Int> = _primaryColorFlow
 
+    private val _colorThemeFlow = MutableStateFlow(getColorTheme())
+    val colorThemeFlow: StateFlow<AppColorTheme> = _colorThemeFlow
+
+    private val _amoledFlow = MutableStateFlow(isAmoledMode())
+    val amoledFlow: StateFlow<Boolean> = _amoledFlow
+
     fun getThemeMode(): Int = prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
 
     fun setThemeMode(mode: Int) {
@@ -61,6 +67,7 @@ class ThemeManager @Inject constructor(
 
     fun setColorTheme(theme: AppColorTheme) {
         prefs.edit().putString(KEY_COLOR_THEME, theme.name).apply()
+        _colorThemeFlow.value = theme
         _primaryColorFlow.value = getPrimaryColor()
     }
 
@@ -68,17 +75,19 @@ class ThemeManager @Inject constructor(
 
     fun setAmoledMode(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_AMOLED_MODE, enabled).apply()
+        _amoledFlow.value = enabled
         _primaryColorFlow.value = getPrimaryColor()
     }
 
     fun getPrimaryColor(): Int {
         val theme = getColorTheme()
+        val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
         val isDark = when (getThemeMode()) {
             THEME_DARK  -> true
             THEME_LIGHT -> false
             else        -> AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_NO
         }
-        val color = if (isDark) theme.primaryDark else theme.primaryLight
+        val color = if (isDark) resolvedTheme.primaryDark else resolvedTheme.primaryLight
         return Color.argb(
             (color.alpha * 255).toInt(),
             (color.red   * 255).toInt(),

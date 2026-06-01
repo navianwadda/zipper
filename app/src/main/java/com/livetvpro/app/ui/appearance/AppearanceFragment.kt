@@ -144,6 +144,7 @@ fun AppearanceScreen(
                     onThemeSelected  = { chosen ->
                         colorTheme = chosen
                         themeManager.setColorTheme(chosen)
+                        activity?.recreate()
                     },
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
@@ -158,6 +159,7 @@ fun AppearanceScreen(
                     onCheckedChange = { newValue ->
                         amoledMode = newValue
                         themeManager.setAmoledMode(newValue)
+                        activity?.recreate()
                     },
                 )
             }

@@ -1,6 +1,8 @@
 package com.livetvpro.app.ui.live
 
+import android.content.DialogInterface
 import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -8,52 +10,50 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.ActivityResultLauncher
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.viewinterop.AndroidViewBinding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livetvpro.app.R
-import com.livetvpro.app.SearchableFragment
-import com.livetvpro.app.data.local.PreferencesManager
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.EventCategory
 import com.livetvpro.app.data.models.EventStatus
 import com.livetvpro.app.data.models.ListenerConfig
+import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.databinding.FragmentLiveEventsBinding
 import com.livetvpro.app.ui.adapters.EventCategoryAdapter
 import com.livetvpro.app.ui.adapters.LiveEventAdapter
-import com.livetvpro.app.ui.theme.LiveTVProTheme
-import com.livetvpro.app.utils.DeviceUtils
+import com.livetvpro.app.ui.player.PlayerActivity
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
-import com.livetvpro.app.utils.RedirectHelper
-import com.livetvpro.app.utils.Refreshable
 import com.livetvpro.app.utils.RetryHandler
+import com.livetvpro.app.SearchableFragment
+import com.livetvpro.app.utils.Refreshable
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
-
     private var _binding: FragmentLiveEventsBinding? = null
-    private val binding get() = _binding!!
-
     private var pendingEventAction: (() -> Unit)? = null
     private var pendingExternalRedirect: Boolean = false
+    private val binding get() = _binding!!
     private val viewModel: LiveEventsViewModel by viewModels()
 
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
-    @Inject lateinit var preferencesManager: PreferencesManager
+    @Inject lateinit var themeManager: ThemeManager
 
     private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
+    @Inject lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
 
     private var selectedCategoryId: String = "evt_cat_all"
     private var selectedStatusFilter: EventStatus? = null
@@ -99,30 +99,16 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         )
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): View = ComposeView(requireContext()).apply {
-        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        setContent {
-            LiveTVProTheme(themeManager = (requireActivity() as com.livetvpro.app.ui.MainActivity).themeManager) {
-                AndroidViewBinding(
-                    factory = FragmentLiveEventsBinding::inflate,
-                    modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-                    update = { _binding = this },
-                )
-            }
-        }
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentLiveEventsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerViewEvents) { v, insets ->
             val navBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
-            val bottom = navBars.bottom +
-                v.resources.getDimensionPixelSize(R.dimen.nav_bottom_margin) +
-                v.resources.getDimensionPixelSize(R.dimen.nav_height)
+            val bottom = navBars.bottom + v.resources.getDimensionPixelSize(com.livetvpro.app.R.dimen.nav_bottom_margin) + v.resources.getDimensionPixelSize(com.livetvpro.app.R.dimen.nav_height)
             v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, bottom)
             insets
         }
@@ -131,8 +117,9 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         setupStatusFilters()
         setupRetryHandling()
         observeViewModel()
+        observePrimaryColor()
         setupMessageBanner()
-        if (DeviceUtils.isTvDevice) {
+        if (com.livetvpro.app.utils.DeviceUtils.isTvDevice) {
             binding.swipeRefresh.isEnabled = false
             setupTvChipNavigation()
         }
@@ -148,8 +135,16 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         observeInitialFocus()
     }
 
+    private fun observePrimaryColor() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            themeManager.primaryColorFlow.collectLatest { color ->
+                eventAdapter?.updatePrimaryColor(color)
+            }
+        }
+    }
+
     private fun observeInitialFocus() {
-        if (!DeviceUtils.isTvDevice) return
+        if (!com.livetvpro.app.utils.DeviceUtils.isTvDevice) return
         viewModel.filteredEvents.observe(viewLifecycleOwner) { events ->
             if (events.isNotEmpty()) {
                 binding.recyclerViewEvents.post {
@@ -168,11 +163,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
             chip.isFocusable = true
             chip.isFocusableInTouchMode = false
             chip.setOnFocusChangeListener { v, hasFocus ->
-                v.animate()
-                    .scaleX(if (hasFocus) 1.08f else 1f)
-                    .scaleY(if (hasFocus) 1.08f else 1f)
-                    .setDuration(100)
-                    .start()
+                v.animate().scaleX(if (hasFocus) 1.08f else 1f).scaleY(if (hasFocus) 1.08f else 1f).setDuration(100).start()
             }
             chip.setOnKeyListener { _, keyCode, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
@@ -240,8 +231,9 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         }
     }
 
-    private fun getEventSpanCount(): Int =
-        resources.getInteger(R.integer.event_span_count)
+    private fun getEventSpanCount(): Int {
+        return resources.getInteger(R.integer.event_span_count)
+    }
 
     private fun setupEventRecycler() {
         if (eventAdapter == null) {
@@ -249,6 +241,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                 context = requireContext(),
                 events = emptyList(),
                 preferencesManager = preferencesManager,
+                primaryColor = themeManager.getPrimaryColor(),
                 onEventInteraction = { event, playerAction ->
                     lastPageType = ListenerConfig.PAGE_LIVE_EVENTS
                     lastUniqueId = event.id
@@ -282,15 +275,28 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         }
     }
 
+    private fun showLinkSelectionDialog(event: LiveEvent) {
+        val linkLabels = event.links.map { it.quality }.toTypedArray()
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Multiple Links Available")
+            .setItems(linkLabels) { dialog, which ->
+                PlayerActivity.startWithEvent(requireContext(), event, which)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+        dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.requestFocus()
+    }
+
     private fun setupStatusFilters() {
         val clickListener = View.OnClickListener { view ->
             if ((view as Chip).isChecked) {
                 val status = when (view.id) {
-                    R.id.chip_all      -> null
-                    R.id.chip_live     -> EventStatus.LIVE
+                    R.id.chip_all -> null
+                    R.id.chip_live -> EventStatus.LIVE
                     R.id.chip_upcoming -> EventStatus.UPCOMING
-                    R.id.chip_recent   -> EventStatus.RECENT
-                    else               -> null
+                    R.id.chip_recent -> EventStatus.RECENT
+                    else -> null
                 }
                 if (status != selectedStatusFilter) {
                     selectedStatusFilter = status
@@ -332,10 +338,10 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
 
     private fun restoreChipState() {
         val chipToCheck = when (selectedStatusFilter) {
-            EventStatus.LIVE     -> binding.chipLive
+            EventStatus.LIVE -> binding.chipLive
             EventStatus.UPCOMING -> binding.chipUpcoming
-            EventStatus.RECENT   -> binding.chipRecent
-            null                 -> binding.chipAll
+            EventStatus.RECENT -> binding.chipRecent
+            null -> binding.chipAll
         }
         listOf(binding.chipAll, binding.chipLive, binding.chipUpcoming, binding.chipRecent).forEach {
             it.isChecked = (it == chipToCheck)
@@ -344,9 +350,9 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        val rvState  = _binding?.recyclerViewEvents?.layoutManager?.onSaveInstanceState()
+        val rvState = _binding?.recyclerViewEvents?.layoutManager?.onSaveInstanceState()
         val catState = _binding?.categoryRecycler?.layoutManager?.onSaveInstanceState()
-        rvState?.let  { outState.putParcelable("rv_events_state", it) }
+        rvState?.let { outState.putParcelable("rv_events_state", it) }
         catState?.let { outState.putParcelable("rv_cat_state", it) }
     }
 
@@ -364,10 +370,10 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         super.onResume()
         startDynamicUpdates()
         RedirectHelper.executePendingActionOnResume(
-            pendingActionProvider   = { pendingEventAction },
-            clearPendingAction      = { pendingEventAction = null },
+            pendingActionProvider = { pendingEventAction },
+            clearPendingAction = { pendingEventAction = null },
             pendingExternalRedirect = pendingExternalRedirect,
-            clearPendingRedirect    = { pendingExternalRedirect = false }
+            clearPendingRedirect = { pendingExternalRedirect = false }
         )
     }
 

@@ -7,6 +7,8 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.livetvpro.app.data.local.ThemeManager
@@ -25,11 +27,11 @@ fun LiveTVProTheme(
         else                     -> systemDark
     }
 
-    val colorTheme = themeManager.getColorTheme()
-    val amoled     = themeManager.isAmoledMode()
+    val colorTheme by themeManager.colorThemeFlow.collectAsState()
+    val amoled     by themeManager.amoledFlow.collectAsState()
 
     val colorScheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
+        colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
             useDark && amoled -> dynamicDarkColorScheme(context).copy(
                 background             = Color.Black,
                 surface                = Color.Black,

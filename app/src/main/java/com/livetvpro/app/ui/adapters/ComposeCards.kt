@@ -42,7 +42,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.integration.compose.placeholder
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.models.Category
@@ -81,13 +83,14 @@ fun ChannelCard(
             modifier = Modifier.padding(8.dp),
         ) {
             Box {
-                AsyncImage(
-                    model             = channel.logoUrl.ifEmpty { null },
+                @OptIn(ExperimentalGlideComposeApi::class)
+                GlideImage(
+                    model              = channel.logoUrl.ifEmpty { null },
                     contentDescription = channel.name,
-                    contentScale      = ContentScale.Fit,
-                    placeholder       = painterResource(R.mipmap.ic_launcher_round),
-                    error             = painterResource(R.mipmap.ic_launcher_round),
-                    modifier          = Modifier
+                    contentScale       = ContentScale.Fit,
+                    loading            = placeholder(R.mipmap.ic_launcher_round),
+                    failure            = placeholder(R.mipmap.ic_launcher_round),
+                    modifier           = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
                         .clip(RoundedCornerShape(6.dp)),
@@ -133,12 +136,13 @@ fun CategoryCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(8.dp),
         ) {
-            AsyncImage(
+            @OptIn(ExperimentalGlideComposeApi::class)
+            GlideImage(
                 model              = category.iconUrl?.ifEmpty { null },
                 contentDescription = category.name,
                 contentScale       = ContentScale.Fit,
-                placeholder        = painterResource(R.mipmap.ic_launcher_round),
-                error              = painterResource(R.mipmap.ic_launcher_round),
+                loading            = placeholder(R.mipmap.ic_launcher_round),
+                failure            = placeholder(R.mipmap.ic_launcher_round),
                 modifier           = Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
@@ -210,12 +214,13 @@ fun FavoriteCard(
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
+            @OptIn(ExperimentalGlideComposeApi::class)
+            GlideImage(
                 model              = favorite.logoUrl.ifEmpty { null },
                 contentDescription = favorite.name,
                 contentScale       = ContentScale.Fit,
-                placeholder        = painterResource(R.mipmap.ic_launcher_round),
-                error              = painterResource(R.mipmap.ic_launcher_round),
+                loading            = placeholder(R.mipmap.ic_launcher_round),
+                failure            = placeholder(R.mipmap.ic_launcher_round),
                 modifier           = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(4.dp)),
@@ -391,11 +396,12 @@ fun LiveEventCard(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier            = Modifier.weight(1f),
                 ) {
-                    AsyncImage(
+                    @OptIn(ExperimentalGlideComposeApi::class)
+                    GlideImage(
                         model              = event.team1Logo.ifEmpty { null },
                         contentDescription = event.team1Name,
-                        placeholder        = painterResource(R.drawable.ic_placeholder_team),
-                        error              = painterResource(R.drawable.ic_placeholder_team),
+                        loading            = placeholder(R.drawable.ic_placeholder_team),
+                        failure            = placeholder(R.drawable.ic_placeholder_team),
                         modifier           = Modifier.size(36.dp),
                     )
                     Text(
@@ -414,11 +420,12 @@ fun LiveEventCard(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier            = Modifier.weight(1f),
                 ) {
-                    AsyncImage(
+                    @OptIn(ExperimentalGlideComposeApi::class)
+                    GlideImage(
                         model              = event.team2Logo.ifEmpty { null },
                         contentDescription = event.team2Name,
-                        placeholder        = painterResource(R.drawable.ic_placeholder_team),
-                        error              = painterResource(R.drawable.ic_placeholder_team),
+                        loading            = placeholder(R.drawable.ic_placeholder_team),
+                        failure            = placeholder(R.drawable.ic_placeholder_team),
                         modifier           = Modifier.size(36.dp),
                     )
                     Text(

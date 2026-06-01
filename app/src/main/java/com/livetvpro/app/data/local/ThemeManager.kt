@@ -43,6 +43,9 @@ class ThemeManager @Inject constructor(
     private val _primaryColorFlow = MutableStateFlow(0)
     val primaryColorFlow: StateFlow<Int> = _primaryColorFlow
 
+    private val _themeModeFlow = MutableStateFlow(getThemeMode())
+    val themeModeFlow: StateFlow<Int> = _themeModeFlow
+
     private val _colorThemeFlow = MutableStateFlow(getColorTheme())
     val colorThemeFlow: StateFlow<AppColorTheme> = _colorThemeFlow
 
@@ -54,6 +57,7 @@ class ThemeManager @Inject constructor(
     fun setThemeMode(mode: Int) {
         prefs.edit().putInt(KEY_THEME_MODE, mode).apply()
         applyThemeStatic(mode)
+        _themeModeFlow.value = mode
         _primaryColorFlow.value = getPrimaryColor()
     }
 

@@ -32,10 +32,10 @@ class LiveEventAdapter(
     private val context: Context,
     private var events: List<LiveEvent>,
     private val preferencesManager: PreferencesManager,
+    private var primaryColor: Int = Color.parseColor("#10B981"),
     private val onEventClick: ((LiveEvent, Int) -> Unit)? = null,
     private val onEventInteraction: ((LiveEvent, () -> Unit) -> Boolean)? = null
 ) : RecyclerView.Adapter<LiveEventAdapter.EventViewHolder>() {
-
 
     private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("UTC")
@@ -79,7 +79,6 @@ class LiveEventAdapter(
 
     override fun onBindViewHolder(holder: EventViewHolder, position: Int, payloads: List<Any>) {
         if (payloads.contains(PAYLOAD_TIMER)) {
-
             bindTimer(holder.binding, events[position])
         } else {
             onBindViewHolder(holder, position)
@@ -203,7 +202,7 @@ class LiveEventAdapter(
 
                     if (startDate != null) {
                         binding.matchTime.text = timeFormat.format(startDate)
-                        binding.matchTime.setTextColor(Color.parseColor("#10B981"))
+                        binding.matchTime.setTextColor(primaryColor)
                         binding.matchTime.visibility = View.VISIBLE
 
                         binding.matchDate.text = dateFormat.format(startDate)
@@ -221,7 +220,7 @@ class LiveEventAdapter(
                             minutes > 0 -> String.format("%02dm %02ds", minutes, seconds)
                             else -> String.format("%02ds", seconds)
                         }
-                        binding.statusText.setTextColor(Color.parseColor("#10B981"))
+                        binding.statusText.setTextColor(primaryColor)
                         binding.statusText.visibility = View.VISIBLE
                     }
                 }
@@ -260,7 +259,6 @@ class LiveEventAdapter(
             binding.statusText.setTextColor(Color.LTGRAY)
             binding.statusText.visibility = View.VISIBLE
         }
-
     }
 
     private fun launchPlayer(event: LiveEvent) {
@@ -307,8 +305,6 @@ class LiveEventAdapter(
     private fun showLinkSelectionDialog(event: LiveEvent) {
         val linkLabels = event.links.map { it.quality }.toTypedArray()
 
-        val hasExistingPlayer = FloatingPlayerHelper.hasFloatingPlayerForEvent(event.id)
-
         MaterialAlertDialogBuilder(context)
             .setTitle("Multiple Links Available")
             .setItems(linkLabels) { dialog, which ->
@@ -340,7 +336,6 @@ class LiveEventAdapter(
             }
 
             try {
-
                 val channel = Channel(
                     id = event.id,
                     name = "${event.team1Name} vs ${event.team2Name}",
@@ -373,8 +368,12 @@ class LiveEventAdapter(
 
     override fun getItemCount(): Int = events.size
 
-    fun updateData(newEvents: List<LiveEvent>) {
+    fun updatePrimaryColor(color: Int) {
+        primaryColor = color
+        notifyItemRangeChanged(0, events.size, PAYLOAD_TIMER)
+    }
 
+    fun updateData(newEvents: List<LiveEvent>) {
         if (newEvents == events) return
 
         val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
@@ -401,5 +400,4 @@ class LiveEventAdapter(
         events = newEvents
         diff.dispatchUpdatesTo(this)
     }
-
 }

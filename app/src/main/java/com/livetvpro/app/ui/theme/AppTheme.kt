@@ -21,14 +21,15 @@ fun LiveTVProTheme(
     val context    = LocalContext.current
     val systemDark = isSystemInDarkTheme()
 
-    val useDark = when (themeManager.getThemeMode()) {
+    val themeMode  by themeManager.themeModeFlow.collectAsState()
+    val colorTheme by themeManager.colorThemeFlow.collectAsState()
+    val amoled     by themeManager.amoledFlow.collectAsState()
+
+    val useDark = when (themeMode) {
         ThemeManager.THEME_DARK  -> true
         ThemeManager.THEME_LIGHT -> false
         else                     -> systemDark
     }
-
-    val colorTheme by themeManager.colorThemeFlow.collectAsState()
-    val amoled     by themeManager.amoledFlow.collectAsState()
 
     val colorScheme = when {
         colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {

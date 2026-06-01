@@ -81,7 +81,6 @@ class AppearanceFragment : Fragment() {
             LiveTVProTheme(themeManager) {
                 AppearanceScreen(
                     themeManager = themeManager,
-                    onRecreate   = { requireActivity().recreate() },
                 )
             }
         }
@@ -93,7 +92,6 @@ class AppearanceFragment : Fragment() {
 @Composable
 fun AppearanceScreen(
     themeManager: ThemeManager,
-    onRecreate: () -> Unit,
 ) {
     val systemDarkTheme = isSystemInDarkTheme()
 
@@ -134,7 +132,6 @@ fun AppearanceScreen(
                             }
                             themeMode = mode
                             themeManager.setThemeMode(mode)
-                            onRecreate()
                         },
                     )
                 }

@@ -123,6 +123,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     }
                 }
             }
+
             setupSearch()
         }
 

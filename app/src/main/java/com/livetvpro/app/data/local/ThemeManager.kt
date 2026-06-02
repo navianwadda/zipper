@@ -3,6 +3,8 @@ package com.livetvpro.app.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.app.AppCompatDelegate
 import com.livetvpro.app.ui.theme.AppColorTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,14 +32,21 @@ class ThemeManager @Inject constructor(
         private const val KEY_AMOLED_MODE = "amoled_mode"
 
         fun applyThemeStatic(mode: Int) {
-            AppCompatDelegate.setDefaultNightMode(
-                when (mode) {
-                    THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-                    THEME_DARK  -> AppCompatDelegate.MODE_NIGHT_YES
-                    else        -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                },
-            )
+            val nightMode = when (mode) {
+                THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+                THEME_DARK  -> AppCompatDelegate.MODE_NIGHT_YES
+                else        -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            }
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                AppCompatDelegate.setDefaultNightMode(nightMode)
+            } else {
+                Handler(Looper.getMainLooper()).post {
+                    AppCompatDelegate.setDefaultNightMode(nightMode)
+                }
+            }
         }
+
+        fun requiresRecreate(oldMode: Int, newMode: Int): Boolean = oldMode != newMode
     }
 
     private val _primaryColorFlow = MutableStateFlow(0)

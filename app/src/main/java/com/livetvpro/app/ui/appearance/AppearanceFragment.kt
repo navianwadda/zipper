@@ -100,57 +100,57 @@ fun AppearanceScreen(themeManager: ThemeManager) {
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
 
-        item { PreferenceSectionHeader(title = "Theme") }
+            item { PreferenceSectionHeader(title = "Theme") }
 
-        item {
-            PreferenceCard {
-                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    MultiChoiceSegmentedButton(
-                        choices = listOf("Dark", "Light", "System"),
-                        selectedIndices = listOf(when (themeMode) {
-                            ThemeManager.THEME_DARK  -> 0
-                            ThemeManager.THEME_LIGHT -> 1
-                            else                     -> 2
-                        }),
-                        onClick = { uiIndex ->
-                            val mode = when (uiIndex) {
-                                0    -> ThemeManager.THEME_DARK
-                                1    -> ThemeManager.THEME_LIGHT
-                                else -> ThemeManager.THEME_AUTO
+            item {
+                PreferenceCard {
+                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        MultiChoiceSegmentedButton(
+                            choices = listOf("Dark", "Light", "System"),
+                            selectedIndices = listOf(when (themeMode) {
+                                ThemeManager.THEME_DARK  -> 0
+                                ThemeManager.THEME_LIGHT -> 1
+                                else                     -> 2
+                            }),
+                            onClick = { uiIndex ->
+                                val mode = when (uiIndex) {
+                                    0    -> ThemeManager.THEME_DARK
+                                    1    -> ThemeManager.THEME_LIGHT
+                                    else -> ThemeManager.THEME_AUTO
+                                }
+                                if (mode != themeMode) {
+                                    themeManager.setThemeMode(mode)
+                                }
+                            },
+                        )
+                    }
+
+                    PreferenceDivider()
+
+                    ThemePicker(
+                        currentTheme    = colorTheme,
+                        isDarkMode      = isDarkMode,
+                        onThemeSelected = { chosen ->
+                            if (chosen != colorTheme) {
+                                themeManager.setColorTheme(chosen)
                             }
-                            if (mode != themeMode) {
-                                themeManager.setThemeMode(mode)
-                            }
+                        },
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+
+                    PreferenceDivider()
+
+                    SwitchPreferenceRow(
+                        title   = "AMOLED Black Mode",
+                        summary = "Use pure black background for dark themes",
+                        checked = amoledMode,
+                        enabled = themeMode != ThemeManager.THEME_LIGHT,
+                        onCheckedChange = { newValue ->
+                            themeManager.setAmoledMode(newValue)
                         },
                     )
                 }
-
-                PreferenceDivider()
-
-                ThemePicker(
-                    currentTheme    = colorTheme,
-                    isDarkMode      = isDarkMode,
-                    onThemeSelected = { chosen ->
-                        if (chosen != colorTheme) {
-                            themeManager.setColorTheme(chosen)
-                        }
-                    },
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-
-                PreferenceDivider()
-
-                SwitchPreferenceRow(
-                    title   = "AMOLED Black Mode",
-                    summary = "Use pure black background for dark themes",
-                    checked = amoledMode,
-                    enabled = themeMode != ThemeManager.THEME_LIGHT,
-                    onCheckedChange = { newValue ->
-                        themeManager.setAmoledMode(newValue)
-                    },
-                )
             }
-        }
     }
 }
 

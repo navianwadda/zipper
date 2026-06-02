@@ -271,7 +271,7 @@ enum class AppColorTheme(
     );
 
     fun getLightColorScheme(): ColorScheme {
-        val bg = backgroundLight
+        val surfaceTint = primaryLight.copy(alpha = 0.05f).over(backgroundLight)
         return lightColorScheme(
             primary                  = primaryLight,
             onPrimary                = Color.White,
@@ -285,27 +285,27 @@ enum class AppColorTheme(
             onTertiary               = Color.White,
             tertiaryContainer        = tertiaryLight.copy(alpha = 0.15f).over(Color.White),
             onTertiaryContainer      = tertiaryLight.darken(0.3f),
-            background               = bg,
+            background               = backgroundLight,
             onBackground             = Color(0xFF1C1B1F),
-            surface                  = bg,
+            surface                  = backgroundLight,
             onSurface                = Color(0xFF1C1B1F),
             surfaceVariant           = primaryLight.copy(alpha = 0.08f).over(Color(0xFFF0F0F0)),
             onSurfaceVariant         = Color(0xFF49454F),
-            outline                  = Color(0xFF79747E),
-            outlineVariant           = Color(0xFFCAC4D0),
+            outline                  = secondaryLight.copy(alpha = 0.5f).over(Color(0xFF79747E)),
+            outlineVariant           = primaryLight.copy(alpha = 0.12f).over(Color(0xFFCAC4D0)),
             inverseSurface           = backgroundDark,
             inverseOnSurface         = Color(0xFFF4EFF4),
             inversePrimary           = primaryDark,
-            surfaceContainerLowest   = bg,
-            surfaceContainerLow      = primaryLight.copy(alpha = 0.03f).over(bg),
-            surfaceContainer         = primaryLight.copy(alpha = 0.06f).over(bg),
-            surfaceContainerHigh     = primaryLight.copy(alpha = 0.08f).over(bg),
-            surfaceContainerHighest  = primaryLight.copy(alpha = 0.11f).over(bg),
+            surfaceContainerLowest   = backgroundLight,
+            surfaceContainerLow      = surfaceTint,
+            surfaceContainer         = primaryLight.copy(alpha = 0.06f).over(backgroundLight),
+            surfaceContainerHigh     = primaryLight.copy(alpha = 0.08f).over(backgroundLight),
+            surfaceContainerHighest  = primaryLight.copy(alpha = 0.11f).over(backgroundLight),
         )
     }
 
     fun getDarkColorScheme(): ColorScheme {
-        val bg = backgroundDark
+        val surfaceTint = primaryDark.copy(alpha = 0.05f).over(backgroundDark)
         return darkColorScheme(
             primary                  = primaryDark,
             onPrimary                = primaryLight.darken(0.5f),
@@ -319,22 +319,22 @@ enum class AppColorTheme(
             onTertiary               = tertiaryLight.darken(0.5f),
             tertiaryContainer        = tertiaryLight.darken(0.3f),
             onTertiaryContainer      = tertiaryDark.lighten(0.1f),
-            background               = bg,
+            background               = backgroundDark,
             onBackground             = Color(0xFFE6E1E5),
-            surface                  = bg,
+            surface                  = backgroundDark,
             onSurface                = Color(0xFFE6E1E5),
             surfaceVariant           = primaryDark.copy(alpha = 0.12f).over(Color(0xFF2A2A2A)),
             onSurfaceVariant         = Color(0xFFCAC4D0),
-            outline                  = Color(0xFF938F99),
-            outlineVariant           = Color(0xFF49454F),
+            outline                  = secondaryDark.copy(alpha = 0.4f).over(Color(0xFF938F99)),
+            outlineVariant           = primaryDark.copy(alpha = 0.15f).over(Color(0xFF49454F)),
             inverseSurface           = backgroundLight,
             inverseOnSurface         = Color(0xFF313033),
             inversePrimary           = primaryLight,
-            surfaceContainerLowest   = bg.darken(0.2f),
-            surfaceContainerLow      = primaryDark.copy(alpha = 0.03f).over(bg),
-            surfaceContainer         = primaryDark.copy(alpha = 0.05f).over(bg),
-            surfaceContainerHigh     = primaryDark.copy(alpha = 0.08f).over(bg),
-            surfaceContainerHighest  = primaryDark.copy(alpha = 0.11f).over(bg),
+            surfaceContainerLowest   = backgroundDark.darken(0.2f),
+            surfaceContainerLow      = surfaceTint,
+            surfaceContainer         = primaryDark.copy(alpha = 0.05f).over(backgroundDark),
+            surfaceContainerHigh     = primaryDark.copy(alpha = 0.08f).over(backgroundDark),
+            surfaceContainerHighest  = primaryDark.copy(alpha = 0.11f).over(backgroundDark),
         )
     }
 

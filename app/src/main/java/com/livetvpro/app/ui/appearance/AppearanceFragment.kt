@@ -98,9 +98,9 @@ fun AppearanceScreen(
     val systemDarkTheme = isSystemInDarkTheme()
     val activity = LocalContext.current as? AppCompatActivity
 
-    var themeMode  by remember { mutableIntStateOf(themeManager.getThemeMode()) }
-    var colorTheme by remember { mutableStateOf(themeManager.getColorTheme()) }
-    var amoledMode by remember { mutableStateOf(themeManager.isAmoledMode()) }
+    val themeMode  by themeManager.themeModeFlow.collectAsState()
+    val colorTheme by themeManager.colorThemeFlow.collectAsState()
+    val amoledMode by themeManager.amoledFlow.collectAsState()
 
     val isDarkMode = when (themeMode) {
         ThemeManager.THEME_DARK  -> true
@@ -133,8 +133,14 @@ fun AppearanceScreen(
                                 1    -> ThemeManager.THEME_LIGHT
                                 else -> ThemeManager.THEME_AUTO
                             }
-                            themeMode = mode
-                            themeManager.setThemeMode(mode)
+                            if (mode != themeMode) {
+                                // applyThemeStatic MUST be called before recreate() so the
+                                // recreated activity picks up the correct night mode.
+                                // setThemeMode already calls applyThemeStatic, and because
+                                // we are on the main thread here it runs synchronously.
+                                themeManager.setThemeMode(mode)
+                                activity?.recreate()
+                            }
                         },
                     )
                 }
@@ -145,9 +151,10 @@ fun AppearanceScreen(
                     currentTheme     = colorTheme,
                     isDarkMode       = isDarkMode,
                     onThemeSelected  = { chosen ->
-                        colorTheme = chosen
-                        themeManager.setColorTheme(chosen)
-                        activity?.recreate()
+                        if (chosen != colorTheme) {
+                            themeManager.setColorTheme(chosen)
+                            activity?.recreate()
+                        }
                     },
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
@@ -160,7 +167,6 @@ fun AppearanceScreen(
                     checked = amoledMode,
                     enabled = themeMode != ThemeManager.THEME_LIGHT,
                     onCheckedChange = { newValue ->
-                        amoledMode = newValue
                         themeManager.setAmoledMode(newValue)
                         activity?.recreate()
                     },

@@ -45,8 +45,6 @@ class ThemeManager @Inject constructor(
                 }
             }
         }
-
-        fun requiresRecreate(oldMode: Int, newMode: Int): Boolean = oldMode != newMode
     }
 
     private val _primaryColorFlow = MutableStateFlow(0)
@@ -65,7 +63,6 @@ class ThemeManager @Inject constructor(
 
     fun setThemeMode(mode: Int) {
         prefs.edit().putInt(KEY_THEME_MODE, mode).apply()
-        applyThemeStatic(mode)
         _themeModeFlow.value = mode
         _primaryColorFlow.value = getPrimaryColor()
     }

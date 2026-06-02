@@ -54,9 +54,6 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
@@ -79,9 +76,7 @@ class AppearanceFragment : Fragment() {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
             LiveTVProTheme(themeManager) {
-                AppearanceScreen(
-                    themeManager = themeManager,
-                )
+                AppearanceScreen(themeManager = themeManager)
             }
         }
     }
@@ -90,11 +85,8 @@ class AppearanceFragment : Fragment() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppearanceScreen(
-    themeManager: ThemeManager,
-) {
+fun AppearanceScreen(themeManager: ThemeManager) {
     val systemDarkTheme = isSystemInDarkTheme()
-    val activity = LocalContext.current as? AppCompatActivity
 
     val themeMode  by themeManager.themeModeFlow.collectAsState()
     val colorTheme by themeManager.colorThemeFlow.collectAsState()
@@ -106,17 +98,12 @@ fun AppearanceScreen(
         else                     -> systemDarkTheme
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-    ) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
 
-        item {
-            PreferenceSectionHeader(title = "Theme")
-        }
+        item { PreferenceSectionHeader(title = "Theme") }
 
         item {
             PreferenceCard {
-
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     MultiChoiceSegmentedButton(
                         choices = listOf("Dark", "Light", "System"),
@@ -133,12 +120,6 @@ fun AppearanceScreen(
                             }
                             if (mode != themeMode) {
                                 themeManager.setThemeMode(mode)
-                                val nightMode = when (mode) {
-                                    ThemeManager.THEME_DARK  -> AppCompatDelegate.MODE_NIGHT_YES
-                                    ThemeManager.THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-                                    else                     -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                                }
-                                activity?.delegate?.localNightMode = nightMode
                             }
                         },
                     )
@@ -147,12 +128,11 @@ fun AppearanceScreen(
                 PreferenceDivider()
 
                 ThemePicker(
-                    currentTheme     = colorTheme,
-                    isDarkMode       = isDarkMode,
-                    onThemeSelected  = { chosen ->
+                    currentTheme    = colorTheme,
+                    isDarkMode      = isDarkMode,
+                    onThemeSelected = { chosen ->
                         if (chosen != colorTheme) {
                             themeManager.setColorTheme(chosen)
-                            activity?.recreate()
                         }
                     },
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -167,7 +147,6 @@ fun AppearanceScreen(
                     enabled = themeMode != ThemeManager.THEME_LIGHT,
                     onCheckedChange = { newValue ->
                         themeManager.setAmoledMode(newValue)
-                        activity?.recreate()
                     },
                 )
             }
@@ -184,11 +163,7 @@ fun ThemePicker(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-
-    val themes = AppColorTheme.entries.filter {
-        it != AppColorTheme.Dynamic || isDynamicAvailable
-    }
-
+    val themes = AppColorTheme.entries.filter { it != AppColorTheme.Dynamic || isDynamicAvailable }
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
@@ -258,11 +233,7 @@ fun ThemePreviewCard(
                 )
                 .clip(RoundedCornerShape(12.dp))
                 .background(colorScheme.surface)
-                .border(
-                    width = borderWidth,
-                    color = borderColor,
-                    shape = RoundedCornerShape(12.dp),
-                ),
+                .border(width = borderWidth, color = borderColor, shape = RoundedCornerShape(12.dp)),
         ) {
             Column(
                 modifier = Modifier
@@ -282,16 +253,12 @@ fun ThemePreviewCard(
                 )
 
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(32.dp),
+                    modifier = Modifier.fillMaxWidth().height(32.dp),
                     color    = colorScheme.surfaceVariant,
                     shape    = RoundedCornerShape(6.dp),
                 ) {
                     Row(
-                        modifier              = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 6.dp),
+                        modifier              = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
                         verticalAlignment     = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
@@ -356,13 +323,9 @@ fun PreferenceCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier  = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape     = RoundedCornerShape(28.dp),
-        colors    = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
@@ -403,15 +366,13 @@ fun MultiChoiceSegmentedButton(
     modifier: Modifier = Modifier,
 ) {
     SingleChoiceSegmentedButtonRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         choices.forEachIndexed { index, choice ->
             SegmentedButton(
-                selected       = selectedIndices.contains(index),
-                onClick        = { onClick(index) },
-                shape          = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
+                selected = selectedIndices.contains(index),
+                onClick  = { onClick(index) },
+                shape    = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
             ) {
                 Text(text = choice)
             }
@@ -448,15 +409,9 @@ fun SwitchPreferenceRow(
             Text(
                 text  = summary,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.outline.copy(
-                    alpha = if (enabled) 1f else 0.38f,
-                ),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 1f else 0.38f),
             )
         }
-        Switch(
-            checked         = checked,
-            onCheckedChange = onCheckedChange,
-            enabled         = enabled,
-        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }

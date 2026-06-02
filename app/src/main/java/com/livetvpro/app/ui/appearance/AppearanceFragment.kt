@@ -134,10 +134,6 @@ fun AppearanceScreen(
                                 else -> ThemeManager.THEME_AUTO
                             }
                             if (mode != themeMode) {
-                                // applyThemeStatic MUST be called before recreate() so the
-                                // recreated activity picks up the correct night mode.
-                                // setThemeMode already calls applyThemeStatic, and because
-                                // we are on the main thread here it runs synchronously.
                                 themeManager.setThemeMode(mode)
                                 activity?.recreate()
                             }

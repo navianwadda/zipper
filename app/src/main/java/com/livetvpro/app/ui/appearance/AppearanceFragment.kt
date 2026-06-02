@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -132,7 +133,12 @@ fun AppearanceScreen(
                             }
                             if (mode != themeMode) {
                                 themeManager.setThemeMode(mode)
-                                activity?.recreate()
+                                val nightMode = when (mode) {
+                                    ThemeManager.THEME_DARK  -> AppCompatDelegate.MODE_NIGHT_YES
+                                    ThemeManager.THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+                                    else                     -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                                }
+                                activity?.delegate?.localNightMode = nightMode
                             }
                         },
                     )

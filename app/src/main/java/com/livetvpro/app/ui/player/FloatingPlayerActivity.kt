@@ -2026,6 +2026,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         if (message.isNotBlank()) {
             binding.tvMessageBanner.text = message
             binding.tvMessageBanner.isSelected = true
+            binding.tvMessageBanner.visibility = View.VISIBLE
             val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             binding.messageBannerContainer.visibility = if (isLandscape) View.GONE else View.VISIBLE
             val url = listenerManager.getMessageUrl()

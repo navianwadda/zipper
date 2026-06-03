@@ -15,6 +15,20 @@ class CategoryAdapter(
     private val onCategoryClick: (Category) -> Unit
 ) : ListAdapter<Category, CategoryAdapter.CategoryViewHolder>(CategoryDiffCallback()) {
 
+    private var primaryColor: Int = 0
+    private var surfaceContainerColor: Int = 0
+
+    fun setColors(primary: Int, surfaceContainer: Int) {
+        val changed = primaryColor != primary || surfaceContainerColor != surfaceContainer
+        primaryColor = primary
+        surfaceContainerColor = surfaceContainer
+        if (changed) notifyItemRangeChanged(0, itemCount, PAYLOAD_COLOR)
+    }
+
+    companion object {
+        private const val PAYLOAD_COLOR = "color"
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CategoryViewHolder {
         val binding = ItemCategoryBinding.inflate(
             LayoutInflater.from(parent.context),
@@ -26,6 +40,14 @@ class CategoryAdapter(
 
     override fun onBindViewHolder(holder: CategoryViewHolder, position: Int) {
         holder.bind(getItem(position))
+    }
+
+    override fun onBindViewHolder(holder: CategoryViewHolder, position: Int, payloads: List<Any>) {
+        if (payloads.contains(PAYLOAD_COLOR)) {
+            holder.applyColor(primaryColor, surfaceContainerColor)
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     inner class CategoryViewHolder(
@@ -70,6 +92,17 @@ class CategoryAdapter(
             }
         }
 
+        fun applyColor(primary: Int, surfaceContainer: Int) {
+            if (primary != 0) {
+                val tintList = android.content.res.ColorStateList.valueOf(primary)
+                binding.categoryName.setTextColor(primary)
+                binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = tintList
+            }
+            if (surfaceContainer != 0) {
+                binding.root.setCardBackgroundColor(surfaceContainer)
+            }
+        }
+
         fun bind(category: Category) {
             binding.categoryName.text = category.name
 
@@ -83,6 +116,7 @@ class CategoryAdapter(
                     R.mipmap.ic_launcher_round
                 )
             }
+            applyColor(primaryColor, surfaceContainerColor)
         }
     }
 

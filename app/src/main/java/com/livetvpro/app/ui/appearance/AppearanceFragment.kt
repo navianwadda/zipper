@@ -1,6 +1,5 @@
 package com.livetvpro.app.ui.appearance
 
-import android.app.Activity
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -34,9 +33,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -51,7 +50,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -84,10 +82,10 @@ class AppearanceFragment : Fragment() {
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(themeManager: ThemeManager) {
-    val context        = LocalContext.current
     val systemDarkTheme = isSystemInDarkTheme()
 
     val themeMode  by themeManager.themeModeFlow.collectAsState()
@@ -102,68 +100,67 @@ fun AppearanceScreen(themeManager: ThemeManager) {
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
 
-        item { PreferenceSectionHeader(title = "Theme") }
+            item { PreferenceSectionHeader(title = "Theme") }
 
-        item {
-            PreferenceCard {
-                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    MultiChoiceSegmentedButton(
-                        choices         = listOf("Dark", "Light", "System"),
-                        selectedIndices = listOf(when (themeMode) {
-                            ThemeManager.THEME_DARK  -> 0
-                            ThemeManager.THEME_LIGHT -> 1
-                            else                     -> 2
-                        }),
-                        onClick = { uiIndex ->
-                            val mode = when (uiIndex) {
-                                0    -> ThemeManager.THEME_DARK
-                                1    -> ThemeManager.THEME_LIGHT
-                                else -> ThemeManager.THEME_AUTO
+            item {
+                PreferenceCard {
+                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        MultiChoiceSegmentedButton(
+                            choices = listOf("Dark", "Light", "System"),
+                            selectedIndices = listOf(when (themeMode) {
+                                ThemeManager.THEME_DARK  -> 0
+                                ThemeManager.THEME_LIGHT -> 1
+                                else                     -> 2
+                            }),
+                            onClick = { uiIndex ->
+                                val mode = when (uiIndex) {
+                                    0    -> ThemeManager.THEME_DARK
+                                    1    -> ThemeManager.THEME_LIGHT
+                                    else -> ThemeManager.THEME_AUTO
+                                }
+                                if (mode != themeMode) {
+                                    themeManager.setThemeMode(mode)
+                                }
+                            },
+                        )
+                    }
+
+                    PreferenceDivider()
+
+                    ThemePicker(
+                        currentTheme    = colorTheme,
+                        isDarkMode      = isDarkMode,
+                        onThemeSelected = { chosen ->
+                            if (chosen != colorTheme) {
+                                themeManager.setColorTheme(chosen)
                             }
-                            if (mode != themeMode) {
-                                themeManager.setThemeMode(mode)
-                                ThemeManager.applyThemeStatic(mode)
-                                (context as? Activity)?.recreate()
-                            }
+                        },
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+
+                    PreferenceDivider()
+
+                    SwitchPreferenceRow(
+                        title   = "AMOLED Black Mode",
+                        summary = "Use pure black background for dark themes",
+                        checked = amoledMode,
+                        enabled = themeMode != ThemeManager.THEME_LIGHT,
+                        onCheckedChange = { newValue ->
+                            themeManager.setAmoledMode(newValue)
                         },
                     )
                 }
-
-                PreferenceDivider()
-
-                ThemePicker(
-                    currentTheme    = colorTheme,
-                    isDarkMode      = isDarkMode,
-                    onThemeSelected = { chosen ->
-                        if (chosen != colorTheme) {
-                            themeManager.setColorTheme(chosen)
-                        }
-                    },
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-
-                PreferenceDivider()
-
-                SwitchPreferenceRow(
-                    title   = "AMOLED Black Mode",
-                    summary = "Use pure black background for dark themes",
-                    checked = amoledMode,
-                    enabled = themeMode != ThemeManager.THEME_LIGHT,
-                    onCheckedChange = { newValue ->
-                        themeManager.setAmoledMode(newValue)
-                    },
-                )
             }
-        }
     }
 }
 
+
 @Composable
 fun ThemePicker(
-    currentTheme:    AppColorTheme,
-    isDarkMode:      Boolean,
+    currentTheme: AppColorTheme,
+    isDarkMode: Boolean,
     onThemeSelected: (AppColorTheme) -> Unit,
-    modifier:        Modifier = Modifier,
+    modifier: Modifier = Modifier,
 ) {
     val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val themes = AppColorTheme.entries.filter { it != AppColorTheme.Dynamic || isDynamicAvailable }
@@ -202,13 +199,14 @@ fun ThemePicker(
     }
 }
 
+
 @Composable
 fun ThemePreviewCard(
-    theme:     AppColorTheme,
+    theme: AppColorTheme,
     isSelected: Boolean,
     isDarkMode: Boolean,
-    onClick:    () -> Unit,
-    modifier:   Modifier = Modifier,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colorScheme    = if (isDarkMode) theme.getDarkColorScheme() else theme.getLightColorScheme()
     val selectionColor = MaterialTheme.colorScheme.primary
@@ -255,16 +253,12 @@ fun ThemePreviewCard(
                 )
 
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(32.dp),
+                    modifier = Modifier.fillMaxWidth().height(32.dp),
                     color    = colorScheme.surfaceVariant,
                     shape    = RoundedCornerShape(6.dp),
                 ) {
                     Row(
-                        modifier              = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 6.dp),
+                        modifier              = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
                         verticalAlignment     = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
@@ -322,15 +316,14 @@ fun ThemePreviewCard(
     }
 }
 
+
 @Composable
 fun PreferenceCard(
     modifier: Modifier = Modifier,
-    content:  @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier  = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier  = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape     = RoundedCornerShape(28.dp),
         colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -344,6 +337,7 @@ fun PreferenceCard(
     }
 }
 
+
 @Composable
 fun PreferenceDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
@@ -351,6 +345,7 @@ fun PreferenceDivider(modifier: Modifier = Modifier) {
         color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
     )
 }
+
 
 @Composable
 fun PreferenceSectionHeader(title: String, modifier: Modifier = Modifier) {
@@ -362,18 +357,16 @@ fun PreferenceSectionHeader(title: String, modifier: Modifier = Modifier) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun MultiChoiceSegmentedButton(
-    choices:         List<String>,
+    choices: List<String>,
     selectedIndices: List<Int>,
-    onClick:         (Int) -> Unit,
-    modifier:        Modifier = Modifier,
+    onClick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     SingleChoiceSegmentedButtonRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         choices.forEachIndexed { index, choice ->
             SegmentedButton(
@@ -387,14 +380,15 @@ fun MultiChoiceSegmentedButton(
     }
 }
 
+
 @Composable
 fun SwitchPreferenceRow(
-    title:           String,
-    summary:         String,
-    checked:         Boolean,
+    title: String,
+    summary: String,
+    checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier:        Modifier = Modifier,
-    enabled:         Boolean = true,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier          = modifier

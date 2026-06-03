@@ -23,6 +23,7 @@ import com.livetvpro.app.data.local.ThemeManager
 @Composable
 fun LiveTVProTheme(
     themeManager: ThemeManager,
+    surfaceColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val context    = LocalContext.current
@@ -73,7 +74,7 @@ fun LiveTVProTheme(
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color    = MaterialTheme.colorScheme.background,
+            color    = surfaceColor ?: MaterialTheme.colorScheme.background,
             content  = content,
         )
     }

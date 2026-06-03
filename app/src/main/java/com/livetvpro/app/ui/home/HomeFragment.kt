@@ -16,6 +16,10 @@ import com.livetvpro.app.SearchableFragment
 import com.livetvpro.app.data.models.ListenerConfig
 import com.livetvpro.app.databinding.FragmentHomeBinding
 import com.livetvpro.app.ui.adapters.CategoryAdapter
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
@@ -33,6 +37,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
 
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
+    @Inject lateinit var themeManager: ThemeManager
 
     private var pendingNavAction: (() -> Unit)? = null
     private var pendingExternalRedirect: Boolean = false
@@ -41,15 +46,15 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
 
-    // Saved scroll position before search so cancel restores it naturally
+
     private var savedScrollState: android.os.Parcelable? = null
 
     override fun onSearchQuery(query: String) {
         if (query.isBlank() && viewModel.currentSearchQuery.isNotBlank()) {
-            // Cancelling search — save scroll state before the list expands
+
             savedScrollState = binding.recyclerViewCategories.layoutManager?.onSaveInstanceState()
         } else if (query.isNotBlank() && viewModel.currentSearchQuery.isBlank()) {
-            // Starting search — save scroll state so cancel can return here
+
             savedScrollState = binding.recyclerViewCategories.layoutManager?.onSaveInstanceState()
         }
         viewModel.searchCategories(query)
@@ -87,6 +92,14 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
         }
         setupRecyclerView()
         setupRetryHandling()
+        viewLifecycleOwner.lifecycleScope.launch {
+            themeManager.primaryColorFlow.collectLatest { color ->
+                if (color != 0) {
+                    val surfaceContainer = themeManager.getSurfaceContainerColor(requireContext())
+                    categoryAdapter.setColors(color, surfaceContainer)
+                }
+            }
+        }
         if (com.livetvpro.app.utils.DeviceUtils.isTvDevice) {
             binding.swipeRefresh.isEnabled = false
         }
@@ -167,7 +180,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
         viewModel.filteredCategories.observe(viewLifecycleOwner) { categories ->
             val restoreState = if (viewModel.currentSearchQuery.isBlank()) savedScrollState else null
             categoryAdapter.submitList(categories) {
-                // Called after DiffUtil finishes and RecyclerView has drawn the new list
+
                 if (restoreState != null) {
                     binding.recyclerViewCategories.layoutManager?.onRestoreInstanceState(restoreState)
                     savedScrollState = null

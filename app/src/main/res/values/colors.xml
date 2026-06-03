@@ -88,7 +88,7 @@
     <color name="telegram_nav_selected">#2481CC</color>
     <color name="white">#FFFFFF</color>
     <color name="accent_amber">#FFB300</color>
-    <color name="message_banner_text">#CC0000</color>
+    <color name="message_banner_text">#1C1B1F</color>
     <color name="message_banner_bg">#33FF0000</color>
     <color name="message_banner_stroke">#CC0000</color>
 </resources>

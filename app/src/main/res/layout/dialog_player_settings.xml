@@ -12,7 +12,7 @@
         android:layout_height="60dp"
         android:paddingStart="20dp"
         android:paddingEnd="12dp"
-        android:background="#1A1A1A">
+        android:background="?attr/colorSurface">
 
         <TextView
             android:id="@+id/tvTitle"
@@ -84,7 +84,7 @@
         android:paddingEnd="8dp"
         android:paddingTop="6dp"
         android:paddingBottom="6dp"
-        android:background="#1A1A1A">
+        android:background="?attr/colorSurface">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancel"

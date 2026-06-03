@@ -13,6 +13,7 @@ import com.livetvpro.app.ui.theme.AppColorTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.lang.ref.WeakReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,6 +25,13 @@ class ThemeManager @Inject constructor(
         "live_tv_pro_prefs",
         Context.MODE_PRIVATE,
     )
+
+    private var activityContextRef: WeakReference<Context>? = null
+
+    fun registerActivityContext(activityContext: Context) {
+        activityContextRef = WeakReference(activityContext)
+        _primaryColorFlow.value = getPrimaryColor()
+    }
 
     companion object {
         const val THEME_AUTO  = 0
@@ -93,15 +101,25 @@ class ThemeManager @Inject constructor(
         _primaryColorFlow.value = getPrimaryColor()
     }
 
-    fun getPrimaryColor(activityContext: android.content.Context? = null): Int {
+    fun getPrimaryColor(activityContext: Context? = null): Int {
         val theme = getColorTheme()
         val isDark = when (getThemeMode()) {
             THEME_DARK  -> true
             THEME_LIGHT -> false
-            else        -> AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_NO
+            else        -> {
+                val nightMode = AppCompatDelegate.getDefaultNightMode()
+                when (nightMode) {
+                    AppCompatDelegate.MODE_NIGHT_YES -> true
+                    AppCompatDelegate.MODE_NIGHT_NO  -> false
+                    else -> (activityContextRef?.get() ?: activityContext ?: context)
+                        .resources.configuration.uiMode and
+                        android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+                        android.content.res.Configuration.UI_MODE_NIGHT_YES
+                }
+            }
         }
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val ctx = activityContext ?: context
+            val ctx = activityContext ?: activityContextRef?.get() ?: context
             val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
             return MaterialColors.getColor(dynamicContext, androidx.appcompat.R.attr.colorPrimary, Color.BLUE)
         }
@@ -119,7 +137,7 @@ class ThemeManager @Inject constructor(
         _primaryColorFlow.value = getPrimaryColor()
     }
 
-    fun initPrimaryColor(activityContext: android.content.Context) {
-        _primaryColorFlow.value = getPrimaryColor(activityContext)
+    fun initPrimaryColor(activityContext: Context) {
+        registerActivityContext(activityContext)
     }
 }

@@ -15,4 +15,9 @@
     <color name="message_banner_text">#FFFFFF</color>
     <color name="message_banner_bg">#1AFF0000</color>
     <color name="message_banner_stroke">#CC0000</color>
+    <color name="card_background">#1A1A1A</color>
+    <color name="card_text">#FFFFFF</color>
+    <color name="card_stroke">#2A2A2A</color>
+    <color name="card_logo_bg">#80FFFFFF</color>
+    <color name="event_secondary_text">#CCCCCC</color>
 </resources>

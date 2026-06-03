@@ -118,11 +118,11 @@
             android:clipToPadding="false" />
     </LinearLayout>
 
+    <!-- Wrapper kept for Kotlin binding compatibility; invisible until message is set -->
     <LinearLayout
         android:id="@+id/message_banner_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="#1A1A1A"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:paddingTop="6dp"
@@ -145,6 +145,7 @@
             android:fontFamily="@font/bergen_sans"
             android:gravity="center_vertical"
             android:background="@drawable/bg_message_banner"
+            android:visibility="gone"
             android:singleLine="true"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="marquee_forever"

@@ -160,7 +160,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:orientation="vertical"
-        android:background="#1A1A1A"
+        android:background="?attr/android:colorBackground"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
         android:visibility="gone"

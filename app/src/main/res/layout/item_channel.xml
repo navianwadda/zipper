@@ -9,7 +9,7 @@
     app:cardElevation="0dp"
     app:strokeColor="@color/player_channel_stroke"
     app:strokeWidth="@dimen/player_channel_stroke_width"
-    app:cardBackgroundColor="#1A1A1A"
+    app:cardBackgroundColor="@color/card_background"
     android:foreground="?attr/selectableItemBackground"
     android:focusable="true"
     android:focusableInTouchMode="false"
@@ -37,7 +37,7 @@
                 app:cardCornerRadius="999dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="#80FFFFFF">
+                app:cardBackgroundColor="@color/card_logo_bg">
 
                 <FrameLayout
                     android:id="@+id/logo_container"
@@ -83,7 +83,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:textColor="@android:color/white"
+            android:textColor="@color/card_text"
             android:textSize="13sp"
             android:textStyle="bold"
             android:gravity="center"

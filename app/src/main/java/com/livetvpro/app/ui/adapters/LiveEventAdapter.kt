@@ -230,7 +230,7 @@ class LiveEventAdapter(
                     binding.liveAnimation.pauseAnimation()
 
                     val endDate = if (endTimeMillis != Long.MAX_VALUE) {
-                        apiDateFormat.parse(event.endTime)
+                        event.endTime?.let { apiDateFormat.parse(it) }
                     } else {
                         startDate
                     }

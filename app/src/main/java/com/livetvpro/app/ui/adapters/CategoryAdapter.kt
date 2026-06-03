@@ -6,9 +6,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.livetvpro.app.utils.GlideExtensions
+import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Category
 import com.livetvpro.app.databinding.ItemCategoryBinding
+import com.livetvpro.app.utils.GlideExtensions
 
 class CategoryAdapter(
     private val onCategoryClick: (Category) -> Unit
@@ -87,11 +88,8 @@ class CategoryAdapter(
             }
         }
 
-        fun applyColor(primary: Int, surfaceContainer: Int) {
-            if (primary != 0) {
-                val tintList = android.content.res.ColorStateList.valueOf(primary)
-                binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = tintList
-            }
+        fun applyColor(@Suppress("UNUSED_PARAMETER") primary: Int, surfaceContainer: Int) {
+            binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = null
             if (surfaceContainer != 0) {
                 binding.root.setCardBackgroundColor(surfaceContainer)
             }
@@ -101,13 +99,13 @@ class CategoryAdapter(
             binding.categoryName.text = category.name
 
             if (category.iconUrl.isNullOrEmpty()) {
-                binding.categoryIcon.setImageDrawable(null)
+                binding.categoryIcon.setImageResource(R.mipmap.ic_launcher_round)
             } else {
                 GlideExtensions.loadImage(
                     binding.categoryIcon,
                     category.iconUrl,
-                    null,
-                    null
+                    R.mipmap.ic_launcher_round,
+                    R.mipmap.ic_launcher_round
                 )
             }
             applyColor(primaryColor, surfaceContainerColor)

@@ -237,6 +237,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun handleStatusBarForOrientation() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         WindowCompat.setDecorFitsSystemWindows(window, false)

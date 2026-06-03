@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:text="Video Settings"
-            android:textColor="#FFFFFF"
+            android:textColor="?android:attr/textColorPrimary"
             android:textSize="18sp"
             android:letterSpacing="0.01"
             android:textStyle="bold" />
@@ -33,7 +33,7 @@
             android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_close"
-            android:tint="#B0B0B0"
+            android:tint="?android:attr/textColorSecondary"
             android:contentDescription="Close"
             android:focusable="true"
             android:nextFocusDown="@id/tabLayout" />
@@ -44,15 +44,15 @@
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
         android:layout_height="52dp"
-        android:background="#242424"
+        android:background="?attr/colorSurface"
         android:focusable="true"
         android:nextFocusUp="@id/btnClose"
         android:nextFocusDown="@id/viewPager"
         app:tabIndicatorColor="#EF4444"
         app:tabIndicatorHeight="3dp"
-        app:tabSelectedTextColor="#FFFFFF"
-        app:tabTextColor="#808080"
-        app:tabRippleColor="#22FFFFFF"
+        app:tabSelectedTextColor="?android:attr/textColorPrimary"
+        app:tabTextColor="?android:attr/textColorSecondary"
+        app:tabRippleColor="?attr/colorControlHighlight"
         app:tabMode="fixed"
         app:tabGravity="fill"
         app:tabTextAppearance="@style/TabTextStyle" />
@@ -63,7 +63,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#1E1E1E"
+        android:background="?attr/colorSurface"
         android:focusable="true"
         android:nextFocusUp="@id/tabLayout"
         android:nextFocusDown="@id/btnCancel" />
@@ -72,7 +72,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#2C2C2C" />
+        android:background="?android:attr/dividerHorizontal" />
 
     <!-- Action buttons -->
     <LinearLayout
@@ -92,14 +92,14 @@
             android:layout_width="wrap_content"
             android:layout_height="44dp"
             android:text="CANCEL"
-            android:textColor="#808080"
+            android:textColor="?android:attr/textColorSecondary"
             android:textSize="13sp"
             android:letterSpacing="0.08"
             android:layout_marginEnd="4dp"
             android:focusable="true"
             android:nextFocusUp="@id/viewPager"
             android:nextFocusRight="@id/btnApply"
-            app:rippleColor="#22FFFFFF"
+            app:rippleColor="?attr/colorControlHighlight"
             app:cornerRadius="0dp" />
 
         <com.google.android.material.button.MaterialButton

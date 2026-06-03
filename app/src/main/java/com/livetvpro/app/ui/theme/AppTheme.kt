@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.livetvpro.app.data.local.ThemeManager
 
+@Suppress("DEPRECATION")
 @Composable
 fun LiveTVProTheme(
     themeManager: ThemeManager,

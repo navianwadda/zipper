@@ -163,6 +163,13 @@ class RelatedChannelAdapter(
                     }
                     val date = inputFormat.parse(channel.startTime)
 
+                    if (date == null) {
+                        eventTimeView?.text = channel.startTime
+                        eventDateView?.text = ""
+                        eventCountdownView?.text = ""
+                        return
+                    }
+
                     val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
                     eventTimeView?.text = timeFormat.format(date)
 
@@ -170,7 +177,7 @@ class RelatedChannelAdapter(
                     eventDateView?.text = dateFormat.format(date)
 
                     val currentTime = System.currentTimeMillis()
-                    val startTime = date?.time ?: 0L
+                    val startTime = date.time
                     val diff = startTime - currentTime
 
                     if (diff > 0) {

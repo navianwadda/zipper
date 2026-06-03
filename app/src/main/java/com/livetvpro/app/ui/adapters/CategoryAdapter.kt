@@ -3,7 +3,6 @@ package com.livetvpro.app.ui.adapters
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -90,9 +89,6 @@ class CategoryAdapter(
         }
 
         fun applyColor(@Suppress("UNUSED_PARAMETER") primary: Int, surfaceContainer: Int) {
-            binding.logoCard.setCardBackgroundColor(
-                ContextCompat.getColor(binding.logoCard.context, R.color.card_logo_bg)
-            )
             binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = null
             if (surfaceContainer != 0) {
                 binding.root.setCardBackgroundColor(surfaceContainer)
@@ -102,12 +98,16 @@ class CategoryAdapter(
         fun bind(category: Category) {
             binding.categoryName.text = category.name
 
-            GlideExtensions.loadImage(
-                binding.categoryIcon,
-                category.iconUrl,
-                R.mipmap.ic_launcher_round,
-                R.mipmap.ic_launcher_round
-            )
+            if (category.iconUrl.isNullOrEmpty()) {
+                binding.categoryIcon.setImageResource(R.mipmap.ic_launcher_round)
+            } else {
+                GlideExtensions.loadImage(
+                    binding.categoryIcon,
+                    category.iconUrl,
+                    R.mipmap.ic_launcher_round,
+                    R.mipmap.ic_launcher_round
+                )
+            }
             applyColor(primaryColor, surfaceContainerColor)
         }
     }

@@ -116,10 +116,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     if (color != 0) {
                         val floatingNav = binding.root.findViewById<com.livetvpro.app.ui.components.FloatingNavView>(R.id.bottom_navigation)
                         floatingNav?.setActiveColor(color)
-                        val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
-                        val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-                        appBarLayout?.setBackgroundColor(color)
-                        toolbar?.setBackgroundColor(color)
                     }
                 }
             }
@@ -194,19 +190,15 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     private fun handleStatusBarForOrientation() {
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
         window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = androidx.core.content.ContextCompat.getColor(this, R.color.background_dark)
-
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
         windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-        windowInsetsController.isAppearanceLightStatusBars = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
         }
-
         applyInsets()
     }
 

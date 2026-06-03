@@ -62,6 +62,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private var isSearchVisible = false
     private var showRefreshIcon = false
     private var backPressedTime = 0L
+    private var currentPrimaryColor: Int = 0
 
 
 
@@ -111,6 +112,16 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             setupDrawer()
             setupNavigation()
             themeManager.initPrimaryColor()
+            var isFirstThemeEmission = true
+            lifecycleScope.launch {
+                themeManager.themeModeFlow.collectLatest { _ ->
+                    if (isFirstThemeEmission) {
+                        isFirstThemeEmission = false
+                    } else {
+                        recreate()
+                    }
+                }
+            }
             lifecycleScope.launch {
                 themeManager.primaryColorFlow.collectLatest { color ->
                     if (color != 0) {
@@ -126,6 +137,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                         btnFavorites?.imageTintList = tintList
                         btnSearchClear?.imageTintList = tintList
                         drawerToggle?.drawerArrowDrawable?.color = color
+                        currentPrimaryColor = color
+                        invalidateOptionsMenu()
                     }
                 }
             }
@@ -564,7 +577,13 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         if (DeviceUtils.isTvDevice) return false
-        menu.findItem(R.id.action_refresh)?.isVisible = showRefreshIcon
+        val refreshItem = menu.findItem(R.id.action_refresh)
+        refreshItem?.isVisible = showRefreshIcon
+        if (refreshItem != null && currentPrimaryColor != 0) {
+            val icon = refreshItem.icon?.mutate()
+            icon?.setTint(currentPrimaryColor)
+            refreshItem.icon = icon
+        }
         return super.onPrepareOptionsMenu(menu)
     }
 

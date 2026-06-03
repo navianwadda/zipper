@@ -8,7 +8,8 @@ import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,7 +88,11 @@ class AppearanceFragment : Fragment() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(themeManager: ThemeManager) {
-    val systemDarkTheme = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val systemDarkTheme = remember(context) {
+        val nightModeFlags = context.applicationContext.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        nightModeFlags == Configuration.UI_MODE_NIGHT_YES
+    }
 
     val themeMode  by themeManager.themeModeFlow.collectAsState()
     val colorTheme by themeManager.colorThemeFlow.collectAsState()

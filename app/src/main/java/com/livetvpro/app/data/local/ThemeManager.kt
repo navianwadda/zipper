@@ -101,12 +101,11 @@ class ThemeManager @Inject constructor(
         _primaryColorFlow.value = getPrimaryColor()
     }
 
-    fun getPrimaryColor(activityContext: Context? = null): Int {
-        val theme = getColorTheme()
-        val isDark = when (getThemeMode()) {
+    fun isDarkMode(activityContext: Context? = null): Boolean {
+        return when (getThemeMode()) {
             THEME_DARK  -> true
             THEME_LIGHT -> false
-            else        -> {
+            else -> {
                 val nightMode = AppCompatDelegate.getDefaultNightMode()
                 when (nightMode) {
                     AppCompatDelegate.MODE_NIGHT_YES -> true
@@ -118,6 +117,30 @@ class ThemeManager @Inject constructor(
                 }
             }
         }
+    }
+
+    fun getBackgroundColor(activityContext: Context? = null): Int {
+        val theme = getColorTheme()
+        val isDark = isDarkMode(activityContext)
+        if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val ctx = activityContext ?: activityContextRef?.get() ?: context
+            val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
+            return MaterialColors.getColor(dynamicContext, android.R.attr.colorBackground, Color.WHITE)
+        }
+        val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
+        if (isDark && isAmoledMode()) return Color.BLACK
+        val color = if (isDark) resolvedTheme.backgroundDark else resolvedTheme.backgroundLight
+        return Color.argb(
+            (color.alpha * 255).toInt(),
+            (color.red   * 255).toInt(),
+            (color.green * 255).toInt(),
+            (color.blue  * 255).toInt(),
+        )
+    }
+
+    fun getPrimaryColor(activityContext: Context? = null): Int {
+        val theme = getColorTheme()
+        val isDark = isDarkMode(activityContext)
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val ctx = activityContext ?: activityContextRef?.get() ?: context
             val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)

@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private var showRefreshIcon = false
     private var backPressedTime = 0L
     private var currentPrimaryColor: Int = 0
+    private var pendingDestinationId: Int = -1
 
 
 
@@ -111,6 +112,14 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             setupToolbar()
             setupDrawer()
             setupNavigation()
+            if (pendingDestinationId != -1) {
+                val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+                val navController = navHostFragment?.navController
+                if (navController != null && navController.currentDestination?.id != pendingDestinationId) {
+                    navController.navigate(pendingDestinationId)
+                }
+                pendingDestinationId = -1
+            }
             themeManager.initPrimaryColor()
             var isFirstThemeEmission = true
             lifecycleScope.launch {
@@ -118,6 +127,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     if (isFirstThemeEmission) {
                         isFirstThemeEmission = false
                     } else {
+                        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+                        pendingDestinationId = navHostFragment?.navController?.currentDestination?.id ?: -1
                         recreate()
                     }
                 }

@@ -3,12 +3,14 @@ package com.livetvpro.app.ui.adapters
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.livetvpro.app.utils.GlideExtensions
+import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Category
 import com.livetvpro.app.databinding.ItemCategoryBinding
+import com.livetvpro.app.utils.GlideExtensions
 
 class CategoryAdapter(
     private val onCategoryClick: (Category) -> Unit
@@ -87,11 +89,11 @@ class CategoryAdapter(
             }
         }
 
-        fun applyColor(primary: Int, surfaceContainer: Int) {
-            if (primary != 0) {
-                val tintList = android.content.res.ColorStateList.valueOf(primary)
-                binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = tintList
-            }
+        fun applyColor(@Suppress("UNUSED_PARAMETER") primary: Int, surfaceContainer: Int) {
+            binding.logoCard.setCardBackgroundColor(
+                ContextCompat.getColor(binding.logoCard.context, R.color.card_logo_bg)
+            )
+            binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = null
             if (surfaceContainer != 0) {
                 binding.root.setCardBackgroundColor(surfaceContainer)
             }
@@ -100,16 +102,12 @@ class CategoryAdapter(
         fun bind(category: Category) {
             binding.categoryName.text = category.name
 
-            if (category.iconUrl.isNullOrEmpty()) {
-                binding.categoryIcon.setImageDrawable(null)
-            } else {
-                GlideExtensions.loadImage(
-                    binding.categoryIcon,
-                    category.iconUrl,
-                    null,
-                    null
-                )
-            }
+            GlideExtensions.loadImage(
+                binding.categoryIcon,
+                category.iconUrl,
+                R.mipmap.ic_launcher_round,
+                R.mipmap.ic_launcher_round
+            )
             applyColor(primaryColor, surfaceContainerColor)
         }
     }

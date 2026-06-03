@@ -6,9 +6,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.livetvpro.app.utils.GlideExtensions
+import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Category
 import com.livetvpro.app.databinding.ItemCategoryBinding
+import com.livetvpro.app.utils.GlideExtensions
 
 class CategoryAdapter(
     private val onCategoryClick: (Category) -> Unit
@@ -43,7 +44,7 @@ class CategoryAdapter(
 
     override fun onBindViewHolder(holder: CategoryViewHolder, position: Int, payloads: List<Any>) {
         if (payloads.contains(PAYLOAD_COLOR)) {
-            holder.applyColor(primaryColor, surfaceContainerColor)
+            holder.applyColor(surfaceContainerColor)
         } else {
             super.onBindViewHolder(holder, position, payloads)
         }
@@ -87,11 +88,8 @@ class CategoryAdapter(
             }
         }
 
-        fun applyColor(primary: Int, surfaceContainer: Int) {
-            if (primary != 0) {
-                val tintList = android.content.res.ColorStateList.valueOf(primary)
-                binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = tintList
-            }
+        fun applyColor(surfaceContainer: Int) {
+            binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = null
             if (surfaceContainer != 0) {
                 binding.root.setCardBackgroundColor(surfaceContainer)
             }
@@ -100,17 +98,13 @@ class CategoryAdapter(
         fun bind(category: Category) {
             binding.categoryName.text = category.name
 
-            if (category.iconUrl.isNullOrEmpty()) {
-                binding.categoryIcon.setImageDrawable(null)
-            } else {
-                GlideExtensions.loadImage(
-                    binding.categoryIcon,
-                    category.iconUrl,
-                    null,
-                    null
-                )
-            }
-            applyColor(primaryColor, surfaceContainerColor)
+            GlideExtensions.loadImage(
+                binding.categoryIcon,
+                category.iconUrl,
+                R.mipmap.ic_launcher_round,
+                R.mipmap.ic_launcher_round
+            )
+            applyColor(surfaceContainerColor)
         }
     }
 

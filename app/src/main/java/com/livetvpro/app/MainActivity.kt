@@ -131,6 +131,18 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     }
                 }
             }
+            var isFirstAmoledEmission = true
+            lifecycleScope.launch {
+                themeManager.amoledFlow.collectLatest { _ ->
+                    if (isFirstAmoledEmission) {
+                        isFirstAmoledEmission = false
+                    } else {
+                        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+                        pendingDestinationId = navHostFragment?.navController?.currentDestination?.id ?: -1
+                        recreate()
+                    }
+                }
+            }
             lifecycleScope.launch {
                 themeManager.primaryColorFlow.collectLatest { color ->
                     if (color != 0) {

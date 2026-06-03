@@ -3,9 +3,12 @@ package com.livetvpro.app.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatDelegate
+import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.MaterialColors
 import com.livetvpro.app.ui.theme.AppColorTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,6 +68,7 @@ class ThemeManager @Inject constructor(
         prefs.edit().putInt(KEY_THEME_MODE, mode).apply()
         _themeModeFlow.value = mode
         _primaryColorFlow.value = getPrimaryColor()
+        applyThemeStatic(mode)
     }
 
     fun applyTheme(mode: Int = getThemeMode()) = applyThemeStatic(mode)
@@ -91,12 +95,16 @@ class ThemeManager @Inject constructor(
 
     fun getPrimaryColor(): Int {
         val theme = getColorTheme()
-        val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
         val isDark = when (getThemeMode()) {
             THEME_DARK  -> true
             THEME_LIGHT -> false
             else        -> AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_NO
         }
+        if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val dynamicContext = DynamicColors.wrapContextIfAvailable(context)
+            return MaterialColors.getColor(dynamicContext, com.google.android.material.R.attr.colorPrimary, Color.BLUE)
+        }
+        val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
         val color = if (isDark) resolvedTheme.primaryDark else resolvedTheme.primaryLight
         return Color.argb(
             (color.alpha * 255).toInt(),

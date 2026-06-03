@@ -89,6 +89,11 @@
     <color name="white">#FFFFFF</color>
     <color name="accent_amber">#FFB300</color>
     <color name="message_banner_text">#1C1B1F</color>
-    <color name="message_banner_bg">#33FF0000</color>
+    <color name="message_banner_bg">#1AFF0000</color>
     <color name="message_banner_stroke">#CC0000</color>
+    <color name="card_background">#F0F0F0</color>
+    <color name="card_text">#1C1B1F</color>
+    <color name="card_stroke">#DDDDDD</color>
+    <color name="card_logo_bg">#80000000</color>
+    <color name="event_secondary_text">#555555</color>
 </resources>

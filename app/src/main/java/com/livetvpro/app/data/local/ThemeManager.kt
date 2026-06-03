@@ -138,6 +138,36 @@ class ThemeManager @Inject constructor(
         )
     }
 
+    fun getSurfaceContainerColor(activityContext: Context? = null): Int {
+        val theme = getColorTheme()
+        val isDark = isDarkMode(activityContext)
+        if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val ctx = activityContext ?: activityContextRef?.get() ?: context
+            val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
+            return MaterialColors.getColor(dynamicContext, com.google.android.material.R.attr.colorSurfaceContainer, Color.LTGRAY)
+        }
+        val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
+        if (isDark && isAmoledMode()) {
+            // AMOLED: surfaceContainer = primaryDark @ 5% over #0D0D0D
+            val primary = resolvedTheme.primaryDark
+            val base = android.graphics.Color.rgb(0x0D, 0x0D, 0x0D)
+            return blendOver(primary, 0.05f, base)
+        }
+        val primary = if (isDark) resolvedTheme.primaryDark else resolvedTheme.primaryLight
+        val background = if (isDark) resolvedTheme.backgroundDark else resolvedTheme.backgroundLight
+        return blendOver(primary, if (isDark) 0.05f else 0.06f, background)
+    }
+
+    private fun blendOver(primary: androidx.compose.ui.graphics.Color, alpha: Float, background: androidx.compose.ui.graphics.Color): Int {
+        val fgA = alpha
+        val bgA = background.alpha
+        val a = fgA + bgA * (1f - fgA)
+        val r = (primary.red * fgA + background.red * bgA * (1f - fgA)) / a
+        val g = (primary.green * fgA + background.green * bgA * (1f - fgA)) / a
+        val b = (primary.blue * fgA + background.blue * bgA * (1f - fgA)) / a
+        return Color.argb((a * 255).toInt(), (r * 255).toInt(), (g * 255).toInt(), (b * 255).toInt())
+    }
+
     fun getPrimaryColor(activityContext: Context? = null): Int {
         val theme = getColorTheme()
         val isDark = isDarkMode(activityContext)

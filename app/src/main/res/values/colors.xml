@@ -10,7 +10,7 @@
     <color name="status_bar">#00000000</color>
     <color name="ic_launcher_background">#121212</color>
     <color name="background">#F5F5F5</color>
-    <color name="surface">#FFFFFF</color>
+    <color name="surface">#F5F5F5</color>
     <color name="on_background">#000000</color>
     <color name="on_surface">#000000</color>
     <color name="text_primary">#000000</color>
@@ -30,7 +30,7 @@
     <color name="background_dark">#0D1117</color>
     <color name="background_light">#F5F5F5</color>
     <color name="surface_dark">#1A1A1A</color>
-    <color name="surface_light">#FFFFFF</color>
+    <color name="surface_light">#F5F5F5</color>
     <color name="on_surface_dark">#FFFFFF</color>
     <color name="on_surface_light">#000000</color>
     <color name="text_primary_dark">#FFFFFF</color>

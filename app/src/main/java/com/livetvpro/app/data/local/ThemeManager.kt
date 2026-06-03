@@ -93,7 +93,7 @@ class ThemeManager @Inject constructor(
         _primaryColorFlow.value = getPrimaryColor()
     }
 
-    fun getPrimaryColor(): Int {
+    fun getPrimaryColor(activityContext: android.content.Context? = null): Int {
         val theme = getColorTheme()
         val isDark = when (getThemeMode()) {
             THEME_DARK  -> true
@@ -101,7 +101,8 @@ class ThemeManager @Inject constructor(
             else        -> AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_NO
         }
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val dynamicContext = DynamicColors.wrapContextIfAvailable(context)
+            val ctx = activityContext ?: context
+            val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
             return MaterialColors.getColor(dynamicContext, androidx.appcompat.R.attr.colorPrimary, Color.BLUE)
         }
         val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
@@ -116,5 +117,9 @@ class ThemeManager @Inject constructor(
 
     fun initPrimaryColor() {
         _primaryColorFlow.value = getPrimaryColor()
+    }
+
+    fun initPrimaryColor(activityContext: android.content.Context) {
+        _primaryColorFlow.value = getPrimaryColor(activityContext)
     }
 }

@@ -148,9 +148,9 @@ class ThemeManager @Inject constructor(
         }
         val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
         if (isDark && isAmoledMode()) {
-            // AMOLED: surfaceContainer = primaryDark @ 5% over #0D0D0D
+
             val primary = resolvedTheme.primaryDark
-            val base = android.graphics.Color.rgb(0x0D, 0x0D, 0x0D)
+            val base = androidx.compose.ui.graphics.Color(0xFF0D0D0D)
             return blendOver(primary, 0.05f, base)
         }
         val primary = if (isDark) resolvedTheme.primaryDark else resolvedTheme.primaryLight

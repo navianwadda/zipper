@@ -7,9 +7,9 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import android.content.res.Configuration
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,11 +87,7 @@ class AppearanceFragment : Fragment() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(themeManager: ThemeManager) {
-    val context = LocalContext.current
-    val systemDarkTheme = remember(context) {
-        val nightModeFlags = context.applicationContext.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        nightModeFlags == Configuration.UI_MODE_NIGHT_YES
-    }
+    val systemDarkTheme = isSystemInDarkTheme()
 
     val themeMode  by themeManager.themeModeFlow.collectAsState()
     val colorTheme by themeManager.colorThemeFlow.collectAsState()
@@ -399,9 +394,7 @@ fun SwitchPreferenceRow(
     Row(
         modifier          = modifier
             .fillMaxWidth()
-            .pointerInput(enabled) {
-                if (enabled) detectTapGestures { onCheckedChange(!checked) }
-            }
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

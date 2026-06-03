@@ -116,6 +116,16 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     if (color != 0) {
                         val floatingNav = binding.root.findViewById<com.livetvpro.app.ui.components.FloatingNavView>(R.id.bottom_navigation)
                         floatingNav?.setActiveColor(color)
+                        val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
+                        toolbarTitle?.setTextColor(color)
+                        val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
+                        val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
+                        val btnSearchClear = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search_clear)
+                        val tintList = android.content.res.ColorStateList.valueOf(color)
+                        btnSearch?.imageTintList = tintList
+                        btnFavorites?.imageTintList = tintList
+                        btnSearchClear?.imageTintList = tintList
+                        drawerToggle?.drawerArrowDrawable?.color = color
                     }
                 }
             }

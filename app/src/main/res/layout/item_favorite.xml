@@ -9,7 +9,7 @@
     app:cardElevation="0dp"
     app:strokeColor="@color/player_channel_stroke"
     app:strokeWidth="@dimen/player_channel_stroke_width"
-    app:cardBackgroundColor="#1A1A1A"
+    app:cardBackgroundColor="@color/card_background"
     android:foreground="?attr/selectableItemBackground"
     android:focusable="true"
     android:focusableInTouchMode="false"
@@ -37,7 +37,7 @@
                 app:cardCornerRadius="44dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@android:color/white">
+                app:cardBackgroundColor="@color/card_logo_bg">
 
                 <FrameLayout
                     android:id="@+id/logo_container"
@@ -74,7 +74,7 @@
             android:src="@drawable/ic_close"
             android:background="@drawable/bg_favorite_button"
             android:contentDescription="Remove from favorites"
-            android:tint="@android:color/white"
+            android:tint="@color/card_text"
             android:elevation="4dp"
             android:focusable="false" />
 
@@ -84,7 +84,7 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/logo_outer_container"
             android:layout_marginTop="6dp"
-            android:textColor="@android:color/white"
+            android:textColor="@color/card_text"
             android:textSize="13sp"
             android:textStyle="bold"
             android:gravity="center"

@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 }
                 pendingDestinationId = -1
             }
-            themeManager.initPrimaryColor()
+            themeManager.initPrimaryColor(this)
             var isFirstThemeEmission = true
             lifecycleScope.launch {
                 themeManager.themeModeFlow.collectLatest { _ ->

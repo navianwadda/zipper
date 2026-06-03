@@ -6,7 +6,6 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.livetvpro.app.R
 import com.livetvpro.app.utils.GlideExtensions
 import com.livetvpro.app.data.models.Category
 import com.livetvpro.app.databinding.ItemCategoryBinding
@@ -55,14 +54,11 @@ class CategoryAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
-            // ── Click ────────────────────────────────────────────────────────
             binding.root.setOnClickListener {
                 val pos = bindingAdapterPosition
                 if (pos != RecyclerView.NO_POSITION) onCategoryClick(getItem(pos))
             }
 
-            // ── D-pad / remote key handler ───────────────────────────────────
-            // OK / Enter on a remote fires the same action as a tap.
             binding.root.setOnKeyListener { _, keyCode, event ->
                 if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
                 val pos = bindingAdapterPosition
@@ -78,7 +74,6 @@ class CategoryAdapter(
                 }
             }
 
-            // ── TV focus ring ────────────────────────────────────────────────
             binding.root.isFocusable            = true
             binding.root.isFocusableInTouchMode = false
 
@@ -95,7 +90,6 @@ class CategoryAdapter(
         fun applyColor(primary: Int, surfaceContainer: Int) {
             if (primary != 0) {
                 val tintList = android.content.res.ColorStateList.valueOf(primary)
-                binding.categoryName.setTextColor(primary)
                 binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = tintList
             }
             if (surfaceContainer != 0) {
@@ -107,13 +101,13 @@ class CategoryAdapter(
             binding.categoryName.text = category.name
 
             if (category.iconUrl.isNullOrEmpty()) {
-                binding.categoryIcon.setImageResource(R.mipmap.ic_launcher_round)
+                binding.categoryIcon.setImageDrawable(null)
             } else {
                 GlideExtensions.loadImage(
                     binding.categoryIcon,
                     category.iconUrl,
-                    R.mipmap.ic_launcher_round,
-                    R.mipmap.ic_launcher_round
+                    null,
+                    null
                 )
             }
             applyColor(primaryColor, surfaceContainerColor)

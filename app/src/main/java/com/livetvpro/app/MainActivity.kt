@@ -65,8 +65,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private var currentPrimaryColor: Int = 0
     private var pendingDestinationId: Int = -1
 
-
-
     private var phoneToolbar: com.google.android.material.appbar.MaterialToolbar? = null
     private var phoneToolbarTitle: android.widget.TextView? = null
     private var phoneBtnSearch: android.widget.ImageButton? = null
@@ -149,6 +147,11 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                         btnSearchClear?.imageTintList = tintList
                         drawerToggle?.drawerArrowDrawable?.color = color
                         currentPrimaryColor = color
+                        val bgColor = themeManager.getBackgroundColor(this@MainActivity)
+                        val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)
+                        val toolbar = binding.root.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+                        appBarLayout?.setBackgroundColor(bgColor)
+                        toolbar?.setBackgroundColor(bgColor)
                         invalidateOptionsMenu()
                     }
                 }
@@ -229,6 +232,9 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+        val isLight = !themeManager.isDarkMode(this)
+        windowInsetsController.isAppearanceLightStatusBars = isLight
+        windowInsetsController.isAppearanceLightNavigationBars = isLight
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
@@ -278,7 +284,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         super.onConfigurationChanged(newConfig)
         drawerToggle?.onConfigurationChanged(newConfig)
 
-        // Recreate when system dark/light mode changes and app is set to follow system
         val newNightMode = newConfig.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         if (newNightMode != lastUiNightMode && lastUiNightMode != android.content.res.Configuration.UI_MODE_NIGHT_UNDEFINED) {
             if (themeManager.getThemeMode() == com.livetvpro.app.data.local.ThemeManager.THEME_AUTO) {
@@ -754,7 +759,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             }
         }
 
-
         floatingNav?.onTabSelected = { index ->
             indexToDest[index]?.let { destId -> navigateTopLevel(destId) }
         }
@@ -1131,7 +1135,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     }
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
-
         if (ev.action == android.view.MotionEvent.ACTION_DOWN
             && ev.isFromSource(android.view.InputDevice.SOURCE_TOUCHSCREEN)
         ) {
@@ -1168,7 +1171,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         }
         window.setBackgroundDrawable(glassBg)
     }
-
 }
 
 private class CustomTypefaceSpan(private val typeface: Typeface) : android.text.style.TypefaceSpan("") {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -110,6 +112,7 @@ fun LiveEventsScreen(
     onEventInteraction: ((LiveEvent, () -> Unit) -> Boolean)? = null
 ) {
     val context = LocalContext.current
+    val isDarkTheme = isSystemInDarkTheme()
 
     val filteredEvents by viewModel.filteredEvents.observeAsState(emptyList())
     val eventCategories by viewModel.eventCategories.observeAsState(emptyList())
@@ -203,7 +206,8 @@ fun LiveEventsScreen(
             MarqueeBanner(
                 text = messageBannerText,
                 url = messageBannerUrl,
-                context = context
+                context = context,
+                isDarkTheme = isDarkTheme
             )
         }
 
@@ -221,6 +225,7 @@ fun LiveEventsScreen(
         StatusFilterChips(
             selected = selectedStatusFilter,
             isTvDevice = isTvDevice,
+            isDarkTheme = isDarkTheme,
             onFilterSelected = { status ->
                 selectedStatusFilter = status
                 viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
@@ -261,6 +266,7 @@ fun LiveEventsScreen(
                                 LiveEventCard(
                                     event = event,
                                     primaryColor = Color(primaryColor),
+                                    isDarkTheme = isDarkTheme,
                                     onClick = {
                                         if (event.links.isEmpty()) {
                                             android.widget.Toast.makeText(
@@ -298,14 +304,26 @@ fun LiveEventsScreen(
 }
 
 @Composable
-private fun MarqueeBanner(text: String, url: String, context: Context) {
+private fun MarqueeBanner(
+    text: String,
+    url: String,
+    context: Context,
+    isDarkTheme: Boolean
+) {
     val bannerShape = RoundedCornerShape(6.dp)
+    val bannerBg = if (isDarkTheme)
+        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.18f)
+    else
+        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.14f)
+    val bannerStroke = MaterialTheme.colorScheme.error.copy(alpha = 0.55f)
+    val bannerText = MaterialTheme.colorScheme.onSurface
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 8.dp, end = 8.dp, top = 6.dp)
-            .background(colorResource(R.color.message_banner_bg), bannerShape)
-            .border(1.5.dp, colorResource(R.color.message_banner_stroke), bannerShape)
+            .background(bannerBg, bannerShape)
+            .border(1.5.dp, bannerStroke, bannerShape)
             .clickable(enabled = url.isNotBlank()) {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
             }
@@ -318,7 +336,7 @@ private fun MarqueeBanner(text: String, url: String, context: Context) {
                 .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = BergenSans,
-            color = colorResource(R.color.message_banner_text),
+            color = bannerText,
             maxLines = 1,
             overflow = TextOverflow.Clip
         )
@@ -352,6 +370,7 @@ private fun CategoryChip(
     onClick: () -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
+    val outlineColor = MaterialTheme.colorScheme.outline
     var hasFocus by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (hasFocus) 1.08f else 1f,
@@ -374,7 +393,7 @@ private fun CategoryChip(
                 .clip(CircleShape)
                 .border(
                     width = 3.dp,
-                    color = if (isSelected) liveRed else MaterialTheme.colorScheme.outline,
+                    color = if (isSelected) liveRed else outlineColor,
                     shape = CircleShape
                 )
         ) {
@@ -411,15 +430,38 @@ private fun CategoryChip(
 private fun StatusFilterChips(
     selected: EventStatus?,
     isTvDevice: Boolean,
+    isDarkTheme: Boolean,
     onFilterSelected: (EventStatus?) -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
+
+    val chipNormalContainerColor = if (isDarkTheme)
+        MaterialTheme.colorScheme.surfaceVariant
+    else
+        MaterialTheme.colorScheme.surface
+
+    val chipNormalLabelColor = if (isDarkTheme)
+        MaterialTheme.colorScheme.onSurfaceVariant
+    else
+        MaterialTheme.colorScheme.onSurface
+
+    val chipSelectedContainerColor = if (isDarkTheme)
+        MaterialTheme.colorScheme.surface
+    else
+        Color.White
+
+    val chipNormalBorderColor = if (isDarkTheme)
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    else
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+
     val filters = listOf(
         null to "All",
         EventStatus.LIVE to "Live",
         EventStatus.UPCOMING to "Upcoming",
         EventStatus.RECENT to "Recent"
     )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -441,7 +483,8 @@ private fun StatusFilterChips(
                     Text(
                         text = label,
                         fontFamily = BergenSans,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) liveRed else chipNormalLabelColor
                     )
                 },
                 leadingIcon = if (isSelected) {
@@ -458,16 +501,16 @@ private fun StatusFilterChips(
                     .scale(scale)
                     .onFocusChanged { hasFocus = it.hasFocus },
                 colors = FilterChipDefaults.filterChipColors(
-                    containerColor = colorResource(R.color.chip_background_normal),
-                    labelColor = colorResource(R.color.chip_text_normal),
-                    selectedContainerColor = colorResource(R.color.chip_background_selected),
+                    containerColor = chipNormalContainerColor,
+                    labelColor = chipNormalLabelColor,
+                    selectedContainerColor = chipSelectedContainerColor,
                     selectedLabelColor = liveRed
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = isSelected,
-                    borderColor = colorResource(R.color.chip_stroke_normal),
-                    selectedBorderColor = colorResource(R.color.chip_stroke_selected),
+                    borderColor = chipNormalBorderColor,
+                    selectedBorderColor = liveRed,
                     borderWidth = 1.5.dp,
                     selectedBorderWidth = 1.5.dp
                 )
@@ -480,6 +523,7 @@ private fun StatusFilterChips(
 fun LiveEventCard(
     event: LiveEvent,
     primaryColor: Color = MaterialTheme.colorScheme.primary,
+    isDarkTheme: Boolean = isSystemInDarkTheme(),
     onClick: () -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
@@ -489,33 +533,46 @@ fun LiveEventCard(
         animationSpec = tween(120),
         label = "cardScale"
     )
-    val density = LocalDensity.current
-    val elevationDp = with(density) { if (hasFocus) 8f.toDp() else 0f.toDp() }
+
+    val cardContainerColor = if (isDarkTheme)
+        MaterialTheme.colorScheme.surfaceVariant
+    else
+        MaterialTheme.colorScheme.surface
+
+    val shadowElevation = if (hasFocus) 8.dp else 3.dp
+    val shadowColor = if (isDarkTheme)
+        Color.Black.copy(alpha = 0.6f)
+    else
+        Color.Black.copy(alpha = 0.12f)
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .padding(horizontal = 6.dp, vertical = 5.dp)
             .scale(scale)
     ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
+                .shadow(
+                    elevation = shadowElevation,
+                    shape = RoundedCornerShape(12.dp),
+                    ambientColor = shadowColor,
+                    spotColor = shadowColor,
+                    clip = false
+                )
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .focusable()
                 .clickable { onClick() },
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = cardContainerColor,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = 2.dp,
-                focusedElevation = elevationDp
-            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             border = androidx.compose.foundation.BorderStroke(
                 width = 1.dp,
-                color = liveRed.copy(alpha = 0.6f)
+                color = liveRed.copy(alpha = if (isDarkTheme) 0.45f else 0.6f)
             )
         ) {
             Column(

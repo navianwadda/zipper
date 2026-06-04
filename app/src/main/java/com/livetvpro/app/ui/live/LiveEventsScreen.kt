@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -211,9 +212,8 @@ fun LiveEventsScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             PullToRefreshBox(
                 isRefreshing = isLoading,
-                onRefresh = { viewModel.refresh() },
+                onRefresh = { if (!isTvDevice) viewModel.refresh() },
                 state = pullToRefreshState,
-                enabled = !isTvDevice,
                 modifier = Modifier.fillMaxSize()
             ) {
                 when {
@@ -291,7 +291,7 @@ private fun MarqueeBanner(text: String, url: String, context: Context) {
         text = text,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, top = 6.dp)
+            .padding(start = 8.dp, end = 8.dp, top = 6.dp)
             .background(colorResource(R.color.message_banner_bg), RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 5.dp)
             .horizontalScroll(scrollState, enabled = false)

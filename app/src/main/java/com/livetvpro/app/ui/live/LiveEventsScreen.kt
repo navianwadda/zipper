@@ -65,7 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -527,11 +527,7 @@ fun LiveEventCard(
     else
         MaterialTheme.colorScheme.surface
 
-    val shadowElevation = if (hasFocus) 8.dp else 3.dp
-    val shadowColor = if (isDarkTheme)
-        Color.Black.copy(alpha = 0.6f)
-    else
-        Color.Black.copy(alpha = 0.12f)
+    val focusElevation = if (hasFocus) 8.dp else 3.dp
 
     Box(
         modifier = Modifier
@@ -542,13 +538,6 @@ fun LiveEventCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .shadow(
-                    elevation = shadowElevation,
-                    shape = RoundedCornerShape(12.dp),
-                    ambientColor = shadowColor,
-                    spotColor = shadowColor,
-                    clip = true
-                )
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .focusable()
                 .clickable { onClick() },
@@ -557,7 +546,7 @@ fun LiveEventCard(
                 containerColor = cardContainerColor,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = focusElevation),
             border = androidx.compose.foundation.BorderStroke(
                 width = 1.dp,
                 color = liveRed.copy(alpha = if (isDarkTheme) 0.45f else 0.6f)

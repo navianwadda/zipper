@@ -3,19 +3,22 @@ package com.livetvpro.app.ui.live
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.EventCategory
 import com.livetvpro.app.data.models.EventStatus
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.data.repository.LiveEventRepository
 import com.livetvpro.app.utils.RetryViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
 class LiveEventsViewModel @Inject constructor(
-    private val liveEventRepository: LiveEventRepository
+    private val liveEventRepository: LiveEventRepository,
+    private val themeManager: ThemeManager
 ) : RetryViewModel() {
 
     private val _events = MutableLiveData<List<LiveEvent>>()
@@ -26,6 +29,8 @@ class LiveEventsViewModel @Inject constructor(
 
     private val _filteredEvents = MutableLiveData<List<LiveEvent>>()
     val filteredEvents: LiveData<List<LiveEvent>> = _filteredEvents
+
+    val primaryColorFlow: StateFlow<Int> = themeManager.primaryColorFlow
 
     var pendingStatusFilter: EventStatus? = null
         private set
@@ -57,7 +62,6 @@ class LiveEventsViewModel @Inject constructor(
                 _events.value = events
                 Timber.d("Loaded ${events.size} live events")
                 finishLoading(dataIsEmpty = events.isEmpty())
-
                 filterEvents(pendingStatusFilter, pendingCategoryId)
             } catch (e: OutOfMemoryError) {
                 System.gc()
@@ -73,7 +77,6 @@ class LiveEventsViewModel @Inject constructor(
     }
 
     fun loadEventCategories() {
-
         if (_eventCategories.value != null) return
         viewModelScope.launch {
             try {
@@ -91,7 +94,6 @@ class LiveEventsViewModel @Inject constructor(
     }
 
     fun filterEvents(status: EventStatus?, categoryId: String = "evt_cat_all") {
-
         pendingStatusFilter = status
         pendingCategoryId = categoryId
         val allEvents = _events.value ?: return

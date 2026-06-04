@@ -94,6 +94,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
                 if (color != 0) {
                     val bgColor = themeManager.getBackgroundColor(requireContext())
                     categoryAdapter.setColors(color, bgColor)
+                    binding.swipeRefresh.setBackgroundColor(bgColor)
                 }
             }
         }

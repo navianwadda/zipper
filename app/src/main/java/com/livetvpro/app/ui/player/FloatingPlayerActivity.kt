@@ -492,7 +492,16 @@ class FloatingPlayerActivity : AppCompatActivity() {
         binding.playerContainer.requestLayout()
         binding.playerView.requestLayout()
     }
+    applyAdapterColors()
 }
+
+    private fun applyAdapterColors() {
+        val primary = themeManager.getPrimaryColor(this)
+        val surfaceContainer = themeManager.getSurfaceContainerColor(this)
+        if (::relatedChannelsAdapter.isInitialized) {
+            relatedChannelsAdapter.setColors(primary, surfaceContainer)
+        }
+    }
 
     private fun applyOrientationSettings(isLandscape: Boolean) {
         adjustLayoutForOrientation(isLandscape)

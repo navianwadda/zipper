@@ -31,6 +31,8 @@ class LiveEventsViewModel @Inject constructor(
     val filteredEvents: LiveData<List<LiveEvent>> = _filteredEvents
 
     val primaryColorFlow: StateFlow<Int> = themeManager.primaryColorFlow
+    val themeModeFlow: StateFlow<Int> = themeManager.themeModeFlow
+    val amoledFlow: StateFlow<Boolean> = themeManager.amoledFlow
 
     var pendingStatusFilter: EventStatus? = null
         private set

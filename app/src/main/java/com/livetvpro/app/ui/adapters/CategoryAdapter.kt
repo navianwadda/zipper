@@ -3,7 +3,6 @@ package com.livetvpro.app.ui.adapters
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -94,9 +93,6 @@ class CategoryAdapter(
                 val tintList = android.content.res.ColorStateList.valueOf(primary)
                 binding.logoOuterContainer.getChildAt(1)?.backgroundTintList = tintList
             }
-            binding.logoCard.setCardBackgroundColor(
-                ContextCompat.getColor(binding.logoCard.context, R.color.card_logo_bg)
-            )
             if (surfaceContainer != 0) {
                 binding.root.setCardBackgroundColor(surfaceContainer)
             }

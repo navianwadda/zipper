@@ -22,6 +22,7 @@ import com.livetvpro.app.ui.player.PlayerActivity
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.FloatingPlayerHelper
 import com.livetvpro.app.utils.NativeListenerManager
+import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.RedirectCooldownManager
 import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.utils.Refreshable
@@ -70,6 +71,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
+                LiveTVProTheme(themeManager) {
                 val spanCount = resources.getInteger(R.integer.event_span_count)
 
                 LiveEventsScreen(
@@ -103,6 +105,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                         result == RedirectHelper.RedirectResult.REDIRECTED
                     }
                 )
+                }
             }
         }
     }

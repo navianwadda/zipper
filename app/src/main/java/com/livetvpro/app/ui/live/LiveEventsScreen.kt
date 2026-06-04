@@ -29,14 +29,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,7 +112,7 @@ fun LiveEventsScreen(
     val isEmpty by viewModel.isEmpty.observeAsState(false)
     val primaryColor by viewModel.primaryColorFlow.collectAsState()
 
-    var selectedStatusFilter by remember { mutableStateOf<EventStatus?>(null) }
+    var selectedStatusFilter by remember { mutableStateOf<EventStatus?>(EventStatus.LIVE) }
     var selectedCategoryId by remember { mutableStateOf("evt_cat_all") }
     var linkDialogEvent by remember { mutableStateOf<LiveEvent?>(null) }
 
@@ -287,12 +285,14 @@ private fun MarqueeBanner(text: String, url: String, context: Context) {
             scrollState.scrollTo(0)
         }
     }
+    val bannerShape = RoundedCornerShape(6.dp)
     Text(
         text = text,
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 8.dp, end = 8.dp, top = 6.dp)
-            .background(colorResource(R.color.message_banner_bg), RoundedCornerShape(8.dp))
+            .background(colorResource(R.color.message_banner_bg), bannerShape)
+            .border(1.5.dp, Color(0xFFCC0000), bannerShape)
             .padding(horizontal = 12.dp, vertical = 5.dp)
             .horizontalScroll(scrollState, enabled = false)
             .clickable(enabled = url.isNotBlank()) {
@@ -337,9 +337,6 @@ private fun CategoryChip(
         animationSpec = tween(120),
         label = "catScale"
     )
-    val density = LocalDensity.current
-    val strokeWidthDp = with(density) { (if (isSelected) 5f else 4f).toDp() }
-    val elevationDp = with(density) { if (hasFocus) 8f.toDp() else 0f.toDp() }
 
     Column(
         modifier = Modifier
@@ -355,8 +352,8 @@ private fun CategoryChip(
                 .size(64.dp)
                 .clip(CircleShape)
                 .border(
-                    width = strokeWidthDp,
-                    color = if (isSelected) Red else Color(0xFF5A5A5A),
+                    width = 3.dp,
+                    color = if (isSelected) Red else MaterialTheme.colorScheme.outline,
                     shape = CircleShape
                 )
         ) {
@@ -420,16 +417,16 @@ private fun StatusFilterChips(
                     .scale(scale)
                     .onFocusChanged { hasFocus = it.hasFocus },
                 colors = FilterChipDefaults.filterChipColors(
-                    containerColor = colorResource(R.color.chip_background_color),
-                    labelColor = colorResource(R.color.chip_text_color),
-                    selectedContainerColor = colorResource(R.color.chip_background_color),
-                    selectedLabelColor = colorResource(R.color.chip_text_color)
+                    containerColor = colorResource(R.color.chip_background_normal),
+                    labelColor = colorResource(R.color.chip_text_normal),
+                    selectedContainerColor = colorResource(R.color.chip_background_selected),
+                    selectedLabelColor = colorResource(R.color.chip_text_selected)
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = isSelected,
-                    borderColor = colorResource(R.color.chip_stroke_color),
-                    selectedBorderColor = colorResource(R.color.chip_stroke_color)
+                    borderColor = colorResource(R.color.chip_stroke_normal),
+                    selectedBorderColor = colorResource(R.color.chip_stroke_selected)
                 )
             )
         }
@@ -509,7 +506,7 @@ fun LiveEventCard(
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         modifier = Modifier
-                            .background(Red, RoundedCornerShape(50))
+                            .background(Color(0xFFD32F2F), RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -554,6 +551,7 @@ fun LiveEventCard(
                 text = event.wrapper,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
+                    .offset(x = (-38).dp)
                     .padding(bottom = 18.dp)
             )
         }
@@ -744,10 +742,8 @@ private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(width = 100.dp, height = 20.dp)
-            .offset(x = (-38).dp)
             .graphicsLayer { rotationZ = 45f }
-            .background(Red)
-            .padding(start = 24.dp),
+            .background(Red),
         contentAlignment = Alignment.Center
     ) {
         Text(

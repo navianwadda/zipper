@@ -92,7 +92,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
         viewLifecycleOwner.lifecycleScope.launch {
             themeManager.primaryColorFlow.collectLatest { color ->
                 if (color != 0) {
-                    val bgColor = themeManager.getBackgroundColor(requireContext())
+                    val bgColor = themeManager.getSurfaceContainerColor(requireContext())
                     categoryAdapter.setColors(color, bgColor)
                     binding.swipeRefresh.setBackgroundColor(bgColor)
                 }

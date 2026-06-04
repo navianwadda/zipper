@@ -726,6 +726,9 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val diff = startMillis - currentTime
+                    val days = (diff / (1000 * 60 * 60 * 24)).toInt()
+                    val hours = ((diff / (1000 * 60 * 60)) % 24).toInt()
+                    val minutes = ((diff / (1000 * 60)) % 60).toInt()
                     val seconds = ((diff / 1000) % 60).toInt()
                     val countdownText = when {
                         days > 0 -> String.format("%dd %02dh %02dm %02ds", days, hours, minutes, seconds)

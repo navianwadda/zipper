@@ -18,36 +18,35 @@ class RelatedChannelAdapter(
     private val onChannelClick: (Channel) -> Unit
 ) : ListAdapter<Channel, RecyclerView.ViewHolder>(ChannelDiffCallback()) {
 
+    private var primaryColor: Int = 0
+    private var surfaceContainerColor: Int = 0
+
+    fun setColors(primary: Int, surfaceContainer: Int) {
+        val changed = primaryColor != primary || surfaceContainerColor != surfaceContainer
+        primaryColor = primary
+        surfaceContainerColor = surfaceContainer
+        if (changed) notifyItemRangeChanged(0, itemCount, PAYLOAD_COLOR)
+    }
+
     companion object {
         private const val VIEW_TYPE_CHANNEL = 1
         private const val VIEW_TYPE_EVENT = 2
+        private const val PAYLOAD_COLOR = "color"
     }
 
     override fun getItemViewType(position: Int): Int {
         val item = getItem(position)
-        return if (item.categoryId == "live_events") {
-            VIEW_TYPE_EVENT
-        } else {
-            VIEW_TYPE_CHANNEL
-        }
+        return if (item.categoryId == "live_events") VIEW_TYPE_EVENT else VIEW_TYPE_CHANNEL
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
             VIEW_TYPE_EVENT -> {
-                val binding = ItemRelatedEventBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
+                val binding = ItemRelatedEventBinding.inflate(LayoutInflater.from(parent.context), parent, false)
                 EventViewHolder(binding)
             }
             else -> {
-                val binding = ItemRelatedChannelBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
+                val binding = ItemRelatedChannelBinding.inflate(LayoutInflater.from(parent.context), parent, false)
                 ChannelViewHolder(binding)
             }
         }
@@ -58,6 +57,16 @@ class RelatedChannelAdapter(
         when (holder) {
             is EventViewHolder -> holder.bind(item)
             is ChannelViewHolder -> holder.bind(item)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: List<Any>) {
+        if (payloads.contains(PAYLOAD_COLOR)) {
+            when (holder) {
+                is ChannelViewHolder -> holder.applyColor(primaryColor, surfaceContainerColor)
+            }
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
         }
     }
 
@@ -92,7 +101,6 @@ class RelatedChannelAdapter(
             }
 
             GlideExtensions.loadImage(binding.team1Logo, channel.team1Logo.ifEmpty { channel.logoUrl }, R.mipmap.ic_launcher_round, R.mipmap.ic_launcher_round, isCircular = true)
-
             GlideExtensions.loadImage(binding.team2Logo, channel.team2Logo.ifEmpty { channel.logoUrl }, R.mipmap.ic_launcher_round, R.mipmap.ic_launcher_round, isCircular = true)
 
             val eventTimeView = binding.root.findViewById<android.widget.TextView>(R.id.event_time)
@@ -103,7 +111,6 @@ class RelatedChannelAdapter(
                 val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
                     timeZone = TimeZone.getTimeZone("UTC")
                 }
-
                 val startTime = inputFormat.parse(channel.startTime)?.time ?: 0L
                 val endTimeValue = if (channel.endTime.isNotEmpty()) {
                     inputFormat.parse(channel.endTime)?.time ?: Long.MAX_VALUE
@@ -111,7 +118,6 @@ class RelatedChannelAdapter(
                     Long.MAX_VALUE
                 }
                 val currentTime = System.currentTimeMillis()
-
                 currentTime in startTime..endTimeValue
             } catch (e: Exception) {
                 channel.isLive
@@ -127,27 +133,13 @@ class RelatedChannelAdapter(
                 val pulseRing3 = binding.root.findViewById<android.widget.ImageView>(R.id.live_pulse_ring_3)
 
                 pulseBg?.let {
-                    val animation = android.view.animation.AnimationUtils.loadAnimation(
-                        binding.root.context,
-                        R.anim.live_pulse_ring_1
-                    )
-                    it.startAnimation(animation)
+                    it.startAnimation(android.view.animation.AnimationUtils.loadAnimation(binding.root.context, R.anim.live_pulse_ring_1))
                 }
-
                 pulseRing2?.let {
-                    val animation = android.view.animation.AnimationUtils.loadAnimation(
-                        binding.root.context,
-                        R.anim.live_pulse_ring_2
-                    )
-                    it.startAnimation(animation)
+                    it.startAnimation(android.view.animation.AnimationUtils.loadAnimation(binding.root.context, R.anim.live_pulse_ring_2))
                 }
-
                 pulseRing3?.let {
-                    val animation = android.view.animation.AnimationUtils.loadAnimation(
-                        binding.root.context,
-                        R.anim.live_pulse_ring_3
-                    )
-                    it.startAnimation(animation)
+                    it.startAnimation(android.view.animation.AnimationUtils.loadAnimation(binding.root.context, R.anim.live_pulse_ring_3))
                 }
 
                 eventTimeView?.text = "00:00"
@@ -200,20 +192,25 @@ class RelatedChannelAdapter(
             }
         }
 
+        fun applyColor(
+            @Suppress("UNUSED_PARAMETER") primary: Int,
+            surfaceContainer: Int
+        ) {
+            if (surfaceContainer != 0) {
+                binding.root.setCardBackgroundColor(surfaceContainer)
+            }
+        }
+
         fun bind(channel: Channel) {
             binding.channelName.text = channel.name
             binding.channelName.isSelected = true
             GlideExtensions.loadImage(binding.channelLogo, channel.logoUrl, R.mipmap.ic_launcher_round, R.mipmap.ic_launcher_round)
+            applyColor(primaryColor, surfaceContainerColor)
         }
     }
 
     private class ChannelDiffCallback : DiffUtil.ItemCallback<Channel>() {
-        override fun areItemsTheSame(oldItem: Channel, newItem: Channel): Boolean {
-            return oldItem.id == newItem.id
-        }
-
-        override fun areContentsTheSame(oldItem: Channel, newItem: Channel): Boolean {
-            return oldItem == newItem
-        }
+        override fun areItemsTheSame(oldItem: Channel, newItem: Channel): Boolean = oldItem.id == newItem.id
+        override fun areContentsTheSame(oldItem: Channel, newItem: Channel): Boolean = oldItem == newItem
     }
 }

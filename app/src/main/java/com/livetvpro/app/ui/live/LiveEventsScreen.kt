@@ -5,31 +5,37 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,6 +67,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,6 +117,7 @@ fun LiveEventsScreen(
     var selectedCategoryId by remember { mutableStateOf("evt_cat_all") }
     var linkDialogEvent by remember { mutableStateOf<LiveEvent?>(null) }
 
+    val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
@@ -124,6 +134,14 @@ fun LiveEventsScreen(
         while (true) {
             delay(10_000)
             viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
+        }
+    }
+
+    if (isTvDevice) {
+        LaunchedEffect(filteredEvents) {
+            if (filteredEvents.isNotEmpty()) {
+                gridState.scrollToItem(0)
+            }
         }
     }
 
@@ -183,6 +201,7 @@ fun LiveEventsScreen(
 
         StatusFilterChips(
             selected = selectedStatusFilter,
+            isTvDevice = isTvDevice,
             onFilterSelected = { status ->
                 selectedStatusFilter = status
                 viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
@@ -209,9 +228,14 @@ fun LiveEventsScreen(
                         }
                     }
                     else -> {
+                        val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(spanCount),
-                            contentPadding = PaddingValues(top = 4.dp, bottom = 90.dp),
+                            state = gridState,
+                            contentPadding = PaddingValues(
+                                top = 4.dp,
+                                bottom = navBarBottom + dimensionResource(R.dimen.nav_bottom_margin) + dimensionResource(R.dimen.nav_height)
+                            ),
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(filteredEvents, key = { it.id }) { event ->
@@ -219,7 +243,14 @@ fun LiveEventsScreen(
                                     event = event,
                                     primaryColor = Color(primaryColor),
                                     onClick = {
-                                        if (event.links.isEmpty()) return@LiveEventCard
+                                        if (event.links.isEmpty()) {
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                "No streams available for this event",
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                            return@LiveEventCard
+                                        }
                                         val playerAction: () -> Unit = {
                                             if (event.links.size > 1) {
                                                 linkDialogEvent = event
@@ -260,15 +291,15 @@ private fun MarqueeBanner(text: String, url: String, context: Context) {
         text = text,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, top = 6.dp)
+            .background(colorResource(R.color.message_banner_bg), RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 5.dp)
             .horizontalScroll(scrollState, enabled = false)
             .clickable(enabled = url.isNotBlank()) {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
             },
         fontSize = 16.sp,
-        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        color = colorResource(R.color.message_banner_text),
         maxLines = 1,
         overflow = TextOverflow.Clip
     )
@@ -306,6 +337,9 @@ private fun CategoryChip(
         animationSpec = tween(120),
         label = "catScale"
     )
+    val density = LocalDensity.current
+    val strokeWidthDp = with(density) { (if (isSelected) 5f else 4f).toDp() }
+    val elevationDp = with(density) { if (hasFocus) 8f.toDp() else 0f.toDp() }
 
     Column(
         modifier = Modifier
@@ -321,7 +355,7 @@ private fun CategoryChip(
                 .size(64.dp)
                 .clip(CircleShape)
                 .border(
-                    width = if (isSelected) 3.dp else 2.dp,
+                    width = strokeWidthDp,
                     color = if (isSelected) Red else Color(0xFF5A5A5A),
                     shape = CircleShape
                 )
@@ -357,6 +391,7 @@ private fun CategoryChip(
 @Composable
 private fun StatusFilterChips(
     selected: EventStatus?,
+    isTvDevice: Boolean,
     onFilterSelected: (EventStatus?) -> Unit
 ) {
     val filters = listOf(
@@ -373,13 +408,30 @@ private fun StatusFilterChips(
     ) {
         filters.forEach { (status, label) ->
             val isSelected = selected == status
+            var hasFocus by remember { mutableStateOf(false) }
+            val scale by animateFloatAsState(
+                targetValue = if (isTvDevice && hasFocus) 1.08f else 1f,
+                animationSpec = tween(100),
+                label = "chipScale"
+            )
             FilterChip(
                 selected = isSelected,
                 onClick = { if (!isSelected) onFilterSelected(status) },
                 label = { Text(label) },
+                modifier = Modifier
+                    .scale(scale)
+                    .onFocusChanged { hasFocus = it.hasFocus },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = colorResource(R.color.chip_background_color),
+                    labelColor = colorResource(R.color.chip_text_color),
+                    selectedContainerColor = colorResource(R.color.chip_background_color),
+                    selectedLabelColor = colorResource(R.color.chip_text_color)
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = isSelected,
+                    borderColor = colorResource(R.color.chip_stroke_color),
+                    selectedBorderColor = colorResource(R.color.chip_stroke_color)
                 )
             )
         }
@@ -398,6 +450,8 @@ fun LiveEventCard(
         animationSpec = tween(120),
         label = "cardScale"
     )
+    val density = LocalDensity.current
+    val elevationDp = with(density) { if (hasFocus) 8f.toDp() else 0f.toDp() }
 
     Box(modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)) {
         Card(
@@ -412,7 +466,7 @@ fun LiveEventCard(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 2.dp,
-                focusedElevation = 8.dp
+                focusedElevation = elevationDp
             ),
             border = androidx.compose.foundation.BorderStroke(1.dp, Red)
         ) {
@@ -550,7 +604,13 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
             timeZone = TimeZone.getTimeZone("UTC")
         }
     }
-    val timeFormat = remember { SimpleDateFormat("hh:mm a", Locale.US) }
+    val timeFormat = remember {
+        SimpleDateFormat("hh:mm a", Locale.US).apply {
+            val symbols = dateFormatSymbols
+            symbols.amPmStrings = arrayOf("AM", "PM")
+            dateFormatSymbols = symbols
+        }
+    }
     val dateFormat = remember { SimpleDateFormat("EEE, dd MMM yyyy", Locale.US) }
 
     var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -561,30 +621,45 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
         }
     }
 
-    val startMillis = remember(event.startTime) {
-        try { apiDateFormat.parse(event.startTime)?.time ?: 0L } catch (e: Exception) { 0L }
+    val parseResult = remember(event.startTime, event.endTime) {
+        try {
+            val startDate = apiDateFormat.parse(event.startTime)
+            val startMillis = startDate?.time ?: 0L
+            val endMillis = if (!event.endTime.isNullOrEmpty()) {
+                try { apiDateFormat.parse(event.endTime)?.time ?: Long.MAX_VALUE } catch (e: Exception) { Long.MAX_VALUE }
+            } else Long.MAX_VALUE
+            Triple(startDate, startMillis, endMillis)
+        } catch (e: Exception) {
+            null
+        }
     }
-    val endMillis = remember(event.endTime) {
-        if (!event.endTime.isNullOrEmpty()) {
-            try { apiDateFormat.parse(event.endTime)?.time ?: Long.MAX_VALUE } catch (e: Exception) { Long.MAX_VALUE }
-        } else Long.MAX_VALUE
-    }
-
-    val isLiveNow = (currentTime >= startMillis && currentTime <= endMillis) || event.isLive
-    val isUpcoming = !isLiveNow && currentTime < startMillis
-
-    val lottieComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.live_animation))
-    val lottieProgress by animateLottieCompositionAsState(
-        composition = lottieComposition,
-        iterations = LottieConstants.IterateForever,
-        isPlaying = isLiveNow
-    )
 
     Column(
         modifier = Modifier.padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        if (parseResult == null) {
+            Text(
+                text = "Unknown",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.LightGray
+            )
+            return@Column
+        }
+
+        val (startDate, startMillis, endMillis) = parseResult
+        val isLiveNow = (currentTime >= startMillis && currentTime <= endMillis) || event.isLive
+        val isUpcoming = !isLiveNow && currentTime < startMillis
+
+        val lottieComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.live_animation))
+        val lottieProgress by animateLottieCompositionAsState(
+            composition = lottieComposition,
+            iterations = LottieConstants.IterateForever,
+            isPlaying = isLiveNow
+        )
+
         when {
             isLiveNow -> {
                 LottieAnimation(
@@ -605,7 +680,6 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                 )
             }
             isUpcoming -> {
-                val startDate = try { apiDateFormat.parse(event.startTime) } catch (e: Exception) { null }
                 if (startDate != null) {
                     Text(
                         text = timeFormat.format(startDate),
@@ -643,7 +717,7 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                 val endDate = if (endMillis != Long.MAX_VALUE) {
                     try { apiDateFormat.parse(event.endTime!!) } catch (e: Exception) { null }
                 } else {
-                    try { apiDateFormat.parse(event.startTime) } catch (e: Exception) { null }
+                    startDate
                 }
                 if (endDate != null) {
                     Text(

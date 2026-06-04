@@ -1,6 +1,5 @@
 package com.livetvpro.app.ui.adapters
 
-import android.graphics.Color
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -29,17 +28,6 @@ class CategoryAdapter(
 
     companion object {
         private const val PAYLOAD_COLOR = "color"
-
-        fun outerContainerColorForPosition(primaryColor: Int, position: Int): Int {
-            if (primaryColor == 0) return Color.parseColor("#F0F0F0")
-            val hsv = FloatArray(3)
-            Color.colorToHSV(primaryColor, hsv)
-            hsv[0] = (hsv[0] + position * 37f) % 360f
-            hsv[1] = hsv[1].coerceIn(0.35f, 0.55f)
-            hsv[2] = hsv[2].coerceIn(0.80f, 0.95f)
-            val solid = Color.HSVToColor(hsv)
-            return Color.argb(220, Color.red(solid), Color.green(solid), Color.blue(solid))
-        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CategoryViewHolder {
@@ -52,12 +40,12 @@ class CategoryAdapter(
     }
 
     override fun onBindViewHolder(holder: CategoryViewHolder, position: Int) {
-        holder.bind(getItem(position), position)
+        holder.bind(getItem(position))
     }
 
     override fun onBindViewHolder(holder: CategoryViewHolder, position: Int, payloads: List<Any>) {
         if (payloads.contains(PAYLOAD_COLOR)) {
-            holder.applyColor(primaryColor, surfaceContainerColor, position)
+            holder.applyColor(primaryColor, surfaceContainerColor)
         } else {
             super.onBindViewHolder(holder, position, payloads)
         }
@@ -107,9 +95,8 @@ class CategoryAdapter(
         }
 
         fun applyColor(
-            primary: Int,
-            surfaceContainer: Int,
-            position: Int
+            @Suppress("UNUSED_PARAMETER") primary: Int,
+            surfaceContainer: Int
         ) {
             binding.logoCard.setCardBackgroundColor(
                 ContextCompat.getColor(binding.logoCard.context, R.color.card_logo_bg)
@@ -120,12 +107,9 @@ class CategoryAdapter(
             if (surfaceContainer != 0) {
                 binding.root.setCardBackgroundColor(surfaceContainer)
             }
-
-            val outerBg = outerContainerColorForPosition(primary, position)
-            binding.logoOuterContainer.setBackgroundColor(outerBg)
         }
 
-        fun bind(category: Category, position: Int) {
+        fun bind(category: Category) {
             binding.categoryName.text = category.name
             binding.categoryIcon.setImageDrawable(null)
 
@@ -140,7 +124,7 @@ class CategoryAdapter(
                 binding.categoryIcon.setImageResource(R.mipmap.ic_launcher_round)
             }
 
-            applyColor(primaryColor, surfaceContainerColor, position)
+            applyColor(primaryColor, surfaceContainerColor)
         }
     }
 

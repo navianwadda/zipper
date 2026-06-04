@@ -77,8 +77,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -360,17 +360,15 @@ private fun CategoryChip(
                     shape = CircleShape
                 )
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(category.logoUrl)
-                    .crossfade(true)
-                    .fallback(R.mipmap.ic_launcher_round)
-                    .error(R.mipmap.ic_launcher_round)
-                    .build(),
+            @OptIn(ExperimentalGlideComposeApi::class)
+            GlideImage(
+                model = category.logoUrl,
                 contentDescription = category.name,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize()
-            )
+            ) {
+                it.error(R.mipmap.ic_launcher_round).fallback(R.mipmap.ic_launcher_round)
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -480,17 +478,15 @@ fun LiveEventCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(event.leagueLogo)
-                            .crossfade(true)
-                            .fallback(R.mipmap.ic_launcher_round)
-                            .error(R.mipmap.ic_launcher_round)
-                            .build(),
+                    @OptIn(ExperimentalGlideComposeApi::class)
+                    GlideImage(
+                        model = event.leagueLogo,
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(28.dp)
-                    )
+                    ) {
+                        it.error(R.mipmap.ic_launcher_round).fallback(R.mipmap.ic_launcher_round)
+                    }
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = event.league ?: "Unknown League",
@@ -570,19 +566,17 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(logoUrl)
-                .crossfade(true)
-                .fallback(R.mipmap.ic_launcher_round)
-                .error(R.mipmap.ic_launcher_round)
-                .build(),
+        @OptIn(ExperimentalGlideComposeApi::class)
+        GlideImage(
+            model = logoUrl,
             contentDescription = name,
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-        )
+        ) {
+            it.error(R.mipmap.ic_launcher_round).fallback(R.mipmap.ic_launcher_round)
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = name,

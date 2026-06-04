@@ -10,16 +10,17 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,7 +49,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,7 +61,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -199,7 +198,7 @@ fun LiveEventsScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 when {
-                    isLoading && filteredEvents.isEmpty() -> { /* ProgressBar shown below */ }
+                    isLoading && filteredEvents.isEmpty() -> {}
                     isEmpty || filteredEvents.isEmpty() -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
@@ -348,7 +347,9 @@ private fun CategoryChip(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(70.dp)
+            modifier = Modifier
+                .width(70.dp)
+                .basicMarquee()
         )
     }
 }
@@ -418,6 +419,7 @@ fun LiveEventCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .defaultMinSize(minHeight = 85.dp)
                     .padding(6.dp)
             ) {
                 Row(
@@ -443,7 +445,9 @@ fun LiveEventCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .basicMarquee()
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     val categoryLabel = event.category.ifEmpty {
@@ -672,8 +676,8 @@ private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(width = 100.dp, height = 20.dp)
-            .graphicsLayer { rotationZ = 45f }
             .offset(x = (-38).dp)
+            .graphicsLayer { rotationZ = 45f }
             .background(Red)
             .padding(start = 24.dp),
         contentAlignment = Alignment.Center

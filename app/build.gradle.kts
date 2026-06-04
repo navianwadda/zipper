@@ -85,7 +85,8 @@ android {
         jvmTarget = "17"
         
         freeCompilerArgs += listOf(
-            "-opt-in=androidx.media3.common.util.UnstableApi"
+            "-opt-in=androidx.media3.common.util.UnstableApi",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
         )
     }
 
@@ -192,7 +193,7 @@ dependencies {
     implementation("androidx.media3:media3-common:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
     // Prebuilt FFmpeg decoder AAR by Jellyfin (published to Maven Central).
-    // androidx.media3:media3-exoplayer-ffmpeg is NOT on Maven — it needs manual native compilation.
+    // androidx.media3:media3-exoplayer-ffmpeg is NOT on Maven â€” it needs manual native compilation.
     // This drop-in provides the same libffmpegjni.so for all ABIs from the same source.
     // License: GPL-3.0  |  https://github.com/jellyfin/jellyfin-androidx-media
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
@@ -223,6 +224,9 @@ dependencies {
     implementation("com.github.bumptech.glide:compose:1.0.0-beta09")
     implementation("com.caverock:androidsvg-aar:1.4")
 
+    // Hilt Navigation Compose
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
     // RecyclerView
     implementation("androidx.recyclerview:recyclerview:1.4.0")
 
@@ -246,6 +250,7 @@ dependencies {
 
     // Lottie Animations
     implementation("com.airbnb.android:lottie:6.6.0")
+    implementation("com.airbnb.android:lottie-compose:6.6.0")
 
     implementation("com.google.zxing:core:3.5.3")
 

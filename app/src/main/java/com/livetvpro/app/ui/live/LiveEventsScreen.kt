@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -368,7 +369,9 @@ private fun CategoryChip(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize()
             ) {
-                it.error(R.mipmap.ic_launcher_round).fallback(R.mipmap.ic_launcher_round)
+                it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .error(R.mipmap.ic_launcher_round)
+                    .fallback(R.mipmap.ic_launcher_round)
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -430,7 +433,7 @@ private fun StatusFilterChips(
                             imageVector = Icons.Filled.Check,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = colorResource(R.color.chip_text_selected)
+                            tint = Red
                         )
                     }
                 } else null,
@@ -441,7 +444,7 @@ private fun StatusFilterChips(
                     containerColor = colorResource(R.color.chip_background_normal),
                     labelColor = colorResource(R.color.chip_text_normal),
                     selectedContainerColor = colorResource(R.color.chip_background_selected),
-                    selectedLabelColor = colorResource(R.color.chip_text_selected)
+                    selectedLabelColor = Red
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
@@ -508,7 +511,9 @@ fun LiveEventCard(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(28.dp)
                     ) {
-                        it.error(R.mipmap.ic_launcher_round).fallback(R.mipmap.ic_launcher_round)
+                        it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .error(R.mipmap.ic_launcher_round)
+                            .fallback(R.mipmap.ic_launcher_round)
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
@@ -601,7 +606,9 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
                 .size(48.dp)
                 .clip(CircleShape)
         ) {
-            it.error(R.mipmap.ic_launcher_round).fallback(R.mipmap.ic_launcher_round)
+            it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                .error(R.mipmap.ic_launcher_round)
+                .fallback(R.mipmap.ic_launcher_round)
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(

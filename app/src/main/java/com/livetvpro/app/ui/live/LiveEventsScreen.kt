@@ -93,6 +93,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.EventCategory
 import com.livetvpro.app.data.models.EventStatus
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.LiveEvent
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -112,7 +113,15 @@ fun LiveEventsScreen(
     onEventInteraction: ((LiveEvent, () -> Unit) -> Boolean)? = null
 ) {
     val context = LocalContext.current
-    val isDarkTheme = isSystemInDarkTheme()
+    val themeMode by viewModel.themeModeFlow.collectAsState()
+    val amoled by viewModel.amoledFlow.collectAsState()
+    val systemDark = isSystemInDarkTheme()
+    val isDarkTheme = when (themeMode) {
+        ThemeManager.THEME_DARK  -> true
+        ThemeManager.THEME_LIGHT -> false
+        else                     -> systemDark
+    }
+    val isAmoled = isDarkTheme && amoled
 
     val filteredEvents by viewModel.filteredEvents.observeAsState(emptyList())
     val eventCategories by viewModel.eventCategories.observeAsState(emptyList())
@@ -267,6 +276,7 @@ fun LiveEventsScreen(
                                     event = event,
                                     primaryColor = Color(primaryColor),
                                     isDarkTheme = isDarkTheme,
+                                    isAmoled = isAmoled,
                                     onClick = {
                                         if (event.links.isEmpty()) {
                                             android.widget.Toast.makeText(
@@ -512,6 +522,7 @@ fun LiveEventCard(
     event: LiveEvent,
     primaryColor: Color = MaterialTheme.colorScheme.primary,
     isDarkTheme: Boolean = isSystemInDarkTheme(),
+    isAmoled: Boolean = false,
     onClick: () -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
@@ -522,10 +533,10 @@ fun LiveEventCard(
         label = "cardScale"
     )
 
-    val cardContainerColor = if (isDarkTheme)
-        MaterialTheme.colorScheme.surfaceVariant
+    val cardContainerColor = if (isAmoled)
+        Color(0xFF0D0D0D)
     else
-        MaterialTheme.colorScheme.surface
+        MaterialTheme.colorScheme.surfaceVariant
 
     val focusElevation = if (hasFocus) 8.dp else 3.dp
 

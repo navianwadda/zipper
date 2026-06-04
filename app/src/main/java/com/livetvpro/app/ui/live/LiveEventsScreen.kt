@@ -38,12 +38,15 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,9 +62,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
@@ -80,14 +80,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.EventCategory
 import com.livetvpro.app.data.models.EventStatus
@@ -96,9 +96,6 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
-
-private val Red = Color(0xFFEF4444)
-private val Green = Color(0xFF10B981)
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
@@ -156,12 +153,22 @@ fun LiveEventsScreen(
         val event = linkDialogEvent!!
         AlertDialog(
             onDismissRequest = { linkDialogEvent = null },
-            title = { Text("Multiple Links Available") },
+            title = {
+                Text(
+                    text = "Multiple Links Available",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = BergenSans
+                )
+            },
             text = {
                 Column {
                     event.links.forEachIndexed { index, link ->
                         Text(
                             text = link.quality,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontFamily = BergenSans,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -173,10 +180,15 @@ fun LiveEventsScreen(
                     }
                 }
             },
+            containerColor = MaterialTheme.colorScheme.surface,
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { linkDialogEvent = null }) {
-                    Text("Cancel")
+                    Text(
+                        text = "Cancel",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontFamily = BergenSans
+                    )
                 }
             }
         )
@@ -228,7 +240,7 @@ fun LiveEventsScreen(
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
                                 text = "No events available",
-                                fontSize = 16.sp,
+                                style = MaterialTheme.typography.bodyLarge,
                                 fontFamily = BergenSans,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -276,7 +288,10 @@ fun LiveEventsScreen(
             }
 
             if (isLoading && filteredEvents.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
@@ -301,7 +316,7 @@ private fun MarqueeBanner(text: String, url: String, context: Context) {
             modifier = Modifier
                 .fillMaxWidth()
                 .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
-            fontSize = 16.sp,
+            style = MaterialTheme.typography.bodyMedium,
             fontFamily = BergenSans,
             color = colorResource(R.color.message_banner_text),
             maxLines = 1,
@@ -336,6 +351,7 @@ private fun CategoryChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val liveRed = MaterialTheme.colorScheme.error
     var hasFocus by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (hasFocus) 1.08f else 1f,
@@ -358,7 +374,7 @@ private fun CategoryChip(
                 .clip(CircleShape)
                 .border(
                     width = 3.dp,
-                    color = if (isSelected) Red else MaterialTheme.colorScheme.outline,
+                    color = if (isSelected) liveRed else MaterialTheme.colorScheme.outline,
                     shape = CircleShape
                 )
         ) {
@@ -377,10 +393,10 @@ private fun CategoryChip(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = category.name,
-            fontSize = 10.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             fontFamily = BergenSans,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = if (isSelected) liveRed else MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -397,6 +413,7 @@ private fun StatusFilterChips(
     isTvDevice: Boolean,
     onFilterSelected: (EventStatus?) -> Unit
 ) {
+    val liveRed = MaterialTheme.colorScheme.error
     val filters = listOf(
         null to "All",
         EventStatus.LIVE to "Live",
@@ -433,7 +450,7 @@ private fun StatusFilterChips(
                             imageVector = Icons.Filled.Check,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Red
+                            tint = liveRed
                         )
                     }
                 } else null,
@@ -444,7 +461,7 @@ private fun StatusFilterChips(
                     containerColor = colorResource(R.color.chip_background_normal),
                     labelColor = colorResource(R.color.chip_text_normal),
                     selectedContainerColor = colorResource(R.color.chip_background_selected),
-                    selectedLabelColor = Red
+                    selectedLabelColor = liveRed
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
@@ -462,9 +479,10 @@ private fun StatusFilterChips(
 @Composable
 fun LiveEventCard(
     event: LiveEvent,
-    primaryColor: Color = Green,
+    primaryColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
+    val liveRed = MaterialTheme.colorScheme.error
     var hasFocus by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (hasFocus) 1.03f else 1f,
@@ -487,12 +505,18 @@ fun LiveEventCard(
                 .focusable()
                 .clickable { onClick() },
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 2.dp,
                 focusedElevation = elevationDp
             ),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Red)
+            border = androidx.compose.foundation.BorderStroke(
+                width = 1.dp,
+                color = liveRed.copy(alpha = 0.6f)
+            )
         ) {
             Column(
                 modifier = Modifier
@@ -518,7 +542,7 @@ fun LiveEventCard(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = event.league ?: "Unknown League",
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -534,12 +558,12 @@ fun LiveEventCard(
                     }
                     Text(
                         text = categoryLabel,
-                        fontSize = 10.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onError,
                         modifier = Modifier
-                            .background(Color(0xFFD32F2F), RoundedCornerShape(4.dp))
+                            .background(liveRed, RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -613,7 +637,7 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = name,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             fontFamily = BergenSans,
             color = MaterialTheme.colorScheme.onSurface,
@@ -626,7 +650,10 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
 }
 
 @Composable
-private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
+private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.colorScheme.primary) {
+    val liveRed = MaterialTheme.colorScheme.error
+    val endedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+
     val apiDateFormat = remember {
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
@@ -670,10 +697,10 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
         if (parseResult == null) {
             Text(
                 text = "Unknown",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 fontFamily = BergenSans,
-                color = Color.LightGray
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
             )
             return@Column
         }
@@ -703,17 +730,17 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = String.format("%02d:%02d:%02d", h, m, s),
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
-                    color = Red
+                    color = liveRed
                 )
             }
             isUpcoming -> {
                 if (startDate != null) {
                     Text(
                         text = timeFormat.format(startDate),
-                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
                         color = primaryColor
@@ -721,7 +748,7 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = dateFormat.format(startDate),
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -739,10 +766,10 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = countdownText,
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
-                        color = Red
+                        color = liveRed
                     )
                 }
             }
@@ -755,15 +782,15 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                 if (endDate != null) {
                     Text(
                         text = timeFormat.format(endDate),
-                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
-                        color = Color.Gray
+                        color = endedColor
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = dateFormat.format(endDate),
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -771,10 +798,10 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "Ended",
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
-                    color = Color.Gray
+                    color = endedColor
                 )
             }
         }
@@ -783,19 +810,20 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
 
 @Composable
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
+    val liveRed = MaterialTheme.colorScheme.error
     Box(
         modifier = modifier
             .size(width = 100.dp, height = 20.dp)
             .graphicsLayer { rotationZ = 45f }
-            .background(Red)
+            .background(liveRed)
             .padding(start = 24.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
             text = text,
-            fontSize = 10.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onError,
             maxLines = 1
         )
     }

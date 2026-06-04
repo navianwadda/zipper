@@ -120,7 +120,7 @@ fun LiveEventsScreen(
     val isEmpty by viewModel.isEmpty.observeAsState(false)
     val primaryColor by viewModel.primaryColorFlow.collectAsState()
 
-    var selectedStatusFilter by remember { mutableStateOf<EventStatus?>(EventStatus.LIVE) }
+    var selectedStatusFilter by remember { mutableStateOf<EventStatus?>(null) }
     var selectedCategoryId by remember { mutableStateOf("evt_cat_all") }
     var linkDialogEvent by remember { mutableStateOf<LiveEvent?>(null) }
 
@@ -435,25 +435,13 @@ private fun StatusFilterChips(
 ) {
     val liveRed = MaterialTheme.colorScheme.error
 
-    val chipNormalContainerColor = if (isDarkTheme)
-        MaterialTheme.colorScheme.surfaceVariant
-    else
-        MaterialTheme.colorScheme.surface
+    val chipNormalContainerColor = MaterialTheme.colorScheme.surfaceVariant
 
-    val chipNormalLabelColor = if (isDarkTheme)
-        MaterialTheme.colorScheme.onSurfaceVariant
-    else
-        MaterialTheme.colorScheme.onSurface
+    val chipNormalLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-    val chipSelectedContainerColor = if (isDarkTheme)
-        MaterialTheme.colorScheme.surface
-    else
-        Color.White
+    val chipSelectedContainerColor = MaterialTheme.colorScheme.surface
 
-    val chipNormalBorderColor = if (isDarkTheme)
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-    else
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+    val chipNormalBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
 
     val filters = listOf(
         null to "All",
@@ -559,7 +547,7 @@ fun LiveEventCard(
                     shape = RoundedCornerShape(12.dp),
                     ambientColor = shadowColor,
                     spotColor = shadowColor,
-                    clip = false
+                    clip = true
                 )
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .focusable()

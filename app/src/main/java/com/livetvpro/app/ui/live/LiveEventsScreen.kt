@@ -69,6 +69,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,6 +95,10 @@ import java.util.TimeZone
 
 private val Red = Color(0xFFEF4444)
 private val Green = Color(0xFF10B981)
+
+// FIX #1,2,3,4,5,8,10: bergen_sans was applied via android:fontFamily in all XML views but omitted
+// from every Compose Text. Define it once here and use throughout.
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 @Composable
 fun LiveEventsScreen(
@@ -218,9 +224,11 @@ fun LiveEventsScreen(
                     isLoading && filteredEvents.isEmpty() -> {}
                     isEmpty || filteredEvents.isEmpty() -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            // FIX #10: empty_view had android:fontFamily="@font/bergen_sans"
                             Text(
                                 text = "No events available",
                                 fontSize = 16.sp,
+                                fontFamily = BergenSans,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -286,19 +294,22 @@ private fun MarqueeBanner(text: String, url: String, context: Context) {
         }
     }
     val bannerShape = RoundedCornerShape(6.dp)
+    // FIX #9: bg_message_banner drawable already contains the stroke (width=1.5dp, color=message_banner_stroke).
+    // The original Compose version added a redundant .border(...) on top, doubling it. Removed.
+    // FIX #8: tv_message_banner had android:fontFamily="@font/bergen_sans" — added fontFamily = BergenSans.
     Text(
         text = text,
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 8.dp, end = 8.dp, top = 6.dp)
             .background(colorResource(R.color.message_banner_bg), bannerShape)
-            .border(1.5.dp, Color(0xFFCC0000), bannerShape)
             .padding(horizontal = 12.dp, vertical = 5.dp)
             .horizontalScroll(scrollState, enabled = false)
             .clickable(enabled = url.isNotBlank()) {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
             },
         fontSize = 16.sp,
+        fontFamily = BergenSans,
         color = colorResource(R.color.message_banner_text),
         maxLines = 1,
         overflow = TextOverflow.Clip
@@ -368,10 +379,12 @@ private fun CategoryChip(
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
+        // FIX #1: category_name had android:fontFamily="@font/bergen_sans"
         Text(
             text = category.name,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
+            fontFamily = BergenSans,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
             maxLines = 1,
@@ -485,10 +498,12 @@ fun LiveEventCard(
                         it.error(R.mipmap.ic_launcher_round).fallback(R.mipmap.ic_launcher_round)
                     }
                     Spacer(modifier = Modifier.width(6.dp))
+                    // FIX #2: leagueName had android:fontFamily="@font/bergen_sans"
                     Text(
                         text = event.league ?: "Unknown League",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
+                        fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -500,10 +515,12 @@ fun LiveEventCard(
                     val categoryLabel = event.category.ifEmpty {
                         event.eventCategoryName.ifEmpty { "Sports" }
                     }
+                    // FIX #3: categoryTag had android:fontFamily="@font/bergen_sans"
                     Text(
                         text = categoryLabel,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
+                        fontFamily = BergenSans,
                         color = Color.White,
                         modifier = Modifier
                             .background(Color(0xFFD32F2F), RoundedCornerShape(4.dp))
@@ -576,10 +593,12 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
             it.error(R.mipmap.ic_launcher_round).fallback(R.mipmap.ic_launcher_round)
         }
         Spacer(modifier = Modifier.height(4.dp))
+        // FIX #4: team1Name / team2Name had android:fontFamily="@font/bergen_sans"
         Text(
             text = name,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
+            fontFamily = BergenSans,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             maxLines = 2,
@@ -636,6 +655,7 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                 text = "Unknown",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
+                fontFamily = BergenSans,
                 color = Color.LightGray
             )
             return@Column
@@ -668,21 +688,26 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                     text = String.format("%02d:%02d:%02d", h, m, s),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = BergenSans,
                     color = Red
                 )
             }
             isUpcoming -> {
                 if (startDate != null) {
+                    // FIX #5: matchTime had android:fontFamily="@font/bergen_sans"
                     Text(
                         text = timeFormat.format(startDate),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
+                        fontFamily = BergenSans,
                         color = primaryColor
                     )
                     Spacer(modifier = Modifier.height(2.dp))
+                    // FIX #5: matchDate had android:fontFamily="@font/bergen_sans"
                     Text(
                         text = dateFormat.format(startDate),
                         fontSize = 12.sp,
+                        fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val diff = startMillis - currentTime
@@ -697,11 +722,14 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                         else -> String.format("%02ds", seconds)
                     }
                     Spacer(modifier = Modifier.height(2.dp))
+                    // FIX #5+6: statusText had android:fontFamily="@font/bergen_sans" AND
+                    // android:textColor="#EF4444" (Red). Compose was using primaryColor here. Fixed to Red.
                     Text(
                         text = countdownText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = primaryColor
+                        fontFamily = BergenSans,
+                        color = Red
                     )
                 }
             }
@@ -716,12 +744,14 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                         text = timeFormat.format(endDate),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
+                        fontFamily = BergenSans,
                         color = Color.Gray
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = dateFormat.format(endDate),
                         fontSize = 12.sp,
+                        fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -730,6 +760,7 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
                     text = "Ended",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = BergenSans,
                     color = Color.Gray
                 )
             }
@@ -739,12 +770,16 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = Green) {
 
 @Composable
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
+    // FIX #7: XML wrapperBadge has android:paddingStart="24dp" which offsets the text rightward
+    // inside the rotated badge. Compose was using contentAlignment=Center which centers it instead.
+    // Replicate XML behaviour: left-align with paddingStart=24dp.
     Box(
         modifier = modifier
             .size(width = 100.dp, height = 20.dp)
             .graphicsLayer { rotationZ = 45f }
-            .background(Red),
-        contentAlignment = Alignment.Center
+            .background(Red)
+            .padding(start = 24.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
         Text(
             text = text,

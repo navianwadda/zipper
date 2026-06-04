@@ -46,15 +46,12 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
 
-
     private var savedScrollState: android.os.Parcelable? = null
 
     override fun onSearchQuery(query: String) {
         if (query.isBlank() && viewModel.currentSearchQuery.isNotBlank()) {
-
             savedScrollState = binding.recyclerViewCategories.layoutManager?.onSaveInstanceState()
         } else if (query.isNotBlank() && viewModel.currentSearchQuery.isBlank()) {
-
             savedScrollState = binding.recyclerViewCategories.layoutManager?.onSaveInstanceState()
         }
         viewModel.searchCategories(query)
@@ -95,8 +92,8 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
         viewLifecycleOwner.lifecycleScope.launch {
             themeManager.primaryColorFlow.collectLatest { color ->
                 if (color != 0) {
-                    val surfaceContainer = themeManager.getSurfaceContainerColor(requireContext())
-                    categoryAdapter.setColors(color, surfaceContainer)
+                    val bgColor = themeManager.getBackgroundColor(requireContext())
+                    categoryAdapter.setColors(color, bgColor)
                 }
             }
         }
@@ -180,7 +177,6 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
         viewModel.filteredCategories.observe(viewLifecycleOwner) { categories ->
             val restoreState = if (viewModel.currentSearchQuery.isBlank()) savedScrollState else null
             categoryAdapter.submitList(categories) {
-
                 if (restoreState != null) {
                     binding.recyclerViewCategories.layoutManager?.onRestoreInstanceState(restoreState)
                     savedScrollState = null

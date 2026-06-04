@@ -533,6 +533,7 @@ class PlayerActivity : AppCompatActivity() {
         setSubtitleTextSize()
         updateMessageBannerForOrientation(isLandscape)
         updateLinksForOrientation(isLandscape)
+        applyAdapterColors()
 
         if (player?.playbackState == Player.STATE_BUFFERING) {
             binding.playerView.hideController()
@@ -542,6 +543,14 @@ class PlayerActivity : AppCompatActivity() {
             binding.root.requestLayout()
             binding.playerContainer.requestLayout()
             binding.playerView.requestLayout()
+        }
+    }
+
+    private fun applyAdapterColors() {
+        val primary = themeManager.getPrimaryColor(this)
+        val surfaceContainer = themeManager.getSurfaceContainerColor(this)
+        if (::relatedChannelsAdapter.isInitialized) {
+            relatedChannelsAdapter.setColors(primary, surfaceContainer)
         }
     }
 

@@ -156,6 +156,7 @@ dependencies {
 
     val pagingVersion = "3.3.6"
     implementation("androidx.paging:paging-runtime-ktx:$pagingVersion")
+    implementation("androidx.paging:paging-compose:$pagingVersion")
 
     // Jetpack Compose - Required for PlayerActivity
     val composeBom = platform("androidx.compose:compose-bom:2025.06.01")

@@ -66,14 +66,12 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                LiveTVProTheme(themeManager) {
-                val spanCount = resources.getInteger(R.integer.event_span_count)
-
+        savedInstanceState: Bundle?,
+    ): View = ComposeView(requireContext()).apply {
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        setContent {
+            val spanCount = resources.getInteger(R.integer.event_span_count)
+            LiveTVProTheme(themeManager) {
                 LiveEventsScreen(
                     viewModel = viewModel,
                     messageBannerText = listenerManager.getMessage(),
@@ -105,7 +103,6 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                         result == RedirectHelper.RedirectResult.REDIRECTED
                     }
                 )
-                }
             }
         }
     }

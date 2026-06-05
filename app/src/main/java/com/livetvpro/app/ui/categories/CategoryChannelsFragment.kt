@@ -114,6 +114,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                         isTvDevice = DeviceUtils.isTvDevice,
                         onChannelClick = { channel -> launchPlayer(channel, -1) },
                         onChannelLongClick = { channel -> showFavoriteDialog(channel) },
+                        onShowGroupsDialog = { showGroupsDialog() },
                         onChannelInteraction = { channel, navAction ->
                             val action: () -> Unit =
                                 if (channel.links != null && channel.links.size > 1) {

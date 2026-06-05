@@ -2,7 +2,6 @@ package com.livetvpro.app.ui.categories
 
 import android.content.DialogInterface
 import android.content.Intent
-import androidx.activity.result.ActivityResultLauncher
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -16,59 +15,52 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.paging.LoadState
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.tabs.TabLayout
 import com.livetvpro.app.R
 import com.livetvpro.app.SearchableFragment
+import com.livetvpro.app.data.local.PreferencesManager
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ListenerConfig
-import com.livetvpro.app.databinding.FragmentCategoryChannelsBinding
-import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.ui.adapters.CategoryGroupDialogAdapter
-import com.livetvpro.app.ui.adapters.ChannelAdapter
+import com.livetvpro.app.ui.player.ChannelListCache
 import com.livetvpro.app.ui.player.PlayerActivity
+import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
+import com.livetvpro.app.utils.FloatingPlayerHelper
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
-import com.livetvpro.app.utils.RetryHandler
+import com.livetvpro.app.utils.RedirectHelper
 import com.livetvpro.app.utils.Refreshable
-import com.livetvpro.app.data.local.PreferencesManager
-import com.livetvpro.app.utils.FloatingPlayerHelper
-import com.livetvpro.app.ui.player.ChannelListCache
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
-    private var _binding: FragmentCategoryChannelsBinding? = null
-    private var pendingChannelAction: (() -> Unit)? = null
-    private var pendingExternalRedirect: Boolean = false
-    private val binding get() = _binding!!
+
     private val viewModel: CategoryChannelsViewModel by viewModels()
-    private lateinit var channelAdapter: ChannelAdapter
 
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
+    @Inject lateinit var preferencesManager: PreferencesManager
+    @Inject lateinit var themeManager: ThemeManager
 
     private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
-    @Inject lateinit var preferencesManager: PreferencesManager
+    private var pendingChannelAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
 
     private var currentCategoryId: String? = null
+
     private var numpadBuffer = ""
     private val numpadHandler = Handler(Looper.getMainLooper())
     private val numpadResetRunnable = Runnable {
@@ -77,22 +69,12 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
     }
     private val NUMPAD_RESET_MS = 2000L
 
-    private var savedScrollState: android.os.Parcelable? = null
+    override fun refreshData() {
+        currentCategoryId?.let { viewModel.loadChannels(it) }
+    }
 
     override fun onSearchQuery(query: String) {
-        if (query.isBlank() && viewModel.currentSearchQuery.isNotBlank()) {
-            savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
-        } else if (query.isNotBlank() && viewModel.currentSearchQuery.isBlank()) {
-            savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
-        }
         viewModel.searchChannels(query)
-    }
-    override fun refreshData() { currentCategoryId?.let { viewModel.loadChannels(it) } }
-
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
-        super.onConfigurationChanged(newConfig)
-        val columnCount = resources.getInteger(R.integer.grid_column_count)
-        (binding.recyclerViewChannels.layoutManager as? GridLayoutManager)?.spanCount = columnCount
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,54 +87,78 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         )
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = FragmentCategoryChannelsBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?,
+    ): View {
         currentCategoryId = arguments?.getString("categoryId")
+
         try {
             val toolbarTitle = requireActivity().findViewById<TextView>(R.id.toolbar_title)
             if (viewModel.categoryName.isNotEmpty()) toolbarTitle?.text = viewModel.categoryName
         } catch (_: Exception) {}
-        setupTabLayout()
-        setupRecyclerView()
-        setupRetryHandling()
-        observeViewModel()
-        binding.groupsIcon.setOnClickListener { showGroupsDialog() }
-        if (DeviceUtils.isTvDevice) {
-            binding.swipeRefresh.isEnabled = false
-            binding.groupsIcon.isFocusable = true
-            binding.groupsIcon.isFocusableInTouchMode = false
-            binding.groupsIcon.setOnKeyListener { _, keyCode, event ->
-                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                when (keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-                    android.view.KeyEvent.KEYCODE_ENTER,
-                    android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                        showGroupsDialog()
-                        true
-                    }
-                    else -> false
-                }
-            }
-        } else {
-            binding.swipeRefresh.isEnabled = true
-        }
+
         currentCategoryId?.let { id ->
             if (id != viewModel.lastLoadedCategoryId) viewModel.loadChannels(id)
         }
-        if (DeviceUtils.isTvDevice) {
-            setupTvNumpadSearch()
+
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val spanCount = resources.getInteger(R.integer.grid_column_count)
+                LiveTVProTheme(themeManager) {
+                    CategoryChannelsScreen(
+                        viewModel = viewModel,
+                        spanCount = spanCount,
+                        isTvDevice = DeviceUtils.isTvDevice,
+                        onChannelClick = { channel -> launchPlayer(channel, -1) },
+                        onChannelLongClick = { channel -> showFavoriteDialog(channel) },
+                        onChannelInteraction = { channel, navAction ->
+                            val action: () -> Unit =
+                                if (channel.links != null && channel.links.size > 1) {
+                                    { showLinkSelectionDialog(channel) }
+                                } else {
+                                    navAction
+                                }
+                            lastPageType = ListenerConfig.PAGE_CHANNELS
+                            lastUniqueId = channel.id
+                            pendingChannelAction = action
+
+                            val result = RedirectHelper.tryRedirect(
+                                fragment    = this@CategoryChannelsFragment,
+                                pageType    = ListenerConfig.PAGE_CHANNELS,
+                                uniqueId    = channel.id,
+                                cooldownMgr = cooldownManager,
+                                listenerMgr = listenerManager,
+                                launcher    = redirectLauncher
+                            )
+                            if (result == RedirectHelper.RedirectResult.REDIRECTED) {
+                                if (!listenerManager.isInAppRedirectEnabled()) {
+                                    pendingExternalRedirect = true
+                                } else {
+                                    pendingChannelAction = null
+                                }
+                            } else {
+                                pendingChannelAction = null
+                            }
+                            result == RedirectHelper.RedirectResult.REDIRECTED
+                        }
+                    )
+                }
+            }
         }
     }
 
-    private fun setupTvNumpadSearch() {
-        binding.root.isFocusableInTouchMode = true
-        binding.root.requestFocus()
-        binding.root.setOnKeyListener { _, keyCode, event ->
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        if (DeviceUtils.isTvDevice) setupTvNumpadSearch(view)
+    }
+
+    private fun setupTvNumpadSearch(rootView: View) {
+        rootView.isFocusableInTouchMode = true
+        rootView.requestFocus()
+        rootView.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
             val digit: String? = when (keyCode) {
                 KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_NUMPAD_0 -> "0"
@@ -172,7 +178,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 numpadHandler.removeCallbacks(numpadResetRunnable)
                 numpadHandler.postDelayed(numpadResetRunnable, NUMPAD_RESET_MS)
                 viewModel.searchChannels(numpadBuffer)
-                binding.recyclerViewChannels.requestFocus()
                 return@setOnKeyListener true
             }
             if (keyCode == KeyEvent.KEYCODE_DEL && numpadBuffer.isNotEmpty()) {
@@ -190,75 +195,13 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         }
     }
 
-    private fun setupRecyclerView() {
-        channelAdapter = ChannelAdapter(
-            onChannelClick = { channel ->
-                pendingChannelAction = if (channel.links != null && channel.links.isNotEmpty() && channel.links.size > 1) {
-                    { showLinkSelectionDialog(channel) }
-                } else {
-                    { launchPlayer(channel, -1) }
-                }
-                lastPageType = ListenerConfig.PAGE_CHANNELS
-                lastUniqueId = channel.id
-                val result = RedirectHelper.tryRedirect(
-                    fragment    = this@CategoryChannelsFragment,
-                    pageType    = ListenerConfig.PAGE_CHANNELS,
-                    uniqueId    = channel.id,
-                    cooldownMgr = cooldownManager,
-                    listenerMgr = listenerManager,
-                    launcher    = redirectLauncher
-                )
-                if (result == RedirectHelper.RedirectResult.REDIRECTED) {
-                    if (!listenerManager.isInAppRedirectEnabled()) {
-                        pendingExternalRedirect = true
-                    } else {
-                        pendingChannelAction = null
-                    }
-                } else if (result == RedirectHelper.RedirectResult.NOT_REDIRECTED) {
-                    pendingChannelAction?.invoke()
-                    pendingChannelAction = null
-                } else {
-                    pendingChannelAction = null
-                }
-            },
-            onFavoriteToggle = { channel ->
-                viewModel.toggleFavorite(channel)
-                lifecycleScope.launch {
-                    delay(50)
-                    if (_binding != null) channelAdapter.refreshItem(channel.id)
-                }
-            },
-            isFavorite = { channelId -> viewModel.isFavorite(channelId) }
-        )
-        val columnCount = resources.getInteger(R.integer.grid_column_count)
-        binding.recyclerViewChannels.apply {
-            layoutManager = GridLayoutManager(context, columnCount)
-            adapter = channelAdapter
-            itemAnimator = null
-            if (DeviceUtils.isTvDevice) {
-                descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-                isFocusable = true
-                isFocusableInTouchMode = false
-            }
-        }
-    }
-
-    private fun setupRetryHandling() {
-        RetryHandler.setupGlobal(
-            lifecycleOwner = viewLifecycleOwner,
-            viewModel = viewModel,
-            activity = requireActivity() as androidx.appcompat.app.AppCompatActivity,
-            contentView = binding.swipeRefresh,
-            swipeRefresh = binding.swipeRefresh,
-            progressBar = binding.progressBar,
-            emptyView = binding.emptyView
-        )
-    }
-
     private fun launchPlayer(channel: Channel, linkIndex: Int) {
-        val cacheKey = currentCategoryId ?: channel.categoryId.takeIf { it.isNotEmpty() } ?: channel.id
-        val channelList = channelAdapter.snapshot().items
-        if (channelList.isNotEmpty()) ChannelListCache.put(cacheKey, channelList)
+        val cacheKey = currentCategoryId
+            ?: channel.categoryId.takeIf { it.isNotEmpty() }
+            ?: channel.id
+        val floatingEnabled = preferencesManager.isFloatingPlayerEnabled()
+        val hasPermission = FloatingPlayerHelper.hasOverlayPermission(requireContext())
+
         if (DeviceUtils.isTvDevice) {
             PlayerActivity.startWithChannel(
                 requireContext(), channel, linkIndex,
@@ -268,8 +211,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
             )
             return
         }
-        val floatingEnabled = preferencesManager.isFloatingPlayerEnabled()
-        val hasPermission = FloatingPlayerHelper.hasOverlayPermission(requireContext())
+
         if (floatingEnabled) {
             if (!hasPermission) {
                 PlayerActivity.startWithChannel(
@@ -281,7 +223,9 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 return
             }
             try {
-                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+                FloatingPlayerHelper.launchFloatingPlayer(
+                    requireContext(), channel, linkIndex, channelListCacheKey = cacheKey
+                )
             } catch (_: Exception) {
                 PlayerActivity.startWithChannel(
                     requireContext(), channel, linkIndex,
@@ -314,7 +258,23 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.requestFocus()
     }
 
-    private fun showGroupsDialog() {
+    private fun showFavoriteDialog(channel: Channel) {
+        val isFav = viewModel.isFavorite(channel.id)
+        val title = if (isFav) "Remove from Favorites?" else "Add to Favorites?"
+        val message = if (isFav) "Remove \"${channel.name}\" from favorites?" else "Add \"${channel.name}\" to favorites?"
+        val posBtnLabel = if (isFav) "Remove" else "Add"
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(posBtnLabel) { dialog, _ ->
+                viewModel.toggleFavorite(channel)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    fun showGroupsDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_category_groups, null)
         val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recycler_view_groups)
         val searchEditText = dialogView.findViewById<EditText>(R.id.search_group)
@@ -331,10 +291,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
 
         val dialogAdapter = CategoryGroupDialogAdapter { groupName ->
             viewModel.selectGroup(groupName)
-            val tabIndex = allGroups.indexOf(groupName)
-            if (tabIndex >= 0 && tabIndex < binding.tabLayoutGroups.tabCount) {
-                binding.tabLayoutGroups.getTabAt(tabIndex)?.select()
-            }
             dialog.dismiss()
         }
         recyclerView.apply {
@@ -353,9 +309,9 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
             }
         } else {
             val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            searchEditText.setOnFocusChangeListener { view, hasFocus ->
+            searchEditText.setOnFocusChangeListener { v, hasFocus ->
                 clearSearchBtn.visibility = if (hasFocus) View.VISIBLE else View.GONE
-                if (!hasFocus) imm.hideSoftInputFromWindow(view.windowToken, 0)
+                if (!hasFocus) imm.hideSoftInputFromWindow(v.windowToken, 0)
             }
             searchEditText.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -386,115 +342,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         }
     }
 
-    private fun observeViewModel() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.channelsPaged.collectLatest { pagingData ->
-                    val restoreState = savedScrollState
-                    channelAdapter.submitData(pagingData)
-                    if (restoreState != null) {
-                        binding.recyclerViewChannels.layoutManager
-                            ?.onRestoreInstanceState(restoreState)
-                        savedScrollState = null
-                    }
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                channelAdapter.loadStateFlow.collectLatest { loadStates ->
-                    val isEmpty = channelAdapter.itemCount == 0 &&
-                        loadStates.refresh is LoadState.NotLoading
-                    if (viewModel.isLoading.value != true && viewModel.error.value == null) {
-                        binding.emptyView.visibility = if (isEmpty) View.VISIBLE else View.GONE
-                        binding.recyclerViewChannels.visibility =
-                            if (isEmpty) View.GONE else View.VISIBLE
-                    }
-                    if (DeviceUtils.isTvDevice && channelAdapter.itemCount > 0) {
-                        binding.recyclerViewChannels.post {
-                            binding.recyclerViewChannels
-                                .findViewHolderForAdapterPosition(0)
-                                ?.itemView
-                                ?.requestFocus()
-                        }
-                    }
-                }
-            }
-        }
-
-        viewModel.categoryGroups.observe(viewLifecycleOwner) { groups ->
-            val hasGroups = groups.isNotEmpty()
-            binding.groupsHeader.visibility = if (hasGroups) View.VISIBLE else View.GONE
-            binding.headerDivider.visibility = if (hasGroups) View.VISIBLE else View.GONE
-            if (hasGroups) updateTabs(groups)
-            else binding.tabLayoutGroups.removeAllTabs()
-        }
-        viewModel.currentGroup.observe(viewLifecycleOwner) { selectedGroup ->
-            val groups = viewModel.categoryGroups.value ?: emptyList()
-            val tabIndex = groups.indexOf(selectedGroup)
-            if (tabIndex >= 0 && tabIndex < binding.tabLayoutGroups.tabCount) {
-                binding.tabLayoutGroups.getTabAt(tabIndex)?.select()
-            }
-        }
-    }
-
-    private var suppressTabListener = false
-
-    private fun setupTabLayout() {
-        binding.tabLayoutGroups.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                if (suppressTabListener) return
-                tab?.text?.toString()?.let { groupName ->
-                    savedScrollState = binding.recyclerViewChannels.layoutManager?.onSaveInstanceState()
-                    viewModel.selectGroup(groupName)
-                }
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
-        })
-    }
-
-    private fun updateTabs(groups: List<String>) {
-        suppressTabListener = true
-        binding.tabLayoutGroups.removeAllTabs()
-        groups.forEach { groupName ->
-            binding.tabLayoutGroups.addTab(binding.tabLayoutGroups.newTab().setText(groupName))
-        }
-        val currentGroup = viewModel.currentGroup.value ?: "All"
-        val restoreIndex = groups.indexOf(currentGroup).coerceAtLeast(0)
-        if (binding.tabLayoutGroups.tabCount > 0) binding.tabLayoutGroups.getTabAt(restoreIndex)?.select()
-        suppressTabListener = false
-        binding.tabLayoutGroups.post {
-            for (i in 0 until binding.tabLayoutGroups.tabCount) {
-                val tab = binding.tabLayoutGroups.getTabAt(i)
-                val tabView = tab?.view
-                val tabTextView = tabView?.findViewById<TextView>(android.R.id.text1)
-                tabTextView?.typeface = resources.getFont(R.font.bergen_sans)
-                if (DeviceUtils.isTvDevice && tabView != null) {
-                    tabView.isFocusable = true
-                    tabView.isFocusableInTouchMode = false
-                    tabView.setOnFocusChangeListener { v, hasFocus ->
-                        v.animate().scaleX(if (hasFocus) 1.05f else 1f)
-                            .scaleY(if (hasFocus) 1.05f else 1f).setDuration(100).start()
-                    }
-                    tabView.setOnKeyListener { _, keyCode, event ->
-                        if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                        when (keyCode) {
-                            android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-                            android.view.KeyEvent.KEYCODE_ENTER,
-                            android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                                tabView.performClick()
-                                true
-                            }
-                            else -> false
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     override fun onResume() {
         super.onResume()
         RedirectHelper.executePendingActionOnResume(
@@ -505,23 +352,9 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         )
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        val layoutManager = _binding?.recyclerViewChannels?.layoutManager as? GridLayoutManager
-        layoutManager?.onSaveInstanceState()?.let { outState.putParcelable("rv_channels_state", it) }
-    }
-
-    override fun onViewStateRestored(savedInstanceState: Bundle?) {
-        super.onViewStateRestored(savedInstanceState)
-        savedInstanceState?.getParcelable<android.os.Parcelable>("rv_channels_state")?.let {
-            binding.recyclerViewChannels.layoutManager?.onRestoreInstanceState(it)
-        }
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
         numpadHandler.removeCallbacksAndMessages(null)
         viewModel.dismissError()
-        _binding = null
     }
 }

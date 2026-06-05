@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
@@ -30,6 +31,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -79,7 +81,8 @@ fun CategoryChannelsScreen(
     isTvDevice: Boolean = false,
     onChannelClick: (Channel) -> Unit,
     onChannelLongClick: (Channel) -> Unit,
-    onChannelInteraction: ((Channel, () -> Unit) -> Boolean)? = null
+    onChannelInteraction: ((Channel, () -> Unit) -> Boolean)? = null,
+    onShowGroupsDialog: (() -> Unit)? = null
 ) {
     val channels: LazyPagingItems<Channel> = viewModel.channelsPaged.collectAsLazyPagingItems()
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -103,23 +106,37 @@ fun CategoryChannelsScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         if (hasGroups) {
             val selectedIndex = categoryGroups.indexOf(currentGroup).coerceAtLeast(0)
-            ScrollableTabRow(
-                selectedTabIndex = selectedIndex,
-                edgePadding = 0.dp,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                categoryGroups.forEachIndexed { index, group ->
-                    Tab(
-                        selected = index == selectedIndex,
-                        onClick = { viewModel.selectGroup(group) },
-                        text = {
-                            Text(
-                                text = group,
-                                fontFamily = BergenSans,
-                                fontSize = 14.sp
-                            )
-                        }
-                    )
+                if (onShowGroupsDialog != null) {
+                    IconButton(onClick = onShowGroupsDialog) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_list),
+                            contentDescription = "Search Groups",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                ScrollableTabRow(
+                    selectedTabIndex = selectedIndex,
+                    edgePadding = 0.dp,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    categoryGroups.forEachIndexed { index, group ->
+                        Tab(
+                            selected = index == selectedIndex,
+                            onClick = { viewModel.selectGroup(group) },
+                            text = {
+                                Text(
+                                    text = group,
+                                    fontFamily = BergenSans,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }

@@ -165,7 +165,9 @@ fun CategoryChannelsScreen(
                             columns = GridCells.Fixed(spanCount),
                             state = gridState,
                             contentPadding = PaddingValues(
-                                all = 4.dp,
+                                start = 4.dp,
+                                top = 4.dp,
+                                end = 4.dp,
                                 bottom = bottomPadding
                             ),
                             horizontalArrangement = Arrangement.spacedBy(0.dp),

@@ -3,16 +3,19 @@ package com.livetvpro.app.ui.home
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.Category
 import com.livetvpro.app.data.repository.CategoryRepository
 import com.livetvpro.app.utils.RetryViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val themeManager: ThemeManager
 ) : RetryViewModel() {
 
     private val _categories = MutableLiveData<List<Category>>()
@@ -20,6 +23,8 @@ class HomeViewModel @Inject constructor(
 
     private val _filteredCategories = MutableLiveData<List<Category>>()
     val filteredCategories: LiveData<List<Category>> = _filteredCategories
+
+    val primaryColorFlow: StateFlow<Int> = themeManager.primaryColorFlow
 
     var currentSearchQuery = ""
         private set
@@ -32,17 +37,17 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 startLoading()
-                
+
                 val categories = categoryRepository.getCategories()
-                
+
                 _categories.value = categories
                 searchCategories(currentSearchQuery)
-                
+
                 finishLoading(dataIsEmpty = categories.isEmpty())
             } catch (e: Exception) {
                 _categories.value = emptyList()
                 _filteredCategories.value = emptyList()
-                
+
                 finishLoading(dataIsEmpty = true, error = e)
             }
         }

@@ -284,10 +284,6 @@ private fun ChannelCard(
                             .fallback(R.mipmap.ic_launcher_round)
                     }
                 }
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
-                        )
-                )
 
                 if (isFavorite) {
                     Icon(

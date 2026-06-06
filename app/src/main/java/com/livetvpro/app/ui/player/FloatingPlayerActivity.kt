@@ -136,7 +136,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private var resizeModesRestoredFromState = false
 
     private var savedPlaybackPosition: Long = -1L
-    private var settingsDialog: com.livetvpro.app.ui.player.settings.PlayerSettingsDialog? = null
     private var isShowingSettingsDialog = false
     private val showSettingsDialogState = androidx.compose.runtime.mutableStateOf(false)
 

@@ -1,16 +1,11 @@
 package com.livetvpro.app.ui.player.compose
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,13 +14,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -36,8 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,12 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -65,14 +51,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.data.models.LiveEventLink
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.TimeZone
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
@@ -389,15 +373,13 @@ private fun RelatedEventsGrid(
     if (events.isEmpty()) return
     LazyVerticalGrid(
         columns = GridCells.Fixed(spanCount),
-        contentPadding = PaddingValues(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = 4.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight(),
     ) {
         items(events, key = { it.id }) { event ->
-            RelatedEventCard(
+            com.livetvpro.app.ui.live.LiveEventCard(
                 event = event,
                 onClick = { onEventClick(event, 0) },
             )
@@ -405,173 +387,4 @@ private fun RelatedEventsGrid(
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
-@Composable
-private fun RelatedEventCard(
-    event: LiveEvent,
-    onClick: () -> Unit,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (focused) 1.05f else 1f,
-        animationSpec = tween(150),
-        label = "scale",
-    )
-    val isLive = remember(event) {
-        try {
-            val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-                .apply { timeZone = TimeZone.getTimeZone("UTC") }
-            val start = fmt.parse(event.startTime)?.time ?: 0L
-            val end = if (!event.endTime.isNullOrEmpty()) fmt.parse(event.endTime)?.time ?: Long.MAX_VALUE
-                      else Long.MAX_VALUE
-            System.currentTimeMillis() in start..end
-        } catch (_: Exception) {
-            event.isLive
-        }
-    }
 
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-        modifier = Modifier
-            .scale(scale)
-            .onFocusChanged { focused = it.isFocused }
-            .focusable(),
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                val teamNames = event.title.split(" vs ", ignoreCase = true)
-                val team1 = teamNames.getOrNull(0)?.trim() ?: ""
-                val team2 = teamNames.getOrNull(1)?.trim() ?: ""
-
-                TeamLogoColumn(
-                    logoUrl = event.team1Logo.ifEmpty { event.leagueLogo },
-                    name = team1,
-                )
-                Text(
-                    text = "vs",
-                    fontFamily = BergenSans,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                )
-                TeamLogoColumn(
-                    logoUrl = event.team2Logo.ifEmpty { event.leagueLogo },
-                    name = team2,
-                )
-            }
-
-            Spacer(Modifier.height(4.dp))
-            if (isLive) {
-                LivePulseDot()
-            } else {
-                EventTimeText(startTime = event.startTime)
-            }
-            Text(
-                text = event.league,
-                fontFamily = BergenSans,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalGlideComposeApi::class)
-@Composable
-private fun TeamLogoColumn(logoUrl: String, name: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(56.dp),
-    ) {
-        GlideImage(
-            model = logoUrl,
-            contentDescription = name,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape),
-        ) {
-            it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                .placeholder(R.mipmap.ic_launcher_round)
-                .error(R.mipmap.ic_launcher_round)
-        }
-        Text(
-            text = name,
-            fontFamily = BergenSans,
-            fontSize = 10.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun LivePulseDot(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "live_pulse")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 0.2f,
-        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
-        label = "alpha",
-    )
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = modifier,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFE53935).copy(alpha = alpha)),
-        )
-        Text(
-            text = "LIVE",
-            fontFamily = BergenSans,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFFE53935),
-        )
-    }
-}
-
-@Composable
-private fun EventTimeText(startTime: String, modifier: Modifier = Modifier) {
-    val (timeStr, dateStr) = remember(startTime) {
-        try {
-            val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-                .apply { timeZone = TimeZone.getTimeZone("UTC") }
-            val date = fmt.parse(startTime)
-            val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(date)
-            val day = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date)
-            time to day
-        } catch (_: Exception) {
-            startTime to ""
-        }
-    }
-    Column(modifier = modifier) {
-        Text(
-            text = timeStr,
-            fontFamily = BergenSans,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-        )
-        if (dateStr.isNotBlank()) {
-            Text(
-                text = dateStr,
-                fontFamily = BergenSans,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-            )
-        }
-    }
-}

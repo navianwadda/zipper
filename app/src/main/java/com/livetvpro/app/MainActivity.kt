@@ -148,16 +148,17 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     if (color != 0) {
                         val floatingNav = binding.root.findViewById<com.livetvpro.app.ui.components.FloatingNavView>(R.id.bottom_navigation)
                         floatingNav?.setActiveColor(color)
+                        val onSurface = themeManager.getOnSurfaceColor(this@MainActivity)
                         val toolbarTitle = binding.root.findViewById<android.widget.TextView>(R.id.toolbar_title)
-                        toolbarTitle?.setTextColor(color)
+                        toolbarTitle?.setTextColor(onSurface)
                         val btnSearch = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search)
                         val btnFavorites = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_favorites)
                         val btnSearchClear = binding.root.findViewById<android.widget.ImageButton>(R.id.btn_search_clear)
-                        val tintList = android.content.res.ColorStateList.valueOf(color)
+                        val tintList = android.content.res.ColorStateList.valueOf(onSurface)
                         btnSearch?.imageTintList = tintList
                         btnFavorites?.imageTintList = tintList
                         btnSearchClear?.imageTintList = tintList
-                        drawerToggle?.drawerArrowDrawable?.color = color
+                        drawerToggle?.drawerArrowDrawable?.color = onSurface
                         currentPrimaryColor = color
                         val bgColor = themeManager.getBackgroundColor(this@MainActivity)
                         val appBarLayout = binding.root.findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar_layout)

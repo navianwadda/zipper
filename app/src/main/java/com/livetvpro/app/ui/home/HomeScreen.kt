@@ -219,7 +219,7 @@ private fun CategoryCard(
                 ) {
                     @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
-                        model = category.iconUrl.takeIf { it.isNotBlank() },
+                        model = category.iconUrl?.takeIf { it.isNotBlank() },
                         contentDescription = "Category icon",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()

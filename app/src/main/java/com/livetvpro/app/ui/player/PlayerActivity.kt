@@ -1098,6 +1098,7 @@ class PlayerActivity : AppCompatActivity() {
         showChannelOverlayState.value = null
         return
 
+    }
     private fun navigateToChannelByNumber() {
         val number = channelNumberInput.toIntOrNull()
         channelNumberInput = ""
@@ -1682,8 +1683,6 @@ class PlayerActivity : AppCompatActivity() {
 
             setupPlayer()
             setupLinksUI()
-                )
-            }
 
             relatedContentState.value = RelatedContentState.Loading
 
@@ -1860,7 +1859,6 @@ class PlayerActivity : AppCompatActivity() {
         playerViewRef.hideController()
 
         if (DeviceUtils.isTvDevice) {
-                ?.setOnClickListener { retryPlayback() }
         }
         trackSelector = DefaultTrackSelector(this).apply {
             parameters = buildUponParameters()

@@ -237,14 +237,17 @@ private fun ChannelCard(
     )
 
     Card(
-        onClick = onClick,
         modifier = Modifier
             .padding(4.dp)
             .fillMaxWidth()
             .wrapContentHeight()
             .scale(scale)
             .onFocusChanged { hasFocus = it.hasFocus }
-            .focusable(),
+            .focusable()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -252,11 +255,7 @@ private fun ChannelCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp)
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick
-                ),
+                .padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(

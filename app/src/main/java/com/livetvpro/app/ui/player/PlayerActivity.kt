@@ -100,6 +100,7 @@ class PlayerActivity : AppCompatActivity() {
     private val showFloatingDialog  = mutableStateOf(false)
     internal val errorMessage        = mutableStateOf("")
     private var relatedChannels = listOf<Channel>()
+    private var relatedLiveEvents = listOf<LiveEvent>()
 
     private val mainHandler = Handler(Looper.getMainLooper())
     internal val viewModel: PlayerViewModel by viewModels()
@@ -475,6 +476,7 @@ class PlayerActivity : AppCompatActivity() {
 
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
             if (contentType != ContentType.EVENT) return@observe
+            relatedLiveEvents = liveEvents
             relatedContentState.value = if (liveEvents.isEmpty()) RelatedContentState.Hidden else RelatedContentState.Events(liveEvents)
         }
 
@@ -800,7 +802,11 @@ class PlayerActivity : AppCompatActivity() {
             val hasRelated = relatedChannels.isNotEmpty() ||
                 (contentType == ContentType.EVENT)
             if (hasRelated) {
-                relatedContentState.value = RelatedContentState.Hidden
+                relatedContentState.value = when {
+                    relatedChannels.isNotEmpty() -> RelatedContentState.Channels(relatedChannels)
+                    relatedLiveEvents.isNotEmpty() -> RelatedContentState.Events(relatedLiveEvents)
+                    else -> RelatedContentState.Loading
+                }
             }
         }
 
@@ -2425,7 +2431,8 @@ private fun PlayerActivity.PlayerActivityRoot(
     onEventClick: (com.livetvpro.app.data.models.LiveEvent, Int) -> Unit,
     onMessageBannerClick: () -> Unit,
 ) {
-    val isLandscape = activity.resources.configuration.orientation ==
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isLandscape = configuration.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE ||
         com.livetvpro.app.utils.DeviceUtils.isTvDevice
     val spanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)

@@ -1132,201 +1132,6 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun setupComposeControls() {
-        binding.playerControlsCompose.apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
-                    val isPlaying by produceState(initialValue = false, player) {
-                        while (true) {
-                            value = player?.isPlaying == true
-                            delay(100)
-                        }
-                    }
-
-                    var currentPosition by remember { mutableStateOf(0L) }
-                    var duration by remember { mutableStateOf(0L) }
-                    var bufferedPosition by remember { mutableStateOf(0L) }
-
-                    LaunchedEffect(player) {
-                        while (true) {
-                            currentPosition = player?.currentPosition ?: 0L
-                            bufferedPosition = player?.bufferedPosition ?: 0L
-                            duration = player?.contentDuration?.coerceAtLeast(0L) ?: 0L
-                            delay(500L)
-                        }
-                    }
-                    val isLandscape = DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-                    var showChannelList by this@PlayerActivity.showChannelList
-                    val channelListItems by viewModel.channelListItems.observeAsState(emptyList())
-                    val isChannelListAvailable = contentType == ContentType.CHANNEL && channelListItems.isNotEmpty() && (isLandscape || DeviceUtils.isTvDevice)
-
-                    LaunchedEffect(controlsState.isVisible, controlsState.isLocked, isLandscape, showChannelList) {
-                        if (isLandscape) {
-                            val landscapeLinksRecycler = playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
-                            val chipsVisible = controlsState.isVisible && !controlsState.isLocked && !showChannelList
-                            landscapeLinksRecycler?.visibility = if (chipsVisible) View.VISIBLE else View.GONE
-                        }
-                    }
-
-                    DisposableEffect(Unit) {
-                        val listener = ViewTreeObserver.OnGlobalLayoutListener {
-                            val rect = Rect()
-                            val surface = playerViewRef.videoSurfaceView
-                            val target = surface ?: playerViewRef
-                            target.getGlobalVisibleRect(rect)
-                            if (!rect.isEmpty) {
-                                pipRect = rect
-                            }
-                        }
-                        playerViewRef.viewTreeObserver.addOnGlobalLayoutListener(listener)
-
-                        onDispose {
-                            playerViewRef.viewTreeObserver.removeOnGlobalLayoutListener(listener)
-                        }
-                    }
-
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        PlayerControls(
-                            state = controlsState,
-                            isPlaying = isPlaying,
-                            isMuted = isMuted,
-                            currentPosition = currentPosition,
-                            duration = duration,
-                            bufferedPosition = bufferedPosition,
-                            channelName = contentName,
-                            showPipButton = isPipSupported && !DeviceUtils.isTvDevice,
-                            showAspectRatioButton = true,
-                            isLandscape = isLandscape,
-                            isTvMode = DeviceUtils.isTvDevice,
-                            centerControlsMode = preferencesManager.getCenterControlsMode(),
-                            isNetworkStream = contentType == ContentType.NETWORK_STREAM,
-                            isChannelListAvailable = isChannelListAvailable,
-                            onBackClick = { finish() },
-                            onPipClick = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    wasLockedBeforePip = controlsState.isLocked
-                                    enterPictureInPictureMode(updatePipParams(enter = true))
-                                }
-                            },
-                            onSettingsClick = { showSettingsDialog() },
-                            onMuteClick = { toggleMute() },
-                            onLockClick = { locked -> },
-                            onChannelListClick = { showChannelList = true },
-                            onPlayPauseClick = {
-                                player?.let {
-                                    val hasError = errorMessage.value.isNotBlank()
-                                    val hasEnded = it.playbackState == Player.STATE_ENDED
-
-                                    if (hasError || hasEnded) {
-                                        retryPlayback()
-                                    } else {
-                                        if (it.isPlaying) it.pause() else it.play()
-                                    }
-                                }
-                            },
-                            onSeek = { position ->
-                                player?.seekTo(position)
-                            },
-                            onRewindClick = {
-                                player?.let {
-                                    val newPosition = it.currentPosition - skipMs
-                                    it.seekTo(if (newPosition < 0) 0 else newPosition)
-                                }
-                            },
-                            onForwardClick = {
-                                player?.let {
-                                    val newPosition = it.currentPosition + skipMs
-                                    if (it.isCurrentWindowLive && it.duration != C.TIME_UNSET && newPosition >= it.duration) {
-                                        it.seekTo(it.duration)
-                                    } else {
-                                        it.seekTo(newPosition)
-                                    }
-                                }
-                            },
-                            onPrevClick = {
-                                when (contentType) {
-                                    ContentType.EVENT -> {
-                                        if (allEventLinks.size > 1) {
-                                            val prevIndex = (currentLinkIndex - 1).coerceAtLeast(0)
-                                            if (prevIndex != currentLinkIndex) switchToLink(allEventLinks[prevIndex], prevIndex)
-                                        }
-                                    }
-                                    ContentType.CHANNEL -> {
-                                        val items = viewModel.channelListItems.value
-                                        if (!items.isNullOrEmpty()) {
-                                            val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
-                                            val prevIndex = (currentIndex - 1).coerceAtLeast(0)
-                                            if (prevIndex != currentIndex) switchToChannel(items[prevIndex])
-                                        }
-                                    }
-                                    else -> {}
-                                }
-                            },
-                            onNextClick = {
-                                when (contentType) {
-                                    ContentType.EVENT -> {
-                                        if (allEventLinks.size > 1) {
-                                            val nextIndex = (currentLinkIndex + 1).coerceAtMost(allEventLinks.size - 1)
-                                            if (nextIndex != currentLinkIndex) switchToLink(allEventLinks[nextIndex], nextIndex)
-                                        }
-                                    }
-                                    ContentType.CHANNEL -> {
-                                        val items = viewModel.channelListItems.value
-                                        if (!items.isNullOrEmpty()) {
-                                            val currentIndex = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
-                                            val nextIndex = (currentIndex + 1).coerceAtMost(items.size - 1)
-                                            if (nextIndex != currentIndex) switchToChannel(items[nextIndex])
-                                        }
-                                    }
-                                    else -> {}
-                                }
-                            },
-                            onAspectRatioClick = {
-                                if (isLandscape || contentType == ContentType.NETWORK_STREAM) {
-                                    cycleAspectRatio()
-                                }
-                            },
-                            onFullscreenClick = { toggleFullscreen() },
-                            onVolumeSwipe = { vol ->
-                                gestureVolume = vol
-                                val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-                                val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                                val target = (vol / 100f * max).toInt()
-                                audioManager.setStreamVolume(
-                                    AudioManager.STREAM_MUSIC,
-                                    target,
-                                    0
-                                )
-                            },
-                            onBrightnessSwipe = { bri ->
-                                gestureBrightness = bri
-                                val lp = window.attributes
-                                lp.screenBrightness = if (bri == 0) {
-                                    WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-                                } else {
-                                    bri / 100f
-                                }
-                                window.attributes = lp
-                            },
-                            initialVolume = gestureVolume,
-                            initialBrightness = gestureBrightness,
-                        )
-
-                        if (isLandscape && isChannelListAvailable) {
-                            com.livetvpro.app.ui.player.compose.ChannelListPanel(
-                                visible = showChannelList,
-                                channels = channelListItems,
-                                currentChannelId = contentId,
-                                onChannelClick = { channel -> switchToChannel(channel) },
-                                onDismiss = { showChannelList = false },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private fun cycleAspectRatio() {
@@ -1639,10 +1444,6 @@ class PlayerActivity : AppCompatActivity() {
 
         setupPlayer()
         setupLinksUI()
-
-        relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
-            switchToChannel(relatedItem)
-        }
 
         relatedContentState.value = RelatedContentState.Loading
 
@@ -2142,14 +1943,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun showError(message: String) {
-                android.graphics.Typeface.DEFAULT
-            }
-            setTextColor(android.graphics.Color.WHITE)
-            textSize = 15f
-            setPadding(48, 20, 48, 20)
-            setBackgroundResource(R.drawable.error_message_background)
-            elevation = 0f
-        }
+        errorMessage.value = message
     }
     private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
@@ -2696,7 +2490,6 @@ private fun PlayerActivity.PlayerActivityRoot(
             onDismiss = onFloatingDismiss,
         )
     }
-}
 }
 
 private val Int.dp: androidx.compose.ui.unit.Dp get() = androidx.compose.ui.unit.Dp(this.toFloat())

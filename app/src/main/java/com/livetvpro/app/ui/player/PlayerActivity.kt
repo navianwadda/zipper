@@ -2128,7 +2128,14 @@ class PlayerActivity : AppCompatActivity() {
         val hasRelated = relatedChannels.isNotEmpty() ||
             (contentType == ContentType.EVENT)
         if (hasRelated) {
-            relatedContentState.value = RelatedContentState.Channels(relatedChannels)
+            relatedContentState.value = when {
+                contentType == ContentType.EVENT -> {
+                    val events = viewModel.relatedLiveEvents.value
+                    if (!events.isNullOrEmpty()) RelatedContentState.Events(events) else RelatedContentState.Loading
+                }
+                relatedChannels.isNotEmpty() -> RelatedContentState.Channels(relatedChannels)
+                else -> RelatedContentState.Loading
+            }
         }
     }
 
@@ -2708,7 +2715,9 @@ private fun PlayerActivity.PlayerActivityRoot(
                         onMessageBannerClick = onMessageBannerClick,
                         spanCount = spanCount,
                         eventSpanCount = eventSpanCount,
-                        modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.TopCenter),
+                        modifier = androidx.compose.ui.Modifier
+                            .align(androidx.compose.ui.Alignment.TopCenter)
+                            .padding(top = 44.dp),
                     )
                 }
             }

@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -237,6 +239,7 @@ private fun ChannelCard(
     )
 
     Card(
+        onClick = onClick,
         modifier = Modifier
             .padding(4.dp)
             .fillMaxWidth()
@@ -244,10 +247,9 @@ private fun ChannelCard(
             .scale(scale)
             .onFocusChanged { hasFocus = it.hasFocus }
             .focusable()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            ),
+            .pointerInput(onLongClick) {
+                detectTapGestures(onLongPress = { onLongClick() })
+            },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

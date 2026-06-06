@@ -608,9 +608,9 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         if (DeviceUtils.isTvDevice) return false
         val refreshItem = menu.findItem(R.id.action_refresh)
         refreshItem?.isVisible = showRefreshIcon
-        if (refreshItem != null && currentPrimaryColor != 0) {
+        if (refreshItem != null) {
             val icon = refreshItem.icon?.mutate()
-            icon?.setTint(currentPrimaryColor)
+            icon?.setTint(themeManager.getOnSurfaceColor(this))
             refreshItem.icon = icon
         }
         return super.onPrepareOptionsMenu(menu)

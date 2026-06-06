@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +41,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -239,21 +239,26 @@ private fun MessageBanner(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer,
+    val bannerShape = RoundedCornerShape(6.dp)
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .padding(start = 8.dp, end = 8.dp, top = 6.dp)
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.16f), bannerShape)
+            .border(1.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.55f), bannerShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 5.dp),
     ) {
         Text(
             text = message,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            fontFamily = BergenSans,
-            fontSize = 16.sp,
-            maxLines = 1,
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 5.dp)
-                .basicMarquee(),
+                .fillMaxWidth()
+                .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            fontFamily = BergenSans,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
         )
     }
 }
@@ -284,9 +289,9 @@ private fun RelatedChannelsGrid(
     if (channels.isEmpty()) return
     LazyVerticalGrid(
         columns = GridCells.Fixed(spanCount),
-        contentPadding = PaddingValues(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        contentPadding = PaddingValues(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight(),
@@ -314,45 +319,61 @@ private fun RelatedChannelCard(
     )
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
+        colors = CardDefaults.cardColors(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
+            .padding(4.dp)
+            .fillMaxWidth()
+            .wrapContentHeight()
             .scale(scale)
             .onFocusChanged { focused = it.isFocused }
             .focusable(),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-                    .background(Color(0x80000000)),
+                    .aspectRatio(1f)
+                    .padding(2.dp),
             ) {
-                GlideImage(
-                    model = channel.logoUrl,
-                    contentDescription = channel.name,
-                    contentScale = ContentScale.Fit,
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp),
+                        .clip(CircleShape)
+                        .background(Color(0x80000000)),
                 ) {
-                    it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .placeholder(R.mipmap.ic_launcher_round)
-                        .error(R.mipmap.ic_launcher_round)
+                    GlideImage(
+                        model = channel.logoUrl.takeIf { it.isNotBlank() },
+                        contentDescription = channel.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .placeholder(R.mipmap.ic_launcher_round)
+                            .error(R.mipmap.ic_launcher_round)
+                            .fallback(R.mipmap.ic_launcher_round)
+                    }
                 }
             }
             Text(
                 text = channel.name,
                 fontFamily = BergenSans,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                    .padding(top = 6.dp)
+                    .basicMarquee(iterations = Int.MAX_VALUE),
             )
         }
     }

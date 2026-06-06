@@ -276,7 +276,7 @@ class PlayerActivity : AppCompatActivity() {
         val binding = androidx.compose.ui.platform.ComposeView(this).also { composeRoot ->
             composeRoot.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             composeRoot.setContent {
-                LiveTVProTheme(themeManager) {
+                LiveTVProTheme(themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
                     PlayerActivityRoot(
                         activity = this,
                         controlsState = controlsState,

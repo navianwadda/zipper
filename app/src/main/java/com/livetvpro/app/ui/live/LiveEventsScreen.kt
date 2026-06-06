@@ -184,7 +184,7 @@ fun LiveEventsScreen(
                 TextButton(onClick = { linkDialogEvent = null }) {
                     Text(
                         text = "Cancel",
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontFamily = BergenSans
                     )
                 }
@@ -288,7 +288,7 @@ fun LiveEventsScreen(
             if (isLoading && filteredEvents.isEmpty()) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -368,6 +368,7 @@ private fun CategoryChip(
             .padding(horizontal = 6.dp, vertical = 4.dp)
             .onFocusChanged { hasFocus = it.hasFocus }
             .focusable()
+            .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -383,12 +384,13 @@ private fun CategoryChip(
         ) {
             @OptIn(ExperimentalGlideComposeApi::class)
             GlideImage(
-                model = category.logoUrl,
+                model = category.logoUrl.takeIf { it.isNotBlank() },
                 contentDescription = category.name,
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             ) {
                 it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .placeholder(R.mipmap.ic_launcher_round)
                     .error(R.mipmap.ic_launcher_round)
                     .fallback(R.mipmap.ic_launcher_round)
             }
@@ -464,9 +466,9 @@ private fun StatusFilterChips(
                     .scale(scale)
                     .onFocusChanged { hasFocus = it.hasFocus },
                 colors = FilterChipDefaults.filterChipColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    selectedContainerColor = MaterialTheme.colorScheme.surface,
+                    selectedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     selectedLabelColor = liveRed
                 ),
                 border = FilterChipDefaults.filterChipBorder(
@@ -485,7 +487,7 @@ private fun StatusFilterChips(
 @Composable
 fun LiveEventCard(
     event: LiveEvent,
-    primaryColor: Color = MaterialTheme.colorScheme.primary,
+    primaryColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
@@ -502,23 +504,16 @@ fun LiveEventCard(
             .scale(scale)
     ) {
         Card(
+            onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
                 .onFocusChanged { hasFocus = it.hasFocus }
-                .focusable()
-                .clickable { onClick() },
+                .focusable(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ),
+            colors = CardDefaults.cardColors(),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = if (hasFocus) 8.dp else 3.dp
-            ),
-            border = androidx.compose.foundation.BorderStroke(
-                width = 1.dp,
-                color = liveRed.copy(alpha = 0.5f)
+                defaultElevation = if (hasFocus) 8.dp else 2.dp
             )
         ) {
             Column(
@@ -533,12 +528,13 @@ fun LiveEventCard(
                 ) {
                     @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
-                        model = event.leagueLogo,
+                        model = event.leagueLogo?.takeIf { it.isNotBlank() },
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(28.dp)
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .placeholder(R.mipmap.ic_launcher_round)
                             .error(R.mipmap.ic_launcher_round)
                             .fallback(R.mipmap.ic_launcher_round)
                     }
@@ -626,14 +622,15 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
     ) {
         @OptIn(ExperimentalGlideComposeApi::class)
         GlideImage(
-            model = logoUrl,
+            model = logoUrl?.takeIf { it.isNotBlank() },
             contentDescription = name,
-            contentScale = ContentScale.Fit,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
         ) {
             it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                .placeholder(R.mipmap.ic_launcher_round)
                 .error(R.mipmap.ic_launcher_round)
                 .fallback(R.mipmap.ic_launcher_round)
         }
@@ -653,7 +650,7 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
 }
 
 @Composable
-private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.colorScheme.primary) {
+private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.colorScheme.onSurface) {
     val liveRed = MaterialTheme.colorScheme.error
     val endedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
 

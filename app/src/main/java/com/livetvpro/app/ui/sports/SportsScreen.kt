@@ -58,8 +58,10 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
-import com.livetvpro.app.ui.theme.BergenSans
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val CardLogoBg = Color(0x80000000)
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -269,7 +269,7 @@ class PlayerActivity : AppCompatActivity() {
             postponeEnterTransition()
         }
 
-        binding = androidx.compose.ui.platform.ComposeView(this).also { composeRoot ->
+        val binding = androidx.compose.ui.platform.ComposeView(this).also { composeRoot ->
             composeRoot.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             composeRoot.setContent {
                 LiveTVProTheme(themeManager) {
@@ -288,7 +288,7 @@ class PlayerActivity : AppCompatActivity() {
                         showFloatingDialog = showFloatingDialog.value,
                         player = player,
                         preferencesManager = preferencesManager,
-                        onSettingsDismiss = { showSettingsDialog.value = false },
+                        onSettingsDismiss = { showSettingsDialog.value = false; isShowingSettingsDialog = false },
                         onFloatingDismiss = { showFloatingDialog.value = false },
                         onLinkClick = { link, idx -> switchToLink(link, idx) },
                         onChannelClick = { switchToChannel(it) },
@@ -315,7 +315,7 @@ class PlayerActivity : AppCompatActivity() {
                 )
             )
             addView(
-                (binding as android.compose.ui.platform.ComposeView),
+                (binding as androidx.compose.ui.platform.ComposeView),
                 android.widget.FrameLayout.LayoutParams(
                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
@@ -629,6 +629,7 @@ class PlayerActivity : AppCompatActivity() {
 
             playerViewRef.controllerAutoShow = false
             playerViewRef.controllerShowTimeoutMs = 5000
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -1363,17 +1364,11 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun showSettingsDialog() {
-        val exoPlayer = player ?: return
+        if (player == null) return
         if (isFinishing || isDestroyed) return
         if (isShowingSettingsDialog) return
         isShowingSettingsDialog = true
-        try {
-            showSettingsDialog.value = true
-            dialog.setOnDismissListener { isShowingSettingsDialog = false }
-            dialog.show()
-        } catch (e: Exception) {
-            isShowingSettingsDialog = false
-        }
+        showSettingsDialog.value = true
     }
 
     private fun parseIntent() {

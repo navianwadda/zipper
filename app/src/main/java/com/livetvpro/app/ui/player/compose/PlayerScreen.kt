@@ -401,7 +401,7 @@ private fun RelatedEventCard(
             val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
                 .apply { timeZone = TimeZone.getTimeZone("UTC") }
             val start = fmt.parse(event.startTime)?.time ?: 0L
-            val end = if (event.endTime.isNotEmpty()) fmt.parse(event.endTime)?.time ?: Long.MAX_VALUE
+            val end = if (!event.endTime.isNullOrEmpty()) fmt.parse(event.endTime)?.time ?: Long.MAX_VALUE
                       else Long.MAX_VALUE
             System.currentTimeMillis() in start..end
         } catch (_: Exception) {

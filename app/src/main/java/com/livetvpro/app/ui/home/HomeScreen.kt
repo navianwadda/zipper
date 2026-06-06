@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -184,14 +183,14 @@ private fun CategoryCard(
     )
 
     Card(
+        onClick = onClick,
         modifier = Modifier
             .padding(4.dp)
             .fillMaxWidth()
             .wrapContentHeight()
             .scale(scale)
             .onFocusChanged { hasFocus = it.hasFocus }
-            .focusable()
-            .clickable { onClick() },
+            .focusable(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -199,7 +198,7 @@ private fun CategoryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -218,7 +217,7 @@ private fun CategoryCard(
                     GlideImage(
                         model = category.iconUrl?.takeIf { it.isNotBlank() },
                         contentDescription = "Category icon",
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.FillWidth,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)

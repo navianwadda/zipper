@@ -51,18 +51,24 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.LiveEvent
-import com.livetvpro.app.databinding.ActivityPlayerBinding
-import com.livetvpro.app.ui.adapters.RelatedChannelAdapter
-import com.livetvpro.app.ui.adapters.LinkChipAdapter
-import com.livetvpro.app.ui.adapters.LiveEventAdapter
 import com.livetvpro.app.data.models.LiveEventLink
+import com.livetvpro.app.ui.player.compose.PlayerControls
+import com.livetvpro.app.ui.player.compose.PlayerControlsState
+import com.livetvpro.app.ui.player.compose.GestureState
+import com.livetvpro.app.ui.player.compose.PlayerScreen
+import com.livetvpro.app.ui.player.compose.RelatedContentState
+import com.livetvpro.app.ui.player.compose.LandscapeLinksRow
+import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog
+import com.livetvpro.app.ui.player.settings.PlayerSettingsDialog
+import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.data.local.ThemeManager
+import com.livetvpro.app.utils.DeviceUtils
+import com.livetvpro.app.ui.player.ChannelListCache
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 import android.annotation.SuppressLint
@@ -72,21 +78,20 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import com.livetvpro.app.ui.player.compose.PlayerControls
-import com.livetvpro.app.ui.player.compose.PlayerControlsState
-import com.livetvpro.app.ui.player.compose.GestureState
 import android.media.AudioManager
-import com.livetvpro.app.ui.theme.LiveTVProTheme
-import com.livetvpro.app.data.local.ThemeManager
-import com.livetvpro.app.utils.DeviceUtils
-import com.livetvpro.app.ui.player.ChannelListCache
-import kotlinx.coroutines.delay
 
 @UnstableApi
 @AndroidEntryPoint
 class PlayerActivity : AppCompatActivity() {
-
-    private lateinit var binding: ActivityPlayerBinding
+    private val relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
+    private val linksState          = mutableStateOf<List<LiveEventLink>>(emptyList())
+    private val selectedLinkState   = mutableStateOf(0)
+    private val messageBannerText   = mutableStateOf("")
+    private val messageBannerUrl    = mutableStateOf("")
+    private val showSettingsDialog  = mutableStateOf(false)
+    private val showFloatingDialog  = mutableStateOf(false)
+    private val errorMessage        = mutableStateOf("")
+    private var relatedChannels = listOf<Channel>()
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val viewModel: PlayerViewModel by viewModels()
@@ -102,11 +107,8 @@ class PlayerActivity : AppCompatActivity() {
 
     @javax.inject.Inject
     lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
-
-    private lateinit var relatedChannelsAdapter: RelatedChannelAdapter
-    private var relatedChannels = listOf<Channel>()
-    private lateinit var relatedEventsAdapter: LiveEventAdapter
-    private lateinit var linkChipAdapter: LinkChipAdapter
+    private lateinit var playerViewRef: androidx.media3.ui.PlayerView
+    private lateinit var playerContainer: androidx.constraintlayout.widget.ConstraintLayout
 
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
@@ -143,7 +145,8 @@ class PlayerActivity : AppCompatActivity() {
     private var channelNumberInput: String = ""
     private val channelNumberHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val channelNumberRunnable = Runnable { navigateToChannelByNumber() }
-    private val overlayHideRunnable = Runnable { binding.channelNumberOverlay?.visibility = View.GONE }
+    private val showChannelOverlayState = mutableStateOf<Pair<String, String>?>(null)
+    private val overlayHideRunnable = Runnable { showChannelOverlayState.value = null }
     private var pendingChannelIndex: Int = -1
     private var pendingChannelDirection: Int = 0
     private var pendingChannelNumber: Int = -1
@@ -266,8 +269,62 @@ class PlayerActivity : AppCompatActivity() {
             postponeEnterTransition()
         }
 
-        binding = ActivityPlayerBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        binding = androidx.compose.ui.platform.ComposeView(this).also { composeRoot ->
+            composeRoot.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            composeRoot.setContent {
+                LiveTVProTheme(themeManager) {
+                    PlayerActivityRoot(
+                        activity = this,
+                        controlsState = controlsState,
+                        showChannelList = showChannelList,
+                        isMuted = isMuted,
+                        relatedContentState = relatedContentState.value,
+                        links = linksState.value,
+                        selectedLinkIndex = selectedLinkState.value,
+                        messageBanner = messageBannerText.value,
+                        messageBannerUrl = messageBannerUrl.value,
+                        errorMessage = errorMessage.value,
+                        showSettingsDialog = showSettingsDialog.value,
+                        showFloatingDialog = showFloatingDialog.value,
+                        player = player,
+                        preferencesManager = preferencesManager,
+                        onSettingsDismiss = { showSettingsDialog.value = false },
+                        onFloatingDismiss = { showFloatingDialog.value = false },
+                        onLinkClick = { link, idx -> switchToLink(link, idx) },
+                        onChannelClick = { switchToChannel(it) },
+                        onEventClick = { event, linkIdx -> switchToEventFromLiveEvent(event, linkIdx) },
+                        onMessageBannerClick = {
+                            val url = messageBannerUrl.value
+                            if (url.isNotBlank()) {
+                                try {
+                                    startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                                } catch (_: Exception) {}
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        val rootLayout = android.widget.FrameLayout(this).apply {
+            addView(
+                android.view.LayoutInflater.from(this@PlayerActivity)
+                    .inflate(R.layout.activity_player, null),
+                android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                )
+            )
+            addView(
+                (binding as android.compose.ui.platform.ComposeView),
+                android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                )
+            )
+        }
+        setContentView(rootLayout)
+        playerViewRef = rootLayout.findViewById(R.id.player_view)
+        playerContainer = rootLayout.findViewById(R.id.player_container)
 
         windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
@@ -316,22 +373,19 @@ class PlayerActivity : AppCompatActivity() {
         configurePlayerInteractions()
         setupBackHandler()
 
-        binding.playerView.useController = false
+        playerViewRef.useController = false
 
         if (DeviceUtils.isTvDevice) {
-            binding.relatedLoadingProgress.visibility = View.GONE
-            binding.relatedChannelsSection.visibility = View.GONE
+            relatedContentState.value = RelatedContentState.Hidden
+            relatedContentState.value = RelatedContentState.Hidden
         } else if (!isLandscape) {
-            binding.relatedLoadingProgress.visibility = View.VISIBLE
-            binding.relatedChannelsRecycler.visibility = View.GONE
+            relatedContentState.value = RelatedContentState.Loading
         }
 
-        binding.progressBar.visibility = View.VISIBLE
-
-        binding.root.viewTreeObserver.addOnPreDrawListener(
+        window.decorView.viewTreeObserver.addOnPreDrawListener(
             object : ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
-                    binding.root.viewTreeObserver.removeOnPreDrawListener(this)
+                    window.decorView.viewTreeObserver.removeOnPreDrawListener(this)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         startPostponedEnterTransition()
                     }
@@ -386,7 +440,7 @@ class PlayerActivity : AppCompatActivity() {
                     channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
                 } else {
 
-                    binding.channelNumberOverlay?.visibility = View.GONE
+                    showChannelOverlayState.value = null
                 }
                 return@observe
             }
@@ -409,45 +463,12 @@ class PlayerActivity : AppCompatActivity() {
         viewModel.relatedItems.observe(this) { channels ->
             if (contentType != ContentType.CHANNEL) return@observe
             relatedChannels = channels
-            if (!::relatedChannelsAdapter.isInitialized) {
-                relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
-                    switchToChannel(relatedItem)
-                }
-            }
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
-            binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
-            relatedChannelsAdapter.submitList(channels)
-            binding.relatedChannelsSection.visibility = if (channels.isEmpty()) {
-                View.GONE
-            } else {
-                View.VISIBLE
-            }
-            binding.relatedLoadingProgress.visibility = View.GONE
-            binding.relatedChannelsRecycler.visibility = View.VISIBLE
+            relatedContentState.value = if (channels.isEmpty()) RelatedContentState.Hidden else RelatedContentState.Channels(channels)
         }
 
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
             if (contentType != ContentType.EVENT) return@observe
-            if (!::relatedEventsAdapter.isInitialized) {
-                relatedEventsAdapter = LiveEventAdapter(
-                    context = this,
-                    events = emptyList(),
-                    preferencesManager = preferencesManager,
-                    onEventClick = { event, idx ->
-                        switchToEventFromLiveEvent(event, idx)
-                    }
-                )
-            }
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.event_span_count))
-            binding.relatedChannelsRecycler.adapter = relatedEventsAdapter
-            relatedEventsAdapter.updateData(liveEvents)
-            binding.relatedChannelsSection.visibility = if (liveEvents.isEmpty()) {
-                View.GONE
-            } else {
-                View.VISIBLE
-            }
-            binding.relatedLoadingProgress.visibility = View.GONE
-            binding.relatedChannelsRecycler.visibility = View.VISIBLE
+            relatedContentState.value = if (liveEvents.isEmpty()) RelatedContentState.Hidden else RelatedContentState.Events(liveEvents)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -496,10 +517,10 @@ class PlayerActivity : AppCompatActivity() {
     private fun setupWindowInsets() {
         if (DeviceUtils.isTvDevice) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-            binding.root.setOnApplyWindowInsetsListener { view, insets ->
+            window.decorView.setOnApplyWindowInsetsListener { view, insets ->
                 val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-                val params = binding.playerContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+                val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 if (!isLandscape) {
                     val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         insets.getInsets(WindowInsets.Type.systemBars()).top
@@ -510,8 +531,8 @@ class PlayerActivity : AppCompatActivity() {
                 } else {
                     params.topMargin = 0
                 }
-                binding.playerContainer.layoutParams = params
-                binding.playerContainer.setPadding(0, 0, 0, 0)
+                playerContainer.layoutParams = params
+                playerContainer.setPadding(0, 0, 0, 0)
                 insets
             }
         }
@@ -521,7 +542,7 @@ class PlayerActivity : AppCompatActivity() {
         super.onConfigurationChanged(newConfig)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
-            binding.playerView.hideController()
+            playerViewRef.hideController()
             return
         }
 
@@ -536,29 +557,23 @@ class PlayerActivity : AppCompatActivity() {
         applyAdapterColors()
 
         if (player?.playbackState == Player.STATE_BUFFERING) {
-            binding.playerView.hideController()
+            playerViewRef.hideController()
         }
 
-        binding.root.post {
-            binding.root.requestLayout()
-            binding.playerContainer.requestLayout()
-            binding.playerView.requestLayout()
+        window.decorView.post {
+            playerContainer.requestLayout()
+            playerViewRef.requestLayout()
         }
     }
 
-    private fun applyAdapterColors() {
-        val primary = themeManager.getPrimaryColor(this)
-        val surfaceContainer = themeManager.getSurfaceContainerColor(this)
-        if (::relatedChannelsAdapter.isInitialized) {
-            relatedChannelsAdapter.setColors(primary, surfaceContainer)
-        }
+    private fun applyAdapterColors() {  }
     }
 
     private fun applyResizeModeForOrientation(isLandscape: Boolean) {
         if (isLandscape) {
-            binding.playerView.resizeMode = networkLandscapeResizeMode
+            playerViewRef.resizeMode = networkLandscapeResizeMode
         } else {
-            binding.playerView.resizeMode = networkPortraitResizeMode
+            playerViewRef.resizeMode = networkPortraitResizeMode
         }
     }
 
@@ -571,7 +586,7 @@ class PlayerActivity : AppCompatActivity() {
         if (isLandscape) {
             enterFullscreen()
 
-            val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
+            val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
             params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
             params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
             params.topMargin = 0
@@ -581,11 +596,11 @@ class PlayerActivity : AppCompatActivity() {
             params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
             params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
 
-            binding.playerContainer.setPadding(0, 0, 0, 0)
-            binding.playerContainer.layoutParams = params
+            playerContainer.setPadding(0, 0, 0, 0)
+            playerContainer.layoutParams = params
 
-            binding.playerView.controllerAutoShow = false
-            binding.playerView.controllerShowTimeoutMs = 3000
+            playerViewRef.controllerAutoShow = false
+            playerViewRef.controllerShowTimeoutMs = 3000
 
         } else {
 
@@ -595,7 +610,7 @@ class PlayerActivity : AppCompatActivity() {
                 } else {
                     @Suppress("DEPRECATION") window.decorView.rootWindowInsets?.systemWindowInsetTop ?: 0
                 }
-                val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
+                val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.topMargin = topInset
@@ -606,26 +621,14 @@ class PlayerActivity : AppCompatActivity() {
                 params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
                 params.dimensionRatio = null
 
-                binding.playerContainer.setPadding(0, 0, 0, 0)
-                binding.playerContainer.layoutParams = params
+                playerContainer.setPadding(0, 0, 0, 0)
+                playerContainer.layoutParams = params
             } else {
                 exitFullscreen()
             }
 
-            binding.playerView.controllerAutoShow = false
-            binding.playerView.controllerShowTimeoutMs = 5000
-
-            val relatedParams = binding.relatedChannelsSection.layoutParams as ConstraintLayout.LayoutParams
-            relatedParams.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-            relatedParams.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-            relatedParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            relatedParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            relatedParams.topToBottom = binding.messageBannerContainer.id
-            relatedParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-            binding.relatedChannelsSection.layoutParams = relatedParams
-        }
-
-        binding.root.requestLayout()
+            playerViewRef.controllerAutoShow = false
+            playerViewRef.controllerShowTimeoutMs = 5000
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -715,9 +718,8 @@ class PlayerActivity : AppCompatActivity() {
         if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
             viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
         }
-        binding.playerView.onResume()
-        binding.playerView.player = player
-        binding.playerControlsCompose.requestFocus()
+        playerViewRef.onResume()
+        playerViewRef.player = player
     }
 
     override fun onPictureInPictureModeChanged(
@@ -756,11 +758,8 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         controlsState.hide()
-        binding.playerControlsCompose.visibility = View.GONE
-        binding.linksSection.visibility = View.GONE
-        binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)?.visibility = View.GONE
 
-        val pipParams = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
+        val pipParams = playerContainer.layoutParams as ConstraintLayout.LayoutParams
         pipParams.dimensionRatio = null
         pipParams.topMargin = 0
         pipParams.bottomMargin = 0
@@ -768,7 +767,7 @@ class PlayerActivity : AppCompatActivity() {
         pipParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
         pipParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         pipParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-        binding.playerContainer.layoutParams = pipParams
+        playerContainer.layoutParams = pipParams
 
         setupPipReceiver()
 
@@ -785,21 +784,17 @@ class PlayerActivity : AppCompatActivity() {
 
         applyOrientationSettings(isLandscape)
 
-        binding.playerControlsCompose.visibility = View.VISIBLE
-
         if (!isLandscape) {
-            val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
+            val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
             params.dimensionRatio = "H,16:9"
             params.topMargin = 0
             params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-            binding.playerContainer.layoutParams = params
+            playerContainer.layoutParams = params
 
             val hasRelated = relatedChannels.isNotEmpty() ||
-                (contentType == ContentType.EVENT && ::relatedEventsAdapter.isInitialized)
+                (contentType == ContentType.EVENT)
             if (hasRelated) {
-                binding.relatedChannelsSection.visibility = View.VISIBLE
-                binding.relatedChannelsRecycler.visibility = View.VISIBLE
-                binding.relatedLoadingProgress.visibility = View.GONE
+                relatedContentState.value = RelatedContentState.Hidden
             }
         }
 
@@ -810,7 +805,7 @@ class PlayerActivity : AppCompatActivity() {
             controlsState.isLocked = false
         }
 
-        binding.playerView.useController = false
+        playerViewRef.useController = false
         updateLinksForOrientation(isLandscape)
     }
 
@@ -849,7 +844,7 @@ class PlayerActivity : AppCompatActivity() {
         pendingChannelNumber = -1
         channelNumberHandler.removeCallbacks(channelNumberRunnable)
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
-        binding.channelNumberOverlay?.visibility = View.GONE
+        showChannelOverlayState.value = null
     }
     private fun clearNumberTyping() {
         channelNumberInput = ""
@@ -937,7 +932,7 @@ class PlayerActivity : AppCompatActivity() {
             android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                 cancelNumberInput()
                 player?.let {
-                    val hasError = binding.errorView.visibility == View.VISIBLE
+                    val hasError = errorMessage.value.isNotBlank()
                     val hasEnded = it.playbackState == Player.STATE_ENDED
                     if (hasError || hasEnded) retryPlayback()
                     else if (it.isPlaying) it.pause() else it.play()
@@ -998,7 +993,7 @@ class PlayerActivity : AppCompatActivity() {
                 } else {
                     cancelNumberInput()
                     player?.let {
-                        val hasError = binding.errorView.visibility == View.VISIBLE
+                        val hasError = errorMessage.value.isNotBlank()
                         val hasEnded = it.playbackState == Player.STATE_ENDED
                         if (hasError || hasEnded) retryPlayback()
                         else if (it.isPlaying) it.pause() else it.play()
@@ -1101,7 +1096,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun showChannelOverlay(number: String, channel: com.livetvpro.app.data.models.Channel?) {
-        val overlay = binding.channelNumberOverlay ?: return
+        showChannelOverlayState.value = null
+        return
         val logoView = overlay.findViewById<android.widget.ImageView>(R.id.channel_overlay_logo)
         val numberView = overlay.findViewById<android.widget.TextView>(R.id.channel_overlay_number)
         val nameView = overlay.findViewById<android.widget.TextView>(R.id.channel_overlay_name)
@@ -1121,11 +1117,11 @@ class PlayerActivity : AppCompatActivity() {
         val number = channelNumberInput.toIntOrNull()
         channelNumberInput = ""
         if (number == null || number <= 0) {
-            binding.channelNumberOverlay?.visibility = View.GONE
+            showChannelOverlayState.value = null
             return
         }
         if (contentType != ContentType.CHANNEL) {
-            binding.channelNumberOverlay?.visibility = View.GONE
+            showChannelOverlayState.value = null
             return
         }
         val items = viewModel.channelListItems.value
@@ -1140,7 +1136,7 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
         val index = number - 1
-        binding.channelNumberOverlay?.visibility = View.GONE
+        showChannelOverlayState.value = null
         if (index in items.indices) {
             switchToChannel(items[index])
             showChannelOverlay((index + 1).toString(), items[index])
@@ -1150,7 +1146,6 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun setupComposeControls() {
-        binding.playerControlsCompose.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
@@ -1181,7 +1176,7 @@ class PlayerActivity : AppCompatActivity() {
 
                     LaunchedEffect(controlsState.isVisible, controlsState.isLocked, isLandscape, showChannelList) {
                         if (isLandscape) {
-                            val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
+                            val landscapeLinksRecycler = playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
                             val chipsVisible = controlsState.isVisible && !controlsState.isLocked && !showChannelList
                             landscapeLinksRecycler?.visibility = if (chipsVisible) View.VISIBLE else View.GONE
                         }
@@ -1190,17 +1185,17 @@ class PlayerActivity : AppCompatActivity() {
                     DisposableEffect(Unit) {
                         val listener = ViewTreeObserver.OnGlobalLayoutListener {
                             val rect = Rect()
-                            val surface = binding.playerView.videoSurfaceView
-                            val target = surface ?: binding.playerView
+                            val surface = playerViewRef.videoSurfaceView
+                            val target = surface ?: playerViewRef
                             target.getGlobalVisibleRect(rect)
                             if (!rect.isEmpty) {
                                 pipRect = rect
                             }
                         }
-                        binding.playerView.viewTreeObserver.addOnGlobalLayoutListener(listener)
+                        playerViewRef.viewTreeObserver.addOnGlobalLayoutListener(listener)
 
                         onDispose {
-                            binding.playerView.viewTreeObserver.removeOnGlobalLayoutListener(listener)
+                            playerViewRef.viewTreeObserver.removeOnGlobalLayoutListener(listener)
                         }
                     }
 
@@ -1233,7 +1228,7 @@ class PlayerActivity : AppCompatActivity() {
                             onChannelListClick = { showChannelList = true },
                             onPlayPauseClick = {
                                 player?.let {
-                                    val hasError = binding.errorView.visibility == View.VISIBLE
+                                    val hasError = errorMessage.value.isNotBlank()
                                     val hasEnded = it.playbackState == Player.STATE_ENDED
 
                                     if (hasError || hasEnded) {
@@ -1349,7 +1344,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun cycleAspectRatio() {
         val isLandscape = DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val current = binding.playerView.resizeMode
+        val current = playerViewRef.resizeMode
         val next = when (current) {
             AspectRatioFrameLayout.RESIZE_MODE_FIT   -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
             AspectRatioFrameLayout.RESIZE_MODE_ZOOM  -> AspectRatioFrameLayout.RESIZE_MODE_FILL
@@ -1364,7 +1359,7 @@ class PlayerActivity : AppCompatActivity() {
             else preferencesManager.setSavedAspectRatioPortrait(next)
         }
 
-        binding.playerView.resizeMode = next
+        playerViewRef.resizeMode = next
     }
 
     private fun showSettingsDialog() {
@@ -1373,8 +1368,7 @@ class PlayerActivity : AppCompatActivity() {
         if (isShowingSettingsDialog) return
         isShowingSettingsDialog = true
         try {
-            val dialog = com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(this, exoPlayer)
-            settingsDialog = dialog
+            showSettingsDialog.value = true
             dialog.setOnDismissListener { isShowingSettingsDialog = false }
             dialog.show()
         } catch (e: Exception) {
@@ -1584,102 +1578,23 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun setupRelatedChannels() {
         if (contentType == ContentType.NETWORK_STREAM || DeviceUtils.isTvDevice) {
-            binding.relatedChannelsSection.visibility = View.GONE
+            relatedContentState.value = RelatedContentState.Hidden
             return
         }
-
-        if (contentType == ContentType.EVENT) {
-            relatedEventsAdapter = LiveEventAdapter(
-                context = this,
-                events = emptyList(),
-                preferencesManager = preferencesManager,
-                onEventClick = { event, linkIndex ->
-                    switchToEventFromLiveEvent(event, linkIndex)
-                }
-            )
-
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.event_span_count))
-            binding.relatedChannelsRecycler.adapter = relatedEventsAdapter
-        } else {
-            relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
-                switchToChannel(relatedItem)
-            }
-
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
-            binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
-        }
+        relatedContentState.value = RelatedContentState.Loading
     }
 
     private fun setupLinksUI() {
-        linkChipAdapter = LinkChipAdapter { link, position -> switchToLink(link, position) }
+        updateLinksState()
+    }
 
-        val portraitLinksRecycler = binding.linksRecyclerView
-        portraitLinksRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        portraitLinksRecycler.adapter = linkChipAdapter
-
-        val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
-        landscapeLinksRecycler?.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-
-        val landscapeLinkAdapter = LinkChipAdapter { link, position -> switchToLink(link, position) }
-        landscapeLinksRecycler?.adapter = landscapeLinkAdapter
-        landscapeLinksRecycler?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                if (dx != 0) controlsState.show(lifecycleScope)
-            }
-        })
-
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        if (isInPipMode) {
-            binding.linksSection.visibility = View.GONE
-            landscapeLinksRecycler?.visibility = View.GONE
-            return
-        }
-        if (allEventLinks.size > 1) {
-            if (isLandscape) {
-                binding.linksSection.visibility = View.GONE
-                landscapeLinksRecycler?.visibility = View.VISIBLE
-                landscapeLinkAdapter.submitList(allEventLinks)
-                landscapeLinkAdapter.setSelectedPosition(currentLinkIndex)
-            } else {
-                binding.linksSection.visibility = View.VISIBLE
-                landscapeLinksRecycler?.visibility = View.GONE
-                linkChipAdapter.submitList(allEventLinks)
-                linkChipAdapter.setSelectedPosition(currentLinkIndex)
-            }
-        } else {
-            binding.linksSection.visibility = View.GONE
-            landscapeLinksRecycler?.visibility = View.GONE
-        }
+    private fun updateLinksState() {
+        linksState.value = if (isInPipMode || allEventLinks.size <= 1) emptyList() else allEventLinks
+        selectedLinkState.value = currentLinkIndex
     }
 
     private fun updateLinksForOrientation(isLandscape: Boolean) {
-        if (!::linkChipAdapter.isInitialized) return
-        val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
-
-        if (isInPipMode) {
-            binding.linksSection.visibility = View.GONE
-            landscapeLinksRecycler?.visibility = View.GONE
-            return
-        }
-
-        if (allEventLinks.size > 1) {
-            if (isLandscape) {
-                binding.linksSection.visibility = View.GONE
-                val chipsVisible = controlsState.isVisible && !controlsState.isLocked
-                landscapeLinksRecycler?.visibility = if (chipsVisible) View.VISIBLE else View.GONE
-                val landscapeAdapter = landscapeLinksRecycler?.adapter as? LinkChipAdapter
-                landscapeAdapter?.submitList(allEventLinks)
-                landscapeAdapter?.setSelectedPosition(currentLinkIndex)
-            } else {
-                binding.linksSection.visibility = View.VISIBLE
-                landscapeLinksRecycler?.visibility = View.GONE
-                linkChipAdapter.submitList(allEventLinks)
-                linkChipAdapter.setSelectedPosition(currentLinkIndex)
-            }
-        } else {
-            binding.linksSection.visibility = View.GONE
-            landscapeLinksRecycler?.visibility = View.GONE
-        }
+        updateLinksState()
     }
 
     private fun loadRelatedContent() {
@@ -1747,11 +1662,8 @@ class PlayerActivity : AppCompatActivity() {
         relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
             switchToChannel(relatedItem)
         }
-        binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
-        binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
 
-        binding.relatedLoadingProgress.visibility = View.VISIBLE
-        binding.relatedChannelsRecycler.visibility = View.GONE
+        relatedContentState.value = RelatedContentState.Loading
 
         val isSports = newChannel.categoryId == "sports" || intentIsSports && previousContentType != ContentType.EVENT
         val categoryId = newChannel.categoryId.takeIf { it.isNotEmpty() } ?: intentCategoryId ?: ""
@@ -1790,22 +1702,10 @@ class PlayerActivity : AppCompatActivity() {
 
             setupPlayer()
             setupLinksUI()
-
-            if (!::relatedEventsAdapter.isInitialized) {
-                relatedEventsAdapter = LiveEventAdapter(
-                    context = this,
-                    events = emptyList(),
-                    preferencesManager = preferencesManager,
-                    onEventClick = { event, idx ->
-                        switchToEventFromLiveEvent(event, idx)
-                    }
                 )
             }
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.event_span_count))
-            binding.relatedChannelsRecycler.adapter = relatedEventsAdapter
 
-            binding.relatedLoadingProgress.visibility = View.VISIBLE
-            binding.relatedChannelsRecycler.visibility = View.GONE
+            relatedContentState.value = RelatedContentState.Loading
 
             viewModel.loadRelatedEvents(newEvent.id)
 
@@ -1816,12 +1716,6 @@ class PlayerActivity : AppCompatActivity() {
     private fun switchToLink(link: LiveEventLink, position: Int) {
         currentLinkIndex = position
         streamUrl = buildStreamUrl(link)
-        if (::linkChipAdapter.isInitialized) {
-            linkChipAdapter.setSelectedPosition(position)
-        }
-        val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
-        val landscapeAdapter = landscapeLinksRecycler?.adapter as? LinkChipAdapter
-        landscapeAdapter?.setSelectedPosition(position)
         releasePlayer()
         setupPlayer()
     }
@@ -1833,7 +1727,7 @@ class PlayerActivity : AppCompatActivity() {
         val isPip = isEnteringPip ||
                 (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode)
         if (!isPip) {
-            binding.playerView.onPause()
+            playerViewRef.onPause()
             player?.pause()
         }
     }
@@ -1895,21 +1789,14 @@ class PlayerActivity : AppCompatActivity() {
 
         val url = normalizedUrl.substring(0, pipeIndex).trim().trimEnd('?')
         val rawParams = normalizedUrl.substring(pipeIndex + 1).trim()
-
-        // Split on | first, then only split on & when the value is a simple scalar
-        // (no embedded = sign). This prevents complex tokens like accountinfo=~~V2.0~...
-        // from being shredded into garbage key/value pairs.
         val parts = buildList {
             for (segment in rawParams.split("|")) {
                 val eqIdx = segment.indexOf('=')
                 val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
                 when {
-                    // URL values — never split
                     value.startsWith("http://", ignoreCase = true) ||
                     value.startsWith("https://", ignoreCase = true) -> add(segment)
-                    // Values that contain '=' are complex tokens — never split on &
                     value.contains('=') -> add(segment)
-                    // Simple scalar values — safe to split on &
                     else -> addAll(segment.split("&"))
                 }
             }
@@ -1930,7 +1817,6 @@ class PlayerActivity : AppCompatActivity() {
 
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
-                // Legacy colon-joined format: drmLicense=<kid>:<key>
                 "drmlicense" -> {
                     if (value.startsWith("http://", ignoreCase = true) ||
                         value.startsWith("https://", ignoreCase = true)) {
@@ -1945,7 +1831,6 @@ class PlayerActivity : AppCompatActivity() {
                         }
                     }
                 }
-                // New explicit separate params (avoids colon ambiguity)
                 "drmkeyid" -> drmKeyId = value
                 "drmkey"   -> drmKey   = value
                 "referer", "referrer" -> headers["Referer"] = value
@@ -1991,13 +1876,10 @@ class PlayerActivity : AppCompatActivity() {
     }
     private fun setupPlayer() {
         if (player != null) return
-        binding.errorView.visibility = View.GONE
-        binding.errorText.text = ""
-        binding.progressBar.visibility = View.VISIBLE
-        binding.playerView.hideController()
+        errorMessage.value = ""
+        playerViewRef.hideController()
 
         if (DeviceUtils.isTvDevice) {
-            binding.root.findViewById<com.google.android.material.button.MaterialButton?>(R.id.btn_error_retry)
                 ?.setOnClickListener { retryPlayback() }
         }
         trackSelector = DefaultTrackSelector(this).apply {
@@ -2059,9 +1941,6 @@ class PlayerActivity : AppCompatActivity() {
                     .setDrmSessionManagerProvider { clearKeyMgr }
             } else {
                 if (streamInfo.drmScheme == "clearkey") {
-                    // Keys were declared but failed to build — playing without DRM will
-                    // result in an encrypted stream with no decryption keys. Fail fast
-                    // with a clear error rather than a cryptic decoder exception.
                     android.util.Log.e("PlayerActivity",
                         "ClearKey DRM required but key material is missing or invalid. " +
                         "keyId=${streamInfo.drmKeyId} key=${streamInfo.drmKey} branch=$clearKeyBranch")
@@ -2091,7 +1970,7 @@ class PlayerActivity : AppCompatActivity() {
                     true
                 )
                 .build().also { exo ->
-                    binding.playerView.player = exo
+                    playerViewRef.player = exo
 
                     if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
                         val savedLandscape = preferencesManager.getSavedAspectRatio()
@@ -2103,7 +1982,7 @@ class PlayerActivity : AppCompatActivity() {
                     applyResizeModeForOrientation(
                         DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                     )
-                    binding.playerView.hideController()
+                    playerViewRef.hideController()
                     val uri = android.net.Uri.parse(streamInfo.url)
                     val mediaItemBuilder = MediaItem.Builder().setUri(uri)
                     val urlLower = streamInfo.url.lowercase()
@@ -2183,17 +2062,14 @@ class PlayerActivity : AppCompatActivity() {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             when (playbackState) {
                                 Player.STATE_READY -> {
-                                    binding.progressBar.visibility = View.GONE
-                                    binding.errorView.visibility = View.GONE
+                                    errorMessage.value = ""
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) updatePipParams()
                                 }
                                 Player.STATE_BUFFERING -> {
-                                    binding.progressBar.visibility = View.VISIBLE
-                                    binding.errorView.visibility = View.GONE
+                                    errorMessage.value = ""
                                 }
                                 Player.STATE_ENDED -> {
-                                    binding.progressBar.visibility = View.GONE
-                                    binding.playerView.showController()
+                                    playerViewRef.showController()
                                 }
                                 Player.STATE_IDLE -> {}
                             }
@@ -2242,7 +2118,6 @@ class PlayerActivity : AppCompatActivity() {
 
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                             super.onPlayerError(error)
-                            binding.progressBar.visibility = View.GONE
 
                             if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
                                 val nextIndex = currentLinkIndex + 1
@@ -2289,12 +2164,6 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun showError(message: String) {
-        binding.progressBar.visibility = View.GONE
-        binding.errorText.apply {
-            text = message
-            typeface = try {
-                resources.getFont(R.font.bergen_sans)
-            } catch (e: Exception) {
                 android.graphics.Typeface.DEFAULT
             }
             setTextColor(android.graphics.Color.WHITE)
@@ -2303,12 +2172,6 @@ class PlayerActivity : AppCompatActivity() {
             setBackgroundResource(R.drawable.error_message_background)
             elevation = 0f
         }
-        val layoutParams = binding.errorView.layoutParams
-        if (layoutParams is androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) {
-            layoutParams.verticalBias = 0.35f
-            binding.errorView.layoutParams = layoutParams
-        }
-        binding.errorView.visibility = View.VISIBLE
     }
     private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
@@ -2329,9 +2192,6 @@ class PlayerActivity : AppCompatActivity() {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                // Allow clear (unencrypted) samples to render before the DRM key exchange
-                // completes. Critical for live DASH streams where the first segments are
-                // unencrypted — without this the player stalls indefinitely on a black screen.
                 .setPlayClearSamplesWithoutKeys(true)
                 .build(adaptiveCallback)
         } catch (e: Exception) {
@@ -2439,28 +2299,12 @@ class PlayerActivity : AppCompatActivity() {
     private fun setupMessageBanner() {
         val message = listenerManager.getMessage()
         if (message.isNotBlank()) {
-            binding.tvMessageBanner.text = message
-            binding.tvMessageBanner.isSelected = true
-            binding.tvMessageBanner.visibility = View.VISIBLE
-            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            binding.messageBannerContainer.visibility = if (isLandscape) View.GONE else View.VISIBLE
-            val url = listenerManager.getMessageUrl()
-            if (url.isNotBlank()) {
-                binding.tvMessageBanner.setOnClickListener {
-                    try {
-                        startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-                    } catch (e: Exception) { }
-                }
-            } else {
-                binding.tvMessageBanner.setOnClickListener(null)
-            }
+            messageBannerText.value = message
+            messageBannerUrl.value = listenerManager.getMessageUrl()
         }
     }
 
     private fun updateMessageBannerForOrientation(isLandscape: Boolean) {
-        if (binding.tvMessageBanner.text.isNotBlank()) {
-            binding.messageBannerContainer.visibility = if (isLandscape) View.GONE else View.VISIBLE
-        }
     }
 
     private fun configurePlayerInteractions() {
@@ -2487,7 +2331,7 @@ class PlayerActivity : AppCompatActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         }
 
-        val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
+        val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
         params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.dimensionRatio = "H,16:9"
@@ -2495,16 +2339,14 @@ class PlayerActivity : AppCompatActivity() {
         params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
         params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
         params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-        binding.playerContainer.layoutParams = params
-        binding.playerContainer.visibility = View.VISIBLE
+        playerContainer.layoutParams = params
+        playerContainer.visibility = View.VISIBLE
 
         if (allEventLinks.size > 1) {
-            binding.linksSection.visibility = View.VISIBLE
         }
         val hasRelated = relatedChannels.isNotEmpty() ||
-            (contentType == ContentType.EVENT && ::relatedEventsAdapter.isInitialized)
+            (contentType == ContentType.EVENT)
         if (hasRelated) {
-            binding.relatedChannelsSection.visibility = View.VISIBLE
         }
     }
 
@@ -2513,11 +2355,9 @@ class PlayerActivity : AppCompatActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+        playerContainer.setPadding(0, 0, 0, 0)
 
-        binding.root.setPadding(0, 0, 0, 0)
-        binding.playerContainer.setPadding(0, 0, 0, 0)
-
-        val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
+        val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
         params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.topMargin = 0
@@ -2526,19 +2366,18 @@ class PlayerActivity : AppCompatActivity() {
         params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
         params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
         params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-        binding.playerContainer.layoutParams = params
+        playerContainer.layoutParams = params
 
-        binding.relatedChannelsSection.visibility = View.GONE
-        binding.linksSection.visibility = View.GONE
+        relatedContentState.value = RelatedContentState.Hidden
     }
 
     private fun setSubtitleTextSize() {
-        val subtitleView = binding.playerView.subtitleView ?: return
+        val subtitleView = playerViewRef.subtitleView ?: return
         subtitleView.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION)
     }
 
     private fun setSubtitleTextSizePiP() {
-        val subtitleView = binding.playerView.subtitleView ?: return
+        val subtitleView = playerViewRef.subtitleView ?: return
         subtitleView.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 2)
     }
 
@@ -2548,7 +2387,7 @@ class PlayerActivity : AppCompatActivity() {
 
     @SuppressLint("NewApi")
     private fun enterPipMode() {
-        binding.playerView.useController = false
+        playerViewRef.useController = false
         setSubtitleTextSizePiP()
         updatePipParams(enter = true)
     }
@@ -2572,7 +2411,7 @@ class PlayerActivity : AppCompatActivity() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action != ACTION_MEDIA_CONTROL) return
                 val currentPlayer = player ?: return
-                val hasError = binding.errorView.visibility == View.VISIBLE
+                val hasError = errorMessage.value.isNotBlank()
                 val hasEnded = currentPlayer.playbackState == Player.STATE_ENDED
                 when (intent.getIntExtra(EXTRA_CONTROL_TYPE, 0)) {
                     CONTROL_TYPE_PLAY -> {
@@ -2736,10 +2575,9 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun retryPlayback() {
-        binding.errorView.visibility = View.GONE
-        binding.progressBar.visibility = View.VISIBLE
+        errorMessage.value = ""
 
-        binding.playerView.hideController()
+        playerViewRef.hideController()
 
         player?.release()
         player = null
@@ -2783,3 +2621,105 @@ class PlayerActivity : AppCompatActivity() {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@androidx.compose.runtime.Composable
+private fun PlayerActivity.PlayerActivityRoot(
+    activity: PlayerActivity,
+    controlsState: com.livetvpro.app.ui.player.compose.PlayerControlsState,
+    showChannelList: androidx.compose.runtime.MutableState<Boolean>,
+    isMuted: Boolean,
+    relatedContentState: com.livetvpro.app.ui.player.compose.RelatedContentState,
+    links: List<com.livetvpro.app.data.models.LiveEventLink>,
+    selectedLinkIndex: Int,
+    messageBanner: String,
+    messageBannerUrl: String,
+    errorMessage: String,
+    showSettingsDialog: Boolean,
+    showFloatingDialog: Boolean,
+    player: androidx.media3.exoplayer.ExoPlayer?,
+    preferencesManager: com.livetvpro.app.data.local.PreferencesManager,
+    onSettingsDismiss: () -> Unit,
+    onFloatingDismiss: () -> Unit,
+    onLinkClick: (com.livetvpro.app.data.models.LiveEventLink, Int) -> Unit,
+    onChannelClick: (com.livetvpro.app.data.models.Channel) -> Unit,
+    onEventClick: (com.livetvpro.app.data.models.LiveEvent, Int) -> Unit,
+    onMessageBannerClick: () -> Unit,
+) {
+    val isLandscape = activity.resources.configuration.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE ||
+        com.livetvpro.app.utils.DeviceUtils.isTvDevice
+    val spanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)
+    val eventSpanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.event_span_count)
+
+    androidx.compose.foundation.layout.Column(
+        modifier = androidx.compose.ui.Modifier.fillMaxSize()
+    ) {
+        if (!isLandscape) {
+            androidx.compose.foundation.layout.Spacer(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+            )
+        } else {
+            androidx.compose.foundation.layout.Spacer(
+                modifier = androidx.compose.ui.Modifier.fillMaxSize()
+            )
+        }
+        if (!isLandscape) {
+            com.livetvpro.app.ui.player.compose.PlayerScreen(
+                isLandscape = false,
+                relatedContentState = relatedContentState,
+                links = links,
+                selectedLinkIndex = selectedLinkIndex,
+                messageBanner = messageBanner,
+                messageBannerUrl = messageBannerUrl,
+                onLinkClick = onLinkClick,
+                onChannelClick = onChannelClick,
+                onEventClick = onEventClick,
+                onMessageBannerClick = onMessageBannerClick,
+                spanCount = spanCount,
+                eventSpanCount = eventSpanCount,
+            )
+        }
+    }
+    if (errorMessage.isNotBlank()) {
+        androidx.compose.foundation.layout.Box(
+            contentAlignment = androidx.compose.ui.Alignment.TopCenter,
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxSize()
+                .padding(top = (activity.resources.displayMetrics.heightPixels * 0.25f).dp)
+        ) {
+            androidx.compose.material3.Surface(
+                color = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                modifier = androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 20.dp)
+            ) {
+                androidx.compose.material3.Text(
+                    text = errorMessage,
+                    color = androidx.compose.ui.graphics.Color.White,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily(
+                        androidx.compose.ui.text.font.Font(com.livetvpro.app.R.font.bergen_sans)
+                    ),
+                    fontSize = 15.sp,
+                    modifier = androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 20.dp)
+                )
+            }
+        }
+    }
+    if (showSettingsDialog && player != null) {
+        com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(
+            player = player,
+            onDismiss = onSettingsDismiss,
+        )
+    }
+    if (showFloatingDialog) {
+        com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog(
+            preferencesManager = preferencesManager,
+            onDismiss = onFloatingDismiss,
+        )
+    }
+}
+
+private val Int.dp: androidx.compose.ui.unit.Dp get() = androidx.compose.ui.unit.Dp(this.toFloat())
+private val Float.dp: androidx.compose.ui.unit.Dp get() = androidx.compose.ui.unit.Dp(this)
+private val Float.sp: androidx.compose.ui.unit.TextUnit get() = androidx.compose.ui.unit.TextUnit(this, androidx.compose.ui.unit.TextUnitType.Sp)

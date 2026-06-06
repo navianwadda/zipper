@@ -100,7 +100,6 @@ class PlayerActivity : AppCompatActivity() {
     private val showFloatingDialog  = mutableStateOf(false)
     internal val errorMessage        = mutableStateOf("")
     private var relatedChannels = listOf<Channel>()
-    private var relatedLiveEvents = listOf<LiveEvent>()
 
     private val mainHandler = Handler(Looper.getMainLooper())
     internal val viewModel: PlayerViewModel by viewModels()
@@ -476,7 +475,6 @@ class PlayerActivity : AppCompatActivity() {
 
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
             if (contentType != ContentType.EVENT) return@observe
-            relatedLiveEvents = liveEvents
             relatedContentState.value = if (liveEvents.isEmpty()) RelatedContentState.Hidden else RelatedContentState.Events(liveEvents)
         }
 
@@ -802,11 +800,7 @@ class PlayerActivity : AppCompatActivity() {
             val hasRelated = relatedChannels.isNotEmpty() ||
                 (contentType == ContentType.EVENT)
             if (hasRelated) {
-                relatedContentState.value = when {
-                    relatedChannels.isNotEmpty() -> RelatedContentState.Channels(relatedChannels)
-                    relatedLiveEvents.isNotEmpty() -> RelatedContentState.Events(relatedLiveEvents)
-                    else -> RelatedContentState.Loading
-                }
+                relatedContentState.value = RelatedContentState.Channels(relatedChannels)
             }
         }
 

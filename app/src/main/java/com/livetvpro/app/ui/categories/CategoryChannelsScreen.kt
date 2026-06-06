@@ -122,17 +122,25 @@ fun CategoryChannelsScreen(
                 ScrollableTabRow(
                     selectedTabIndex = selectedIndex,
                     edgePadding = 0.dp,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 ) {
                     categoryGroups.forEachIndexed { index, group ->
                         Tab(
                             selected = index == selectedIndex,
                             onClick = { viewModel.selectGroup(group) },
+                            selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             text = {
                                 Text(
                                     text = group,
                                     fontFamily = BergenSans,
-                                    fontSize = 14.sp
+                                    fontSize = 14.sp,
+                                    color = if (index == selectedIndex)
+                                        MaterialTheme.colorScheme.onSurface
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         )
@@ -216,7 +224,7 @@ fun CategoryChannelsScreen(
             if (isLoading && channels.itemCount == 0) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }

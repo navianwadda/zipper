@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -195,14 +194,10 @@ private fun CategoryCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -224,26 +219,17 @@ private fun CategoryCard(
                 ) {
                     @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
-                        model = category.iconUrl,
+                        model = category.iconUrl.takeIf { it.isNotBlank() },
                         contentDescription = "Category icon",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .placeholder(R.mipmap.ic_launcher_round)
                             .error(R.mipmap.ic_launcher_round)
                             .fallback(R.mipmap.ic_launcher_round)
                     }
                 }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(
-                            width = dimensionResource(R.dimen.player_channel_logo_stroke_width),
-                            color = primaryColor,
-                            shape = CircleShape
-                        )
-                )
             }
 
             Text(

@@ -130,7 +130,6 @@ class PlayerActivity : AppCompatActivity() {
     private var screenOffReceiver: BroadcastReceiver? = null
     private var isScreenOff = false
     private var wasLockedBeforePip = false
-    private var settingsDialog: com.livetvpro.app.ui.player.settings.PlayerSettingsDialog? = null
     private var isShowingSettingsDialog = false
     private var pipRect: Rect? = null
     val isPipSupported by lazy {
@@ -567,8 +566,6 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun applyAdapterColors() {  }
-    }
-
     private fun applyResizeModeForOrientation(isLandscape: Boolean) {
         if (isLandscape) {
             playerViewRef.resizeMode = networkLandscapeResizeMode

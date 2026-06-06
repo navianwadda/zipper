@@ -2169,9 +2169,17 @@ class PlayerActivity : AppCompatActivity() {
 
     @SuppressLint("NewApi")
     internal fun enterPipMode() {
+        if (!isPipSupported) return
         playerViewRef.useController = false
         setSubtitleTextSizePiP()
-        updatePipParams(enter = true)
+        isEnteringPip = true
+        wasLockedBeforePip = controlsState.isLocked
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            enterPictureInPictureMode(updatePipParams(enter = true))
+        } else {
+            @Suppress("DEPRECATION")
+            enterPictureInPictureMode()
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

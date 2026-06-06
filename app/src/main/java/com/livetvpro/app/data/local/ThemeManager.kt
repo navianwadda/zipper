@@ -168,6 +168,10 @@ class ThemeManager @Inject constructor(
         return Color.argb((a * 255).toInt(), (r * 255).toInt(), (g * 255).toInt(), (b * 255).toInt())
     }
 
+    fun getOnSurfaceColor(activityContext: Context? = null): Int {
+        return if (isDarkMode(activityContext)) Color.WHITE else Color.BLACK
+    }
+
     fun getPrimaryColor(activityContext: Context? = null): Int {
         val theme = getColorTheme()
         val isDark = isDarkMode(activityContext)

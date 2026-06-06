@@ -80,6 +80,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import android.media.AudioManager
@@ -2111,6 +2112,7 @@ class PlayerActivity : AppCompatActivity() {
         params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.dimensionRatio = "H,16:9"
+        params.matchConstraintPercentHeight = -1f
         params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
         params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
@@ -2435,6 +2437,7 @@ private fun PlayerActivity.PlayerActivityRoot(
                 modifier = androidx.compose.ui.Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
+                    .pointerInput(Unit) { }
             )
         } else {
             androidx.compose.foundation.layout.Spacer(

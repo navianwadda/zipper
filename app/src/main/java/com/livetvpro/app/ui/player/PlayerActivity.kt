@@ -79,6 +79,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import android.media.AudioManager
+import androidx.recyclerview.widget.RecyclerView
 
 @UnstableApi
 @AndroidEntryPoint
@@ -1096,20 +1097,6 @@ class PlayerActivity : AppCompatActivity() {
     private fun showChannelOverlay(number: String, channel: com.livetvpro.app.data.models.Channel?) {
         showChannelOverlayState.value = null
         return
-        val logoView = overlay.findViewById<android.widget.ImageView>(R.id.channel_overlay_logo)
-        val numberView = overlay.findViewById<android.widget.TextView>(R.id.channel_overlay_number)
-        val nameView = overlay.findViewById<android.widget.TextView>(R.id.channel_overlay_name)
-        numberView?.text = number
-        nameView?.text = channel?.name ?: ""
-        nameView?.visibility = if (channel != null) View.VISIBLE else View.GONE
-        if (channel != null && channel.logoUrl.isNotEmpty()) {
-            logoView?.visibility = View.VISIBLE
-            logoView?.let { com.livetvpro.app.utils.GlideExtensions.loadImage(it, channel.logoUrl) }
-        } else {
-            logoView?.visibility = View.GONE
-        }
-        overlay.visibility = View.VISIBLE
-    }
 
     private fun navigateToChannelByNumber() {
         val number = channelNumberInput.toIntOrNull()
@@ -1144,6 +1131,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun setupComposeControls() {
+        binding.playerControlsCompose.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
@@ -2710,6 +2698,7 @@ private fun PlayerActivity.PlayerActivityRoot(
             onDismiss = onFloatingDismiss,
         )
     }
+}
 }
 
 private val Int.dp: androidx.compose.ui.unit.Dp get() = androidx.compose.ui.unit.Dp(this.toFloat())

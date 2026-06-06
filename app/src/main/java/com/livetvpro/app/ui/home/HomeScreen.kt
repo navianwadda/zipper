@@ -217,7 +217,7 @@ private fun CategoryCard(
                     GlideImage(
                         model = category.iconUrl?.takeIf { it.isNotBlank() },
                         contentDescription = "Category icon",
-                        contentScale = ContentScale.FillWidth,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)

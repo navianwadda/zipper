@@ -138,6 +138,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private var savedPlaybackPosition: Long = -1L
     private var settingsDialog: com.livetvpro.app.ui.player.settings.PlayerSettingsDialog? = null
     private var isShowingSettingsDialog = false
+    private val showSettingsDialogState = androidx.compose.runtime.mutableStateOf(false)
 
     enum class ContentType {
         CHANNEL, EVENT, NETWORK_STREAM
@@ -1988,6 +1989,18 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
+
+                        if (showSettingsDialogState.value) {
+                            player?.let { exo ->
+                                com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(
+                                    player = exo,
+                                    onDismiss = {
+                                        showSettingsDialogState.value = false
+                                        isShowingSettingsDialog = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -2015,19 +2028,11 @@ class FloatingPlayerActivity : AppCompatActivity() {
     }
 
     private fun showSettingsDialog() {
-        val exoPlayer = player ?: return
+        if (player == null) return
         if (isFinishing || isDestroyed) return
         if (isShowingSettingsDialog) return
         isShowingSettingsDialog = true
-        try {
-            val dialog = com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(this, exoPlayer)
-            settingsDialog = dialog
-            dialog.setOnDismissListener { isShowingSettingsDialog = false }
-            dialog.show()
-        } catch (e: Exception) {
-            isShowingSettingsDialog = false
-            android.util.Log.e("FloatingPlayerActivity", "Error showing settings dialog", e)
-        }
+        showSettingsDialogState.value = true
     }
 
     private fun setupMessageBanner() {

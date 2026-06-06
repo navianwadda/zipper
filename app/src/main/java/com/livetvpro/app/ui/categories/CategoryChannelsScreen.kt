@@ -4,8 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -239,32 +237,26 @@ private fun ChannelCard(
     )
 
     Card(
+        onClick = onClick,
         modifier = Modifier
             .padding(4.dp)
             .fillMaxWidth()
             .wrapContentHeight()
             .scale(scale)
             .onFocusChanged { hasFocus = it.hasFocus }
-            .focusable()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            ),
+            .focusable(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline
-        )
+        colors = CardDefaults.cardColors(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(4.dp)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -281,22 +273,17 @@ private fun ChannelCard(
                 ) {
                     @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
-                        model = channel.logoUrl,
+                        model = channel.logoUrl.takeIf { it.isNotBlank() },
                         contentDescription = "Channel logo",
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .placeholder(R.mipmap.ic_launcher_round)
                             .error(R.mipmap.ic_launcher_round)
                             .fallback(R.mipmap.ic_launcher_round)
                     }
                 }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .border(
-                            width = dimensionResource(R.dimen.player_channel_logo_stroke_width),
                             color = MaterialTheme.colorScheme.primary,
                             shape = CircleShape
                         )

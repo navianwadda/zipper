@@ -98,11 +98,11 @@ class PlayerActivity : AppCompatActivity() {
     private val messageBannerUrl    = mutableStateOf("")
     private val showSettingsDialog  = mutableStateOf(false)
     private val showFloatingDialog  = mutableStateOf(false)
-    private val errorMessage        = mutableStateOf("")
+    internal val errorMessage        = mutableStateOf("")
     private var relatedChannels = listOf<Channel>()
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val viewModel: PlayerViewModel by viewModels()
+    internal val viewModel: PlayerViewModel by viewModels()
     private var player: ExoPlayer? = null
     private var trackSelector: DefaultTrackSelector? = null
     private var playerListener: Player.Listener? = null
@@ -122,13 +122,13 @@ class PlayerActivity : AppCompatActivity() {
 
     private val controlsState = PlayerControlsState()
     private var showChannelList = mutableStateOf(false)
-    private var gestureVolume: Int = 100
-    private var gestureBrightness: Int = 0
+    internal var gestureVolume: Int = 100
+    internal var gestureBrightness: Int = 0
 
     private var isInPipMode = false
     private var isEnteringPip = false
     private var isMuted by mutableStateOf(false)
-    private val skipMs = 10_000L
+    internal val skipMs = 10_000L
 
     private var networkPortraitResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     private var networkLandscapeResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
@@ -148,7 +148,7 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private var contentType: ContentType = ContentType.CHANNEL
+    internal var contentType: ContentType = ContentType.CHANNEL
     private var channelNumberInput: String = ""
     private val channelNumberHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val channelNumberRunnable = Runnable { navigateToChannelByNumber() }
@@ -159,10 +159,10 @@ class PlayerActivity : AppCompatActivity() {
     private var pendingChannelNumber: Int = -1
     private var channelData: Channel? = null
     private var eventData: LiveEvent? = null
-    private var allEventLinks = listOf<LiveEventLink>()
-    private var currentLinkIndex = 0
-    private var contentId: String = ""
-    private var contentName: String by mutableStateOf("")
+    internal var allEventLinks = listOf<LiveEventLink>()
+    internal var currentLinkIndex = 0
+    internal var contentId: String = ""
+    internal var contentName: String by mutableStateOf("")
     private var streamUrl: String = ""
     private var intentCategoryId: String? = null
     private var intentSelectedGroup: String? = null
@@ -1141,7 +1141,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun setupComposeControls() {
     }
 
-    private fun cycleAspectRatio() {
+    internal fun cycleAspectRatio() {
         val isLandscape = DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val current = playerViewRef.resizeMode
         val next = when (current) {
@@ -1161,7 +1161,7 @@ class PlayerActivity : AppCompatActivity() {
         playerViewRef.resizeMode = next
     }
 
-    private fun showSettingsDialog() {
+    internal fun showSettingsDialog() {
         if (player == null) return
         if (isFinishing || isDestroyed) return
         if (isShowingSettingsDialog) return
@@ -1419,7 +1419,7 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
+    internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
         releasePlayer()
         val previousContentType = contentType
         channelData = newChannel
@@ -1500,7 +1500,7 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun switchToLink(link: LiveEventLink, position: Int) {
+    internal fun switchToLink(link: LiveEventLink, position: Int) {
         currentLinkIndex = position
         streamUrl = buildStreamUrl(link)
         releasePlayer()
@@ -2068,7 +2068,7 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun toggleMute() {
+    internal fun toggleMute() {
         player?.let {
             isMuted = !isMuted
             it.volume = if (isMuted) 0f else 1f
@@ -2094,7 +2094,7 @@ class PlayerActivity : AppCompatActivity() {
 
     }
 
-    private fun toggleFullscreen() {
+    internal fun toggleFullscreen() {
         if (DeviceUtils.isTvDevice) return
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         requestedOrientation = if (isLandscape) {
@@ -2166,7 +2166,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     @SuppressLint("NewApi")
-    private fun enterPipMode() {
+    internal fun enterPipMode() {
         playerViewRef.useController = false
         setSubtitleTextSizePiP()
         updatePipParams(enter = true)
@@ -2354,7 +2354,7 @@ class PlayerActivity : AppCompatActivity() {
         return actions
     }
 
-    private fun retryPlayback() {
+    internal fun retryPlayback() {
         errorMessage.value = ""
 
         playerViewRef.hideController()
@@ -2434,6 +2434,36 @@ private fun PlayerActivity.PlayerActivityRoot(
     // Status bar height must match topMargin applied to player_container in setupWindowInsets
     val statusBarHeight = androidx.compose.foundation.layout.WindowInsets.statusBars
         .asPaddingValues().calculateTopPadding()
+
+    val isPlaying by androidx.compose.runtime.produceState(initialValue = false, player) {
+        while (true) {
+            value = player?.isPlaying == true
+            kotlinx.coroutines.delay(100)
+        }
+    }
+    var currentPosition by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    var duration by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    var bufferedPosition by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    androidx.compose.runtime.LaunchedEffect(player) {
+        while (true) {
+            currentPosition = player?.currentPosition ?: 0L
+            bufferedPosition = player?.bufferedPosition ?: 0L
+            duration = player?.contentDuration?.coerceAtLeast(0L) ?: 0L
+            kotlinx.coroutines.delay(500L)
+        }
+    }
+
+    val channelListItems by activity.viewModel.channelListItems.observeAsState(emptyList())
+    val isChannelListAvailable = activity.contentType == ContentType.CHANNEL &&
+        channelListItems.isNotEmpty() &&
+        (isLandscape || com.livetvpro.app.utils.DeviceUtils.isTvDevice)
+
+    val isPipSupported = !com.livetvpro.app.utils.DeviceUtils.isTvDevice &&
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+        } else false
+
+    androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
 
     androidx.compose.foundation.layout.Column(
         modifier = androidx.compose.ui.Modifier.fillMaxSize()
@@ -2523,6 +2553,111 @@ private fun PlayerActivity.PlayerActivityRoot(
             preferencesManager = preferencesManager,
             onDismiss = onFloatingDismiss,
         )
+    }
+
+    com.livetvpro.app.ui.player.compose.PlayerControls(
+        state = controlsState,
+        isPlaying = isPlaying,
+        isMuted = isMuted,
+        currentPosition = currentPosition,
+        duration = duration,
+        bufferedPosition = bufferedPosition,
+        channelName = activity.contentName,
+        showPipButton = isPipSupported,
+        showAspectRatioButton = true,
+        isLandscape = isLandscape,
+        isTvMode = com.livetvpro.app.utils.DeviceUtils.isTvDevice,
+        centerControlsMode = preferencesManager.getCenterControlsMode(),
+        isNetworkStream = activity.contentType == ContentType.NETWORK_STREAM,
+        isChannelListAvailable = isChannelListAvailable,
+        onBackClick = { activity.finish() },
+        onPipClick = { activity.enterPipMode() },
+        onSettingsClick = { activity.showSettingsDialog() },
+        onMuteClick = { activity.toggleMute() },
+        onLockClick = { locked ->
+            if (locked) controlsState.lock() else controlsState.unlock(androidx.compose.runtime.rememberCoroutineScope())
+        },
+        onChannelListClick = { showChannelList.value = true },
+        onPlayPauseClick = {
+            player?.let {
+                val hasError = activity.errorMessage.value.isNotBlank()
+                val hasEnded = it.playbackState == androidx.media3.common.Player.STATE_ENDED
+                if (hasError || hasEnded) activity.retryPlayback()
+                else if (it.isPlaying) it.pause() else it.play()
+            }
+        },
+        onSeek = { position -> player?.seekTo(position) },
+        onRewindClick = {
+            player?.let { it.seekTo((it.currentPosition - activity.skipMs).coerceAtLeast(0L)) }
+        },
+        onForwardClick = {
+            player?.let {
+                val newPosition = it.currentPosition + activity.skipMs
+                if (it.isCurrentWindowLive && it.duration != androidx.media3.common.C.TIME_UNSET && newPosition >= it.duration) {
+                    it.seekTo(it.duration)
+                } else {
+                    it.seekTo(newPosition)
+                }
+            }
+        },
+        onPrevClick = {
+            when (activity.contentType) {
+                ContentType.EVENT -> {
+                    if (activity.allEventLinks.size > 1) {
+                        val prevIndex = (activity.currentLinkIndex - 1).coerceAtLeast(0)
+                        if (prevIndex != activity.currentLinkIndex) activity.switchToLink(activity.allEventLinks[prevIndex], prevIndex)
+                    }
+                }
+                ContentType.CHANNEL -> {
+                    val items = activity.viewModel.channelListItems.value
+                    if (!items.isNullOrEmpty()) {
+                        val currentIndex = items.indexOfFirst { it.id == activity.contentId }.takeIf { it != -1 } ?: 0
+                        val prevIndex = (currentIndex - 1).coerceAtLeast(0)
+                        if (prevIndex != currentIndex) activity.switchToChannel(items[prevIndex])
+                    }
+                }
+                else -> {}
+            }
+        },
+        onNextClick = {
+            when (activity.contentType) {
+                ContentType.EVENT -> {
+                    if (activity.allEventLinks.size > 1) {
+                        val nextIndex = (activity.currentLinkIndex + 1).coerceAtMost(activity.allEventLinks.size - 1)
+                        if (nextIndex != activity.currentLinkIndex) activity.switchToLink(activity.allEventLinks[nextIndex], nextIndex)
+                    }
+                }
+                ContentType.CHANNEL -> {
+                    val items = activity.viewModel.channelListItems.value
+                    if (!items.isNullOrEmpty()) {
+                        val currentIndex = items.indexOfFirst { it.id == activity.contentId }.takeIf { it != -1 } ?: 0
+                        val nextIndex = (currentIndex + 1).coerceAtMost(items.size - 1)
+                        if (nextIndex != currentIndex) activity.switchToChannel(items[nextIndex])
+                    }
+                }
+                else -> {}
+            }
+        },
+        onAspectRatioClick = {
+            if (isLandscape || activity.contentType == ContentType.NETWORK_STREAM) activity.cycleAspectRatio()
+        },
+        onFullscreenClick = { activity.toggleFullscreen() },
+        onVolumeSwipe = { vol ->
+            activity.gestureVolume = vol
+            val audioManager = activity.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+            val max = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+            audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (vol / 100f * max).toInt(), 0)
+        },
+        onBrightnessSwipe = { bri ->
+            activity.gestureBrightness = bri
+            val lp = activity.window.attributes
+            lp.screenBrightness = if (bri == 0) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else bri / 100f
+            activity.window.attributes = lp
+        },
+        initialVolume = activity.gestureVolume,
+        initialBrightness = activity.gestureBrightness,
+    )
+
     }
 }
 

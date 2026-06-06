@@ -96,13 +96,14 @@ fun PlayerScreen(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(if (isLandscape) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface)
     ) {
-        if (!isLandscape) {
+        if (links.size > 1) {
             LinksRow(
                 links = links,
                 selectedIndex = selectedLinkIndex,
                 onLinkClick = onLinkClick,
+                background = if (isLandscape) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface,
             )
         }
         if (!isLandscape && messageBanner.isNotBlank()) {
@@ -134,6 +135,7 @@ private fun LinksRow(
     selectedIndex: Int,
     onLinkClick: (LiveEventLink, Int) -> Unit,
     modifier: Modifier = Modifier,
+    background: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
 ) {
     AnimatedVisibility(
         visible = links.size > 1,
@@ -146,7 +148,7 @@ private fun LinksRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface),
+                .background(background),
         ) {
             itemsIndexed(links) { index, link ->
                 LinkChip(

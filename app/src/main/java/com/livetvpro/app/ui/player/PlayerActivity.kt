@@ -2453,8 +2453,9 @@ private fun PlayerActivity.PlayerActivityRoot(
         }
     }
 
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val channelListItems by activity.viewModel.channelListItems.observeAsState(emptyList())
-    val isChannelListAvailable = activity.contentType == ContentType.CHANNEL &&
+    val isChannelListAvailable = activity.contentType == PlayerActivity.ContentType.CHANNEL &&
         channelListItems.isNotEmpty() &&
         (isLandscape || com.livetvpro.app.utils.DeviceUtils.isTvDevice)
 
@@ -2568,14 +2569,14 @@ private fun PlayerActivity.PlayerActivityRoot(
         isLandscape = isLandscape,
         isTvMode = com.livetvpro.app.utils.DeviceUtils.isTvDevice,
         centerControlsMode = preferencesManager.getCenterControlsMode(),
-        isNetworkStream = activity.contentType == ContentType.NETWORK_STREAM,
+        isNetworkStream = activity.contentType == PlayerActivity.ContentType.NETWORK_STREAM,
         isChannelListAvailable = isChannelListAvailable,
         onBackClick = { activity.finish() },
         onPipClick = { activity.enterPipMode() },
         onSettingsClick = { activity.showSettingsDialog() },
         onMuteClick = { activity.toggleMute() },
         onLockClick = { locked ->
-            if (locked) controlsState.lock() else controlsState.unlock(androidx.compose.runtime.rememberCoroutineScope())
+            if (locked) controlsState.lock() else controlsState.unlock(scope)
         },
         onChannelListClick = { showChannelList.value = true },
         onPlayPauseClick = {
@@ -2602,13 +2603,13 @@ private fun PlayerActivity.PlayerActivityRoot(
         },
         onPrevClick = {
             when (activity.contentType) {
-                ContentType.EVENT -> {
+                PlayerActivity.ContentType.EVENT -> {
                     if (activity.allEventLinks.size > 1) {
                         val prevIndex = (activity.currentLinkIndex - 1).coerceAtLeast(0)
                         if (prevIndex != activity.currentLinkIndex) activity.switchToLink(activity.allEventLinks[prevIndex], prevIndex)
                     }
                 }
-                ContentType.CHANNEL -> {
+                PlayerActivity.ContentType.CHANNEL -> {
                     val items = activity.viewModel.channelListItems.value
                     if (!items.isNullOrEmpty()) {
                         val currentIndex = items.indexOfFirst { it.id == activity.contentId }.takeIf { it != -1 } ?: 0
@@ -2621,13 +2622,13 @@ private fun PlayerActivity.PlayerActivityRoot(
         },
         onNextClick = {
             when (activity.contentType) {
-                ContentType.EVENT -> {
+                PlayerActivity.ContentType.EVENT -> {
                     if (activity.allEventLinks.size > 1) {
                         val nextIndex = (activity.currentLinkIndex + 1).coerceAtMost(activity.allEventLinks.size - 1)
                         if (nextIndex != activity.currentLinkIndex) activity.switchToLink(activity.allEventLinks[nextIndex], nextIndex)
                     }
                 }
-                ContentType.CHANNEL -> {
+                PlayerActivity.ContentType.CHANNEL -> {
                     val items = activity.viewModel.channelListItems.value
                     if (!items.isNullOrEmpty()) {
                         val currentIndex = items.indexOfFirst { it.id == activity.contentId }.takeIf { it != -1 } ?: 0
@@ -2639,7 +2640,7 @@ private fun PlayerActivity.PlayerActivityRoot(
             }
         },
         onAspectRatioClick = {
-            if (isLandscape || activity.contentType == ContentType.NETWORK_STREAM) activity.cycleAspectRatio()
+            if (isLandscape || activity.contentType == PlayerActivity.ContentType.NETWORK_STREAM) activity.cycleAspectRatio()
         },
         onFullscreenClick = { activity.toggleFullscreen() },
         onVolumeSwipe = { vol ->

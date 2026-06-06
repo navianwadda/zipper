@@ -2840,7 +2840,6 @@ private fun PlayerActivity.PlayerActivityRoot(
         initialBrightness = activity.gestureBrightness,
     )
 
-    }
 }
 
 private val Int.dp: androidx.compose.ui.unit.Dp get() = androidx.compose.ui.unit.Dp(this.toFloat())

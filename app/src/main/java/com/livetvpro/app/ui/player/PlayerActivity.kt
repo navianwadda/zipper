@@ -74,13 +74,15 @@ import java.util.UUID
 import android.annotation.SuppressLint
 import android.graphics.Rect
 import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import android.media.AudioManager
@@ -2429,16 +2431,43 @@ private fun PlayerActivity.PlayerActivityRoot(
     val spanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)
     val eventSpanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.event_span_count)
 
+    // Status bar height must match topMargin applied to player_container in setupWindowInsets
+    val statusBarHeight = androidx.compose.foundation.layout.WindowInsets.statusBars
+        .asPaddingValues().calculateTopPadding()
+
     androidx.compose.foundation.layout.Column(
         modifier = androidx.compose.ui.Modifier.fillMaxSize()
     ) {
         if (!isLandscape) {
-            androidx.compose.foundation.layout.Spacer(
+            // Box wraps the player-area spacer so error message can be overlaid inside it
+            androidx.compose.foundation.layout.Box(
                 modifier = androidx.compose.ui.Modifier
                     .fillMaxWidth()
+                    .padding(top = statusBarHeight)
                     .aspectRatio(16f / 9f)
-                    .pointerInput(Unit) { }
-            )
+            ) {
+                if (errorMessage.isNotBlank()) {
+                    androidx.compose.foundation.layout.Box(
+                        contentAlignment = androidx.compose.ui.Alignment.Center,
+                        modifier = androidx.compose.ui.Modifier.fillMaxSize()
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = errorMessage,
+                            color = androidx.compose.ui.graphics.Color.White,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily(
+                                androidx.compose.ui.text.font.Font(com.livetvpro.app.R.font.bergen_sans)
+                            ),
+                            fontSize = 15.sp,
+                            modifier = androidx.compose.ui.Modifier
+                                .background(
+                                    androidx.compose.ui.graphics.Color(0xFF1A1A1A),
+                                    androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 24.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+            }
         } else {
             androidx.compose.foundation.layout.Spacer(
                 modifier = androidx.compose.ui.Modifier.fillMaxSize()
@@ -2461,28 +2490,26 @@ private fun PlayerActivity.PlayerActivityRoot(
             )
         }
     }
-    if (errorMessage.isNotBlank()) {
+    // Landscape error — centered in the full-screen player
+    if (isLandscape && errorMessage.isNotBlank()) {
         androidx.compose.foundation.layout.Box(
-            contentAlignment = androidx.compose.ui.Alignment.TopCenter,
-            modifier = androidx.compose.ui.Modifier
-                .fillMaxSize()
-                .padding(top = (activity.resources.displayMetrics.heightPixels * 0.25f).dp)
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+            modifier = androidx.compose.ui.Modifier.fillMaxSize()
         ) {
-            androidx.compose.material3.Surface(
-                color = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                modifier = androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 20.dp)
-            ) {
-                androidx.compose.material3.Text(
-                    text = errorMessage,
-                    color = androidx.compose.ui.graphics.Color.White,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily(
-                        androidx.compose.ui.text.font.Font(com.livetvpro.app.R.font.bergen_sans)
-                    ),
-                    fontSize = 15.sp,
-                    modifier = androidx.compose.ui.Modifier.padding(horizontal = 48.dp, vertical = 20.dp)
-                )
-            }
+            androidx.compose.material3.Text(
+                text = errorMessage,
+                color = androidx.compose.ui.graphics.Color.White,
+                fontFamily = androidx.compose.ui.text.font.FontFamily(
+                    androidx.compose.ui.text.font.Font(com.livetvpro.app.R.font.bergen_sans)
+                ),
+                fontSize = 15.sp,
+                modifier = androidx.compose.ui.Modifier
+                    .background(
+                        androidx.compose.ui.graphics.Color(0xFF1A1A1A),
+                        androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 24.dp, vertical = 10.dp)
+            )
         }
     }
     if (showSettingsDialog && player != null) {

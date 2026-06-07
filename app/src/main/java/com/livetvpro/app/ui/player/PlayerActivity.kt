@@ -741,6 +741,7 @@ class PlayerActivity : AppCompatActivity() {
             isInPipMode = false
             isEnteringPip = false
             isInPip = false
+            updateLinksState()
 
             super.onPictureInPictureModeChanged(false, newConfig)
 
@@ -758,6 +759,7 @@ class PlayerActivity : AppCompatActivity() {
         isInPipMode = true
         isEnteringPip = false
         isInPip = true
+        updateLinksState()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             setPictureInPictureParams(updatePipParams(enter = true))
@@ -2702,23 +2704,29 @@ private fun PlayerActivity.PlayerActivityRoot(
                     initialBrightness = activity.gestureBrightness,
                 )
                 if (links.size > 1) {
-                    com.livetvpro.app.ui.player.compose.PlayerScreen(
-                        isLandscape = true,
-                        relatedContentState = com.livetvpro.app.ui.player.compose.RelatedContentState.Hidden,
-                        links = links,
-                        selectedLinkIndex = selectedLinkIndex,
-                        messageBanner = "",
-                        messageBannerUrl = "",
-                        onLinkClick = onLinkClick,
-                        onChannelClick = onChannelClick,
-                        onEventClick = onEventClick,
-                        onMessageBannerClick = onMessageBannerClick,
-                        spanCount = spanCount,
-                        eventSpanCount = eventSpanCount,
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = controlsState.isVisible && !controlsState.isLocked,
+                        enter = androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.fadeOut(),
                         modifier = androidx.compose.ui.Modifier
                             .align(androidx.compose.ui.Alignment.TopCenter)
                             .padding(top = 44.dp),
-                    )
+                    ) {
+                        com.livetvpro.app.ui.player.compose.PlayerScreen(
+                            isLandscape = true,
+                            relatedContentState = com.livetvpro.app.ui.player.compose.RelatedContentState.Hidden,
+                            links = links,
+                            selectedLinkIndex = selectedLinkIndex,
+                            messageBanner = "",
+                            messageBannerUrl = "",
+                            onLinkClick = onLinkClick,
+                            onChannelClick = onChannelClick,
+                            onEventClick = onEventClick,
+                            onMessageBannerClick = onMessageBannerClick,
+                            spanCount = spanCount,
+                            eventSpanCount = eventSpanCount,
+                        )
+                    }
                 }
             }
         }

@@ -120,6 +120,7 @@ fun PlayerScreen(
                 channels = relatedContentState.items,
                 spanCount = spanCount,
                 onChannelClick = onChannelClick,
+                background = if (isLandscape) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface,
             )
             is RelatedContentState.Events -> RelatedEventsGrid(
                 events = relatedContentState.items,
@@ -282,6 +283,7 @@ private fun RelatedChannelsGrid(
     spanCount: Int,
     onChannelClick: (Channel) -> Unit,
     modifier: Modifier = Modifier,
+    background: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
 ) {
     if (channels.isEmpty()) return
     LazyVerticalGrid(
@@ -292,11 +294,12 @@ private fun RelatedChannelsGrid(
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .background(MaterialTheme.colorScheme.surface),
+            .background(background),
     ) {
         items(channels, key = { it.id }) { channel ->
             RelatedChannelCard(
                 channel = channel,
+                background = background,
                 onClick = { onChannelClick(channel) },
             )
         }
@@ -308,6 +311,7 @@ private fun RelatedChannelsGrid(
 private fun RelatedChannelCard(
     channel: Channel,
     onClick: () -> Unit,
+    background: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
 ) {
     var focused by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(
@@ -317,7 +321,7 @@ private fun RelatedChannelCard(
     )
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = background),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
@@ -343,8 +347,7 @@ private fun RelatedChannelCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(Color(0x80000000)),
+                        .clip(CircleShape),
                 ) {
                     GlideImage(
                         model = channel.logoUrl.takeIf { it.isNotBlank() },

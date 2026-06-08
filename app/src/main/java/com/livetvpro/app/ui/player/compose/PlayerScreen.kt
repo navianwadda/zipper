@@ -291,7 +291,8 @@ private fun RelatedChannelsGrid(
         verticalArrangement = Arrangement.spacedBy(0.dp),
         modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight(),
+            .wrapContentHeight()
+            .background(MaterialTheme.colorScheme.surface),
     ) {
         items(channels, key = { it.id }) { channel ->
             RelatedChannelCard(
@@ -316,7 +317,7 @@ private fun RelatedChannelCard(
     )
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier

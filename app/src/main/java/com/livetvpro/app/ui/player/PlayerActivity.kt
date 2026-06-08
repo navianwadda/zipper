@@ -2370,7 +2370,7 @@ private fun PlayerActivity.PlayerActivityRoot(
             )
         }
     }
-    com.livetvpro.app.ui.player
+    
     if (isLandscape && errorMessage.isNotBlank()) {
         androidx.compose.foundation.layout.Box(
             contentAlignment = androidx.compose.ui.Alignment.Center,

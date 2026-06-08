@@ -1,13 +1,13 @@
 package com.livetvpro.app.ui.playlists
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.Playlist
 import com.livetvpro.app.data.repository.PlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -16,23 +16,33 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PlaylistsViewModel @Inject constructor(
-    private val playlistRepository: PlaylistRepository
+    private val playlistRepository: PlaylistRepository,
+    private val themeManager: ThemeManager,
 ) : ViewModel() {
 
-    val playlists: LiveData<List<Playlist>> = playlistRepository.getAllPlaylists()
-        .onStart { _isLoading.postValue(true) }
-        .catch { e ->
-            _error.postValue("Failed to load playlists: ${e.message}")
-            emit(emptyList())
+    val primaryColorFlow: StateFlow<Int> = themeManager.primaryColorFlow
+
+    private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
+    val playlists: StateFlow<List<Playlist>> = _playlists
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    init {
+        viewModelScope.launch {
+            playlistRepository.getAllPlaylists()
+                .onStart { _isLoading.value = true }
+                .catch { e ->
+                    _error.value = "Failed to load playlists: ${e.message}"
+                    emit(emptyList())
+                }
+                .onEach { _isLoading.value = false }
+                .collect { _playlists.value = it }
         }
-        .onEach { _isLoading.postValue(false) }
-        .asLiveData()
-
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
-
-    private val _isLoading = MutableLiveData<Boolean>()
-    val isLoading: LiveData<Boolean> = _isLoading
+    }
 
     fun addPlaylist(title: String, url: String = "", isFile: Boolean = false, filePath: String = "") {
         viewModelScope.launch {

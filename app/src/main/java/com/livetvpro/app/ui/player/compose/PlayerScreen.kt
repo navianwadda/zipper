@@ -69,6 +69,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
+private val CardLogoBg = Color(0x80000000)
 
 sealed class RelatedContentState {
     object Hidden : RelatedContentState()
@@ -299,7 +300,6 @@ private fun RelatedChannelsGrid(
         items(channels, key = { it.id }) { channel ->
             RelatedChannelCard(
                 channel = channel,
-                background = background,
                 onClick = { onChannelClick(channel) },
             )
         }
@@ -311,7 +311,6 @@ private fun RelatedChannelsGrid(
 private fun RelatedChannelCard(
     channel: Channel,
     onClick: () -> Unit,
-    background: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
 ) {
     var focused by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(
@@ -321,7 +320,7 @@ private fun RelatedChannelCard(
     )
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = background),
+        colors = CardDefaults.cardColors(),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
@@ -347,7 +346,8 @@ private fun RelatedChannelCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(CircleShape),
+                        .clip(CircleShape)
+                        .background(CardLogoBg),
                 ) {
                     GlideImage(
                         model = channel.logoUrl.takeIf { it.isNotBlank() },

@@ -96,6 +96,7 @@ fun PlayerScreen(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .wrapContentHeight()
             .background(if (isLandscape) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface)
     ) {
         if (links.size > 1) {

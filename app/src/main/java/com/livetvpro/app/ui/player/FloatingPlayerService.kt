@@ -358,7 +358,10 @@ class FloatingPlayerService : Service() {
                 return START_STICKY
             }
             ACTION_SHOW_ALL -> {
-                activeInstances.values.forEach { it.floatingView.visibility = View.VISIBLE }
+                activeInstances.values.forEach {
+                    it.floatingView.visibility = View.VISIBLE
+                    it.player.play()
+                }
                 return START_STICKY
             }
             ACTION_UPDATE_NETWORK_STREAM -> {
@@ -1266,7 +1269,10 @@ class FloatingPlayerService : Service() {
                 PlayerHolder.transferPlayer(currentPlayer, streamUrl, contentName)
 
                 activeInstances.forEach { (id, inst) ->
-                    if (id != instanceId) inst.floatingView.visibility = View.INVISIBLE
+                    if (id != instanceId) {
+                        inst.floatingView.visibility = View.INVISIBLE
+                        inst.player.pause()
+                    }
                 }
 
                 val intent = Intent(this, FloatingPlayerActivity::class.java).apply {

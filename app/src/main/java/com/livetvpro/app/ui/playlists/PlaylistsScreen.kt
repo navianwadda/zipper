@@ -118,7 +118,6 @@ fun PlaylistsScreen(
         backgroundColor = primaryColor.copy(alpha = 0.3f)
     )
 
-    // Surface any ViewModel errors to the fragment as Toasts
     LaunchedEffect(error) {
         error?.let {
             onError(it)
@@ -126,7 +125,6 @@ fun PlaylistsScreen(
         }
     }
 
-    // When the fragment picks a file, open the Add dialog immediately
     LaunchedEffect(pendingFileUri) {
         if (pendingFileUri != null) {
             fabExpanded = false
@@ -137,7 +135,6 @@ fun PlaylistsScreen(
     CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
 
-            // Dim scrim when speed-dial is open
             AnimatedVisibility(
                 visible = fabExpanded,
                 enter = fadeIn(tween(150)),
@@ -151,7 +148,6 @@ fun PlaylistsScreen(
                 )
             }
 
-            // Content
             when {
                 isLoading && playlists.isEmpty() -> {
                     CircularProgressIndicator(
@@ -193,7 +189,6 @@ fun PlaylistsScreen(
                 }
             }
 
-            // FABs
             if (!isTvDevice) {
                 Column(
                     modifier = Modifier
@@ -202,7 +197,6 @@ fun PlaylistsScreen(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Speed-dial: Add via URL
                     AnimatedVisibility(
                         visible = fabExpanded,
                         enter = fadeIn(tween(200)) + scaleIn(tween(200)) + expandVertically(tween(200), expandFrom = Alignment.Bottom),
@@ -219,7 +213,6 @@ fun PlaylistsScreen(
                         )
                     }
 
-                    // Speed-dial: Add via File
                     AnimatedVisibility(
                         visible = fabExpanded,
                         enter = fadeIn(tween(160)) + scaleIn(tween(160)) + expandVertically(tween(160), expandFrom = Alignment.Bottom),
@@ -236,7 +229,6 @@ fun PlaylistsScreen(
                         )
                     }
 
-                    // Main FAB
                     val fabRotation by animateFloatAsState(
                         targetValue = if (fabExpanded) 45f else 0f,
                         animationSpec = tween(220),
@@ -257,7 +249,6 @@ fun PlaylistsScreen(
                     }
                 }
             } else {
-                // TV: single FAB at bottom-end
                 FloatingActionButton(
                     onClick = { activeDialog = PlaylistDialog.Add(isFile = false) },
                     shape = CircleShape,
@@ -276,7 +267,6 @@ fun PlaylistsScreen(
         }
     }
 
-    // Active dialog rendering
     when (val dialog = activeDialog) {
         is PlaylistDialog.Add -> {
             AddPlaylistDialog(
@@ -325,7 +315,6 @@ fun PlaylistsScreen(
     }
 }
 
-// ─── Speed-dial option row ───────────────────────────────────────────────────
 
 @Composable
 private fun FabOptionRow(
@@ -372,7 +361,6 @@ private fun FabOptionRow(
     }
 }
 
-// ─── Playlist card ───────────────────────────────────────────────────────────
 
 @Composable
 private fun PlaylistCard(
@@ -439,7 +427,6 @@ private fun PlaylistCard(
     }
 }
 
-// ─── Dialogs ─────────────────────────────────────────────────────────────────
 
 @Composable
 private fun AddPlaylistDialog(
@@ -636,7 +623,6 @@ private fun DeletePlaylistDialog(
     )
 }
 
-// ─── Shared text field ────────────────────────────────────────────────────────
 
 @Composable
 private fun PlaylistTextField(

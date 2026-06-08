@@ -55,6 +55,8 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.data.models.LiveEventLink
+import com.livetvpro.app.ui.player.PlayerStreamHelper
+import com.livetvpro.app.ui.player.StreamInfo
 import com.livetvpro.app.ui.player.compose.PlayerControls
 import com.livetvpro.app.ui.player.compose.PlayerControlsState
 import com.livetvpro.app.ui.player.compose.GestureState
@@ -1182,7 +1184,7 @@ class PlayerActivity : AppCompatActivity() {
             val decodedUriString = android.net.Uri.decode(rawUriString)
             streamUrl = decodedUriString
 
-            val parsed = parseStreamUrl(decodedUriString)
+            val parsed = PlayerStreamHelper.parseStreamUrl(decodedUriString)
 
             allEventLinks = listOf(
                 com.livetvpro.app.data.models.LiveEventLink(
@@ -1215,7 +1217,7 @@ class PlayerActivity : AppCompatActivity() {
             if (streamUrlRaw.contains("|")) {
                 streamUrl = streamUrlRaw
 
-                val parsed = parseStreamUrl(streamUrlRaw)
+                val parsed = PlayerStreamHelper.parseStreamUrl(streamUrlRaw)
                 val extraDrmScheme = intent.getStringExtra("DRM_SCHEME")?.takeIf { it.isNotBlank() }
                 val extraDrmLicense = intent.getStringExtra("DRM_LICENSE")?.takeIf { it.isNotBlank() }
                 val resolvedDrmScheme = parsed.drmScheme ?: extraDrmScheme
@@ -1258,7 +1260,7 @@ class PlayerActivity : AppCompatActivity() {
                     drmLicenseUrl = resolvedDrmLicenseUrl
                         ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } }
                 )
-                streamUrl = buildStreamUrl(mergedLink)
+                streamUrl = PlayerStreamHelper.buildStreamUrl(mergedLink)
 
                 allEventLinks = listOf(mergedLink)
             } else {
@@ -1282,7 +1284,7 @@ class PlayerActivity : AppCompatActivity() {
                     )
                 )
 
-                streamUrl = buildStreamUrl(allEventLinks[0])
+                streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[0])
             }
 
             currentLinkIndex = 0
@@ -1340,7 +1342,7 @@ class PlayerActivity : AppCompatActivity() {
                     currentLinkIndex = if (matchIndex != -1) matchIndex else 0
                 }
 
-                streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
+                streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
                 streamUrl = channel.streamUrl
                 allEventLinks = emptyList()
@@ -1359,7 +1361,7 @@ class PlayerActivity : AppCompatActivity() {
 
             if (allEventLinks.isNotEmpty()) {
                 currentLinkIndex = if (passedLinkIndex in allEventLinks.indices) passedLinkIndex else 0
-                streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
+                streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
                 currentLinkIndex = 0
                 streamUrl = ""
@@ -1445,7 +1447,7 @@ class PlayerActivity : AppCompatActivity() {
                 )
             }
             currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
-            streamUrl = allEventLinks.getOrNull(currentLinkIndex)?.let { buildStreamUrl(it) } ?: newChannel.streamUrl
+            streamUrl = allEventLinks.getOrNull(currentLinkIndex)?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
         } else {
             allEventLinks = emptyList()
             streamUrl = newChannel.streamUrl
@@ -1485,7 +1487,7 @@ class PlayerActivity : AppCompatActivity() {
 
             if (allEventLinks.isNotEmpty()) {
                 currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
-                streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
+                streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
                 currentLinkIndex = 0
                 streamUrl = ""
@@ -1505,7 +1507,7 @@ class PlayerActivity : AppCompatActivity() {
     internal fun switchToLink(link: LiveEventLink, position: Int) {
         currentLinkIndex = position
         selectedLinkState.value = position
-        streamUrl = buildStreamUrl(link)
+        streamUrl = PlayerStreamHelper.buildStreamUrl(link)
         releasePlayer()
         setupPlayer()
     }
@@ -1561,521 +1563,142 @@ class PlayerActivity : AppCompatActivity() {
         playerListener = null
     }
 
-    private data class StreamInfo(
-        val url: String,
-        val headers: Map<String, String>,
-        val drmScheme: String?,
-        val drmKeyId: String?,
-        val drmKey: String?,
-        val drmLicenseUrl: String? = null
-    )
-
-    private fun parseStreamUrl(streamUrl: String): StreamInfo {
-        val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
-        val pipeIndex = normalizedUrl.indexOf('|')
-        if (pipeIndex == -1) {
-            return StreamInfo(normalizedUrl, mapOf(), null, null, null, null)
-        }
-
-        val url = normalizedUrl.substring(0, pipeIndex).trim().trimEnd('?')
-        val rawParams = normalizedUrl.substring(pipeIndex + 1).trim()
-        val parts = buildList {
-            for (segment in rawParams.split("|")) {
-                val eqIdx = segment.indexOf('=')
-                val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
-                when {
-                    value.startsWith("http://", ignoreCase = true) ||
-                    value.startsWith("https://", ignoreCase = true) -> add(segment)
-                    value.contains('=') -> add(segment)
-                    else -> addAll(segment.split("&"))
-                }
-            }
-        }
-
-        val headers = mutableMapOf<String, String>()
-        var drmScheme: String? = null
-        var drmKeyId: String? = null
-        var drmKey: String? = null
-        var drmLicenseUrl: String? = null
-
-        for (part in parts) {
-            val eqIndex = part.indexOf('=')
-            if (eqIndex == -1) continue
-
-            val key = part.substring(0, eqIndex).trim()
-            val value = part.substring(eqIndex + 1).trim()
-
-            when (key.lowercase()) {
-                "drmscheme" -> drmScheme = normalizeDrmScheme(value)
-                "drmlicense" -> {
-                    if (value.startsWith("http://", ignoreCase = true) ||
-                        value.startsWith("https://", ignoreCase = true)) {
-                        drmLicenseUrl = value
-                    } else if (value.trimStart().startsWith("{")) {
-                        drmLicenseUrl = value
-                    } else {
-                        val colonIndex = value.indexOf(':')
-                        if (colonIndex != -1) {
-                            drmKeyId = value.substring(0, colonIndex).trim()
-                            drmKey = value.substring(colonIndex + 1).trim()
-                        }
-                    }
-                }
-                "drmkeyid" -> drmKeyId = value
-                "drmkey"   -> drmKey   = value
-                "referer", "referrer" -> headers["Referer"] = value
-                "user-agent", "useragent" -> headers["User-Agent"] = value
-                "origin" -> headers["Origin"] = value
-                "cookie" -> headers["Cookie"] = value
-                "x-forwarded-for" -> headers["X-Forwarded-For"] = value
-                else -> headers[key] = value
-            }
-        }
-
-        return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
-    }
-
-    private fun normalizeDrmScheme(scheme: String): String {
-        val lower = scheme.lowercase()
-        return when {
-            lower.contains("clearkey") || lower == "org.w3.clearkey" -> "clearkey"
-            lower.contains("widevine") || lower == "com.widevine.alpha" -> "widevine"
-            lower.contains("playready") || lower == "com.microsoft.playready" -> "playready"
-            lower.contains("fairplay") -> "fairplay"
-            else -> lower
-        }
-    }
-
-    private fun buildStreamUrl(link: LiveEventLink): String {
-        var url = link.url
-        val params = mutableListOf<String>()
-
-        link.referer?.let { if (it.isNotEmpty()) params.add("referer=$it") }
-        link.cookie?.let { if (it.isNotEmpty()) params.add("cookie=$it") }
-        link.origin?.let { if (it.isNotEmpty()) params.add("origin=$it") }
-        link.userAgent?.let { if (it.isNotEmpty()) params.add("user-agent=$it") }
-        link.xForwardedFor?.let { if (it.isNotEmpty()) params.add("x-forwarded-for=$it") }
-        link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
-        link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
-
-        if (params.isNotEmpty()) {
-            url += "|" + params.joinToString("|")
-        }
-
-        return url
-    }
     private fun setupPlayer() {
-        if (player != null) return
-        errorMessage.value = ""
-        playerViewRef.hideController()
-
-        if (DeviceUtils.isTvDevice) {
+        if (streamUrl.isBlank()) {
+            errorMessage.value = "No stream URL"
+            return
         }
-        trackSelector = DefaultTrackSelector(this).apply {
+
+        val parsed = PlayerStreamHelper.parseStreamUrl(streamUrl)
+        val headers = parsed.headers.toMutableMap()
+        if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
+            headers["User-Agent"] = "okhttp/4.12.0"
+        }
+
+        val dataSourceFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
+            .setDefaultRequestProperties(headers)
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(15_000)
+            .setAllowCrossProtocolRedirects(true)
+            .setKeepPostFor302Redirects(true)
+
+        val clearKeyMgr: androidx.media3.exoplayer.drm.DefaultDrmSessionManager? = when {
+            parsed.drmScheme != "clearkey" -> null
+            parsed.drmKeyId != null && parsed.drmKey != null ->
+                PlayerStreamHelper.buildClearKeyInlineManager(parsed.drmKeyId, parsed.drmKey)
+            parsed.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
+                PlayerStreamHelper.buildClearKeyJwkManager(parsed.drmLicenseUrl)
+            parsed.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
+                PlayerStreamHelper.buildClearKeyServerManager(parsed.drmLicenseUrl, headers)
+            else -> null
+        }
+
+        val mediaSourceFactory = if (clearKeyMgr != null) {
+            DefaultMediaSourceFactory(this)
+                .setDataSourceFactory(dataSourceFactory)
+                .setDrmSessionManagerProvider { clearKeyMgr }
+        } else {
+            DefaultMediaSourceFactory(this).setDataSourceFactory(dataSourceFactory)
+        }
+
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            .setEnableDecoderFallback(true)
+
+        val ts = DefaultTrackSelector(this).apply {
             parameters = buildUponParameters()
                 .setAllowVideoMixedMimeTypeAdaptiveness(true)
                 .setAllowAudioMixedMimeTypeAdaptiveness(true)
                 .setAllowAudioMixedChannelCountAdaptiveness(true)
-                .clearVideoSizeConstraints()
-
-                .setTunnelingEnabled(DeviceUtils.isTvDevice)
                 .build()
         }
+        trackSelector = ts
 
-        try {
-            val streamInfo = parseStreamUrl(streamUrl)
+        val exo = ExoPlayer.Builder(this)
+            .setRenderersFactory(renderersFactory)
+            .setTrackSelector(ts)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
+            .setHandleAudioBecomingNoisy(true)
+            .setAudioAttributes(
+                androidx.media3.common.AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .build(),
+                true
+            )
+            .build()
 
-            if (streamInfo.url.isBlank()) {
-                showError("Invalid stream URL")
-                return
-            }
-            val headers = streamInfo.headers.toMutableMap()
-            val ua = headers["User-Agent"]
-            if (ua.isNullOrBlank() || ua == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
-            }
+        player = exo
+        playerViewRef.player = exo
 
-            val baseDataSourceFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
-                .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(15_000)
-                .setReadTimeoutMs(15_000)
-                .setAllowCrossProtocolRedirects(true)
-                .setKeepPostFor302Redirects(true)
-            val clearKeyBranch = when {
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> "inline-hex"
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> "jwk-inline"
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> "license-server"
-                streamInfo.drmScheme == "clearkey" -> "none(no-key-material)"
-                else -> "none(scheme=${streamInfo.drmScheme})"
-            }
-            val clearKeyMgr: DefaultDrmSessionManager? = when {
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null && streamInfo.drmKey != null -> {
-                    val mgr = buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                    mgr
-                }
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true -> {
-                    val mgr = buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
-                    mgr
-                }
-                streamInfo.drmScheme == "clearkey" && streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true -> {
-                    val mgr = buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
-                    mgr
-                }
-                else -> null
-            }
-            val mediaSourceFactory = if (clearKeyMgr != null) {
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(baseDataSourceFactory)
-                    .setDrmSessionManagerProvider { clearKeyMgr }
-            } else {
-                if (streamInfo.drmScheme == "clearkey") {
-                    android.util.Log.e("PlayerActivity",
-                        "ClearKey DRM required but key material is missing or invalid. " +
-                        "keyId=${streamInfo.drmKeyId} key=${streamInfo.drmKey} branch=$clearKeyBranch")
-                    showError("DRM Error: ClearKey material invalid")
-                    return
-                }
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(baseDataSourceFactory)
-            }
-            val renderersFactory = DefaultRenderersFactory(this)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-                .setEnableDecoderFallback(true)
-
-            player = ExoPlayer.Builder(this)
-                .setRenderersFactory(renderersFactory)
-                .setTrackSelector(trackSelector!!)
-                .setMediaSourceFactory(mediaSourceFactory)
-                .setSeekBackIncrementMs(skipMs)
-                .setSeekForwardIncrementMs(skipMs)
-                .setWakeMode(C.WAKE_MODE_NETWORK)
-                .setHandleAudioBecomingNoisy(true)
-                .setAudioAttributes(
-                    androidx.media3.common.AudioAttributes.Builder()
-                        .setUsage(C.USAGE_MEDIA)
-                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                        .build(),
-                    true
-                )
-                .build().also { exo ->
-                    playerViewRef.player = exo
-
-                    if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
-                        val savedLandscape = preferencesManager.getSavedAspectRatio()
-                        if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
-                        val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
-                        if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
-                    }
-
-                    applyResizeModeForOrientation(
-                        DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                    )
-                    playerViewRef.hideController()
-                    val uri = android.net.Uri.parse(streamInfo.url)
-                    val mediaItemBuilder = MediaItem.Builder().setUri(uri)
-                    val urlLower = streamInfo.url.lowercase()
-                    when {
-                        urlLower.contains("m3u8") || urlLower.contains("extension=m3u8") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
-                        urlLower.contains(".mpd") || urlLower.contains("/dash/") || urlLower.contains("type=mpd") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
-                        urlLower.contains(".ism") || urlLower.contains(".isml") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
-                        urlLower.contains(".flv") ->
-                            mediaItemBuilder.setMimeType("video/x-flv")
-                        urlLower.contains(".ts") || urlLower.contains(".mts") || urlLower.contains(".m2ts") ->
-                            mediaItemBuilder.setMimeType("video/mp2t")
-                        urlLower.contains(".mp4") || urlLower.contains(".m4v") || urlLower.contains(".m4a") ->
-                            mediaItemBuilder.setMimeType("video/mp4")
-                        urlLower.contains(".mkv") ->
-                            mediaItemBuilder.setMimeType("video/x-matroska")
-                        urlLower.contains(".webm") ->
-                            mediaItemBuilder.setMimeType("video/webm")
-                        urlLower.contains(".avi") ->
-                            mediaItemBuilder.setMimeType("video/avi")
-                        urlLower.contains(".mov") ->
-                            mediaItemBuilder.setMimeType("video/quicktime")
-                        urlLower.contains(".mp3") ->
-                            mediaItemBuilder.setMimeType("audio/mpeg")
-                        urlLower.contains(".aac") ->
-                            mediaItemBuilder.setMimeType("audio/aac")
-                        urlLower.startsWith("rtmp://") || urlLower.startsWith("rtmps://") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
-                        urlLower.startsWith("rtsp://") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
-                    }
-
-                    when {
-                        streamInfo.drmScheme == "clearkey" && clearKeyMgr != null -> {
-                        }
-                        streamInfo.drmScheme == "widevine" && streamInfo.drmLicenseUrl != null -> {
-
-                            val licenseHeaders = headers.filter { (k, _) ->
-                                k.lowercase() !in setOf("referer", "origin")
-                            }
-                            mediaItemBuilder.setDrmConfiguration(
-                                MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
-                                    .setLicenseUri(streamInfo.drmLicenseUrl)
-                                    .setLicenseRequestHeaders(licenseHeaders)
-
-                                    .setForceDefaultLicenseUri(true)
-
-                                    .setMultiSession(false)
-                                    .build()
-                            )
-                        }
-                        streamInfo.drmScheme == "playready" && streamInfo.drmLicenseUrl != null -> {
-                            val licenseHeaders = headers.filter { (k, _) ->
-                                k.lowercase() !in setOf("referer", "origin")
-                            }
-                            mediaItemBuilder.setDrmConfiguration(
-                                MediaItem.DrmConfiguration.Builder(C.PLAYREADY_UUID)
-                                    .setLicenseUri(streamInfo.drmLicenseUrl)
-                                    .setLicenseRequestHeaders(licenseHeaders)
-                                    .setForceDefaultLicenseUri(true)
-                                    .setMultiSession(false)
-                                    .build()
-                            )
-                        }
-
-                        else -> {
-                        }
-                    }
-
-                    val mediaItem = mediaItemBuilder.build()
-                    exo.setMediaItem(mediaItem)
-                    exo.prepare()
-                    exo.playWhenReady = true
-                    playerListener = object : Player.Listener {
-                        override fun onPlaybackStateChanged(playbackState: Int) {
-                            when (playbackState) {
-                                Player.STATE_READY -> {
-                                    errorMessage.value = ""
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) updatePipParams()
-                                }
-                                Player.STATE_BUFFERING -> {
-                                    errorMessage.value = ""
-                                }
-                                Player.STATE_ENDED -> {
-                                    playerViewRef.showController()
-                                }
-                                Player.STATE_IDLE -> {}
-                            }
-                        }
-
-                        override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
-                            if (!preferencesManager.isForceLowestQualityEnabled()) return
-                            val ts = trackSelector ?: return
-                            var lowestHeight = Int.MAX_VALUE
-                            var lowestGroupIndex = -1
-                            var lowestTrackIndex = -1
-                            tracks.groups.forEachIndexed { gi, group ->
-                                if (group.type != androidx.media3.common.C.TRACK_TYPE_VIDEO) return@forEachIndexed
-                                for (ti in 0 until group.length) {
-                                    val fmt = group.getTrackFormat(ti)
-                                    if (fmt.height > 0 && fmt.height < lowestHeight) {
-                                        lowestHeight = fmt.height
-                                        lowestGroupIndex = gi
-                                        lowestTrackIndex = ti
-                                    }
-                                }
-                            }
-                            if (lowestGroupIndex != -1) {
-                                val group = tracks.groups[lowestGroupIndex]
-                                ts.parameters = ts.parameters.buildUpon()
-                                    .setOverrideForType(
-                                        androidx.media3.common.TrackSelectionOverride(
-                                            group.mediaTrackGroup,
-                                            listOf(lowestTrackIndex)
-                                        )
-                                    )
-                                    .build()
-                            }
-                        }
-
-                        override fun onIsPlayingChanged(isPlaying: Boolean) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPipMode) {
-                                setPictureInPictureParams(updatePipParams(enter = false))
-                            }
-                        }
-
-                        override fun onVideoSizeChanged(videoSize: VideoSize) {
-                            super.onVideoSizeChanged(videoSize)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) updatePipParams()
-                        }
-
-                        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                            super.onPlayerError(error)
-
-                            if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
-                                val nextIndex = currentLinkIndex + 1
-                                if (nextIndex in allEventLinks.indices) {
-                                    switchToLink(allEventLinks[nextIndex], nextIndex)
-                                    return
-                                }
-                            }
-
-                            val errorMessage = when {
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_TIMEOUT ->
-                                    "Connection Failed"
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
-                                    when {
-                                        error.message?.contains("403") == true -> "Access Denied"
-                                        error.message?.contains("404") == true -> "Stream Not Found"
-                                        else -> "Playback Error"
-                                    }
-                                }
-                                error.message?.contains("drm", ignoreCase = true) == true ||
-                                error.message?.contains("widevine", ignoreCase = true) == true ||
-                                error.message?.contains("clearkey", ignoreCase = true) == true ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DRM_PROVISIONING_FAILED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ->
-                                    "Stream Error"
-                                error.message?.contains("geo", ignoreCase = true) == true ||
-                                error.message?.contains("region", ignoreCase = true) == true ->
-                                    "Not Available"
-                                else -> "Playback Error"
-                            }
-                            showError(errorMessage)
-                        }
-                    }
-                    exo.addListener(playerListener!!)
-                }
-        } catch (e: Exception) {
-            showError("Failed to initialize player")
+        val urlLower = parsed.url.lowercase()
+        val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
+        when {
+            urlLower.contains("m3u8") || urlLower.contains("extension=m3u8") ->
+                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
+            urlLower.contains(".mpd") || urlLower.contains("/dash/") || urlLower.contains("type=mpd") ->
+                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
+            urlLower.contains(".ism") || urlLower.contains(".isml") ->
+                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
+            urlLower.contains(".mp4") || urlLower.contains(".m4v") ->
+                mediaItemBuilder.setMimeType("video/mp4")
+            urlLower.contains(".ts") || urlLower.contains("/ts") ->
+                mediaItemBuilder.setMimeType("video/mp2t")
+            urlLower.contains(".mkv") ->
+                mediaItemBuilder.setMimeType("video/x-matroska")
         }
-    }
-
-    private fun showError(message: String) {
-        errorMessage.value = message
-    }
-    private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
-        return try {
-            val keyIdBytes = hexToBytes(keyIdHex)
-            val keyBytes   = hexToBytes(keyHex)
-            if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) {
-                android.util.Log.e("PlayerActivity", "ClearKey: failed to decode hex — keyId=${keyIdHex.take(8)}... key=${keyHex.take(8)}...")
-                return null
-            }
-            val keyBase64 = android.util.Base64.encodeToString(
-                keyBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-
-            val keyIdBase64 = android.util.Base64.encodeToString(
-                keyIdBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-
-            val adaptiveCallback = buildAdaptiveClearKeyCallback(keyBase64, keyIdBase64, "ClearKey-InlineHex")
-
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
-                .build(adaptiveCallback)
-        } catch (e: Exception) {
-            android.util.Log.e("PlayerActivity", "buildClearKeyInlineManager failed: ${e.message}", e)
-            null
+        if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
+            val uuid = if (parsed.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
+            val licHeaders = headers.filter { (k, _) -> k.lowercase() !in setOf("referer", "origin") }
+            mediaItemBuilder.setDrmConfiguration(
+                MediaItem.DrmConfiguration.Builder(uuid)
+                    .setLicenseUri(parsed.drmLicenseUrl)
+                    .setLicenseRequestHeaders(licHeaders)
+                    .setForceDefaultLicenseUri(true)
+                    .setMultiSession(false)
+                    .build()
+            )
         }
-    }
-    private fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
-        return try {
-            val drmCallback = LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8))
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
-                .build(drmCallback)
-        } catch (e: Exception) {
-            android.util.Log.e("PlayerActivity", "buildClearKeyJwkManager failed: ${e.message}", e)
-            null
-        }
-    }
-    private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
-        return try {
-            val licenseFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
-                .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(15_000)
-                .setReadTimeoutMs(15_000)
-                .setAllowCrossProtocolRedirects(true)
-                .setKeepPostFor302Redirects(true)
-            val callback = HttpMediaDrmCallback(licenseUrl, licenseFactory)
-            headers.forEach { (k, v) -> callback.setKeyRequestProperty(k, v) }
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(true)
-                .build(callback)
-        } catch (e: Exception) {
-            android.util.Log.e("PlayerActivity", "buildClearKeyServerManager failed: ${e.message}", e)
-            null
-        }
-    }
-    private fun buildAdaptiveClearKeyCallback(
-        keyBase64: String,
-        fallbackKidBase64: String,
-        tag: String
-    ): androidx.media3.exoplayer.drm.MediaDrmCallback {
-        return object : androidx.media3.exoplayer.drm.MediaDrmCallback {
 
-            override fun executeProvisionRequest(
-                uuid: UUID,
-                request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest
-            ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response =
-                androidx.media3.exoplayer.drm.MediaDrmCallback.Response(ByteArray(0))
-
-            override fun executeKeyRequest(
-                uuid: UUID,
-                request: androidx.media3.exoplayer.drm.ExoMediaDrm.KeyRequest
-            ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response {
-                return try {
-                    val requestBody = String(request.data, Charsets.UTF_8)
-                    val requestedKids = mutableListOf<String>()
-                    Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(requestBody)?.let { match ->
-                        Regex(""""([A-Za-z0-9+/=_-]+)"""").findAll(match.groupValues[1])
-                            .forEach { requestedKids.add(it.groupValues[1]) }
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                when (state) {
+                    Player.STATE_BUFFERING -> {
+                        errorMessage.value = ""
                     }
-                    val keyEntries = if (requestedKids.isNotEmpty()) {
-                        requestedKids.joinToString(",") { kid ->
-                            """{"kty":"oct","k":"$keyBase64","kid":"$kid"}"""
+                    Player.STATE_READY -> {
+                        errorMessage.value = ""
+                        if (!resizeModesRestoredFromState) {
+                            val savedLandscape = preferencesManager.getSavedAspectRatio()
+                            val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
+                            if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
+                            if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
+                            resizeModesRestoredFromState = true
+                            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                            playerViewRef.resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
                         }
-                    } else {
-
-                        """{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}"""
+                        setSubtitleTextSize()
                     }
-
-                    val jwkResponse = """{"keys":[$keyEntries],"type":"temporary"}"""
-
-                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
-                        jwkResponse.toByteArray(Charsets.UTF_8))
-                } catch (e: Exception) {
-
-                    val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}],"type":"temporary"}"""
-                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(
-                        fallback.toByteArray(Charsets.UTF_8))
+                    else -> {}
                 }
             }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                errorMessage.value = error.localizedMessage ?: "Playback error"
+            }
         }
-    }
-    private fun hexToBytes(hex: String): ByteArray {
-        return try {
-            val clean = hex.replace(" ", "").replace("-", "").lowercase()
-            if (clean.length % 2 != 0) return ByteArray(0)
-            clean.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-        } catch (e: Exception) {
-            ByteArray(0)
-        }
+        playerListener = listener
+        exo.addListener(listener)
+
+        exo.setMediaItem(mediaItemBuilder.build())
+        exo.prepare()
+        exo.playWhenReady = true
     }
 
     internal fun toggleMute() {
-        player?.let {
-            isMuted = !isMuted
-            it.volume = if (isMuted) 0f else 1f
-        }
+        isMuted = PlayerStreamHelper.toggleMute(player, isMuted)
     }
 
     private fun setupMessageBanner() {
@@ -2747,7 +2370,7 @@ private fun PlayerActivity.PlayerActivityRoot(
             )
         }
     }
-    // Landscape error — centered in the full-screen player
+    com.livetvpro.app.ui.player
     if (isLandscape && errorMessage.isNotBlank()) {
         androidx.compose.foundation.layout.Box(
             contentAlignment = androidx.compose.ui.Alignment.Center,

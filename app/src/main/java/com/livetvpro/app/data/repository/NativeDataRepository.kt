@@ -33,6 +33,7 @@ class NativeDataRepository @Inject constructor(
     companion object {
         private val k_dldd = byteArrayOf(0xc3.toByte(),0xce.toByte(),0xd5.toByte(),0xc2.toByte(),0xc4.toByte(),0xd3.toByte(),0xf8.toByte(),0xcb.toByte(),0xce.toByte(),0xc9.toByte(),0xcc.toByte(),0xf8.toByte(),0xc3.toByte(),0xce.toByte(),0xd4.toByte(),0xc6.toByte(),0xc5.toByte(),0xcb.toByte(),0xc2.toByte(),0xc3.toByte(),0xf8.toByte(),0xc3.toByte(),0xc2.toByte(),0xd1.toByte(),0xce.toByte(),0xc4.toByte(),0xc2.toByte(),0xd4.toByte()).map{(it.toInt() and 0xFF xor 0xA7).toChar()}.joinToString("")
         val REMOTE_CONFIG_DIRECT_LINK_DISABLED_DEVICES: String get() = k_dldd
+        const val REMOTE_CONFIG_APP_SIGNATURE = "app_signature"
 
         private val k_nl = byteArrayOf(0xc9.toByte(),0xc6.toByte(),0xd3.toByte(),0xce.toByte(),0xd1.toByte(),0xc2.toByte(),0x8a.toByte(),0xcb.toByte(),0xce.toByte(),0xc5.toByte()).map{(it.toInt() and 0xFF xor 0xA7).toChar()}.joinToString("")
 
@@ -99,7 +100,8 @@ class NativeDataRepository @Inject constructor(
                     p2()  to "",
                     k_rch to 8L,
                     k_dldd to "",
-                    k_dit to ""
+                    k_dit to "",
+                    REMOTE_CONFIG_APP_SIGNATURE to ""
                 ))
             } catch (e: Exception) {}
         } catch (e: Exception) {}
@@ -122,6 +124,10 @@ class NativeDataRepository @Inject constructor(
             if (q4.isNotEmpty()) { p3(q4); return@withContext true }
             return@withContext false
         }
+    }
+
+    fun getAppSignature(): String {
+        return try { remoteConfig.getString(REMOTE_CONFIG_APP_SIGNATURE).trim() } catch (e: Exception) { "" }
     }
 
     suspend fun refreshData(): Boolean = withContext(Dispatchers.IO) {

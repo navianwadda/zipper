@@ -21,7 +21,7 @@ class FcmService : FirebaseMessagingService() {
         private const val CHANNEL_ID_DEFAULT = "fcm_default_channel"
         private const val CHANNEL_ID_LOW = "fcm_low_channel"
         private const val CHANNEL_ID_NONE = "fcm_none_channel"
-        private const val NOTIFICATION_ID = 2001
+        private val notificationIdCounter = java.util.concurrent.atomic.AtomicInteger(2001)
     }
 
     override fun onNewToken(token: String) {
@@ -107,7 +107,7 @@ class FcmService : FirebaseMessagingService() {
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .build()
 
-            notificationManager.notify(NOTIFICATION_ID, notification)
+            notificationManager.notify(notificationIdCounter.getAndIncrement(), notification)
         } catch (e: Exception) { }
     }
 }

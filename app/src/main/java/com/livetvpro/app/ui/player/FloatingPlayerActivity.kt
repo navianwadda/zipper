@@ -69,6 +69,15 @@ import android.graphics.Rect
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -87,6 +96,7 @@ import kotlinx.coroutines.delay
 class FloatingPlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPlayerBinding
+    private lateinit var floatingComposeView: androidx.compose.ui.platform.ComposeView
     private val viewModel: PlayerViewModel by viewModels()
     private var player: ExoPlayer? = null
     private var trackSelector: DefaultTrackSelector? = null
@@ -238,7 +248,28 @@ class FloatingPlayerActivity : AppCompatActivity() {
         }
 
         binding = ActivityPlayerBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+
+        // Match PlayerActivity: stack the XML layout + a full-screen ComposeView so that
+        // the Compose Column (PlayerControls overlay + PlayerScreen below) is rendered on
+        // top of the real PlayerView instead of being squeezed inside player_container.
+        floatingComposeView = androidx.compose.ui.platform.ComposeView(this)
+        val rootLayout = android.widget.FrameLayout(this).apply {
+            addView(
+                binding.root,
+                android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                )
+            )
+            addView(
+                floatingComposeView,
+                android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                )
+            )
+        }
+        setContentView(rootLayout)
 
         windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
@@ -1236,7 +1267,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     }
 
     private fun setupComposeControls() {
-        binding.playerControlsCompose.apply {
+        floatingComposeView.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
@@ -1273,8 +1304,12 @@ class FloatingPlayerActivity : AppCompatActivity() {
                         }
                     }
 
-                    androidx.compose.foundation.layout.Column {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    // Shared PlayerControls lambda to avoid duplication
+                    val pipSupported = !DeviceUtils.isTvDevice && if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        isPipSupported()
+                    } else { false }
+
+                    val playerControlsComposable: @androidx.compose.runtime.Composable () -> Unit = {
                         PlayerControls(
                             state = controlsState,
                             isPlaying = isPlaying,
@@ -1283,11 +1318,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             duration = duration,
                             bufferedPosition = bufferedPosition,
                             channelName = contentName,
-                            showPipButton = !DeviceUtils.isTvDevice && if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                isPipSupported()
-                            } else {
-                                false
-                            },
+                            showPipButton = pipSupported,
                             showAspectRatioButton = true,
                             isLandscape = isLandscape,
                             isTvMode = DeviceUtils.isTvDevice,
@@ -1296,7 +1327,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             isChannelListAvailable = isChannelListAvailable,
                             onBackClick = { finish() },
                             onPipClick = {
-
                                 val currentChannel = channelData
                                 val currentEvent = eventData
                                 val currentPlayer = player
@@ -1305,9 +1335,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 val sourceInstanceId = intent.getStringExtra("source_instance_id")
 
                                 if (currentPlayer != null && contentType == ContentType.NETWORK_STREAM) {
-
                                     PlayerHolder.transferPlayer(currentPlayer, currentStreamUrl, currentName)
-
                                     val link = allEventLinks.getOrNull(currentLinkIndex)
                                     val serviceIntent = Intent(this@FloatingPlayerActivity, FloatingPlayerService::class.java).apply {
                                         putExtra("IS_NETWORK_STREAM", true)
@@ -1321,78 +1349,48 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                         putExtra("DRM_SCHEME", link?.drmScheme ?: "clearkey")
                                         putExtra("CHANNEL_NAME", currentName)
                                         putExtra(FloatingPlayerService.EXTRA_RESTORE_POSITION, true)
-                                        if (sourceInstanceId != null) {
-                                            putExtra(FloatingPlayerService.EXTRA_INSTANCE_ID, sourceInstanceId)
-                                        }
+                                        if (sourceInstanceId != null) putExtra(FloatingPlayerService.EXTRA_INSTANCE_ID, sourceInstanceId)
                                     }
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                        startForegroundService(serviceIntent)
-                                    } else {
-                                        startService(serviceIntent)
-                                    }
-
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(serviceIntent)
+                                    else startService(serviceIntent)
                                     player = null
                                     finish()
-
                                 } else if (currentPlayer != null && (currentChannel != null || currentEvent != null)) {
                                     PlayerHolder.transferPlayer(currentPlayer, currentStreamUrl, currentName)
-
                                     val serviceIntent = Intent(this@FloatingPlayerActivity, FloatingPlayerService::class.java).apply {
-                                        if (currentChannel != null) {
-                                            putExtra(FloatingPlayerService.EXTRA_CHANNEL, currentChannel)
-                                        }
-                                        if (currentEvent != null) {
-                                            putExtra(FloatingPlayerService.EXTRA_EVENT, currentEvent)
-                                        }
+                                        if (currentChannel != null) putExtra(FloatingPlayerService.EXTRA_CHANNEL, currentChannel)
+                                        if (currentEvent != null) putExtra(FloatingPlayerService.EXTRA_EVENT, currentEvent)
                                         putExtra(FloatingPlayerService.EXTRA_RESTORE_POSITION, true)
                                         putExtra("use_transferred_player", true)
-                                        if (sourceInstanceId != null) {
-                                            putExtra(FloatingPlayerService.EXTRA_INSTANCE_ID, sourceInstanceId)
-                                        }
+                                        if (sourceInstanceId != null) putExtra(FloatingPlayerService.EXTRA_INSTANCE_ID, sourceInstanceId)
                                     }
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                        startForegroundService(serviceIntent)
-                                    } else {
-                                        startService(serviceIntent)
-                                    }
-
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(serviceIntent)
+                                    else startService(serviceIntent)
                                     player = null
                                     finish()
                                 }
                             },
                             onSettingsClick = { showSettingsDialog() },
                             onMuteClick = { toggleMute() },
-                            onLockClick = { locked -> },
+                            onLockClick = { _ -> },
                             onChannelListClick = { showChannelList = true },
                             onPlayPauseClick = {
                                 player?.let {
                                     val hasError = binding.errorView.visibility == View.VISIBLE
                                     val hasEnded = it.playbackState == Player.STATE_ENDED
-
-                                    if (hasError || hasEnded) {
-                                        retryPlayback()
-                                    } else {
-                                        if (it.isPlaying) it.pause() else it.play()
-                                    }
+                                    if (hasError || hasEnded) retryPlayback()
+                                    else if (it.isPlaying) it.pause() else it.play()
                                 }
                             },
-                            onSeek = { position ->
-                                player?.seekTo(position)
-                            },
+                            onSeek = { position -> player?.seekTo(position) },
                             onRewindClick = {
-                                player?.let {
-                                    val newPosition = it.currentPosition - skipMs
-                                    it.seekTo(if (newPosition < 0) 0 else newPosition)
-                                }
+                                player?.let { it.seekTo((it.currentPosition - skipMs).coerceAtLeast(0L)) }
                             },
                             onForwardClick = {
                                 player?.let {
                                     val newPosition = it.currentPosition + skipMs
-                                    if (it.isCurrentWindowLive && it.duration != C.TIME_UNSET && newPosition >= it.duration) {
-                                        it.seekTo(it.duration)
-                                    } else {
-                                        it.seekTo(newPosition)
-                                    }
+                                    if (it.isCurrentWindowLive && it.duration != C.TIME_UNSET && newPosition >= it.duration) it.seekTo(it.duration)
+                                    else it.seekTo(newPosition)
                                 }
                             },
                             onPrevClick = {
@@ -1433,80 +1431,116 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                     else -> {}
                                 }
                             },
-                            onAspectRatioClick = {
-
-                                if (isLandscape || contentType == ContentType.NETWORK_STREAM) {
-                                    cycleAspectRatio()
-                                }
-                            },
+                            onAspectRatioClick = { cycleAspectRatio() },
                             onFullscreenClick = { toggleFullscreen() },
                             onVolumeSwipe = { vol ->
                                 gestureVolume = vol
                                 val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
                                 val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                                val target = (vol / 100f * max).toInt()
-                                audioManager.setStreamVolume(
-                                    AudioManager.STREAM_MUSIC,
-                                    target,
-                                    0
-                                )
+                                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (vol / 100f * max).toInt(), 0)
                             },
                             onBrightnessSwipe = { bri ->
                                 gestureBrightness = bri
                                 val lp = window.attributes
-                                lp.screenBrightness = if (bri == 0) {
-                                    WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-                                } else {
-                                    bri / 100f
-                                }
+                                lp.screenBrightness = if (bri == 0) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else bri / 100f
                                 window.attributes = lp
                             },
                             initialVolume = gestureVolume,
                             initialBrightness = gestureBrightness,
                         )
+                    }
 
-                        if ((isLandscape || DeviceUtils.isTvDevice) && isChannelListAvailable) {
-                            com.livetvpro.app.ui.player.compose.ChannelListPanel(
-                                visible = showChannelList,
-                                channels = channelListItems,
-                                currentChannelId = contentId,
-                                onChannelClick = { channel -> switchToChannel(channel) },
-                                onDismiss = { showChannelList = false },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                    // Mirror PlayerActivity's PlayerActivityRoot layout:
+                    // Portrait → Column: 16:9 Box (PlayerControls overlay) + PlayerScreen below
+                    // Landscape → Box fillMaxSize (PlayerControls) with no related section below
+                    androidx.compose.foundation.layout.Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        if (!isLandscape) {
+                            // Portrait: reserve the 16:9 player area as a spacer and overlay controls on it
+                            val statusBarHeight = WindowInsets.statusBars
+                                .asPaddingValues().calculateTopPadding()
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = statusBarHeight)
+                                    .aspectRatio(16f / 9f)
+                            ) {
+                                playerControlsComposable()
 
-                        if (showSettingsDialogState.value) {
-                            player?.let { exo ->
-                                com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(
-                                    player = exo,
-                                    onDismiss = {
-                                        showSettingsDialogState.value = false
-                                        isShowingSettingsDialog = false
+                                if (isChannelListAvailable) {
+                                    com.livetvpro.app.ui.player.compose.ChannelListPanel(
+                                        visible = showChannelList,
+                                        channels = channelListItems,
+                                        currentChannelId = contentId,
+                                        onChannelClick = { channel -> switchToChannel(channel) },
+                                        onDismiss = { showChannelList = false },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                if (showSettingsDialogState.value) {
+                                    player?.let { exo ->
+                                        com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(
+                                            player = exo,
+                                            onDismiss = {
+                                                showSettingsDialogState.value = false
+                                                isShowingSettingsDialog = false
+                                            }
+                                        )
                                     }
-                                )
+                                }
+                            }
+
+                            // Related channels / PlayerScreen renders BELOW the player in portrait
+                            PlayerScreen(
+                                isLandscape = false,
+                                relatedContentState = relatedContentState.value,
+                                links = allEventLinks,
+                                selectedLinkIndex = currentLinkIndex,
+                                messageBanner = "",
+                                messageBannerUrl = "",
+                                onLinkClick = { link, pos -> switchToLink(link, pos) },
+                                onChannelClick = { channel -> switchToChannel(channel) },
+                                onEventClick = { event, idx -> switchToEventFromLiveEvent(event, idx) },
+                                onMessageBannerClick = {},
+                                spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count),
+                                eventSpanCount = resources.getInteger(com.livetvpro.app.R.integer.event_span_count),
+                            )
+                        } else {
+                            // Landscape: controls fill the entire screen; no related section shown below
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                playerControlsComposable()
+
+                                if (isChannelListAvailable) {
+                                    com.livetvpro.app.ui.player.compose.ChannelListPanel(
+                                        visible = showChannelList,
+                                        channels = channelListItems,
+                                        currentChannelId = contentId,
+                                        onChannelClick = { channel -> switchToChannel(channel) },
+                                        onDismiss = { showChannelList = false },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                if (showSettingsDialogState.value) {
+                                    player?.let { exo ->
+                                        com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(
+                                            player = exo,
+                                            onDismiss = {
+                                                showSettingsDialogState.value = false
+                                                isShowingSettingsDialog = false
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
-                    }
-                    }
-                    PlayerScreen(
-                        isLandscape = isLandscape,
-                        relatedContentState = relatedContentState.value,
-                        links = allEventLinks,
-                        selectedLinkIndex = currentLinkIndex,
-                        messageBanner = "",
-                        messageBannerUrl = "",
-                        onLinkClick = { link, pos -> switchToLink(link, pos) },
-                        onChannelClick = { channel -> switchToChannel(channel) },
-                        onEventClick = { event, idx -> switchToEventFromLiveEvent(event, idx) },
-                        onMessageBannerClick = {},
-                        spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count),
-                        eventSpanCount = resources.getInteger(com.livetvpro.app.R.integer.event_span_count),
-                    )
                     }
                 }
             }
         }
+    }
 
     private fun cycleAspectRatio() {
         val isLandscape = DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE

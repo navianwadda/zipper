@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -52,7 +51,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -202,7 +200,7 @@ fun PlaylistsScreen(
                         enter = fadeIn(tween(200)) + scaleIn(tween(200)) + expandVertically(tween(200), expandFrom = Alignment.Bottom),
                         exit  = fadeOut(tween(130)) + scaleOut(tween(130)) + shrinkVertically(tween(130), shrinkTowards = Alignment.Bottom)
                     ) {
-                        FabOptionRow(
+                        FabOptionPill(
                             label = "Add Playlist URL",
                             iconRes = R.drawable.ic_link,
                             primaryColor = primaryColor,
@@ -218,7 +216,7 @@ fun PlaylistsScreen(
                         enter = fadeIn(tween(160)) + scaleIn(tween(160)) + expandVertically(tween(160), expandFrom = Alignment.Bottom),
                         exit  = fadeOut(tween(100)) + scaleOut(tween(100)) + shrinkVertically(tween(100), shrinkTowards = Alignment.Bottom)
                     ) {
-                        FabOptionRow(
+                        FabOptionPill(
                             label = "Add Playlist File",
                             iconRes = R.drawable.ic_folder,
                             primaryColor = primaryColor,
@@ -239,7 +237,12 @@ fun PlaylistsScreen(
                         shape = CircleShape,
                         containerColor = primaryColor,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
-                        elevation = FloatingActionButtonDefaults.elevation()
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = if (fabExpanded) 0.dp else 6.dp,
+                            pressedElevation = 0.dp,
+                            focusedElevation = 0.dp,
+                            hoveredElevation = 0.dp
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -317,45 +320,43 @@ fun PlaylistsScreen(
 
 
 @Composable
-private fun FabOptionRow(
+private fun FabOptionPill(
     label: String,
     iconRes: Int,
     primaryColor: Color,
     onClick: () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor   = MaterialTheme.colorScheme.onSurface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            focusedElevation = 0.dp,
+            hoveredElevation = 0.dp
+        )
     ) {
-        Card(
-            onClick = onClick,
-            shape = RoundedCornerShape(50),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                contentColor   = MaterialTheme.colorScheme.onSurface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
                 text       = label,
                 fontFamily = BergenSans,
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
-                modifier   = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                color      = MaterialTheme.colorScheme.onSurface
             )
-        }
-        Spacer(Modifier.width(12.dp))
-        SmallFloatingActionButton(
-            onClick        = onClick,
-            shape          = CircleShape,
-            containerColor = primaryColor,
-            contentColor   = MaterialTheme.colorScheme.onPrimary,
-            elevation      = FloatingActionButtonDefaults.elevation()
-        ) {
             Icon(
-                painter           = painterResource(iconRes),
+                painter            = painterResource(iconRes),
                 contentDescription = label,
-                modifier          = Modifier.size(20.dp)
+                tint               = primaryColor,
+                modifier           = Modifier.size(18.dp)
             )
         }
     }

@@ -49,17 +49,18 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.databinding.ActivityPlayerBinding
-import com.livetvpro.app.ui.adapters.RelatedChannelAdapter
-import com.livetvpro.app.ui.adapters.LiveEventAdapter
 import com.livetvpro.app.ui.adapters.LinkChipAdapter
 import com.livetvpro.app.data.models.LiveEventLink
+import com.livetvpro.app.ui.player.PlayerStreamHelper
+import com.livetvpro.app.ui.player.StreamInfo
+import com.livetvpro.app.ui.player.compose.PlayerScreen
+import com.livetvpro.app.ui.player.compose.RelatedContentState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -100,10 +101,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
     @javax.inject.Inject
     lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
 
-    private lateinit var relatedChannelsAdapter: RelatedChannelAdapter
-    private var relatedChannels = listOf<Channel>()
-    private lateinit var relatedEventsAdapter: LiveEventAdapter
     private lateinit var linkChipAdapter: LinkChipAdapter
+    private val relatedContentState = androidx.compose.runtime.mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
 
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
@@ -291,11 +290,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
         binding.playerView.useController = false
 
-        if (!isLandscape && !DeviceUtils.isTvDevice) {
-            binding.relatedLoadingProgress.visibility = View.VISIBLE
-            binding.relatedChannelsRecycler.visibility = View.GONE
-        }
-
         binding.progressBar.visibility = View.VISIBLE
 
         binding.root.viewTreeObserver.addOnPreDrawListener(
@@ -355,41 +349,14 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
         viewModel.relatedItems.observe(this) { channels ->
             if (contentType != ContentType.CHANNEL) return@observe
-            relatedChannels = channels
-            if (::relatedChannelsAdapter.isInitialized) {
-                relatedChannelsAdapter.submitList(channels)
-            }
-            binding.relatedChannelsSection.visibility = if (channels.isEmpty()) {
-                View.GONE
-            } else {
-                View.VISIBLE
-            }
-            binding.relatedLoadingProgress.visibility = View.GONE
-            binding.relatedChannelsRecycler.visibility = View.VISIBLE
+            relatedContentState.value = if (channels.isEmpty()) RelatedContentState.Hidden
+            else RelatedContentState.Channels(channels)
         }
 
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
             if (contentType != ContentType.EVENT) return@observe
-            if (!::relatedEventsAdapter.isInitialized) {
-                relatedEventsAdapter = LiveEventAdapter(
-                    context = this,
-                    events = emptyList(),
-                    preferencesManager = preferencesManager,
-                    onEventClick = { event, linkIndex ->
-                        switchToEventFromLiveEvent(event, linkIndex)
-                    }
-                )
-                binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.event_span_count))
-                binding.relatedChannelsRecycler.adapter = relatedEventsAdapter
-            }
-            relatedEventsAdapter.updateData(liveEvents)
-            binding.relatedChannelsSection.visibility = if (liveEvents.isEmpty()) {
-                View.GONE
-            } else {
-                View.VISIBLE
-            }
-            binding.relatedLoadingProgress.visibility = View.GONE
-            binding.relatedChannelsRecycler.visibility = View.VISIBLE
+            relatedContentState.value = if (liveEvents.isEmpty()) RelatedContentState.Hidden
+            else RelatedContentState.Events(liveEvents)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -495,13 +462,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     applyAdapterColors()
 }
 
-    private fun applyAdapterColors() {
-        val primary = themeManager.getPrimaryColor(this)
-        val surfaceContainer = themeManager.getSurfaceContainerColor(this)
-        if (::relatedChannelsAdapter.isInitialized) {
-            relatedChannelsAdapter.setColors(primary, surfaceContainer)
-        }
-    }
+    private fun applyAdapterColors() {  }
 
     private fun applyOrientationSettings(isLandscape: Boolean) {
         adjustLayoutForOrientation(isLandscape)
@@ -574,14 +535,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
             linksParams.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
             binding.linksSection.layoutParams = linksParams
 
-            val relatedParams = binding.relatedChannelsSection.layoutParams as ConstraintLayout.LayoutParams
-            relatedParams.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-            relatedParams.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-            relatedParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            relatedParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            relatedParams.topToBottom = binding.messageBannerContainer.id
-            relatedParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-            binding.relatedChannelsSection.layoutParams = relatedParams
 
         }
 
@@ -650,9 +603,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
             if (allEventLinks.size > 1) {
                 binding.linksSection.visibility = View.VISIBLE
             }
-            if (relatedChannels.isNotEmpty()) {
-                binding.relatedChannelsSection.visibility = View.VISIBLE
-            }
         }
 
         if (wasLockedBeforePip) {
@@ -690,7 +640,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
             val streamUrlRaw = intent.getStringExtra("STREAM_URL") ?: ""
 
             if (streamUrlRaw.contains("|")) {
-                val parsed = parseStreamUrl(streamUrlRaw)
+                val parsed = PlayerStreamHelper.parseStreamUrl(streamUrlRaw)
                 val extraDrmScheme = intent.getStringExtra("DRM_SCHEME")?.takeIf { it.isNotBlank() }
                 val extraDrmLicense = intent.getStringExtra("DRM_LICENSE")?.takeIf { it.isNotBlank() }
                 val resolvedDrmScheme = parsed.drmScheme ?: extraDrmScheme
@@ -737,7 +687,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 )
 
                 allEventLinks = listOf(mergedLink)
-                streamUrl = buildStreamUrl(mergedLink)
+                streamUrl = PlayerStreamHelper.buildStreamUrl(mergedLink)
             } else {
                 val cookie = intent.getStringExtra("COOKIE") ?: ""
                 val referer = intent.getStringExtra("REFERER") ?: ""
@@ -761,7 +711,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     )
                 )
 
-                streamUrl = buildStreamUrl(allEventLinks[0])
+                streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[0])
             }
 
             currentLinkIndex = 0
@@ -803,7 +753,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
             if (allEventLinks.isNotEmpty()) {
                 currentLinkIndex = if (passedLinkIndex in allEventLinks.indices) passedLinkIndex else 0
-                streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
+                streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
                 currentLinkIndex = 0
                 streamUrl = ""
@@ -837,7 +787,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     currentLinkIndex = if (matchIndex != -1) matchIndex else 0
                 }
 
-                streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
+                streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
                 streamUrl = channel.streamUrl
                 allEventLinks = emptyList()
@@ -856,30 +806,10 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
     private fun setupRelatedChannels() {
         if (contentType == ContentType.NETWORK_STREAM || DeviceUtils.isTvDevice) {
-            binding.relatedChannelsSection.visibility = View.GONE
+            relatedContentState.value = RelatedContentState.Hidden
             return
         }
-
-        if (contentType == ContentType.EVENT) {
-            relatedEventsAdapter = LiveEventAdapter(
-                context = this,
-                events = emptyList(),
-                preferencesManager = preferencesManager,
-                onEventClick = { event, linkIndex ->
-                    switchToEventFromLiveEvent(event, linkIndex)
-                }
-            )
-
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.event_span_count))
-            binding.relatedChannelsRecycler.adapter = relatedEventsAdapter
-        } else {
-            relatedChannelsAdapter = RelatedChannelAdapter { relatedItem ->
-                switchToChannel(relatedItem)
-            }
-
-            binding.relatedChannelsRecycler.layoutManager = GridLayoutManager(this, resources.getInteger(R.integer.grid_column_count))
-            binding.relatedChannelsRecycler.adapter = relatedChannelsAdapter
-        }
+        relatedContentState.value = RelatedContentState.Loading
     }
 
     private fun setupLinksUI() {
@@ -989,7 +919,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                 )
             }
             currentLinkIndex = 0
-            streamUrl = allEventLinks.firstOrNull()?.let { buildStreamUrl(it) } ?: newChannel.streamUrl
+            streamUrl = allEventLinks.firstOrNull()?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
         } else {
             allEventLinks = emptyList()
             streamUrl = newChannel.streamUrl
@@ -999,8 +929,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
         setupLinksUI()
         setupRelatedChannels()
 
-        binding.relatedLoadingProgress.visibility = View.VISIBLE
-        binding.relatedChannelsRecycler.visibility = View.GONE
         if (intentIsSports) {
             viewModel.loadRandomRelatedSports(newChannel.id)
         } else {
@@ -1027,7 +955,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
             if (allEventLinks.isNotEmpty()) {
                 currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
-                streamUrl = buildStreamUrl(allEventLinks[currentLinkIndex])
+                streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[currentLinkIndex])
             } else {
                 currentLinkIndex = 0
                 streamUrl = ""
@@ -1037,9 +965,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
             setupLinksUI()
             setupRelatedChannels()
 
-            binding.relatedLoadingProgress.visibility = View.VISIBLE
-            binding.relatedChannelsRecycler.visibility = View.GONE
-
             viewModel.loadRelatedEvents(newEvent.id)
 
         } catch (e: Exception) {
@@ -1048,7 +973,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
     private fun switchToLink(link: LiveEventLink, position: Int) {
         currentLinkIndex = position
-        streamUrl = buildStreamUrl(link)
+        streamUrl = PlayerStreamHelper.buildStreamUrl(link)
 
         if (::linkChipAdapter.isInitialized) {
             linkChipAdapter.setSelectedPosition(position)
@@ -1161,592 +1086,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
         playerListener = null
     }
 
-    private data class StreamInfo(
-        val url: String,
-        val headers: Map<String, String>,
-        val drmScheme: String?,
-        val drmKeyId: String?,
-        val drmKey: String?,
-        val drmLicenseUrl: String? = null
-    )
-
-    private fun parseStreamUrl(streamUrl: String): StreamInfo {
-        val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
-        val pipeIndex = normalizedUrl.indexOf('|')
-        if (pipeIndex == -1) {
-            return StreamInfo(normalizedUrl, mapOf(), null, null, null, null)
-        }
-
-        val url = normalizedUrl.substring(0, pipeIndex).trim().trimEnd('?')
-        val rawParams = normalizedUrl.substring(pipeIndex + 1).trim()
-
-        val parts = buildList {
-            for (segment in rawParams.split("|")) {
-                val eqIdx = segment.indexOf('=')
-                val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
-                if (value.startsWith("http://", ignoreCase = true) ||
-                    value.startsWith("https://", ignoreCase = true)) {
-                    add(segment)
-                } else {
-                    addAll(segment.split("&"))
-                }
-            }
-        }
-
-        val headers = mutableMapOf<String, String>()
-        var drmScheme: String? = null
-        var drmKeyId: String? = null
-        var drmKey: String? = null
-        var drmLicenseUrl: String? = null
-
-        for (part in parts) {
-            val eqIndex = part.indexOf('=')
-            if (eqIndex == -1) continue
-
-            val key = part.substring(0, eqIndex).trim()
-            val value = part.substring(eqIndex + 1).trim()
-
-            when (key.lowercase()) {
-                "drmscheme" -> drmScheme = normalizeDrmScheme(value)
-                "drmlicense" -> {
-                    if (value.startsWith("http://", ignoreCase = true) ||
-                        value.startsWith("https://", ignoreCase = true)) {
-                        drmLicenseUrl = value
-                    } else if (value.trimStart().startsWith("{")) {
-                        drmLicenseUrl = value
-                    } else {
-                        val colonIndex = value.indexOf(':')
-                        if (colonIndex != -1) {
-                            drmKeyId = value.substring(0, colonIndex).trim()
-                            drmKey = value.substring(colonIndex + 1).trim()
-                        }
-                    }
-                }
-                "referer", "referrer" -> headers["Referer"] = value
-                "user-agent", "useragent" -> headers["User-Agent"] = value
-                "origin" -> headers["Origin"] = value
-                "cookie" -> headers["Cookie"] = value
-                "x-forwarded-for" -> headers["X-Forwarded-For"] = value
-                else -> headers[key] = value
-            }
-        }
-
-        return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
-    }
-
-    private fun normalizeDrmScheme(scheme: String): String {
-        val lower = scheme.lowercase()
-        return when {
-            lower.contains("clearkey") || lower == "org.w3.clearkey" -> "clearkey"
-            lower.contains("widevine") || lower == "com.widevine.alpha" -> "widevine"
-            lower.contains("playready") || lower == "com.microsoft.playready" -> "playready"
-            lower.contains("fairplay") -> "fairplay"
-            else -> lower
-        }
-    }
-
-    private fun buildStreamUrl(link: LiveEventLink): String {
-        var url = link.url
-        val params = mutableListOf<String>()
-
-        link.referer?.let { if (it.isNotEmpty()) params.add("referer=$it") }
-        link.cookie?.let { if (it.isNotEmpty()) params.add("cookie=$it") }
-        link.origin?.let { if (it.isNotEmpty()) params.add("origin=$it") }
-        link.userAgent?.let { if (it.isNotEmpty()) params.add("user-agent=$it") }
-        link.xForwardedFor?.let { if (it.isNotEmpty()) params.add("x-forwarded-for=$it") }
-        link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
-        link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
-
-        if (params.isNotEmpty()) {
-            url += "|" + params.joinToString("|")
-        }
-
-        return url
-    }
-
-        private fun setupPlayer() {
-        val useTransferredPlayer = intent.getBooleanExtra("use_transferred_player", false)
-
-        if (useTransferredPlayer) {
-            val (transferredPlayer, transferredUrl, transferredName) = PlayerHolder.retrievePlayer()
-
-            if (transferredPlayer != null) {
-
-                binding.progressBar.visibility = View.GONE
-                binding.errorView.visibility = View.GONE
-
-                player = transferredPlayer
-                binding.playerView.player = player
-
-                if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
-                    val savedLandscape = preferencesManager.getSavedAspectRatio()
-                    if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
-                    val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
-                    if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
-                }
-                applyResizeModeForOrientation(
-                    DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                )
-
-                PlayerHolder.clearReferences()
-
-                configurePlayerInteractions()
-                setupLockOverlay()
-
-                playerListener = object : Player.Listener {
-                    override fun onPlaybackStateChanged(playbackState: Int) {
-                        when (playbackState) {
-                            Player.STATE_READY -> {
-
-                                binding.progressBar.visibility = View.GONE
-                                binding.errorView.visibility = View.GONE
-                                updatePipParams()
-                            }
-                            Player.STATE_BUFFERING -> {
-                                binding.progressBar.visibility = View.VISIBLE
-                                binding.errorView.visibility = View.GONE
-                                binding.playerView.hideController()
-                            }
-                            Player.STATE_ENDED -> {
-                                binding.progressBar.visibility = View.GONE
-                                binding.playerView.showController()
-                            }
-                            Player.STATE_IDLE -> {}
-                        }
-                    }
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-
-                        if (isInPipMode) updatePipParams()
-                    }
-                    override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
-                        super.onVideoSizeChanged(videoSize)
-                        updatePipParams()
-                    }
-                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                        super.onPlayerError(error)
-                        binding.progressBar.visibility = View.GONE
-
-                        if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
-                            val nextIndex = currentLinkIndex + 1
-                            if (nextIndex in allEventLinks.indices) {
-                                switchToLink(allEventLinks[nextIndex], nextIndex)
-                                return
-                            }
-                        }
-
-                        val errorMessage = when {
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_TIMEOUT ->
-                                "Connection Failed"
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> when {
-                                error.message?.contains("403") == true -> "Access Denied"
-                                error.message?.contains("404") == true -> "Stream Not Found"
-                                else -> "Playback Error"
-                            }
-                            error.message?.contains("drm", ignoreCase = true) == true ||
-                            error.message?.contains("widevine", ignoreCase = true) == true ||
-                            error.message?.contains("clearkey", ignoreCase = true) == true ||
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DRM_PROVISIONING_FAILED ||
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED ||
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
-                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ->
-                                "Stream Error"
-                            error.message?.contains("geo", ignoreCase = true) == true ||
-                            error.message?.contains("region", ignoreCase = true) == true ->
-                                "Not Available"
-                            else -> "Playback Error"
-                        }
-                        showError(errorMessage)
-                    }
-                }
-                playerListener?.let { transferredPlayer.addListener(it) }
-
-                return
-            }
-        }
-
-        if (player != null) return
-        binding.errorView.visibility = View.GONE
-        binding.errorText.text = ""
-        binding.progressBar.visibility = View.VISIBLE
-
-        binding.playerView.hideController()
-
-        trackSelector = DefaultTrackSelector(this)
-
-        try {
-            val streamInfo = parseStreamUrl(streamUrl)
-
-            if (streamInfo.url.isBlank()) {
-                showError("Invalid stream URL")
-                return
-            }
-
-            val headers = streamInfo.headers.toMutableMap()
-            val ua = headers["User-Agent"]
-            if (ua.isNullOrBlank() || ua == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
-            }
-
-            val dataSourceFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
-                .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(15_000)
-                .setReadTimeoutMs(15_000)
-                .setAllowCrossProtocolRedirects(true)
-                .setKeepPostFor302Redirects(true)
-
-            val clearKeyMgr = when {
-                streamInfo.drmScheme != "clearkey" -> null
-                streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
-                    buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
-                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
-                    buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
-                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
-                    buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
-                else -> null
-            }
-            val mediaSourceFactory = if (clearKeyMgr != null) {
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(dataSourceFactory)
-                    .setDrmSessionManagerProvider { clearKeyMgr }
-            } else {
-                DefaultMediaSourceFactory(this)
-                    .setDataSourceFactory(dataSourceFactory)
-            }
-
-            val renderersFactory = DefaultRenderersFactory(this)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-                .setEnableDecoderFallback(true)
-            player = ExoPlayer.Builder(this)
-                .setRenderersFactory(renderersFactory)
-                .setTrackSelector(trackSelector ?: return)
-                .setMediaSourceFactory(mediaSourceFactory)
-                .setSeekBackIncrementMs(skipMs)
-                .setSeekForwardIncrementMs(skipMs)
-                .setWakeMode(C.WAKE_MODE_NETWORK)
-                .setHandleAudioBecomingNoisy(true)
-                .setAudioAttributes(
-                    androidx.media3.common.AudioAttributes.Builder()
-                        .setUsage(C.USAGE_MEDIA)
-                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                        .build(),
-                    true
-                )
-                .build().also { exo ->
-                    binding.playerView.player = exo
-
-                    if (!resizeModesRestoredFromState && preferencesManager.isRememberAspectRatioEnabled()) {
-                        val savedLandscape = preferencesManager.getSavedAspectRatio()
-                        if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
-                        val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
-                        if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
-                    }
-
-                    applyResizeModeForOrientation(
-                        DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                    )
-
-                    binding.playerView.hideController()
-
-                    val uri = android.net.Uri.parse(streamInfo.url)
-                    val mediaItemBuilder = MediaItem.Builder().setUri(uri)
-
-                    val urlLower = streamInfo.url.lowercase()
-                    when {
-                        urlLower.contains("m3u8") || urlLower.contains("extension=m3u8") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
-                        urlLower.contains(".mpd") || urlLower.contains("/dash/") || urlLower.contains("type=mpd") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
-                        urlLower.contains(".ism") || urlLower.contains(".isml") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
-                        urlLower.contains(".flv") ->
-                            mediaItemBuilder.setMimeType("video/x-flv")
-                        urlLower.contains(".ts") || urlLower.contains(".mts") || urlLower.contains(".m2ts") ->
-                            mediaItemBuilder.setMimeType("video/mp2t")
-                        urlLower.contains(".mp4") || urlLower.contains(".m4v") || urlLower.contains(".m4a") ->
-                            mediaItemBuilder.setMimeType("video/mp4")
-                        urlLower.contains(".mkv") ->
-                            mediaItemBuilder.setMimeType("video/x-matroska")
-                        urlLower.contains(".webm") ->
-                            mediaItemBuilder.setMimeType("video/webm")
-                        urlLower.contains(".avi") ->
-                            mediaItemBuilder.setMimeType("video/avi")
-                        urlLower.contains(".mov") ->
-                            mediaItemBuilder.setMimeType("video/quicktime")
-                        urlLower.contains(".mp3") ->
-                            mediaItemBuilder.setMimeType("audio/mpeg")
-                        urlLower.contains(".aac") ->
-                            mediaItemBuilder.setMimeType("audio/aac")
-                        urlLower.startsWith("rtmp://") || urlLower.startsWith("rtmps://") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
-                        urlLower.startsWith("rtsp://") ->
-                            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_RTSP)
-                    }
-
-                    if (streamInfo.drmScheme == "clearkey" && clearKeyMgr != null) {
-                    } else if ((streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready")
-                        && streamInfo.drmLicenseUrl != null) {
-                        val drmUuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
-                        val licenseHeaders = headers.filter { (k, _) ->
-                            k.lowercase() !in setOf("referer", "origin")
-                        }
-                        mediaItemBuilder.setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(drmUuid)
-                                .setLicenseUri(streamInfo.drmLicenseUrl)
-                                .setLicenseRequestHeaders(licenseHeaders)
-                                .setForceDefaultLicenseUri(true)
-                                .setMultiSession(false)
-                                .build()
-                        )
-                    }
-
-                    val mediaItem = mediaItemBuilder.build()
-                    exo.setMediaItem(mediaItem)
-
-                    if (savedPlaybackPosition > 0) {
-                        exo.seekTo(savedPlaybackPosition)
-                        savedPlaybackPosition = -1L
-                    }
-
-                    playerListener = object : Player.Listener {
-                        override fun onPlaybackStateChanged(playbackState: Int) {
-                            when (playbackState) {
-                                Player.STATE_READY -> {
-
-                                    binding.progressBar.visibility = View.GONE
-                                    binding.errorView.visibility = View.GONE
-
-                                    updatePipParams()
-                                }
-                                Player.STATE_BUFFERING -> {
-                                    binding.progressBar.visibility = View.VISIBLE
-                                    binding.errorView.visibility = View.GONE
-
-                                    binding.playerView.hideController()
-                                }
-                                Player.STATE_ENDED -> {
-                                    binding.progressBar.visibility = View.GONE
-                                    binding.playerView.showController()
-                                }
-                                Player.STATE_IDLE -> {}
-                            }
-                        }
-
-                        override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
-                            if (!preferencesManager.isForceLowestQualityEnabled()) return
-                            val ts = trackSelector ?: return
-                            var lowestHeight = Int.MAX_VALUE
-                            var lowestGroupIndex = -1
-                            var lowestTrackIndex = -1
-                            tracks.groups.forEachIndexed { gi, group ->
-                                if (group.type != androidx.media3.common.C.TRACK_TYPE_VIDEO) return@forEachIndexed
-                                for (ti in 0 until group.length) {
-                                    val fmt = group.getTrackFormat(ti)
-                                    if (fmt.height > 0 && fmt.height < lowestHeight) {
-                                        lowestHeight = fmt.height
-                                        lowestGroupIndex = gi
-                                        lowestTrackIndex = ti
-                                    }
-                                }
-                            }
-                            if (lowestGroupIndex != -1) {
-                                val group = tracks.groups[lowestGroupIndex]
-                                ts.parameters = ts.parameters.buildUpon()
-                                    .setOverrideForType(
-                                        androidx.media3.common.TrackSelectionOverride(
-                                            group.mediaTrackGroup,
-                                            listOf(lowestTrackIndex)
-                                        )
-                                    )
-                                    .build()
-                            }
-                        }
-
-                        override fun onIsPlayingChanged(isPlaying: Boolean) {
-
-                            if (isInPipMode) {
-                                updatePipParams()
-                            }
-                        }
-
-                        override fun onVideoSizeChanged(videoSize: VideoSize) {
-                            super.onVideoSizeChanged(videoSize)
-                            updatePipParams()
-                        }
-
-                        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                            super.onPlayerError(error)
-                            binding.progressBar.visibility = View.GONE
-
-                            if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
-                                val nextIndex = currentLinkIndex + 1
-                                if (nextIndex in allEventLinks.indices) {
-                                    switchToLink(allEventLinks[nextIndex], nextIndex)
-                                    return
-                                }
-                            }
-
-                            val errorMessage = when {
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_TIMEOUT ->
-                                    "Connection Failed"
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
-                                    when {
-                                        error.message?.contains("403") == true -> "Access Denied"
-                                        error.message?.contains("404") == true -> "Stream Not Found"
-                                        else -> "Playback Error"
-                                    }
-                                }
-                                error.message?.contains("drm", ignoreCase = true) == true ||
-                                error.message?.contains("widevine", ignoreCase = true) == true ||
-                                error.message?.contains("clearkey", ignoreCase = true) == true ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DRM_PROVISIONING_FAILED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
-                                error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ->
-                                    "Stream Error"
-                                error.message?.contains("geo", ignoreCase = true) == true ||
-                                error.message?.contains("region", ignoreCase = true) == true ->
-                                    "Not Available"
-                                else -> "Playback Error"
-                            }
-
-                            showError(errorMessage)
-                        }
-                    }
-
-                    playerListener?.let { exo.addListener(it) }
-                    exo.prepare()
-                    exo.playWhenReady = true
-                }
-        } catch (e: Exception) {
-            showError("Failed to initialize player")
-        }
-    }
-
-    private fun showError(message: String) {
-        binding.progressBar.visibility = View.GONE
-
-        binding.errorText.apply {
-            text = message
-            typeface = try {
-                resources.getFont(R.font.bergen_sans)
-            } catch (e: Exception) {
-                android.graphics.Typeface.DEFAULT
-            }
-            setTextColor(android.graphics.Color.WHITE)
-            textSize = 15f
-            setPadding(48, 20, 48, 20)
-            setBackgroundResource(R.drawable.error_message_background)
-            elevation = 0f
-        }
-
-        val layoutParams = binding.errorView.layoutParams
-        if (layoutParams is androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) {
-            layoutParams.verticalBias = 0.35f
-            binding.errorView.layoutParams = layoutParams
-        }
-
-        binding.errorView.visibility = View.VISIBLE
-    }
-
-    private fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
-        return try {
-            val keyIdBytes = hexToBytes(keyIdHex)
-            val keyBytes   = hexToBytes(keyHex)
-            if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) return null
-            val keyBase64   = android.util.Base64.encodeToString(keyBytes,   android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val kidBase64   = android.util.Base64.encodeToString(keyIdBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
-                .build(buildAdaptiveClearKeyCallback(keyBase64, kidBase64))
-        } catch (e: Exception) { null }
-    }
-
-    private fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
-        return try {
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
-                .build(LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8)))
-        } catch (e: Exception) { null }
-    }
-
-    private fun buildClearKeyServerManager(licenseUrl: String, headers: Map<String, String>): DefaultDrmSessionManager? {
-        return try {
-            val factory = DefaultHttpDataSource.Factory()
-                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
-                .setDefaultRequestProperties(headers)
-                .setConnectTimeoutMs(15_000).setReadTimeoutMs(15_000)
-                .setAllowCrossProtocolRedirects(true).setKeepPostFor302Redirects(true)
-            val cb = HttpMediaDrmCallback(licenseUrl, factory)
-            headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
-            DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
-                .build(cb)
-        } catch (e: Exception) { null }
-    }
-
-    private fun buildAdaptiveClearKeyCallback(
-        keyBase64: String,
-        fallbackKidBase64: String
-    ): androidx.media3.exoplayer.drm.MediaDrmCallback {
-        return object : androidx.media3.exoplayer.drm.MediaDrmCallback {
-            override fun executeProvisionRequest(
-                uuid: UUID,
-                request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest
-            ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response =
-                androidx.media3.exoplayer.drm.MediaDrmCallback.Response(ByteArray(0))
-
-            override fun executeKeyRequest(
-                uuid: UUID,
-                request: androidx.media3.exoplayer.drm.ExoMediaDrm.KeyRequest
-            ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response {
-                return try {
-                    val body = String(request.data, Charsets.UTF_8)
-                    val kids = mutableListOf<String>()
-                    Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(body)?.let { m ->
-                        Regex(""""([A-Za-z0-9+/=_-]+)"""").findAll(m.groupValues[1])
-                            .forEach { kids.add(it.groupValues[1]) }
-                    }
-                    val entries = if (kids.isNotEmpty()) {
-                        kids.joinToString(",") { kid -> """{"kty":"oct","k":"$keyBase64","kid":"$kid"}""" }
-                    } else {
-                        """{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}"""
-                    }
-                    val jwk = """{"keys":[$entries],"type":"temporary"}"""
-                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(jwk.toByteArray(Charsets.UTF_8))
-                } catch (e: Exception) {
-                    val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}],"type":"temporary"}"""
-                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(fallback.toByteArray(Charsets.UTF_8))
-                }
-            }
-        }
-    }
-
-    private fun hexToBytes(hex: String): ByteArray {
-        return try {
-            val clean = hex.replace(" ", "").replace("-", "").lowercase()
-            if (clean.length % 2 != 0) return ByteArray(0)
-            clean.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-        } catch (e: Exception) { ByteArray(0) }
-    }
     private fun toggleMute() {
-        player?.let {
-            isMuted = !isMuted
-            it.volume = if (isMuted) 0f else 1f
-
-        }
+        isMuted = PlayerStreamHelper.toggleMute(player, isMuted)
     }
 
     private fun setupComposeControls() {
@@ -1787,6 +1128,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                         }
                     }
 
+                    androidx.compose.foundation.layout.Column {
                     Box(modifier = Modifier.fillMaxSize()) {
                         PlayerControls(
                             state = controlsState,
@@ -2001,6 +1343,22 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             }
                         }
                     }
+                    }
+                    PlayerScreen(
+                        isLandscape = isLandscape,
+                        relatedContentState = relatedContentState.value,
+                        links = allEventLinks,
+                        selectedLinkIndex = currentLinkIndex,
+                        messageBanner = "",
+                        messageBannerUrl = "",
+                        onLinkClick = { link, pos -> switchToLink(link, pos) },
+                        onChannelClick = { channel -> switchToChannel(channel) },
+                        onEventClick = { event, idx -> switchToEventFromLiveEvent(event, idx) },
+                        onMessageBannerClick = {},
+                        spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count),
+                        eventSpanCount = resources.getInteger(com.livetvpro.app.R.integer.event_span_count),
+                    )
+                    }
                 }
             }
         }
@@ -2120,11 +1478,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         if (allEventLinks.size > 1) {
             binding.linksSection.visibility = View.VISIBLE
         }
-        val hasRelated = relatedChannels.isNotEmpty() ||
-            (contentType == ContentType.EVENT && ::relatedEventsAdapter.isInitialized)
-        if (hasRelated) {
-            binding.relatedChannelsSection.visibility = View.VISIBLE
-        }
+
     }
 
     private fun enterFullscreen() {
@@ -2144,7 +1498,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
         binding.playerContainer.layoutParams = params
 
-        binding.relatedChannelsSection.visibility = View.GONE
         binding.linksSection.visibility = View.GONE
     }
 

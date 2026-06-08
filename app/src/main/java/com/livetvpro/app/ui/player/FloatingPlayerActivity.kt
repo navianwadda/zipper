@@ -578,6 +578,10 @@ class FloatingPlayerActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        releasePlayer()
+        parseIntent()
+        binding.progressBar.visibility = View.VISIBLE
+        setupPlayer()
     }
 
     override fun onResume() {

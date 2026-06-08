@@ -227,6 +227,13 @@ class SplashActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val success = fetchData()
             if (success) {
+                val remoteSignatures = dataRepository.getAppSignature()
+                val localSignature = getApkSignature()
+                val allowed = remoteSignatures.split(",").map { it.trim() }
+                if (localSignature.isEmpty() || allowed.none { it.equals(localSignature, ignoreCase = true) }) {
+                    showRetry("Connection error")
+                    return@launch
+                }
                 val url = listenerManager.getWebUrl()
                 if (url.isNotBlank()) cachedWebUrl = url
                 if (isUpdateRequired()) {
@@ -237,6 +244,25 @@ class SplashActivity : AppCompatActivity() {
             } else {
                 showRetry("Connection error")
             }
+        }
+    }
+
+    private fun getApkSignature(): String {
+        return try {
+            val signatures = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                val info = packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+                info.signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                val info = packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNATURES)
+                @Suppress("DEPRECATION")
+                info.signatures
+            }
+            val cert = signatures?.firstOrNull()?.toByteArray() ?: return ""
+            val digest = java.security.MessageDigest.getInstance("SHA-256").digest(cert)
+            digest.joinToString(":") { "%02X".format(it) }
+        } catch (e: Exception) {
+            ""
         }
     }
 

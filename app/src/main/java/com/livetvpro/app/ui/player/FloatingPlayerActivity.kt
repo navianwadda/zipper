@@ -112,6 +112,10 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
     private lateinit var linkChipAdapter: LinkChipAdapter
     private val relatedContentState = androidx.compose.runtime.mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
+    private val linksState          = androidx.compose.runtime.mutableStateOf<List<LiveEventLink>>(emptyList())
+    private val selectedLinkState   = androidx.compose.runtime.mutableStateOf(0)
+    private val messageBannerText   = androidx.compose.runtime.mutableStateOf("")
+    private val messageBannerUrl    = androidx.compose.runtime.mutableStateOf("")
 
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
@@ -877,6 +881,14 @@ class FloatingPlayerActivity : AppCompatActivity() {
             binding.linksSection.visibility = View.GONE
             landscapeLinksRecycler?.visibility = View.GONE
         }
+
+        // Keep Compose PlayerScreen in sync
+        updateLinksState()
+    }
+
+    private fun updateLinksState() {
+        linksState.value = if (isInPipMode || allEventLinks.size <= 1) emptyList() else allEventLinks
+        selectedLinkState.value = currentLinkIndex
     }
 
     private fun updateLinksForOrientation(isLandscape: Boolean) {
@@ -1012,6 +1024,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
         val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
         val landscapeAdapter = landscapeLinksRecycler?.adapter as? LinkChipAdapter
         landscapeAdapter?.setSelectedPosition(position)
+
+        updateLinksState()
 
         releasePlayer()
         setupPlayer()
@@ -1495,21 +1509,55 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             PlayerScreen(
                                 isLandscape = false,
                                 relatedContentState = relatedContentState.value,
-                                links = allEventLinks,
-                                selectedLinkIndex = currentLinkIndex,
-                                messageBanner = "",
-                                messageBannerUrl = "",
+                                links = linksState.value,
+                                selectedLinkIndex = selectedLinkState.value,
+                                messageBanner = messageBannerText.value,
+                                messageBannerUrl = messageBannerUrl.value,
                                 onLinkClick = { link, pos -> switchToLink(link, pos) },
                                 onChannelClick = { channel -> switchToChannel(channel) },
                                 onEventClick = { event, idx -> switchToEventFromLiveEvent(event, idx) },
-                                onMessageBannerClick = {},
+                                onMessageBannerClick = {
+                                    val url = messageBannerUrl.value
+                                    if (url.isNotBlank()) {
+                                        try {
+                                            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                                        } catch (_: Exception) {}
+                                    }
+                                },
                                 spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count),
                                 eventSpanCount = resources.getInteger(com.livetvpro.app.R.integer.event_span_count),
                             )
                         } else {
-                            // Landscape: controls fill the entire screen; no related section shown below
+                            // Landscape: controls fill the entire screen; link chips shown inline above controls
                             Box(modifier = Modifier.fillMaxSize()) {
                                 playerControlsComposable()
+
+                                // Landscape link chips — shown when controls are visible (mirrors PlayerActivity)
+                                if (linksState.value.size > 1) {
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = controlsState.isVisible && !controlsState.isLocked,
+                                        enter = androidx.compose.animation.fadeIn(),
+                                        exit = androidx.compose.animation.fadeOut(),
+                                        modifier = Modifier
+                                            .align(androidx.compose.ui.Alignment.TopCenter)
+                                            .padding(top = 44.dp),
+                                    ) {
+                                        PlayerScreen(
+                                            isLandscape = true,
+                                            relatedContentState = RelatedContentState.Hidden,
+                                            links = linksState.value,
+                                            selectedLinkIndex = selectedLinkState.value,
+                                            messageBanner = "",
+                                            messageBannerUrl = "",
+                                            onLinkClick = { link, pos -> switchToLink(link, pos) },
+                                            onChannelClick = { channel -> switchToChannel(channel) },
+                                            onEventClick = { event, idx -> switchToEventFromLiveEvent(event, idx) },
+                                            onMessageBannerClick = {},
+                                            spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count),
+                                            eventSpanCount = resources.getInteger(com.livetvpro.app.R.integer.event_span_count),
+                                        )
+                                    }
+                                }
 
                                 if (isChannelListAvailable) {
                                     com.livetvpro.app.ui.player.compose.ChannelListPanel(
@@ -1572,28 +1620,13 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private fun setupMessageBanner() {
         val message = listenerManager.getMessage()
         if (message.isNotBlank()) {
-            binding.tvMessageBanner.text = message
-            binding.tvMessageBanner.isSelected = true
-            binding.tvMessageBanner.visibility = View.VISIBLE
-            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            binding.messageBannerContainer.visibility = if (isLandscape) View.GONE else View.VISIBLE
-            val url = listenerManager.getMessageUrl()
-            if (url.isNotBlank()) {
-                binding.tvMessageBanner.setOnClickListener {
-                    try {
-                        startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-                    } catch (e: Exception) { }
-                }
-            } else {
-                binding.tvMessageBanner.setOnClickListener(null)
-            }
+            messageBannerText.value = message
+            messageBannerUrl.value = listenerManager.getMessageUrl()
         }
     }
 
     private fun updateMessageBannerForOrientation(isLandscape: Boolean) {
-        if (binding.tvMessageBanner.text.isNotBlank()) {
-            binding.messageBannerContainer.visibility = if (isLandscape) View.GONE else View.VISIBLE
-        }
+        // Message banner is now driven by Compose state via PlayerScreen; no XML update needed.
     }
 
     private fun configurePlayerInteractions() {

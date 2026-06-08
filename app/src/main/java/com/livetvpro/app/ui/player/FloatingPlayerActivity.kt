@@ -575,6 +575,11 @@ class FloatingPlayerActivity : AppCompatActivity() {
         binding.root.requestLayout()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -1137,6 +1142,51 @@ class FloatingPlayerActivity : AppCompatActivity() {
             return
         }
 
+        val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
+        if (isTransferredFromFloating && PlayerHolder.player != null) {
+            val (transferredPlayer, _, _) = PlayerHolder.retrievePlayer()
+            PlayerHolder.clearReferences()
+            player = transferredPlayer
+            binding.playerView.player = transferredPlayer
+            binding.progressBar.visibility = View.GONE
+            binding.errorView.visibility = View.GONE
+            val listener = object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    when (state) {
+                        Player.STATE_BUFFERING -> {
+                            binding.progressBar.visibility = View.VISIBLE
+                            binding.errorView.visibility = View.GONE
+                        }
+                        Player.STATE_READY -> {
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorView.visibility = View.GONE
+                            if (!resizeModesRestoredFromState) {
+                                val savedLandscape = preferencesManager.getSavedAspectRatio()
+                                val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
+                                if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
+                                if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
+                                resizeModesRestoredFromState = true
+                                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                applyResizeModeForOrientation(isLandscape)
+                            }
+                            setSubtitleTextSize()
+                        }
+                        Player.STATE_ENDED -> {
+                            binding.progressBar.visibility = View.GONE
+                        }
+                        else -> {}
+                    }
+                }
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorView.visibility = View.VISIBLE
+                }
+            }
+            playerListener = listener
+            transferredPlayer?.addListener(listener)
+            return
+        }
+
         val parsed = PlayerStreamHelper.parseStreamUrl(streamUrl)
         val headers = parsed.headers.toMutableMap()
         if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
@@ -1346,6 +1396,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 val currentStreamUrl = streamUrl
                                 val currentName = contentName
                                 val sourceInstanceId = intent.getStringExtra("source_instance_id")
+                                    ?: "fpa_${contentId.ifEmpty { currentStreamUrl.hashCode().toString() }}"
 
                                 if (currentPlayer != null && contentType == ContentType.NETWORK_STREAM) {
                                     PlayerHolder.transferPlayer(currentPlayer, currentStreamUrl, currentName)

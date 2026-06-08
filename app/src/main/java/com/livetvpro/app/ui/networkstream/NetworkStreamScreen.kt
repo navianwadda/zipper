@@ -76,7 +76,8 @@ fun NetworkStreamScreen(
     viewModel: NetworkStreamViewModel = hiltViewModel(),
     onPlay: (streamUrl: String, cookie: String, referer: String, origin: String, drmLicense: String, userAgent: String, drmScheme: String) -> Unit
 ) {
-    val primaryColor by viewModel.primaryColorFlow.collectAsState()
+    val primaryColorInt by viewModel.primaryColorFlow.collectAsState()
+    val primaryColor = Color(primaryColorInt)
 
     val userAgentOptions = listOf("Default", "Chrome(Android)", "Chrome(PC)", "IE(PC)", "Firefox(PC)", "iPhone", "Nokia", "Custom")
     val drmSchemeOptions = listOf("clearkey", "widevine", "playready")

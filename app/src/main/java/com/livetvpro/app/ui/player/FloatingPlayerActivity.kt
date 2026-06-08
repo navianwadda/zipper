@@ -73,8 +73,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
@@ -1458,7 +1456,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     ) {
                         if (!isLandscape) {
                             // Portrait: reserve the 16:9 player area as a spacer and overlay controls on it
-                            val statusBarHeight = WindowInsets.statusBars
+                            val statusBarHeight = androidx.compose.foundation.layout.WindowInsets.statusBars
                                 .asPaddingValues().calculateTopPadding()
                             Box(
                                 modifier = Modifier

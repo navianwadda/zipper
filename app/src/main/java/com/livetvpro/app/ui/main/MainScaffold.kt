@@ -369,11 +369,27 @@ private fun PhoneTopBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onMenuOrBack) {
-                Icon(
-                    painter = painterResource(if (isTopLevel) R.drawable.ic_menu else R.drawable.ic_arrow_back),
-                    contentDescription = null,
-                    tint = onSurface,
-                )
+                if (isTopLevel) {
+                    Icon(
+                        imageVector = androidx.compose.ui.graphics.vector.ImageVector.Builder(
+                            defaultWidth = 24.dp, defaultHeight = 24.dp,
+                            viewportWidth = 24f, viewportHeight = 24f
+                        ).addPath(
+                            pathData = androidx.compose.ui.graphics.vector.PathParser().parsePathString(
+                                "M3,18h18v-2H3v2zM3,13h18v-2H3v2zM3,6v2h18V6H3z"
+                            ).toNodes(),
+                            fill = androidx.compose.ui.graphics.SolidColor(onSurface)
+                        ).build(),
+                        contentDescription = null,
+                        tint = androidx.compose.ui.graphics.Color.Unspecified,
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_back),
+                        contentDescription = null,
+                        tint = onSurface,
+                    )
+                }
             }
 
             AnimatedVisibility(
@@ -478,7 +494,19 @@ private fun TvTopBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onMenuClick, modifier = Modifier.size(44.dp)) {
-                Icon(painterResource(R.drawable.ic_menu), contentDescription = null, tint = onSurface)
+                Icon(
+                    imageVector = androidx.compose.ui.graphics.vector.ImageVector.Builder(
+                        defaultWidth = 24.dp, defaultHeight = 24.dp,
+                        viewportWidth = 24f, viewportHeight = 24f
+                    ).addPath(
+                        pathData = androidx.compose.ui.graphics.vector.PathParser().parsePathString(
+                            "M3,18h18v-2H3v2zM3,13h18v-2H3v2zM3,6v2h18V6H3z"
+                        ).toNodes(),
+                        fill = androidx.compose.ui.graphics.SolidColor(onSurface)
+                    ).build(),
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color.Unspecified,
+                )
             }
 
             Spacer(Modifier.width(12.dp))

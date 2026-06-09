@@ -634,7 +634,7 @@ private fun DrawerContent(
         ) {
             Column {
                 Icon(
-                    painterResource(R.mipmap.ic_launcher),
+                    painterResource(R.drawable.ic_launcher_foreground),
                     contentDescription = null,
                     tint = Color.Unspecified,
                     modifier = Modifier.size(56.dp),

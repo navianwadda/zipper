@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PlaylistDao {
-    @Query("SELECT * FROM playlists ORDER BY createdAt ASC")
+    @Query("SELECT * FROM playlists ORDER BY position ASC, createdAt ASC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
 
     @Query("SELECT * FROM playlists WHERE id = :playlistId")
@@ -17,6 +17,11 @@ interface PlaylistDao {
 
     @Update
     suspend fun updatePlaylist(playlist: PlaylistEntity)
+
+    @Transaction
+    suspend fun updatePositions(playlists: List<PlaylistEntity>) {
+        playlists.forEach { updatePlaylist(it) }
+    }
 
     @Delete
     suspend fun deletePlaylist(playlist: PlaylistEntity)

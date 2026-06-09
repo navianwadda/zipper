@@ -739,7 +739,8 @@ private fun PlaylistTextField(
             disabledBorderColor     = MaterialTheme.colorScheme.outlineVariant,
         ),
         shape           = RoundedCornerShape(10.dp),
-        singleLine      = true,
+        singleLine      = false,
+        maxLines        = 1,
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
             imeAction    = ImeAction.Next

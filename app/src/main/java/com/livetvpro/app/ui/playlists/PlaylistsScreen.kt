@@ -371,7 +371,7 @@ private fun FabOptionPill(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.inverseSurface)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick)
     ) {
         Row(
@@ -390,7 +390,7 @@ private fun FabOptionPill(
                 fontFamily = BergenSans,
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color      = MaterialTheme.colorScheme.inverseOnSurface
+                color      = MaterialTheme.colorScheme.onSurface
             )
         }
     }

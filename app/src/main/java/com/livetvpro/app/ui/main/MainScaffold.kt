@@ -239,24 +239,25 @@ fun MainScaffold(
                     }
                 }
             )
-        }
 
-        if (!isTvOrDesktop && !isTablet) {
-            AnimatedVisibility(
-                visible = isTopLevel,
-                enter   = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
-                exit    = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
-            ) {
-                ComposeFloatingNav(
-                    tabs          = tabs,
-                    currentDestId = currentDestId,
-                    primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
-                    onTabSelected = { navigate(it) },
-                    modifier      = Modifier
-                        .fillMaxWidth()
+            if (!isTvOrDesktop && !isTablet) {
+                AnimatedVisibility(
+                    visible = isTopLevel,
+                    enter   = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+                    exit    = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
                         .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                )
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    ComposeFloatingNav(
+                        tabs          = tabs,
+                        currentDestId = currentDestId,
+                        primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
+                        onTabSelected = { navigate(it) },
+                        modifier      = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }

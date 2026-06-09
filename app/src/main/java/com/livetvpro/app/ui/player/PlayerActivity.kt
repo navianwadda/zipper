@@ -2112,11 +2112,15 @@ private fun PlayerActivity.PlayerActivityRoot(
     ) {
         if (!isLandscape) {
             // Box wraps the player-area spacer so error message can be overlaid inside it
+            val isNetworkStream = activity.contentType == PlayerActivity.ContentType.NETWORK_STREAM
             androidx.compose.foundation.layout.Box(
                 modifier = androidx.compose.ui.Modifier
                     .fillMaxWidth()
                     .padding(top = statusBarHeight)
-                    .aspectRatio(16f / 9f)
+                    .then(
+                        if (isNetworkStream) androidx.compose.ui.Modifier.weight(1f)
+                        else androidx.compose.ui.Modifier.aspectRatio(16f / 9f)
+                    )
             ) {
                 if (errorMessage.isNotBlank()) {
                     androidx.compose.foundation.layout.Box(
@@ -2353,7 +2357,7 @@ private fun PlayerActivity.PlayerActivityRoot(
                 }
             }
         }
-        if (!isLandscape) {
+        if (!isLandscape && activity.contentType != PlayerActivity.ContentType.NETWORK_STREAM) {
             com.livetvpro.app.ui.player.compose.PlayerScreen(
                 isLandscape = false,
                 relatedContentState = relatedContentState,

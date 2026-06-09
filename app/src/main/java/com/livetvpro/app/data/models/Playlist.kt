@@ -10,9 +10,9 @@ data class Playlist(
     val url: String = "",
     val isFile: Boolean = false,
     val filePath: String = "",
+    val position: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 ) : Parcelable {
-    // Helper to get the source for display
     fun getSource(): String = if (isFile) filePath else url
 }

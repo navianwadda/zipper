@@ -137,8 +137,10 @@ fun PlaylistsScreen(
 
     var draggedId by remember { mutableStateOf<String?>(null) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
-    var dragStartY by remember { mutableFloatStateOf(0f) }
+    var dragStartY by remember { mutableStateOf<Float?>(null) }
     var draggedPlaylist by remember { mutableStateOf<Playlist?>(null) }
+    // Measured height (px) of one item slot (card + spacing). Captured on first layout.
+    var itemSlotHeightPx by remember { mutableFloatStateOf(0f) }
 
     val selectionColors = TextSelectionColors(
         handleColor = primaryColor,
@@ -205,7 +207,10 @@ fun PlaylistsScreen(
                                 modifier = Modifier
                                     .animateItem()
                                     .onGloballyPositioned { coords ->
-                                        if (isDragging && dragStartY == 0f) {
+                                        if (itemSlotHeightPx == 0f && coords.size.height > 0) {
+                                            itemSlotHeightPx = coords.size.height.toFloat()
+                                        }
+                                        if (isDragging && dragStartY == null) {
                                             dragStartY = coords.positionInRoot().y
                                         }
                                     }
@@ -226,33 +231,33 @@ fun PlaylistsScreen(
                                         draggedId = playlist.id
                                         draggedPlaylist = playlist
                                         dragOffsetY = 0f
-                                        dragStartY = 0f
+                                        dragStartY = null
                                     },
                                     onDrag = { dy ->
                                         dragOffsetY += dy
-                                        val itemHeightPx = 88f
+                                        val slotHeight = if (itemSlotHeightPx > 0f) itemSlotHeightPx else 160f
                                         val currentIndex = localPlaylists.indexOfFirst { it.id == draggedId }
                                         if (currentIndex == -1) return@PlaylistCard
-                                        val targetIndex = (currentIndex + (dragOffsetY / itemHeightPx).roundToInt())
+                                        val targetIndex = (currentIndex + (dragOffsetY / slotHeight).roundToInt())
                                             .coerceIn(0, localPlaylists.lastIndex)
                                         if (targetIndex != currentIndex) {
                                             val reordered = localPlaylists.toMutableList()
                                             val moved = reordered.removeAt(currentIndex)
                                             reordered.add(targetIndex, moved)
                                             localPlaylists = reordered
-                                            dragOffsetY -= (targetIndex - currentIndex) * itemHeightPx
+                                            dragOffsetY -= (targetIndex - currentIndex) * slotHeight
                                         }
                                     },
                                     onDragEnd = {
                                         val finalIndex = localPlaylists.indexOfFirst { it.id == draggedId }
-                                        val originalIndex = playlists.indexOfFirst { it.id == draggedId }
-                                        if (finalIndex != -1 && originalIndex != -1 && finalIndex != originalIndex) {
-                                            viewModel.reorderPlaylists(originalIndex, finalIndex)
+                                        // localPlaylists is the ground truth — just persist its current order
+                                        if (finalIndex != -1) {
+                                            viewModel.persistOrder(localPlaylists)
                                         }
                                         draggedId = null
                                         draggedPlaylist = null
                                         dragOffsetY = 0f
-                                        dragStartY = 0f
+                                        dragStartY = null
                                         isDraggingActive = false
                                     },
                                     // Invisible placeholder while dragging — keeps layout space
@@ -262,9 +267,9 @@ fun PlaylistsScreen(
                         }
                     }
 
-                    // Overlay: dragged card floats above everything
                     val dragging = draggedPlaylist
-                    if (dragging != null && dragStartY != 0f) {
+                    val startY = dragStartY
+                    if (dragging != null && startY != null) {
                         PlaylistCard(
                             playlist = dragging,
                             primaryColor = primaryColor,
@@ -280,7 +285,7 @@ fun PlaylistsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 8.dp)
-                                .offset { IntOffset(0, (dragStartY + dragOffsetY).roundToInt()) }
+                                .offset { IntOffset(0, (startY + dragOffsetY).roundToInt()) }
                                 .zIndex(1f)
                         )
                     }

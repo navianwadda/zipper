@@ -1,16 +1,22 @@
 package com.livetvpro.app.ui.components
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
-import androidx.compose.material3.HorizontalFloatingToolbar
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,7 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -35,10 +43,13 @@ import com.livetvpro.app.ui.main.NavTab
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
-private val NavIconSize   = 24.dp
-private val NavButtonSize = 48.dp
+private val ToolbarHeight    = 64.dp
+private val ToolbarElevation = 6.dp
+private val ItemButtonSize   = 48.dp
+private val ItemIconSize     = 24.dp
+private val PillWidth        = 48.dp
+private val PillHeight       = 32.dp
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ComposeFloatingNav(
     tabs: List<NavTab>,
@@ -47,35 +58,28 @@ fun ComposeFloatingNav(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-   
-   
-    HorizontalFloatingToolbar(
-        expanded  = true,
-        modifier  = modifier,
-        colors    = FloatingToolbarDefaults.standardFloatingToolbarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentColor   = MaterialTheme.colorScheme.onSurface,
-        ),
-       
-        contentPadding        = FloatingToolbarDefaults.ContentPadding,
-       
-        shape                 = FloatingToolbarDefaults.ContainerShape,
-       
-        expandedShadowElevation   = FloatingToolbarDefaults.ContainerExpandedElevation,
-        collapsedShadowElevation  = FloatingToolbarDefaults.ContainerCollapsedElevation,
-        content = {
-            tabs.forEach { tab ->
-                val selected = tab.destId == currentDestId
-                FloatingNavItem(
-                    tab          = tab,
-                    selected     = selected,
-                    primaryColor = primaryColor,
-                    onSurface    = MaterialTheme.colorScheme.onSurface,
-                    onClick      = { onTabSelected(tab.destId) },
-                )
-            }
-        },
-    )
+    Row(
+        modifier = modifier
+            .shadow(elevation = ToolbarElevation, shape = CircleShape)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .height(ToolbarHeight)
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment     = Alignment.CenterVertically,
+    ) {
+        tabs.forEach { tab ->
+            FloatingNavItem(
+                tab          = tab,
+                selected     = tab.destId == currentDestId,
+                primaryColor = primaryColor,
+                onSurface    = MaterialTheme.colorScheme.onSurface,
+                onClick      = { onTabSelected(tab.destId) },
+                modifier     = Modifier.weight(1f),
+            )
+        }
+    }
 }
 
 @Composable
@@ -85,28 +89,50 @@ private fun FloatingNavItem(
     primaryColor: Color,
     onSurface: Color,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
+    val scale   by animateFloatAsState(if (focused && !selected) 1.08f else 1f, tween(120), label = "")
+    val pillW   by animateDpAsState(if (selected) PillWidth else 0.dp, tween(200), label = "")
 
-    Box(contentAlignment = Alignment.Center) {
-       
-        IconButton(
-            onClick           = onClick,
-            modifier          = Modifier
-                .size(NavButtonSize)
-                .scale(if (focused && !selected) 1.08f else 1f)
-                .onFocusChanged { focused = it.isFocused },
-            interactionSource = remember { MutableInteractionSource() },
-            colors            = IconButtonDefaults.iconButtonColors(
-                containerColor         = if (selected) primaryColor.copy(alpha = 0.14f) else Color.Transparent,
-                contentColor           = if (selected) primaryColor else onSurface.copy(alpha = 0.55f),
-            ),
-        ) {
+    Column(
+        modifier = modifier
+            .clip(CircleShape)
+            .scale(scale)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication        = null,
+                onClick           = onClick,
+            )
+            .focusable()
+            .onFocusChanged { focused = it.isFocused }
+            .size(ItemButtonSize),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (selected && pillW > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .size(width = pillW, height = PillHeight)
+                        .clip(CircleShape)
+                        .background(primaryColor.copy(alpha = 0.14f))
+                )
+            }
             Icon(
                 painter            = painterResource(if (selected) tab.filledIcon else tab.outlineIcon),
                 contentDescription = stringResource(tab.labelRes),
-                modifier           = Modifier.size(NavIconSize),
+                tint               = if (selected) primaryColor else onSurface.copy(alpha = 0.55f),
+                modifier           = Modifier.size(ItemIconSize),
             )
         }
+        Text(
+            text       = stringResource(tab.labelRes),
+            color      = if (selected) primaryColor else onSurface.copy(alpha = 0.55f),
+            fontSize   = 10.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            fontFamily = BergenSans,
+            maxLines   = 1,
+        )
     }
 }

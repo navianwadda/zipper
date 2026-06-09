@@ -44,9 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.offset
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -106,7 +103,6 @@ private val TV_TABS = listOf(
     NavTab(R.id.settingsFragment,   R.string.nav_settings,  R.drawable.ic_settings,      R.drawable.ic_settings),
 )
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainScaffold(
     activity: MainActivity,
@@ -252,16 +248,14 @@ fun MainScaffold(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .windowInsetsPadding(WindowInsets.navigationBars)
-                        .offset(y = -ScreenOffset),
+                        .padding(horizontal = 16.dp, bottom = 16.dp),
                 ) {
                     ComposeFloatingNav(
                         tabs          = tabs,
                         currentDestId = currentDestId,
                         primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
                         onTabSelected = { navigate(it) },
-                        modifier      = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenOffset),
+                        modifier      = Modifier.fillMaxWidth(),
                     )
                 }
             }

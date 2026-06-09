@@ -208,8 +208,13 @@ fun PlaylistsScreen(
                                 onDrag = { dy ->
                                     dragOffsetY += dy
                                     val itemHeightPx = 88f
-                                    val rawTarget = index + (dragOffsetY / itemHeightPx).roundToInt()
-                                    hoveredIndex = rawTarget.coerceIn(0, playlists.lastIndex)
+                                    // Use draggedIndex (the current authoritative source) rather than
+                                    // the stale captured `index`, which becomes wrong after a reorder.
+                                    val currentDragged = draggedIndex
+                                    if (currentDragged != -1) {
+                                        val rawTarget = currentDragged + (dragOffsetY / itemHeightPx).roundToInt()
+                                        hoveredIndex = rawTarget.coerceIn(0, playlists.lastIndex)
+                                    }
                                 },
                                 onDragEnd = {
                                     if (draggedIndex != -1 && hoveredIndex != draggedIndex) {
@@ -366,7 +371,7 @@ private fun FabOptionPill(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .background(MaterialTheme.colorScheme.inverseSurface)
             .clickable(onClick = onClick)
     ) {
         Row(
@@ -385,7 +390,7 @@ private fun FabOptionPill(
                 fontFamily = BergenSans,
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color      = MaterialTheme.colorScheme.onSurface
+                color      = MaterialTheme.colorScheme.inverseOnSurface
             )
         }
     }
@@ -422,7 +427,7 @@ private fun PlaylistCard(
             .fillMaxWidth()
             .scale(cardScale)
             .then(if (isDragging) Modifier.offset { IntOffset(0, dragOffsetY.roundToInt()) } else Modifier)
-            .pointerInput(Unit) {
+            .pointerInput(playlist.id) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { onDragStart() },
                     onDrag = { _, dragAmount -> onDrag(dragAmount.y) },
@@ -447,15 +452,6 @@ private fun PlaylistCard(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter            = painterResource(R.drawable.ic_list),
-                contentDescription = "Drag to reorder",
-                tint               = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier           = Modifier
-                    .size(20.dp)
-                    .padding(end = 0.dp)
-            )
-            Spacer(Modifier.padding(horizontal = 6.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text       = playlist.title,

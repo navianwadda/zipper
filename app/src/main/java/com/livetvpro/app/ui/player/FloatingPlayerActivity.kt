@@ -1528,11 +1528,15 @@ class FloatingPlayerActivity : AppCompatActivity() {
                             // Portrait: reserve the 16:9 player area as a spacer and overlay controls on it
                             val statusBarHeight = androidx.compose.foundation.layout.WindowInsets.statusBars
                                 .asPaddingValues().calculateTopPadding()
+                            val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = statusBarHeight)
-                                    .aspectRatio(16f / 9f)
+                                    .then(
+                                        if (isNetworkStream) Modifier.weight(1f)
+                                        else Modifier.aspectRatio(16f / 9f)
+                                    )
                             ) {
                                 playerControlsComposable()
 
@@ -1560,7 +1564,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 }
                             }
 
-                            // Related channels / PlayerScreen renders BELOW the player in portrait
+                            // Related channels / PlayerScreen renders BELOW the player in portrait (not for network stream)
+                            if (!isNetworkStream) {
                             PlayerScreen(
                                 isLandscape = false,
                                 relatedContentState = relatedContentState.value,
@@ -1582,6 +1587,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count),
                                 eventSpanCount = resources.getInteger(com.livetvpro.app.R.integer.event_span_count),
                             )
+                            }
                         } else {
                             // Landscape: controls fill the entire screen; link chips shown inline above controls
                             Box(modifier = Modifier.fillMaxSize()) {
@@ -2020,4 +2026,3 @@ class FloatingPlayerActivity : AppCompatActivity() {
         }
     }
 }
-

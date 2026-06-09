@@ -13,7 +13,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,10 +26,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,13 +60,20 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -74,11 +82,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Playlist
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
@@ -108,9 +119,14 @@ fun PlaylistsScreen(
 
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
     var fabExpanded by remember { mutableStateOf(false) }
     var activeDialog by remember { mutableStateOf<PlaylistDialog>(PlaylistDialog.None) }
+
+    var draggedIndex by remember { mutableIntStateOf(-1) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    var hoveredIndex by remember { mutableIntStateOf(-1) }
 
     val selectionColors = TextSelectionColors(
         handleColor = primaryColor,
@@ -175,13 +191,40 @@ fun PlaylistsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(playlists, key = { it.id }) { playlist ->
+                        itemsIndexed(playlists, key = { _, p -> p.id }) { index, playlist ->
+                            val isDragging = index == draggedIndex
+                            val isHovered = index == hoveredIndex && !isDragging
+
                             PlaylistCard(
                                 playlist = playlist,
                                 primaryColor = primaryColor,
-                                onClick = { onNavigateToCategory(playlist.id, playlist.title) },
+                                isDragging = isDragging,
+                                isHovered = isHovered,
+                                dragOffsetY = if (isDragging) dragOffsetY else 0f,
+                                onClick = {
+                                    if (draggedIndex == -1) onNavigateToCategory(playlist.id, playlist.title)
+                                },
                                 onEditClick = { activeDialog = PlaylistDialog.Edit(playlist) },
-                                onDeleteClick = { activeDialog = PlaylistDialog.Delete(playlist) }
+                                onDeleteClick = { activeDialog = PlaylistDialog.Delete(playlist) },
+                                onDragStart = {
+                                    draggedIndex = index
+                                    dragOffsetY = 0f
+                                    hoveredIndex = index
+                                },
+                                onDrag = { dy ->
+                                    dragOffsetY += dy
+                                    val itemHeightPx = 88f
+                                    val rawTarget = index + (dragOffsetY / itemHeightPx).roundToInt()
+                                    hoveredIndex = rawTarget.coerceIn(0, playlists.lastIndex)
+                                },
+                                onDragEnd = {
+                                    if (draggedIndex != -1 && hoveredIndex != draggedIndex) {
+                                        viewModel.reorderPlaylists(draggedIndex, hoveredIndex)
+                                    }
+                                    draggedIndex = -1
+                                    dragOffsetY = 0f
+                                    hoveredIndex = -1
+                                }
                             )
                         }
                     }
@@ -319,7 +362,6 @@ fun PlaylistsScreen(
     }
 }
 
-
 @Composable
 private fun FabOptionPill(
     label: String,
@@ -355,32 +397,72 @@ private fun FabOptionPill(
     }
 }
 
-
 @Composable
 private fun PlaylistCard(
     playlist: Playlist,
     primaryColor: Color,
+    isDragging: Boolean,
+    isHovered: Boolean,
+    dragOffsetY: Float,
     onClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
 ) {
+    val cardScale by animateFloatAsState(
+        targetValue = if (isDragging) 1.03f else 1f,
+        animationSpec = tween(120),
+        label = "cardScale"
+    )
+    val cardAlpha by animateFloatAsState(
+        targetValue = if (isDragging) 0.92f else 1f,
+        animationSpec = tween(120),
+        label = "cardAlpha"
+    )
+
     Card(
-        onClick   = onClick,
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(10.dp),
-        colors    = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentColor   = MaterialTheme.colorScheme.onSurface
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(cardScale)
+            .then(if (isDragging) Modifier.offset { IntOffset(0, dragOffsetY.roundToInt()) } else Modifier)
+            .then(if (isDragging) Modifier.shadow(8.dp, RoundedCornerShape(10.dp)) else Modifier)
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { onDragStart() },
+                    onDrag = { _, dragAmount -> onDrag(dragAmount.y) },
+                    onDragEnd = { onDragEnd() },
+                    onDragCancel = { onDragEnd() }
+                )
+            },
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isHovered)
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            else
+                MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        border    = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
-            modifier          = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                painter            = painterResource(R.drawable.ic_list),
+                contentDescription = "Drag to reorder",
+                tint               = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier           = Modifier
+                    .size(20.dp)
+                    .padding(end = 0.dp)
+            )
+            Spacer(Modifier.padding(horizontal = 6.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text       = playlist.title,
@@ -420,7 +502,6 @@ private fun PlaylistCard(
         }
     }
 }
-
 
 @Composable
 private fun AddPlaylistDialog(
@@ -616,7 +697,6 @@ private fun DeletePlaylistDialog(
         shape             = RoundedCornerShape(16.dp)
     )
 }
-
 
 @Composable
 private fun PlaylistTextField(

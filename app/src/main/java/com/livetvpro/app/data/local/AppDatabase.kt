@@ -15,7 +15,7 @@ import com.livetvpro.app.data.local.entity.PlaylistEntity
 
 @Database(
     entities = [FavoriteChannelEntity::class, PlaylistEntity::class, ChannelEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(FavoriteChannelConverters::class)
@@ -54,6 +54,12 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE channels ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE playlists ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE playlists SET position = (SELECT COUNT(*) FROM playlists p2 WHERE p2.createdAt <= playlists.createdAt) - 1")
             }
         }
     }

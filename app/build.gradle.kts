@@ -86,8 +86,7 @@ android {
         
         freeCompilerArgs += listOf(
             "-opt-in=androidx.media3.common.util.UnstableApi",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
         )
     }
 

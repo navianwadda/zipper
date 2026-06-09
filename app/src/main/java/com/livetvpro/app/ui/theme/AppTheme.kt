@@ -2,7 +2,9 @@ package com.livetvpro.app.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -10,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -20,6 +23,7 @@ import com.livetvpro.app.data.local.ThemeManager
 @Composable
 fun LiveTVProTheme(
     themeManager: ThemeManager,
+    surfaceColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val context    = LocalContext.current
@@ -67,6 +71,11 @@ fun LiveTVProTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography  = Typography(),
-        content     = content,
-    )
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color    = surfaceColor ?: MaterialTheme.colorScheme.background,
+            content  = content,
+        )
+    }
 }

@@ -4,6 +4,7 @@ import com.livetvpro.app.data.local.dao.PlaylistDao
 import com.livetvpro.app.data.local.entity.PlaylistEntity
 import com.livetvpro.app.data.models.Playlist
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 import javax.inject.Inject
@@ -24,12 +25,15 @@ class PlaylistRepository @Inject constructor(
     }
 
     suspend fun addPlaylist(title: String, url: String = "", isFile: Boolean = false, filePath: String = ""): Playlist {
+        val existing = playlistDao.getAllPlaylists().first()
+        val nextPosition = if (existing.isEmpty()) 0 else existing.maxOf { it.position } + 1
         val playlist = Playlist(
             id = UUID.randomUUID().toString(),
             title = title,
             url = url,
             isFile = isFile,
             filePath = filePath,
+            position = nextPosition,
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis()
         )
@@ -40,6 +44,13 @@ class PlaylistRepository @Inject constructor(
     suspend fun updatePlaylist(playlist: Playlist) {
         val updatedPlaylist = playlist.copy(updatedAt = System.currentTimeMillis())
         playlistDao.updatePlaylist(updatedPlaylist.toEntity())
+    }
+
+    suspend fun updatePositions(playlists: List<Playlist>) {
+        val entities = playlists.mapIndexed { index, playlist ->
+            playlist.toEntity().copy(position = index)
+        }
+        playlistDao.updatePositions(entities)
     }
 
     suspend fun deletePlaylist(playlist: Playlist) {
@@ -60,6 +71,7 @@ class PlaylistRepository @Inject constructor(
         url = url,
         isFile = isFile,
         filePath = filePath,
+        position = position,
         createdAt = createdAt,
         updatedAt = updatedAt
     )
@@ -70,6 +82,7 @@ class PlaylistRepository @Inject constructor(
         url = url,
         isFile = isFile,
         filePath = filePath,
+        position = position,
         createdAt = createdAt,
         updatedAt = updatedAt
     )

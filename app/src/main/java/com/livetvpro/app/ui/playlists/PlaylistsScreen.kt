@@ -65,6 +65,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -421,6 +422,10 @@ private fun PlaylistCard(
         label = "cardAlpha"
     )
 
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+
     Card(
         onClick = onClick,
         modifier = Modifier
@@ -429,10 +434,10 @@ private fun PlaylistCard(
             .then(if (isDragging) Modifier.offset { IntOffset(0, dragOffsetY.roundToInt()) } else Modifier)
             .pointerInput(playlist.id) {
                 detectDragGesturesAfterLongPress(
-                    onDragStart = { onDragStart() },
-                    onDrag = { _, dragAmount -> onDrag(dragAmount.y) },
-                    onDragEnd = { onDragEnd() },
-                    onDragCancel = { onDragEnd() }
+                    onDragStart = { currentOnDragStart() },
+                    onDrag = { _, dragAmount -> currentOnDrag(dragAmount.y) },
+                    onDragEnd = { currentOnDragEnd() },
+                    onDragCancel = { currentOnDragEnd() }
                 )
             },
         shape = RoundedCornerShape(10.dp),

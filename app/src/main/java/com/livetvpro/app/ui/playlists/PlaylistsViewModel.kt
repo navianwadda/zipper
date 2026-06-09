@@ -87,6 +87,17 @@ class PlaylistsViewModel @Inject constructor(
         }
     }
 
+    fun persistOrder(orderedList: List<Playlist>) {
+        _playlists.value = orderedList
+        viewModelScope.launch {
+            try {
+                playlistRepository.updatePositions(orderedList)
+            } catch (e: Exception) {
+                _error.value = "Failed to save order: ${e.message}"
+            }
+        }
+    }
+
     fun deletePlaylist(playlist: Playlist) {
         viewModelScope.launch {
             try {

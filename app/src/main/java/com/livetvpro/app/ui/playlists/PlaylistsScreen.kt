@@ -71,7 +71,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -150,15 +149,10 @@ fun PlaylistsScreen(
     CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
 
-            AnimatedVisibility(
-                visible = fabExpanded,
-                enter = fadeIn(tween(150)),
-                exit = fadeOut(tween(150))
-            ) {
+            if (fabExpanded) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.48f))
                         .clickable(onClick = { fabExpanded = false })
                 )
             }
@@ -428,7 +422,6 @@ private fun PlaylistCard(
             .fillMaxWidth()
             .scale(cardScale)
             .then(if (isDragging) Modifier.offset { IntOffset(0, dragOffsetY.roundToInt()) } else Modifier)
-            .then(if (isDragging) Modifier.shadow(8.dp, RoundedCornerShape(10.dp)) else Modifier)
             .pointerInput(Unit) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { onDragStart() },
@@ -445,7 +438,7 @@ private fun PlaylistCard(
                 MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp, focusedElevation = 0.dp, hoveredElevation = 0.dp),
         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(

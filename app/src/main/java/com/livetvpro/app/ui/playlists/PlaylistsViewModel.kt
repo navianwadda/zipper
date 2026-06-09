@@ -72,6 +72,21 @@ class PlaylistsViewModel @Inject constructor(
         }
     }
 
+    fun reorderPlaylists(from: Int, to: Int) {
+        val current = _playlists.value.toMutableList()
+        if (from !in current.indices || to !in current.indices) return
+        val moved = current.removeAt(from)
+        current.add(to, moved)
+        _playlists.value = current
+        viewModelScope.launch {
+            try {
+                playlistRepository.updatePositions(current)
+            } catch (e: Exception) {
+                _error.value = "Failed to save order: ${e.message}"
+            }
+        }
+    }
+
     fun deletePlaylist(playlist: Playlist) {
         viewModelScope.launch {
             try {

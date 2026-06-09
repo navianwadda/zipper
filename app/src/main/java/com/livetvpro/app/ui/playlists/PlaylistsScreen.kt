@@ -13,6 +13,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -229,7 +230,7 @@ fun PlaylistsScreen(
 
                     val fabRotation by animateFloatAsState(
                         targetValue = if (fabExpanded) 45f else 0f,
-                        animationSpec = tween(220),
+                        animationSpec = tween(150),
                         label = "fabRotation"
                     )
                     FloatingActionButton(
@@ -326,37 +327,29 @@ private fun FabOptionPill(
     primaryColor: Color,
     onClick: () -> Unit,
 ) {
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(50),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentColor   = MaterialTheme.colorScheme.onSurface
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-            focusedElevation = 0.dp,
-            hoveredElevation = 0.dp
-        )
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Icon(
+                painter            = painterResource(iconRes),
+                contentDescription = label,
+                tint               = primaryColor,
+                modifier           = Modifier.size(18.dp)
+            )
             Text(
                 text       = label,
                 fontFamily = BergenSans,
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color      = MaterialTheme.colorScheme.onSurface
-            )
-            Icon(
-                painter            = painterResource(iconRes),
-                contentDescription = label,
-                tint               = primaryColor,
-                modifier           = Modifier.size(18.dp)
             )
         }
     }

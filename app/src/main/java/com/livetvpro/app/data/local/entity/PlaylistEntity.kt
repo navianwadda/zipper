@@ -12,5 +12,6 @@ data class PlaylistEntity(
     val isFile: Boolean,
     val filePath: String,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val position: Int = 0
 )

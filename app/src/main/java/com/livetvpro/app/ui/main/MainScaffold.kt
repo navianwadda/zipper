@@ -44,6 +44,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -103,6 +106,7 @@ private val TV_TABS = listOf(
     NavTab(R.id.settingsFragment,   R.string.nav_settings,  R.drawable.ic_settings,      R.drawable.ic_settings),
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainScaffold(
     activity: MainActivity,
@@ -242,20 +246,22 @@ fun MainScaffold(
 
             if (!isTvOrDesktop && !isTablet) {
                 AnimatedVisibility(
-                    visible = isTopLevel,
-                    enter   = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
-                    exit    = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
+                    visible  = isTopLevel,
+                    enter    = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+                    exit     = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .offset(y = -ScreenOffset),
                 ) {
                     ComposeFloatingNav(
                         tabs          = tabs,
                         currentDestId = currentDestId,
                         primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
                         onTabSelected = { navigate(it) },
-                        modifier      = Modifier.fillMaxWidth(),
+                        modifier      = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = ScreenOffset),
                     )
                 }
             }

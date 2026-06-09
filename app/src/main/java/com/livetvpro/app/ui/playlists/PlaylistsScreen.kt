@@ -61,7 +61,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -69,11 +68,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -85,6 +87,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Playlist
@@ -117,6 +120,14 @@ fun PlaylistsScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
+    // Local mutable copy for live reordering during drag.
+    // Synced from viewModel whenever not dragging.
+    var localPlaylists by remember { mutableStateOf(playlists) }
+    var isDraggingActive by remember { mutableStateOf(false) }
+    LaunchedEffect(playlists) {
+        if (!isDraggingActive) localPlaylists = playlists
+    }
+
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -124,9 +135,10 @@ fun PlaylistsScreen(
     var fabExpanded by remember { mutableStateOf(false) }
     var activeDialog by remember { mutableStateOf<PlaylistDialog>(PlaylistDialog.None) }
 
-    var draggedIndex by remember { mutableIntStateOf(-1) }
+    var draggedId by remember { mutableStateOf<String?>(null) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
-    var hoveredIndex by remember { mutableIntStateOf(-1) }
+    var dragStartY by remember { mutableFloatStateOf(0f) }
+    var draggedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
     val selectionColors = TextSelectionColors(
         handleColor = primaryColor,
@@ -186,47 +198,91 @@ fun PlaylistsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        itemsIndexed(playlists, key = { _, p -> p.id }) { index, playlist ->
-                            val isDragging = index == draggedIndex
-                            val isHovered = index == hoveredIndex && !isDragging
+                        itemsIndexed(localPlaylists, key = { _, p -> p.id }) { index, playlist ->
+                            val isDragging = playlist.id == draggedId
 
-                            PlaylistCard(
-                                playlist = playlist,
-                                primaryColor = primaryColor,
-                                isDragging = isDragging,
-                                isHovered = isHovered,
-                                dragOffsetY = if (isDragging) dragOffsetY else 0f,
-                                onClick = {
-                                    if (draggedIndex == -1) onNavigateToCategory(playlist.id, playlist.title)
-                                },
-                                onEditClick = { activeDialog = PlaylistDialog.Edit(playlist) },
-                                onDeleteClick = { activeDialog = PlaylistDialog.Delete(playlist) },
-                                onDragStart = {
-                                    draggedIndex = index
-                                    dragOffsetY = 0f
-                                    hoveredIndex = index
-                                },
-                                onDrag = { dy ->
-                                    dragOffsetY += dy
-                                    val itemHeightPx = 88f
-                                    // Use draggedIndex (the current authoritative source) rather than
-                                    // the stale captured `index`, which becomes wrong after a reorder.
-                                    val currentDragged = draggedIndex
-                                    if (currentDragged != -1) {
-                                        val rawTarget = currentDragged + (dragOffsetY / itemHeightPx).roundToInt()
-                                        hoveredIndex = rawTarget.coerceIn(0, playlists.lastIndex)
+                            Box(
+                                modifier = Modifier
+                                    .animateItem()
+                                    .onGloballyPositioned { coords ->
+                                        if (isDragging && dragStartY == 0f) {
+                                            dragStartY = coords.positionInRoot().y
+                                        }
                                     }
-                                },
-                                onDragEnd = {
-                                    if (draggedIndex != -1 && hoveredIndex != draggedIndex) {
-                                        viewModel.reorderPlaylists(draggedIndex, hoveredIndex)
-                                    }
-                                    draggedIndex = -1
-                                    dragOffsetY = 0f
-                                    hoveredIndex = -1
-                                }
-                            )
+                            ) {
+                                PlaylistCard(
+                                    playlist = playlist,
+                                    primaryColor = primaryColor,
+                                    isDragging = false,
+                                    isHovered = false,
+                                    dragOffsetY = 0f,
+                                    onClick = {
+                                        if (draggedId == null) onNavigateToCategory(playlist.id, playlist.title)
+                                    },
+                                    onEditClick = { activeDialog = PlaylistDialog.Edit(playlist) },
+                                    onDeleteClick = { activeDialog = PlaylistDialog.Delete(playlist) },
+                                    onDragStart = {
+                                        isDraggingActive = true
+                                        draggedId = playlist.id
+                                        draggedPlaylist = playlist
+                                        dragOffsetY = 0f
+                                        dragStartY = 0f
+                                    },
+                                    onDrag = { dy ->
+                                        dragOffsetY += dy
+                                        val itemHeightPx = 88f
+                                        val currentIndex = localPlaylists.indexOfFirst { it.id == draggedId }
+                                        if (currentIndex == -1) return@PlaylistCard
+                                        val targetIndex = (currentIndex + (dragOffsetY / itemHeightPx).roundToInt())
+                                            .coerceIn(0, localPlaylists.lastIndex)
+                                        if (targetIndex != currentIndex) {
+                                            val reordered = localPlaylists.toMutableList()
+                                            val moved = reordered.removeAt(currentIndex)
+                                            reordered.add(targetIndex, moved)
+                                            localPlaylists = reordered
+                                            dragOffsetY -= (targetIndex - currentIndex) * itemHeightPx
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        val finalIndex = localPlaylists.indexOfFirst { it.id == draggedId }
+                                        val originalIndex = playlists.indexOfFirst { it.id == draggedId }
+                                        if (finalIndex != -1 && originalIndex != -1 && finalIndex != originalIndex) {
+                                            viewModel.reorderPlaylists(originalIndex, finalIndex)
+                                        }
+                                        draggedId = null
+                                        draggedPlaylist = null
+                                        dragOffsetY = 0f
+                                        dragStartY = 0f
+                                        isDraggingActive = false
+                                    },
+                                    // Invisible placeholder while dragging — keeps layout space
+                                    modifier = if (isDragging) Modifier.alpha(0f) else Modifier
+                                )
+                            }
                         }
+                    }
+
+                    // Overlay: dragged card floats above everything
+                    val dragging = draggedPlaylist
+                    if (dragging != null && dragStartY != 0f) {
+                        PlaylistCard(
+                            playlist = dragging,
+                            primaryColor = primaryColor,
+                            isDragging = true,
+                            isHovered = false,
+                            dragOffsetY = 0f,
+                            onClick = {},
+                            onEditClick = {},
+                            onDeleteClick = {},
+                            onDragStart = {},
+                            onDrag = {},
+                            onDragEnd = {},
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp)
+                                .offset { IntOffset(0, (dragStartY + dragOffsetY).roundToInt()) }
+                                .zIndex(1f)
+                        )
                     }
                 }
             }
@@ -410,6 +466,7 @@ private fun PlaylistCard(
     onDragStart: () -> Unit,
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val cardScale by animateFloatAsState(
         targetValue = if (isDragging) 1.03f else 1f,
@@ -428,7 +485,7 @@ private fun PlaylistCard(
 
     Card(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .scale(cardScale)
             .then(if (isDragging) Modifier.offset { IntOffset(0, dragOffsetY.roundToInt()) } else Modifier)

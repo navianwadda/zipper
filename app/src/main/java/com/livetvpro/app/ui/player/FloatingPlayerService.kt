@@ -1961,6 +1961,8 @@ class FloatingPlayerService : Service() {
                         }
                     }
                 }
+                "drmkeyid" -> drmKeyId = value
+                "drmkey" -> drmKey = value
                 "user-agent", "useragent" -> headers["User-Agent"] = value
                 "referer", "referrer" -> headers["Referer"] = value
                 "cookie" -> headers["Cookie"] = value
@@ -2113,25 +2115,56 @@ class FloatingPlayerService : Service() {
         }
     }
 
+    private fun buildWidevineOrPlayReadyManager(
+        scheme: String,
+        licenseUrl: String,
+        headers: Map<String, String>
+    ): DefaultDrmSessionManager? {
+        return try {
+            val uuid = if (scheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
+            val licenseHeaders = headers.filter { (k, _) ->
+                k.lowercase() !in setOf("referer", "origin")
+            }
+            val factory = DefaultHttpDataSource.Factory()
+                .setUserAgent(licenseHeaders["User-Agent"] ?: "LiveTVPro/1.0")
+                .setDefaultRequestProperties(licenseHeaders)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
+                .setAllowCrossProtocolRedirects(true)
+                .setKeepPostFor302Redirects(true)
+            val cb = HttpMediaDrmCallback(licenseUrl, factory)
+            licenseHeaders.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
+            DefaultDrmSessionManager.Builder()
+                .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                .setMultiSession(true)
+                .build(cb)
+        } catch (e: Exception) { null }
+    }
+
     private fun buildDrmMediaSourceFactory(
         streamInfo: StreamInfo,
         dataSourceFactory: DefaultHttpDataSource.Factory,
         headers: Map<String, String>
     ): DefaultMediaSourceFactory {
-        val clearKeyMgr = when {
-            streamInfo.drmScheme != "clearkey" -> null
-            streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
-                buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
-            streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
-                buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
-            streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
-                buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
+        val drmMgr = when {
+            streamInfo.drmScheme == "clearkey" -> when {
+                streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
+                    buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
+                streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
+                    buildClearKeyJwkManager(streamInfo.drmLicenseUrl)
+                streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
+                    buildClearKeyServerManager(streamInfo.drmLicenseUrl, headers)
+                else -> null
+            }
+            (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") &&
+                    streamInfo.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
+                buildWidevineOrPlayReadyManager(streamInfo.drmScheme, streamInfo.drmLicenseUrl, headers)
             else -> null
         }
-        return if (clearKeyMgr != null) {
+        return if (drmMgr != null) {
             DefaultMediaSourceFactory(this)
                 .setDataSourceFactory(dataSourceFactory)
-                .setDrmSessionManagerProvider { clearKeyMgr }
+                .setDrmSessionManagerProvider { drmMgr }
         } else {
             DefaultMediaSourceFactory(this).setDataSourceFactory(dataSourceFactory)
         }

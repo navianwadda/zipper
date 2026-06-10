@@ -49,8 +49,9 @@ abstract class BasePlayerActivity : AppCompatActivity() {
             }
         } else {
             windowInsetsController.apply {
-                show(WindowInsetsCompat.Type.systemBars())
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+                hide(WindowInsetsCompat.Type.navigationBars())
+                show(WindowInsetsCompat.Type.statusBars())
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         }
     }

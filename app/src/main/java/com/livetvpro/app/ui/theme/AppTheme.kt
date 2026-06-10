@@ -24,7 +24,6 @@ import com.livetvpro.app.data.local.ThemeManager
 fun LiveTVProTheme(
     themeManager: ThemeManager,
     surfaceColor: Color? = null,
-    controlNavigationBar: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val context    = LocalContext.current
@@ -60,14 +59,17 @@ fun LiveTVProTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+            val activity = (context as? android.app.Activity)
+                ?: generateSequence(view.context) {
+                    (it as? android.content.ContextWrapper)?.baseContext
+                }.filterIsInstance<android.app.Activity>().firstOrNull()
+                ?: return@SideEffect
+            val window = activity.window
             window.statusBarColor = Color.Transparent.toArgb()
-            val wic = WindowCompat.getInsetsController(window, view)
+            val wic = WindowCompat.getInsetsController(window, window.decorView)
             wic.isAppearanceLightStatusBars = !useDark
-            if (controlNavigationBar) {
-                window.navigationBarColor = Color.Transparent.toArgb()
-                wic.isAppearanceLightNavigationBars = !useDark
-            }
+            window.navigationBarColor = Color.Transparent.toArgb()
+            wic.isAppearanceLightNavigationBars = !useDark
         }
     }
 

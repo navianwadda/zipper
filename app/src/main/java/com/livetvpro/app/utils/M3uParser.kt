@@ -957,10 +957,7 @@ object M3uParser {
                     m3u.drmKeyId.startsWith("https://", ignoreCase = true)) {
                     parts.add("drmLicense=${m3u.drmKeyId}")
                 } else {
-                    // Store as two separate pipe params to avoid colon ambiguity
-                    // with complex URLs that already contain colons (e.g. accountinfo tokens)
-                    parts.add("drmKeyId=${m3u.drmKeyId}")
-                    parts.add("drmKey=${m3u.drmKey}")
+                    parts.add("drmLicense=${m3u.drmKeyId}:${m3u.drmKey}")
                 }
             }
         }

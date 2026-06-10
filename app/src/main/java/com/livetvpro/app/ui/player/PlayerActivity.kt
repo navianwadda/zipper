@@ -75,7 +75,10 @@ import android.graphics.Rect
 import androidx.compose.runtime.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -276,7 +279,7 @@ class PlayerActivity : BasePlayerActivity() {
         val binding = androidx.compose.ui.platform.ComposeView(this).also { composeRoot ->
             composeRoot.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             composeRoot.setContent {
-                LiveTVProTheme(themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
+                LiveTVProTheme(themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent, controlNavigationBar = false) {
                     PlayerActivityRoot(
                         activity = this,
                         controlsState = controlsState,

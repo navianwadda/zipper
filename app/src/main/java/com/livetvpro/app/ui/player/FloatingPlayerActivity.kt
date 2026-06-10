@@ -1425,7 +1425,6 @@ class FloatingPlayerActivity : BasePlayerActivity() {
                                 },
                                 spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count),
                                 eventSpanCount = resources.getInteger(com.livetvpro.app.R.integer.event_span_count),
-                                bottomPadding = navBarHeight,
                             )
                             }
                         } else {

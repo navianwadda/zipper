@@ -241,21 +241,24 @@ fun MainScaffold(
             )
 
             if (!isTvOrDesktop && !isTablet) {
-                AnimatedVisibility(
-                    visible  = isTopLevel,
-                    enter    = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
-                    exit     = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
+                Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(bottom = 16.dp),
                 ) {
-                    ComposeFloatingNav(
-                        tabs          = tabs,
-                        currentDestId = currentDestId,
-                        primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
-                        onTabSelected = { navigate(it) },
-                    )
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isTopLevel,
+                        enter   = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+                        exit    = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
+                    ) {
+                        ComposeFloatingNav(
+                            tabs          = tabs,
+                            currentDestId = currentDestId,
+                            primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
+                            onTabSelected = { navigate(it) },
+                        )
+                    }
                 }
             }
         }

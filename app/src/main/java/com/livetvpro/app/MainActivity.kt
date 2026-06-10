@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -29,8 +28,6 @@ import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.Refreshable
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 interface SearchableFragment {
@@ -83,20 +80,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
-        themeManager.initPrimaryColor(this)
-
-        var isFirstTheme = true
-        lifecycleScope.launch {
-            themeManager.themeModeFlow.collectLatest {
-                if (isFirstTheme) isFirstTheme = false else recreate()
-            }
-        }
-        var isFirstAmoled = true
-        lifecycleScope.launch {
-            themeManager.amoledFlow.collectLatest {
-                if (isFirstAmoled) isFirstAmoled = false else recreate()
-            }
-        }
+        themeManager.registerActivityContext(this)
 
         setContent {
             LiveTVProTheme(themeManager) {

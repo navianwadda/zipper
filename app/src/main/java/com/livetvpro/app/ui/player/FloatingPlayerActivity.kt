@@ -1188,7 +1188,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         floatingComposeView.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent, controlNavigationBar = false) {
+                LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
                     val isPlaying by produceState(initialValue = false, player) {
                         while (true) {
                             value = player?.isPlaying == true

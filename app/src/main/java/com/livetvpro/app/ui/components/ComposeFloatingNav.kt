@@ -52,7 +52,7 @@ fun ComposeFloatingNav(
             .shadow(elevation = ContainerElevation, shape = CircleShape, clip = false)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(horizontal = 8.dp, vertical = 5.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment     = Alignment.CenterVertically,
     ) {

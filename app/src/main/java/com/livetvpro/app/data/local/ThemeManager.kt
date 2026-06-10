@@ -4,9 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
-import androidx.appcompat.app.AppCompatDelegate
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.livetvpro.app.ui.theme.AppColorTheme
@@ -30,7 +27,7 @@ class ThemeManager @Inject constructor(
 
     fun registerActivityContext(activityContext: Context) {
         activityContextRef = WeakReference(activityContext)
-        _primaryColorFlow.value = getPrimaryColor()
+        _primaryColorFlow.value = computePrimaryColor()
     }
 
     companion object {
@@ -41,86 +38,66 @@ class ThemeManager @Inject constructor(
         private const val KEY_THEME_MODE  = "theme_mode"
         private const val KEY_COLOR_THEME = "color_theme"
         private const val KEY_AMOLED_MODE = "amoled_mode"
-
-        fun applyThemeStatic(mode: Int) {
-            val nightMode = when (mode) {
-                THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-                THEME_DARK  -> AppCompatDelegate.MODE_NIGHT_YES
-                else        -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            }
-            if (Looper.myLooper() == Looper.getMainLooper()) {
-                AppCompatDelegate.setDefaultNightMode(nightMode)
-            } else {
-                Handler(Looper.getMainLooper()).post {
-                    AppCompatDelegate.setDefaultNightMode(nightMode)
-                }
-            }
-        }
     }
 
-    private val _primaryColorFlow = MutableStateFlow(getPrimaryColor())
-    val primaryColorFlow: StateFlow<Int> = _primaryColorFlow
-
-    private val _themeModeFlow = MutableStateFlow(getThemeMode())
+    private val _themeModeFlow = MutableStateFlow(
+        prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
+    )
     val themeModeFlow: StateFlow<Int> = _themeModeFlow
 
-    private val _colorThemeFlow = MutableStateFlow(getColorTheme())
+    private val _colorThemeFlow = MutableStateFlow(
+        AppColorTheme.fromName(
+            prefs.getString(KEY_COLOR_THEME, AppColorTheme.Default.name)
+                ?: AppColorTheme.Default.name
+        )
+    )
     val colorThemeFlow: StateFlow<AppColorTheme> = _colorThemeFlow
 
-    private val _amoledFlow = MutableStateFlow(isAmoledMode())
+    private val _amoledFlow = MutableStateFlow(
+        prefs.getBoolean(KEY_AMOLED_MODE, false)
+    )
     val amoledFlow: StateFlow<Boolean> = _amoledFlow
 
-    fun getThemeMode(): Int = prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
+    private val _primaryColorFlow = MutableStateFlow(computePrimaryColor())
+    val primaryColorFlow: StateFlow<Int> = _primaryColorFlow
+
+    fun getThemeMode(): Int = _themeModeFlow.value
 
     fun setThemeMode(mode: Int) {
         prefs.edit().putInt(KEY_THEME_MODE, mode).apply()
         _themeModeFlow.value = mode
-        _primaryColorFlow.value = getPrimaryColor()
-        applyThemeStatic(mode)
+        _primaryColorFlow.value = computePrimaryColor()
     }
 
-    fun applyTheme(mode: Int = getThemeMode()) = applyThemeStatic(mode)
-
-    fun getColorTheme(): AppColorTheme =
-        AppColorTheme.fromName(
-            prefs.getString(KEY_COLOR_THEME, AppColorTheme.Default.name)
-                ?: AppColorTheme.Default.name,
-        )
+    fun getColorTheme(): AppColorTheme = _colorThemeFlow.value
 
     fun setColorTheme(theme: AppColorTheme) {
         prefs.edit().putString(KEY_COLOR_THEME, theme.name).apply()
         _colorThemeFlow.value = theme
-        _primaryColorFlow.value = getPrimaryColor()
+        _primaryColorFlow.value = computePrimaryColor()
     }
 
-    fun isAmoledMode(): Boolean = prefs.getBoolean(KEY_AMOLED_MODE, false)
+    fun isAmoledMode(): Boolean = _amoledFlow.value
 
     fun setAmoledMode(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_AMOLED_MODE, enabled).apply()
         _amoledFlow.value = enabled
-        _primaryColorFlow.value = getPrimaryColor()
+        _primaryColorFlow.value = computePrimaryColor()
     }
 
     fun isDarkMode(activityContext: Context? = null): Boolean {
-        return when (getThemeMode()) {
+        return when (_themeModeFlow.value) {
             THEME_DARK  -> true
             THEME_LIGHT -> false
-            else -> {
-                val nightMode = AppCompatDelegate.getDefaultNightMode()
-                when (nightMode) {
-                    AppCompatDelegate.MODE_NIGHT_YES -> true
-                    AppCompatDelegate.MODE_NIGHT_NO  -> false
-                    else -> (activityContextRef?.get() ?: activityContext ?: context)
-                        .resources.configuration.uiMode and
-                        android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
-                        android.content.res.Configuration.UI_MODE_NIGHT_YES
-                }
-            }
+            else -> (activityContextRef?.get() ?: activityContext ?: context)
+                .resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
     }
 
     fun getBackgroundColor(activityContext: Context? = null): Int {
-        val theme = getColorTheme()
+        val theme = _colorThemeFlow.value
         val isDark = isDarkMode(activityContext)
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val ctx = activityContext ?: activityContextRef?.get() ?: context
@@ -128,7 +105,7 @@ class ThemeManager @Inject constructor(
             return MaterialColors.getColor(dynamicContext, android.R.attr.colorBackground, Color.WHITE)
         }
         val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
-        if (isDark && isAmoledMode()) return Color.BLACK
+        if (isDark && _amoledFlow.value) return Color.BLACK
         val color = if (isDark) resolvedTheme.backgroundDark else resolvedTheme.backgroundLight
         return Color.argb(
             (color.alpha * 255).toInt(),
@@ -139,7 +116,7 @@ class ThemeManager @Inject constructor(
     }
 
     fun getSurfaceContainerColor(activityContext: Context? = null): Int {
-        val theme = getColorTheme()
+        val theme = _colorThemeFlow.value
         val isDark = isDarkMode(activityContext)
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val ctx = activityContext ?: activityContextRef?.get() ?: context
@@ -147,8 +124,7 @@ class ThemeManager @Inject constructor(
             return MaterialColors.getColor(dynamicContext, com.google.android.material.R.attr.colorSurfaceContainer, Color.LTGRAY)
         }
         val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
-        if (isDark && isAmoledMode()) {
-
+        if (isDark && _amoledFlow.value) {
             val primary = resolvedTheme.primaryDark
             val base = androidx.compose.ui.graphics.Color(0xFF0D0D0D)
             return blendOver(primary, 0.05f, base)
@@ -172,8 +148,8 @@ class ThemeManager @Inject constructor(
         return if (isDarkMode(activityContext)) Color.WHITE else Color.BLACK
     }
 
-    fun getPrimaryColor(activityContext: Context? = null): Int {
-        val theme = getColorTheme()
+    private fun computePrimaryColor(activityContext: Context? = null): Int {
+        val theme = _colorThemeFlow.value
         val isDark = isDarkMode(activityContext)
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val ctx = activityContext ?: activityContextRef?.get() ?: context
@@ -190,4 +166,5 @@ class ThemeManager @Inject constructor(
         )
     }
 
+    fun getPrimaryColor(activityContext: Context? = null): Int = computePrimaryColor(activityContext)
 }

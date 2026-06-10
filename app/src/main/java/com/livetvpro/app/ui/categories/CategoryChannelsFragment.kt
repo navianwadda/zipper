@@ -5,24 +5,53 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livetvpro.app.R
 import com.livetvpro.app.SearchableFragment
@@ -30,7 +59,6 @@ import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ListenerConfig
-import com.livetvpro.app.ui.adapters.CategoryGroupDialogAdapter
 import com.livetvpro.app.ui.player.ChannelListCache
 import com.livetvpro.app.ui.player.PlayerActivity
 import com.livetvpro.app.ui.theme.LiveTVProTheme
@@ -107,6 +135,9 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val spanCount = resources.getInteger(R.integer.grid_column_count)
+                var showGroupsDialog by remember { mutableStateOf(false) }
+                val BergenSans = FontFamily(Font(R.font.bergen_sans))
+
                 LiveTVProTheme(themeManager) {
                     CategoryChannelsScreen(
                         viewModel = viewModel,
@@ -114,7 +145,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                         isTvDevice = DeviceUtils.isTvDevice,
                         onChannelClick = { channel -> launchPlayer(channel, -1) },
                         onChannelLongClick = { channel -> showFavoriteDialog(channel) },
-                        onShowGroupsDialog = { showGroupsDialog() },
+                        onShowGroupsDialog = { showGroupsDialog = true },
                         onChannelInteraction = { channel, navAction ->
                             val action: () -> Unit =
                                 if (channel.links != null && channel.links.size > 1) {
@@ -146,6 +177,106 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                             result == RedirectHelper.RedirectResult.REDIRECTED
                         }
                     )
+
+                    if (showGroupsDialog) {
+                        val allGroups = viewModel.categoryGroups.value ?: emptyList()
+                        var query by remember { mutableStateOf("") }
+                        val filtered = remember(query, allGroups) {
+                            if (query.isBlank()) allGroups
+                            else allGroups.filter { it.contains(query, ignoreCase = true) }
+                        }
+
+                        Dialog(
+                            onDismissRequest = { showGroupsDialog = false },
+                            properties = DialogProperties(usePlatformDefaultWidth = false)
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxSize(0.80f),
+                                shape = MaterialTheme.shapes.large,
+                                color = MaterialTheme.colorScheme.surface
+                            ) {
+                                Column {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedTextField(
+                                            value = query,
+                                            onValueChange = { query = it },
+                                            modifier = Modifier.weight(1f),
+                                            placeholder = {
+                                                Text(
+                                                    text = "Search Groups",
+                                                    fontFamily = BergenSans,
+                                                    fontSize = 16.sp
+                                                )
+                                            },
+                                            singleLine = true,
+                                            trailingIcon = {
+                                                if (query.isNotEmpty()) {
+                                                    IconButton(onClick = { query = "" }) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Clear,
+                                                            contentDescription = "Clear"
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                            keyboardActions = KeyboardActions(onSearch = {})
+                                        )
+                                        IconButton(onClick = { showGroupsDialog = false }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Close"
+                                            )
+                                        }
+                                    }
+
+                                    HorizontalDivider(modifier = Modifier.fillMaxWidth())
+
+                                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                        items(filtered, key = { it }) { groupName ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        viewModel.selectGroup(groupName)
+                                                        showGroupsDialog = false
+                                                    }
+                                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_playlist),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = groupName,
+                                                    fontFamily = BergenSans,
+                                                    fontSize = 16.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                            HorizontalDivider(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -275,73 +406,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
             .show()
     }
 
-    fun showGroupsDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_category_groups, null)
-        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recycler_view_groups)
-        val searchEditText = dialogView.findViewById<EditText>(R.id.search_group)
-        val clearSearchBtn = dialogView.findViewById<ImageView>(R.id.clear_search_button)
-        val closeButton = dialogView.findViewById<ImageView>(R.id.close_button)
-        searchEditText.typeface = resources.getFont(R.font.bergen_sans)
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(dialogView)
-            .create()
-
-        val allGroups = viewModel.categoryGroups.value ?: emptyList()
-        var filteredGroups = allGroups.toList()
-
-        val dialogAdapter = CategoryGroupDialogAdapter { groupName ->
-            viewModel.selectGroup(groupName)
-            dialog.dismiss()
-        }
-        recyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = dialogAdapter
-        }
-        dialogAdapter.submitList(filteredGroups)
-
-        if (DeviceUtils.isTvDevice) {
-            searchEditText.isFocusable = false
-            searchEditText.isFocusableInTouchMode = false
-            val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            dialog.setOnShowListener {
-                imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
-                recyclerView.requestFocus()
-            }
-        } else {
-            val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            searchEditText.setOnFocusChangeListener { v, hasFocus ->
-                clearSearchBtn.visibility = if (hasFocus) View.VISIBLE else View.GONE
-                if (!hasFocus) imm.hideSoftInputFromWindow(v.windowToken, 0)
-            }
-            searchEditText.addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                override fun afterTextChanged(s: Editable?) {
-                    val query = s.toString().trim()
-                    filteredGroups = if (query.isEmpty()) allGroups
-                    else allGroups.filter { it.contains(query, ignoreCase = true) }
-                    dialogAdapter.submitList(filteredGroups)
-                }
-            })
-            clearSearchBtn.setOnClickListener {
-                searchEditText.text.clear()
-                searchEditText.clearFocus()
-            }
-            dialog.setOnShowListener {
-                recyclerView.requestFocus()
-                imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
-            }
-        }
-
-        closeButton.setOnClickListener { dialog.dismiss() }
-        dialog.show()
-        dialog.window?.apply {
-            val dm = requireContext().resources.displayMetrics
-            val dialogHeight = (dm.heightPixels * 0.80f).toInt()
-            setLayout(android.view.WindowManager.LayoutParams.MATCH_PARENT, dialogHeight)
-        }
-    }
 
     override fun onResume() {
         super.onResume()

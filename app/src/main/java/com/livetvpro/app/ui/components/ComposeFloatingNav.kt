@@ -2,7 +2,6 @@ package com.livetvpro.app.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,16 +27,17 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.livetvpro.app.ui.main.NavTab
 
 private val ContainerElevation = 8.dp
-private val ItemSize           = 38.dp
-private val IconSize           = 22.dp
-private val IndicatorSize      = 38.dp
-private val ItemWidth          = 64.dp
+private val ItemSize           = 28.dp
+private val IconSize           = 16.dp
+private val ItemWidth          = 68.dp
 
 @Composable
 fun ComposeFloatingNav(
@@ -52,8 +52,8 @@ fun ComposeFloatingNav(
             .shadow(elevation = ContainerElevation, shape = CircleShape, clip = false)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment     = Alignment.CenterVertically,
     ) {
         tabs.forEach { tab ->
@@ -77,24 +77,23 @@ private fun FloatingNavItem(
     onClick: () -> Unit,
 ) {
     val scale by animateFloatAsState(
-        targetValue = if (selected) 1.12f else 1f,
+        targetValue   = if (selected) 1.08f else 1f,
         animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f),
-        label = "",
+        label         = "",
     )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
         modifier = Modifier
             .width(ItemWidth)
             .scale(scale)
-            .clip(CircleShape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication        = null,
                 onClick           = onClick,
             )
-            .padding(vertical = 2.dp),
+            .padding(vertical = 1.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -114,9 +113,10 @@ private fun FloatingNavItem(
             text       = stringResource(tab.labelRes),
             fontSize   = 10.sp,
             maxLines   = 1,
+            overflow   = TextOverflow.Ellipsis,
             textAlign  = TextAlign.Center,
             color      = if (selected) primaryColor else onSurface.copy(alpha = 0.55f),
-            fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             modifier   = Modifier.width(ItemWidth),
         )
     }

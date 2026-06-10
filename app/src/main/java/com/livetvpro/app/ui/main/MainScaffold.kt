@@ -248,14 +248,13 @@ fun MainScaffold(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(horizontal = 16.dp, bottom = 16.dp),
+                        .padding(bottom = 16.dp),
                 ) {
                     ComposeFloatingNav(
                         tabs          = tabs,
                         currentDestId = currentDestId,
                         primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
                         onTabSelected = { navigate(it) },
-                        modifier      = Modifier.fillMaxWidth(),
                     )
                 }
             }

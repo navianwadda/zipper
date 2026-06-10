@@ -28,11 +28,8 @@ import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -92,7 +89,7 @@ import androidx.recyclerview.widget.RecyclerView
 
 @UnstableApi
 @AndroidEntryPoint
-class PlayerActivity : AppCompatActivity() {
+class PlayerActivity : BasePlayerActivity() {
     private val relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
     private val linksState          = mutableStateOf<List<LiveEventLink>>(emptyList())
     private val selectedLinkState   = mutableStateOf(0)
@@ -110,7 +107,7 @@ class PlayerActivity : AppCompatActivity() {
     private var playerListener: Player.Listener? = null
 
     @javax.inject.Inject
-    lateinit var themeManager: ThemeManager
+    override lateinit var themeManager: ThemeManager
 
     @javax.inject.Inject
     lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
@@ -118,9 +115,7 @@ class PlayerActivity : AppCompatActivity() {
     @javax.inject.Inject
     lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
     private lateinit var playerViewRef: androidx.media3.ui.PlayerView
-    private lateinit var playerContainer: androidx.constraintlayout.widget.ConstraintLayout
-
-    private lateinit var windowInsetsController: WindowInsetsControllerCompat
+    override lateinit var playerContainer: androidx.constraintlayout.widget.ConstraintLayout
 
     private val controlsState = PlayerControlsState()
     private var showChannelList = mutableStateOf(false)
@@ -348,7 +343,7 @@ class PlayerActivity : AppCompatActivity() {
 
         setupWindowFlags(isLandscape)
         setupSystemUI(isLandscape)
-        setupWindowInsets()
+        if (!DeviceUtils.isTvDevice) setupWindowInsets(window.decorView)
 
         parseIntent()
 
@@ -482,68 +477,6 @@ class PlayerActivity : AppCompatActivity() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
-        }
-    }
-
-    private fun setupWindowFlags(isLandscape: Boolean) {
-        if (isLandscape) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                window.attributes = window.attributes.apply {
-                    layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                }
-            }
-
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            )
-        } else {
-            WindowCompat.setDecorFitsSystemWindows(window, true)
-            window.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
-        }
-
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-    }
-
-    private fun setupSystemUI(isLandscape: Boolean) {
-        if (isLandscape) {
-            windowInsetsController.apply {
-                hide(WindowInsetsCompat.Type.systemBars())
-                systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        } else {
-            windowInsetsController.apply {
-                show(WindowInsetsCompat.Type.systemBars())
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-            }
-        }
-    }
-
-    private fun setupWindowInsets() {
-        if (DeviceUtils.isTvDevice) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-            window.decorView.setOnApplyWindowInsetsListener { view, insets ->
-                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-                val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
-                if (!isLandscape) {
-                    val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        insets.getInsets(WindowInsets.Type.systemBars()).top
-                    } else {
-                        @Suppress("DEPRECATION") insets.systemWindowInsetTop
-                    }
-                    params.topMargin = topInset
-                } else {
-                    params.topMargin = 0
-                }
-                playerContainer.layoutParams = params
-                playerContainer.setPadding(0, 0, 0, 0)
-                insets
-            }
         }
     }
 
@@ -2074,9 +2007,10 @@ private fun PlayerActivity.PlayerActivityRoot(
     val spanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)
     val eventSpanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.event_span_count)
 
-    // Status bar height must match topMargin applied to player_container in setupWindowInsets
     val statusBarHeight = androidx.compose.foundation.layout.WindowInsets.statusBars
         .asPaddingValues().calculateTopPadding()
+    val navBarHeight = androidx.compose.foundation.layout.WindowInsets.navigationBars
+        .asPaddingValues().calculateBottomPadding()
 
     val isPlaying by androidx.compose.runtime.produceState(initialValue = false, player) {
         while (true) {
@@ -2111,7 +2045,6 @@ private fun PlayerActivity.PlayerActivityRoot(
         modifier = androidx.compose.ui.Modifier.fillMaxSize()
     ) {
         if (!isLandscape) {
-            // Box wraps the player-area spacer so error message can be overlaid inside it
             val isNetworkStream = activity.contentType == PlayerActivity.ContentType.NETWORK_STREAM
             androidx.compose.foundation.layout.Box(
                 modifier = androidx.compose.ui.Modifier
@@ -2371,6 +2304,7 @@ private fun PlayerActivity.PlayerActivityRoot(
                 onMessageBannerClick = onMessageBannerClick,
                 spanCount = spanCount,
                 eventSpanCount = eventSpanCount,
+                bottomPadding = navBarHeight,
             )
         }
     }

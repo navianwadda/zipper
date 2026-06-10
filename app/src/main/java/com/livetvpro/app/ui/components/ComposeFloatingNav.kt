@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.livetvpro.app.ui.main.NavTab
 
 private val ContainerElevation = 8.dp
-private val ItemSize           = 46.dp
+private val ItemSize           = 38.dp
 private val IconSize           = 22.dp
 private val IndicatorSize      = 38.dp
 private val ItemWidth          = 64.dp
@@ -52,7 +52,7 @@ fun ComposeFloatingNav(
             .shadow(elevation = ContainerElevation, shape = CircleShape, clip = false)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(horizontal = 6.dp, vertical = 6.dp),
+            .padding(horizontal = 6.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment     = Alignment.CenterVertically,
     ) {
@@ -94,7 +94,7 @@ private fun FloatingNavItem(
                 indication        = null,
                 onClick           = onClick,
             )
-            .padding(vertical = 4.dp),
+            .padding(vertical = 2.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -111,12 +111,13 @@ private fun FloatingNavItem(
             )
         }
         Text(
-            text      = stringResource(tab.labelRes),
-            fontSize  = 10.sp,
-            maxLines  = 1,
-            textAlign = TextAlign.Center,
-            color     = if (selected) primaryColor else onSurface.copy(alpha = 0.55f),
-            modifier  = Modifier.width(ItemWidth),
+            text       = stringResource(tab.labelRes),
+            fontSize   = 10.sp,
+            maxLines   = 1,
+            textAlign  = TextAlign.Center,
+            color      = if (selected) primaryColor else onSurface.copy(alpha = 0.55f),
+            fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+            modifier   = Modifier.width(ItemWidth),
         )
     }
 }

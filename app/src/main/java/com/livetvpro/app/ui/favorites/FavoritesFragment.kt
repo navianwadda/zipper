@@ -44,6 +44,10 @@ class FavoritesFragment : Fragment() {
     private var pendingChannelAction: (() -> Unit)? = null
     private var pendingExternalRedirect: Boolean = false
 
+    companion object {
+        private const val FAVORITES_CACHE_KEY = "favorites_session"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         redirectLauncher = RedirectHelper.registerLauncher(
@@ -77,6 +81,13 @@ class FavoritesFragment : Fragment() {
         }
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewModel.favorites.observe(viewLifecycleOwner) { favorites ->
+            refreshFavoritesCache(favorites)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         RedirectHelper.executePendingActionOnResume(
@@ -85,6 +96,29 @@ class FavoritesFragment : Fragment() {
             pendingExternalRedirect = pendingExternalRedirect,
             clearPendingRedirect = { pendingExternalRedirect = false }
         )
+    }
+
+    private fun refreshFavoritesCache(favorites: List<FavoriteChannel>?) {
+        val list = try {
+            favorites?.map { fav ->
+                val live = viewModel.getLiveChannel(fav.id)
+                live ?: Channel(
+                    id = fav.id,
+                    name = fav.name,
+                    logoUrl = fav.logoUrl,
+                    streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
+                    categoryId = fav.categoryId,
+                    categoryName = fav.categoryName,
+                    links = fav.links
+                )
+            } ?: emptyList()
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            emptyList()
+        }
+        if (list.isNotEmpty()) {
+            ChannelListCache.put(FAVORITES_CACHE_KEY, list)
+        }
     }
 
     private fun handleChannelClick(favorite: FavoriteChannel) {
@@ -180,28 +214,11 @@ class FavoritesFragment : Fragment() {
     }
 
     private fun launchPlayer(channel: Channel, linkIndex: Int) {
-        val cacheKey = "favorites_${channel.id}"
-        val favoriteChannelList = try {
-            viewModel.favorites.value?.map { fav ->
-                val live = viewModel.getLiveChannel(fav.id)
-                live ?: Channel(
-                    id = fav.id,
-                    name = fav.name,
-                    logoUrl = fav.logoUrl,
-                    streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
-                    categoryId = fav.categoryId,
-                    categoryName = fav.categoryName,
-                    links = fav.links
-                )
-            } ?: listOf(channel)
-        } catch (e: OutOfMemoryError) {
-            System.gc()
-            listOf(channel)
-        }
-        if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
-
         if (DeviceUtils.isTvDevice) {
-            PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+            PlayerActivity.startWithChannel(
+                requireContext(), channel, linkIndex,
+                channelListCacheKey = FAVORITES_CACHE_KEY
+            )
             return
         }
 
@@ -215,16 +232,28 @@ class FavoritesFragment : Fragment() {
                     "Overlay permission required for floating player. Opening normally instead.",
                     android.widget.Toast.LENGTH_LONG
                 ).show()
-                PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+                PlayerActivity.startWithChannel(
+                    requireContext(), channel, linkIndex,
+                    channelListCacheKey = FAVORITES_CACHE_KEY
+                )
                 return
             }
             try {
-                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+                FloatingPlayerHelper.launchFloatingPlayer(
+                    requireContext(), channel, linkIndex,
+                    channelListCacheKey = FAVORITES_CACHE_KEY
+                )
             } catch (e: Exception) {
-                PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+                PlayerActivity.startWithChannel(
+                    requireContext(), channel, linkIndex,
+                    channelListCacheKey = FAVORITES_CACHE_KEY
+                )
             }
         } else {
-            PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+            PlayerActivity.startWithChannel(
+                requireContext(), channel, linkIndex,
+                channelListCacheKey = FAVORITES_CACHE_KEY
+            )
         }
     }
 

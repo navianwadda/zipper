@@ -67,7 +67,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
@@ -1185,7 +1188,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         floatingComposeView.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
+                LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent, controlNavigationBar = false) {
                     val isPlaying by produceState(initialValue = false, player) {
                         while (true) {
                             value = player?.isPlaying == true

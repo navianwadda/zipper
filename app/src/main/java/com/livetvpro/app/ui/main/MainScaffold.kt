@@ -200,9 +200,7 @@ fun MainScaffold(
 
         val containerId = remember { android.view.View.generateViewId() }
 
-        Box(modifier = Modifier.weight(1f).then(
-            if (!isTvOrDesktop && !isTablet) Modifier.padding(bottom = 90.dp) else Modifier
-        )) {
+        Box(modifier = Modifier.weight(1f)) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
@@ -511,5 +509,4 @@ private fun TvTabChip(
         )
     }
 }
-
 

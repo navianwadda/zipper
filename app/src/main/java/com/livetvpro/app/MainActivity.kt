@@ -61,7 +61,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        themeManager.applyTheme()
 
         if (!dataRepository.isDataLoaded()) {
             startActivity(Intent(this, com.livetvpro.app.ui.SplashActivity::class.java))

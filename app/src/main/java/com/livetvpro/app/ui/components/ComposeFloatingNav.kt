@@ -8,12 +8,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -25,13 +28,16 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.livetvpro.app.ui.main.NavTab
 
 private val ContainerElevation = 8.dp
 private val ItemSize           = 46.dp
 private val IconSize           = 22.dp
 private val IndicatorSize      = 38.dp
+private val ItemWidth          = 64.dp
 
 @Composable
 fun ComposeFloatingNav(
@@ -76,24 +82,41 @@ private fun FloatingNavItem(
         label = "",
     )
 
-    Box(
-        contentAlignment = Alignment.Center,
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier
-            .size(ItemSize)
+            .width(ItemWidth)
             .scale(scale)
             .clip(CircleShape)
-            .background(if (selected) primaryColor else Color.Transparent)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication        = null,
                 onClick           = onClick,
-            ),
+            )
+            .padding(vertical = 4.dp),
     ) {
-        Icon(
-            painter            = painterResource(if (selected) tab.filledIcon else tab.outlineIcon),
-            contentDescription = stringResource(tab.labelRes),
-            tint               = if (selected) Color.White else onSurface.copy(alpha = 0.55f),
-            modifier           = Modifier.size(IconSize),
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(ItemSize)
+                .clip(CircleShape)
+                .background(if (selected) primaryColor else Color.Transparent),
+        ) {
+            Icon(
+                painter            = painterResource(if (selected) tab.filledIcon else tab.outlineIcon),
+                contentDescription = stringResource(tab.labelRes),
+                tint               = if (selected) Color.White else onSurface.copy(alpha = 0.55f),
+                modifier           = Modifier.size(IconSize),
+            )
+        }
+        Text(
+            text      = stringResource(tab.labelRes),
+            fontSize  = 10.sp,
+            maxLines  = 1,
+            textAlign = TextAlign.Center,
+            color     = if (selected) primaryColor else onSurface.copy(alpha = 0.55f),
+            modifier  = Modifier.width(ItemWidth),
         )
     }
 }

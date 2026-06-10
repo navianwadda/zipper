@@ -26,11 +26,8 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -89,7 +86,7 @@ import kotlinx.coroutines.delay
 
 @UnstableApi
 @AndroidEntryPoint
-class FloatingPlayerActivity : AppCompatActivity() {
+class FloatingPlayerActivity : BasePlayerActivity() {
 
     private lateinit var binding: ActivityPlayerBinding
     private lateinit var floatingComposeView: androidx.compose.ui.platform.ComposeView
@@ -99,7 +96,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private var playerListener: Player.Listener? = null
 
     @javax.inject.Inject
-    lateinit var themeManager: ThemeManager
+    override lateinit var themeManager: ThemeManager
 
     @javax.inject.Inject
     lateinit var preferencesManager: com.livetvpro.app.data.local.PreferencesManager
@@ -107,13 +104,14 @@ class FloatingPlayerActivity : AppCompatActivity() {
     @javax.inject.Inject
     lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
 
+    override val playerContainer: ConstraintLayout
+        get() = binding.playerContainer
+
     private val relatedContentState = androidx.compose.runtime.mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
     private val linksState          = androidx.compose.runtime.mutableStateOf<List<LiveEventLink>>(emptyList())
     private val selectedLinkState   = androidx.compose.runtime.mutableStateOf(0)
     private val messageBannerText   = androidx.compose.runtime.mutableStateOf("")
     private val messageBannerUrl    = androidx.compose.runtime.mutableStateOf("")
-
-    private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
     private val controlsState = PlayerControlsState(initialVisible = false)
     private var gestureVolume: Int = 100
@@ -248,9 +246,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
         binding = ActivityPlayerBinding.inflate(layoutInflater)
 
-        // Match PlayerActivity: stack the XML layout + a full-screen ComposeView so that
-        // the Compose Column (PlayerControls overlay + PlayerScreen below) is rendered on
-        // top of the real PlayerView instead of being squeezed inside player_container.
         floatingComposeView = androidx.compose.ui.platform.ComposeView(this)
         val rootLayout = android.widget.FrameLayout(this).apply {
             addView(
@@ -283,7 +278,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
         setupWindowFlags(isLandscape)
         setupSystemUI(isLandscape)
-        setupWindowInsets()
+        setupWindowInsets(binding.root)
 
         parseIntent()
 
@@ -390,67 +385,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             registerPipReceiver()
-        }
-    }
-
-    private fun setupWindowFlags(isLandscape: Boolean) {
-        if (isLandscape) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                window.attributes = window.attributes.apply {
-                    layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                }
-            }
-
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            )
-        } else {
-            WindowCompat.setDecorFitsSystemWindows(window, true)
-            window.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
-        }
-
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-    }
-
-    private fun setupSystemUI(isLandscape: Boolean) {
-        if (isLandscape) {
-            windowInsetsController.apply {
-                hide(WindowInsetsCompat.Type.systemBars())
-                systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        } else {
-            windowInsetsController.apply {
-                show(WindowInsetsCompat.Type.systemBars())
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-            }
-        }
-    }
-
-    private fun setupWindowInsets() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-            binding.root.setOnApplyWindowInsetsListener { view, insets ->
-                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-                val params = binding.playerContainer.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
-                if (!isLandscape) {
-                    val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        insets.getInsets(WindowInsets.Type.systemBars()).top
-                    } else {
-                        @Suppress("DEPRECATION") insets.systemWindowInsetTop
-                    }
-                    params.topMargin = topInset
-                } else {
-                    params.topMargin = 0
-                }
-                binding.playerContainer.layoutParams = params
-                binding.playerContainer.setPadding(0, 0, 0, 0)
-                insets
-            }
         }
     }
 
@@ -1277,7 +1211,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     val channelListItems by viewModel.channelListItems.observeAsState(emptyList())
                     val isChannelListAvailable = contentType == ContentType.CHANNEL && channelListItems.isNotEmpty() && (isLandscape || DeviceUtils.isTvDevice)
 
-                    // Shared PlayerControls lambda to avoid duplication
                     val pipSupported = !DeviceUtils.isTvDevice && if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         isPipSupported()
                     } else { false }
@@ -1424,16 +1357,14 @@ class FloatingPlayerActivity : AppCompatActivity() {
                         )
                     }
 
-                    // Mirror PlayerActivity's PlayerActivityRoot layout:
-                    // Portrait → Column: 16:9 Box (PlayerControls overlay) + PlayerScreen below
-                    // Landscape → Box fillMaxSize (PlayerControls) with no related section below
                     androidx.compose.foundation.layout.Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         if (!isLandscape) {
-                            // Portrait: reserve the 16:9 player area as a spacer and overlay controls on it
                             val statusBarHeight = androidx.compose.foundation.layout.WindowInsets.statusBars
                                 .asPaddingValues().calculateTopPadding()
+                            val navBarHeight = androidx.compose.foundation.layout.WindowInsets.navigationBars
+                                .asPaddingValues().calculateBottomPadding()
                             val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                             Box(
                                 modifier = Modifier
@@ -1470,7 +1401,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 }
                             }
 
-                            // Related channels / PlayerScreen renders BELOW the player in portrait (not for network stream)
                             if (!isNetworkStream) {
                             PlayerScreen(
                                 isLandscape = false,
@@ -1492,14 +1422,13 @@ class FloatingPlayerActivity : AppCompatActivity() {
                                 },
                                 spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count),
                                 eventSpanCount = resources.getInteger(com.livetvpro.app.R.integer.event_span_count),
+                                bottomPadding = navBarHeight,
                             )
                             }
                         } else {
-                            // Landscape: controls fill the entire screen; link chips shown inline above controls
                             Box(modifier = Modifier.fillMaxSize()) {
                                 playerControlsComposable()
 
-                                // Landscape link chips — shown when controls are visible (mirrors PlayerActivity)
                                 if (linksState.value.size > 1) {
                                     androidx.compose.animation.AnimatedVisibility(
                                         visible = controlsState.isVisible && !controlsState.isLocked,
@@ -1593,7 +1522,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
     }
 
     private fun updateMessageBannerForOrientation(isLandscape: Boolean) {
-        // Message banner is now driven by Compose state via PlayerScreen; no XML update needed.
     }
 
     private fun configurePlayerInteractions() {

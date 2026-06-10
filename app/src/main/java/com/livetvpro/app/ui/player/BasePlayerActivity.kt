@@ -12,12 +12,12 @@ import com.livetvpro.app.data.local.ThemeManager
 
 abstract class BasePlayerActivity : AppCompatActivity() {
 
-    protected abstract val themeManager: ThemeManager
-    protected abstract val playerContainer: ConstraintLayout
+    abstract val themeManager: ThemeManager
+    abstract val playerContainer: ConstraintLayout
 
-    protected lateinit var windowInsetsController: WindowInsetsControllerCompat
+    internal lateinit var windowInsetsController: WindowInsetsControllerCompat
 
-    protected fun setupWindowFlags(isLandscape: Boolean) {
+    internal fun setupWindowFlags(isLandscape: Boolean) {
         if (isLandscape) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 window.attributes = window.attributes.apply {
@@ -40,7 +40,7 @@ abstract class BasePlayerActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
     }
 
-    protected fun setupSystemUI(isLandscape: Boolean) {
+    internal fun setupSystemUI(isLandscape: Boolean) {
         if (isLandscape) {
             windowInsetsController.apply {
                 hide(WindowInsetsCompat.Type.systemBars())
@@ -57,7 +57,7 @@ abstract class BasePlayerActivity : AppCompatActivity() {
         }
     }
 
-    protected fun setupWindowInsets(rootView: android.view.View) {
+    internal fun setupWindowInsets(rootView: android.view.View) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
             rootView.setOnApplyWindowInsetsListener { view, insets ->
                 val isLandscape = resources.configuration.orientation ==

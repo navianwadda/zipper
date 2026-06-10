@@ -7,45 +7,74 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
+import com.livetvpro.app.data.local.ThemeManager
+import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.models.ListenerConfig
-import com.livetvpro.app.utils.RedirectHelper
-import com.livetvpro.app.databinding.FragmentFavoritesBinding
-import com.livetvpro.app.ui.adapters.FavoriteAdapter
+import com.livetvpro.app.ui.player.ChannelListCache
+import com.livetvpro.app.ui.player.PlayerActivity
+import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
+import com.livetvpro.app.utils.FloatingPlayerHelper
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
+import com.livetvpro.app.utils.RedirectHelper
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class FavoritesFragment : Fragment() {
-    private var _binding: FragmentFavoritesBinding? = null
-    private var pendingChannelAction: (() -> Unit)? = null
-    private var pendingExternalRedirect: Boolean = false
-    private val binding get() = _binding!!
+
     private val viewModel: FavoritesViewModel by viewModels()
-    private lateinit var favoriteAdapter: FavoriteAdapter
 
     @Inject lateinit var preferencesManager: PreferencesManager
+    @Inject lateinit var themeManager: ThemeManager
     @Inject lateinit var listenerManager: NativeListenerManager
     @Inject lateinit var cooldownManager: RedirectCooldownManager
 
     private lateinit var redirectLauncher: ActivityResultLauncher<Intent>
     private var lastPageType: String? = null
     private var lastUniqueId: String? = null
-    private var initialFocusDone = false
+    private var pendingChannelAction: (() -> Unit)? = null
+    private var pendingExternalRedirect: Boolean = false
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
-        super.onConfigurationChanged(newConfig)
-        val columnCount = resources.getInteger(R.integer.grid_column_count)
-        (binding.recyclerViewFavorites.layoutManager as? GridLayoutManager)?.spanCount = columnCount
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        redirectLauncher = RedirectHelper.registerLauncher(
+            fragment = this,
+            cooldownMgr = cooldownManager,
+            pageTypeProvider = { lastPageType },
+            uniqueIdProvider = { lastUniqueId }
+        )
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)
+                LiveTVProTheme(themeManager) {
+                    FavoritesScreen(
+                        viewModel = viewModel,
+                        spanCount = spanCount,
+                        isTvDevice = DeviceUtils.isTvDevice,
+                        onChannelClick = { favorite -> handleChannelClick(favorite) },
+                        onRemoveFavorite = { favorite -> showRemoveConfirmation(favorite) },
+                        onClearAll = { viewModel.clearAll() }
+                    )
+                }
+            }
+        }
     }
 
     override fun onResume() {
@@ -58,162 +87,148 @@ class FavoritesFragment : Fragment() {
         )
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        redirectLauncher = RedirectHelper.registerLauncher(
-            fragment = this,
-            cooldownMgr = cooldownManager,
-            pageTypeProvider = { lastPageType },
-            uniqueIdProvider = { lastUniqueId }
-        )
-    }
+    private fun handleChannelClick(favorite: FavoriteChannel) {
+        val liveChannel = viewModel.getLiveChannel(favorite.id)
+        val channelToUse = if (liveChannel != null) {
+            liveChannel
+        } else {
+            val resolvedStreamUrl = favorite.streamUrl.ifEmpty {
+                favorite.links?.firstOrNull()?.url ?: ""
+            }
+            Channel(
+                id = favorite.id,
+                name = favorite.name,
+                logoUrl = favorite.logoUrl,
+                streamUrl = resolvedStreamUrl,
+                categoryId = favorite.categoryId,
+                categoryName = favorite.categoryName,
+                links = favorite.links
+            )
+        }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = FragmentFavoritesBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        setupRecyclerView()
-        setupButtons()
-        observeViewModel()
-    }
-
-    private fun setupRecyclerView() {
-        favoriteAdapter = FavoriteAdapter(
-            preferencesManager = preferencesManager,
-            onChannelClick = { favorite, playerAction ->
-                pendingChannelAction = playerAction
-                lastPageType = ListenerConfig.PAGE_FAVORITES
-                lastUniqueId = favorite.id
-                val result = RedirectHelper.tryRedirect(
-                    fragment    = this@FavoritesFragment,
-                    pageType    = ListenerConfig.PAGE_FAVORITES,
-                    uniqueId    = favorite.id,
-                    cooldownMgr = cooldownManager,
-                    listenerMgr = listenerManager,
-                    launcher    = redirectLauncher
-                )
-                if (result == RedirectHelper.RedirectResult.REDIRECTED) {
-                    if (!listenerManager.isInAppRedirectEnabled()) {
-                        pendingExternalRedirect = true
-                    } else {
-                        pendingChannelAction = null
-                    }
+        val links = channelToUse.links
+        val playerAction: () -> Unit = when {
+            links.isNullOrEmpty() -> {
+                if (channelToUse.streamUrl.isNotEmpty()) {
+                    { launchPlayer(channelToUse, 0) }
                 } else {
-                    pendingChannelAction?.invoke()
-                    pendingChannelAction = null
+                    {
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "No stream available for ${favorite.name}",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
-                result == RedirectHelper.RedirectResult.REDIRECTED
-            },
-            onFavoriteToggle = { favorite -> viewModel.removeFavorite(favorite.id) },
-            getLiveChannel = { channelId ->
-                viewModel.getLiveChannel(channelId)
             }
-        )
-        val columnCount = resources.getInteger(R.integer.grid_column_count)
-        binding.recyclerViewFavorites.apply {
-            layoutManager = GridLayoutManager(context, columnCount)
-            adapter = favoriteAdapter
-            itemAnimator = null
+            links.size > 1 -> {
+                { showLinkSelectionDialog(channelToUse, links) }
+            }
+            else -> {
+                { launchPlayer(channelToUse, 0) }
+            }
         }
 
-        if (DeviceUtils.isTvDevice) {
-            binding.recyclerViewFavorites.setOnKeyListener { _, keyCode, event ->
-                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                if (keyCode == android.view.KeyEvent.KEYCODE_MENU ||
-                    keyCode == android.view.KeyEvent.KEYCODE_BUTTON_Y) {
-                    val focused = binding.recyclerViewFavorites.focusedChild
-                    val holder = binding.recyclerViewFavorites.findContainingViewHolder(focused ?: return@setOnKeyListener false)
-                    val pos = holder?.adapterPosition ?: return@setOnKeyListener false
-                    val item = favoriteAdapter.currentList.getOrNull(pos) ?: return@setOnKeyListener false
-                    showRemoveConfirmation(item)
-                    return@setOnKeyListener true
-                }
-                false
+        lastPageType = ListenerConfig.PAGE_FAVORITES
+        lastUniqueId = favorite.id
+        pendingChannelAction = playerAction
+
+        val result = RedirectHelper.tryRedirect(
+            fragment    = this,
+            pageType    = ListenerConfig.PAGE_FAVORITES,
+            uniqueId    = favorite.id,
+            cooldownMgr = cooldownManager,
+            listenerMgr = listenerManager,
+            launcher    = redirectLauncher
+        )
+        if (result == RedirectHelper.RedirectResult.REDIRECTED) {
+            if (!listenerManager.isInAppRedirectEnabled()) {
+                pendingExternalRedirect = true
+            } else {
+                pendingChannelAction = null
             }
+        } else {
+            pendingChannelAction = null
+            playerAction()
         }
     }
 
-    private fun setupButtons() {
-        binding.clearAllButton.setOnClickListener {
-            showClearAllDialog()
-        }
-        if (DeviceUtils.isTvDevice) {
-            binding.clearAllButton.setOnKeyListener { _, keyCode, event ->
-                if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyListener false
-                when (keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-                    android.view.KeyEvent.KEYCODE_ENTER,
-                    android.view.KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                        showClearAllDialog()
-                        true
-                    }
-                    else -> false
-                }
+    private fun showLinkSelectionDialog(
+        channel: Channel,
+        links: List<com.livetvpro.app.data.models.ChannelLink>
+    ) {
+        val linkLabels = links.map { it.quality }.toTypedArray()
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Multiple Links Available")
+            .setItems(linkLabels) { d, which ->
+                launchPlayer(channel, which)
+                d.dismiss()
             }
-        }
+            .setNegativeButton("Cancel", null)
+            .show()
+        dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.requestFocus()
     }
 
     private fun showRemoveConfirmation(favorite: FavoriteChannel) {
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle("Remove Favorite")
-            .setMessage("Remove '${favorite.name}' from your favorites list?")
-            .setPositiveButton("Remove") { _, _ ->
-                viewModel.removeFavorite(favorite.id)
-            }
+            .setMessage("Remove \"${favorite.name}\" from your favorites list?")
+            .setPositiveButton("Remove") { _, _ -> viewModel.removeFavorite(favorite.id) }
             .setNegativeButton("Cancel", null)
             .show()
         dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
-    private fun showClearAllDialog() {
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Clear All Favorites")
-            .setMessage("This will remove all channels from your list.")
-            .setPositiveButton("Clear All") { _, _ ->
-                viewModel.clearAll()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
-    }
-
-    private fun observeViewModel() {
-        viewModel.favorites.observe(viewLifecycleOwner) { favorites ->
-            favoriteAdapter.submitList(favorites)
-            val isEmpty = favorites.isEmpty()
-            binding.emptyView.visibility = if (isEmpty) View.VISIBLE else View.GONE
-            binding.recyclerViewFavorites.visibility = if (isEmpty) View.GONE else View.VISIBLE
-            binding.clearAllButton.visibility = if (isEmpty) View.GONE else View.VISIBLE
-            if (DeviceUtils.isTvDevice && favorites.isNotEmpty() && !initialFocusDone) {
-                initialFocusDone = true
-                binding.recyclerViewFavorites.post {
-                    binding.recyclerViewFavorites
-                        .findViewHolderForAdapterPosition(0)
-                        ?.itemView
-                        ?.requestFocus()
-                }
-            }
+    private fun launchPlayer(channel: Channel, linkIndex: Int) {
+        val cacheKey = "favorites_${channel.id}"
+        val favoriteChannelList = try {
+            viewModel.favorites.value?.map { fav ->
+                val live = viewModel.getLiveChannel(fav.id)
+                live ?: Channel(
+                    id = fav.id,
+                    name = fav.name,
+                    logoUrl = fav.logoUrl,
+                    streamUrl = fav.streamUrl.ifEmpty { fav.links?.firstOrNull()?.url ?: "" },
+                    categoryId = fav.categoryId,
+                    categoryName = fav.categoryName,
+                    links = fav.links
+                )
+            } ?: listOf(channel)
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            listOf(channel)
         }
-    }
+        if (favoriteChannelList.isNotEmpty()) ChannelListCache.put(cacheKey, favoriteChannelList)
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        val layoutManager = _binding?.recyclerViewFavorites?.layoutManager as? GridLayoutManager
-        layoutManager?.onSaveInstanceState()?.let { outState.putParcelable("rv_fav_state", it) }
-    }
+        if (DeviceUtils.isTvDevice) {
+            PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+            return
+        }
 
-    override fun onViewStateRestored(savedInstanceState: Bundle?) {
-        super.onViewStateRestored(savedInstanceState)
-        savedInstanceState?.getParcelable<android.os.Parcelable>("rv_fav_state")?.let {
-            binding.recyclerViewFavorites.layoutManager?.onRestoreInstanceState(it)
+        val floatingEnabled = preferencesManager.isFloatingPlayerEnabled()
+        val hasPermission = FloatingPlayerHelper.hasOverlayPermission(requireContext())
+
+        if (floatingEnabled) {
+            if (!hasPermission) {
+                android.widget.Toast.makeText(
+                    requireContext(),
+                    "Overlay permission required for floating player. Opening normally instead.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+                return
+            }
+            try {
+                FloatingPlayerHelper.launchFloatingPlayer(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+            } catch (e: Exception) {
+                PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
+            }
+        } else {
+            PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, channelListCacheKey = cacheKey)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
     }
 }

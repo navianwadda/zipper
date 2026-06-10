@@ -49,13 +49,10 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.databinding.ActivityPlayerBinding
-import com.livetvpro.app.ui.adapters.LinkChipAdapter
 import com.livetvpro.app.data.models.LiveEventLink
 import com.livetvpro.app.ui.player.PlayerStreamHelper
 import com.livetvpro.app.ui.player.StreamInfo
@@ -110,7 +107,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
     @javax.inject.Inject
     lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
 
-    private lateinit var linkChipAdapter: LinkChipAdapter
     private val relatedContentState = androidx.compose.runtime.mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
     private val linksState          = androidx.compose.runtime.mutableStateOf<List<LiveEventLink>>(emptyList())
     private val selectedLinkState   = androidx.compose.runtime.mutableStateOf(0)
@@ -295,10 +291,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
             restoreFromBundle(savedInstanceState)
         }
 
-        val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
-        if (isTransferredFromFloating) {
-            binding.linksSection.visibility = View.GONE
-        }
 
         if (contentType == ContentType.CHANNEL && contentId.isNotEmpty()) {
             viewModel.refreshChannelData(contentId)
@@ -563,16 +555,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
             binding.playerView.controllerAutoShow = true
             binding.playerView.controllerShowTimeoutMs = 5000
 
-            val linksParams = binding.linksSection.layoutParams as ConstraintLayout.LayoutParams
-            linksParams.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-            linksParams.height = ConstraintLayout.LayoutParams.WRAP_CONTENT
-            linksParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            linksParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            linksParams.topToBottom = binding.playerContainer.id
-            linksParams.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-            binding.linksSection.layoutParams = linksParams
-
-
         }
 
         binding.root.requestLayout()
@@ -644,12 +626,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
         setupSystemUI(isLandscape)
 
         applyOrientationSettings(isLandscape)
-
-        if (!isLandscape) {
-            if (allEventLinks.size > 1 && !intent.getBooleanExtra("use_transferred_player", false)) {
-                binding.linksSection.visibility = View.VISIBLE
-            }
-        }
 
         if (wasLockedBeforePip) {
             controlsState.lock()
@@ -859,43 +835,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     }
 
     private fun setupLinksUI() {
-        linkChipAdapter = LinkChipAdapter { link, position -> switchToLink(link, position) }
-
-        val portraitLinksRecycler = binding.linksRecyclerView
-        portraitLinksRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        portraitLinksRecycler.adapter = linkChipAdapter
-
-        val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
-        landscapeLinksRecycler?.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-
-        val landscapeLinkAdapter = LinkChipAdapter { link, position -> switchToLink(link, position) }
-        landscapeLinksRecycler?.adapter = landscapeLinkAdapter
-        landscapeLinksRecycler?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                if (dx != 0) controlsState.show(lifecycleScope)
-            }
-        })
-
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
-        if (allEventLinks.size > 1 && !isTransferredFromFloating) {
-            if (isLandscape) {
-                binding.linksSection.visibility = View.GONE
-                landscapeLinksRecycler?.visibility = View.VISIBLE
-                landscapeLinkAdapter.submitList(allEventLinks)
-                landscapeLinkAdapter.setSelectedPosition(currentLinkIndex)
-            } else {
-                binding.linksSection.visibility = View.VISIBLE
-                landscapeLinksRecycler?.visibility = View.GONE
-                linkChipAdapter.submitList(allEventLinks)
-                linkChipAdapter.setSelectedPosition(currentLinkIndex)
-            }
-        } else {
-            binding.linksSection.visibility = View.GONE
-            landscapeLinksRecycler?.visibility = View.GONE
-        }
-
-        // Keep Compose PlayerScreen in sync
+        binding.linksSection.visibility = View.GONE
         updateLinksState()
     }
 
@@ -905,28 +845,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     }
 
     private fun updateLinksForOrientation(isLandscape: Boolean) {
-        if (!::linkChipAdapter.isInitialized) return
-        val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
-        val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
-
-        if (allEventLinks.size > 1 && !isTransferredFromFloating) {
-            if (isLandscape) {
-                binding.linksSection.visibility = View.GONE
-                val chipsVisible = controlsState.isVisible && !controlsState.isLocked
-                landscapeLinksRecycler?.visibility = if (chipsVisible) View.VISIBLE else View.GONE
-                val landscapeAdapter = landscapeLinksRecycler?.adapter as? LinkChipAdapter
-                landscapeAdapter?.submitList(allEventLinks)
-                landscapeAdapter?.setSelectedPosition(currentLinkIndex)
-            } else {
-                binding.linksSection.visibility = View.VISIBLE
-                landscapeLinksRecycler?.visibility = View.GONE
-                linkChipAdapter.submitList(allEventLinks)
-                linkChipAdapter.setSelectedPosition(currentLinkIndex)
-            }
-        } else {
-            binding.linksSection.visibility = View.GONE
-            landscapeLinksRecycler?.visibility = View.GONE
-        }
+        updateLinksState()
     }
 
     private fun loadRelatedContent() {
@@ -1030,17 +949,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private fun switchToLink(link: LiveEventLink, position: Int) {
         currentLinkIndex = position
         streamUrl = PlayerStreamHelper.buildStreamUrl(link)
-
-        if (::linkChipAdapter.isInitialized) {
-            linkChipAdapter.setSelectedPosition(position)
-        }
-
-        val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
-        val landscapeAdapter = landscapeLinksRecycler?.adapter as? LinkChipAdapter
-        landscapeAdapter?.setSelectedPosition(position)
-
         updateLinksState()
-
         releasePlayer()
         setupPlayer()
     }
@@ -1367,14 +1276,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
                     var showChannelList by remember { mutableStateOf(false) }
                     val channelListItems by viewModel.channelListItems.observeAsState(emptyList())
                     val isChannelListAvailable = contentType == ContentType.CHANNEL && channelListItems.isNotEmpty() && (isLandscape || DeviceUtils.isTvDevice)
-
-                    LaunchedEffect(controlsState.isVisible, controlsState.isLocked, isLandscape, showChannelList) {
-                        if (isLandscape) {
-                            val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
-                            val chipsVisible = controlsState.isVisible && !controlsState.isLocked && !showChannelList
-                            landscapeLinksRecycler?.visibility = if (chipsVisible) View.VISIBLE else View.GONE
-                        }
-                    }
 
                     // Shared PlayerControls lambda to avoid duplication
                     val pipSupported = !DeviceUtils.isTvDevice && if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1751,10 +1652,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
         binding.playerContainer.layoutParams = params
         binding.playerContainer.visibility = View.VISIBLE
 
-        if (allEventLinks.size > 1 && !intent.getBooleanExtra("use_transferred_player", false)) {
-            binding.linksSection.visibility = View.VISIBLE
-        }
-
     }
 
     private fun enterFullscreen() {
@@ -1773,8 +1670,6 @@ class FloatingPlayerActivity : AppCompatActivity() {
         params.dimensionRatio = null
 
         binding.playerContainer.layoutParams = params
-
-        binding.linksSection.visibility = View.GONE
     }
 
     private fun setSubtitleTextSize() {

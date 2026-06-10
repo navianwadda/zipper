@@ -51,8 +51,6 @@ abstract class BasePlayerActivity : AppCompatActivity() {
             windowInsetsController.apply {
                 show(WindowInsetsCompat.Type.systemBars())
                 systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-                isAppearanceLightStatusBars = !themeManager.isDarkMode(this@BasePlayerActivity)
-                isAppearanceLightNavigationBars = !themeManager.isDarkMode(this@BasePlayerActivity)
             }
         }
     }

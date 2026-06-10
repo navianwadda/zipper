@@ -72,6 +72,8 @@ object PlayerStreamHelper {
                         }
                     }
                 }
+                "drmkeyid" -> drmKeyId = value
+                "drmkey" -> drmKey = value
                 "referer", "referrer" -> headers["Referer"] = value
                 "user-agent", "useragent" -> headers["User-Agent"] = value
                 "origin" -> headers["Origin"] = value

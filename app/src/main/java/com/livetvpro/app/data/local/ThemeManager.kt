@@ -58,7 +58,7 @@ class ThemeManager @Inject constructor(
         }
     }
 
-    private val _primaryColorFlow = MutableStateFlow(0)
+    private val _primaryColorFlow = MutableStateFlow(getPrimaryColor())
     val primaryColorFlow: StateFlow<Int> = _primaryColorFlow
 
     private val _themeModeFlow = MutableStateFlow(getThemeMode())
@@ -190,11 +190,8 @@ class ThemeManager @Inject constructor(
         )
     }
 
-    fun initPrimaryColor() {
+    fun registerActivityContext(activityContext: Context) {
+        activityContextRef = WeakReference(activityContext)
         _primaryColorFlow.value = getPrimaryColor()
-    }
-
-    fun initPrimaryColor(activityContext: Context) {
-        registerActivityContext(activityContext)
     }
 }

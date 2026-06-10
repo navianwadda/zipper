@@ -200,7 +200,9 @@ fun MainScaffold(
 
         val containerId = remember { android.view.View.generateViewId() }
 
-        Box(modifier = Modifier.weight(1f)) {
+        Box(modifier = Modifier.weight(1f).then(
+            if (!isTvOrDesktop && !isTablet) Modifier.padding(bottom = 90.dp) else Modifier
+        )) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->

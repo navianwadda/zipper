@@ -2307,7 +2307,6 @@ private fun PlayerActivity.PlayerActivityRoot(
                 onMessageBannerClick = onMessageBannerClick,
                 spanCount = spanCount,
                 eventSpanCount = eventSpanCount,
-                bottomPadding = navBarHeight,
             )
         }
     }

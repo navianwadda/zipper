@@ -241,7 +241,7 @@ fun MainScaffold(
             )
 
             if (!isTvOrDesktop && !isTablet) {
-                AnimatedVisibility(
+                this@Box.AnimatedVisibility(
                     visible  = isTopLevel,
                     enter    = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
                     exit     = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),

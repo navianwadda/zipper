@@ -190,8 +190,4 @@ class ThemeManager @Inject constructor(
         )
     }
 
-    fun registerActivityContext(activityContext: Context) {
-        activityContextRef = WeakReference(activityContext)
-        _primaryColorFlow.value = getPrimaryColor()
-    }
 }

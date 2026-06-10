@@ -296,6 +296,9 @@ class FloatingPlayerActivity : AppCompatActivity() {
         }
 
         val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
+        if (isTransferredFromFloating) {
+            binding.linksSection.visibility = View.GONE
+        }
 
         if (contentType == ContentType.CHANNEL && contentId.isNotEmpty()) {
             viewModel.refreshChannelData(contentId)
@@ -643,7 +646,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         applyOrientationSettings(isLandscape)
 
         if (!isLandscape) {
-            if (allEventLinks.size > 1) {
+            if (allEventLinks.size > 1 && !intent.getBooleanExtra("use_transferred_player", false)) {
                 binding.linksSection.visibility = View.VISIBLE
             }
         }
@@ -874,7 +877,8 @@ class FloatingPlayerActivity : AppCompatActivity() {
         })
 
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        if (allEventLinks.size > 1) {
+        val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
+        if (allEventLinks.size > 1 && !isTransferredFromFloating) {
             if (isLandscape) {
                 binding.linksSection.visibility = View.GONE
                 landscapeLinksRecycler?.visibility = View.VISIBLE
@@ -903,8 +907,9 @@ class FloatingPlayerActivity : AppCompatActivity() {
     private fun updateLinksForOrientation(isLandscape: Boolean) {
         if (!::linkChipAdapter.isInitialized) return
         val landscapeLinksRecycler = binding.playerContainer.findViewById<RecyclerView>(R.id.exo_links_recycler)
+        val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
 
-        if (allEventLinks.size > 1) {
+        if (allEventLinks.size > 1 && !isTransferredFromFloating) {
             if (isLandscape) {
                 binding.linksSection.visibility = View.GONE
                 val chipsVisible = controlsState.isVisible && !controlsState.isLocked
@@ -1746,7 +1751,7 @@ class FloatingPlayerActivity : AppCompatActivity() {
         binding.playerContainer.layoutParams = params
         binding.playerContainer.visibility = View.VISIBLE
 
-        if (allEventLinks.size > 1) {
+        if (allEventLinks.size > 1 && !intent.getBooleanExtra("use_transferred_player", false)) {
             binding.linksSection.visibility = View.VISIBLE
         }
 

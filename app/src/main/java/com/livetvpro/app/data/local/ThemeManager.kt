@@ -27,6 +27,10 @@ class ThemeManager @Inject constructor(
 
     fun registerActivityContext(activityContext: Context) {
         activityContextRef = WeakReference(activityContext)
+        val isDark = activityContext.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        _systemDarkFlow.value = isDark
         _primaryColorFlow.value = computePrimaryColor()
     }
 
@@ -44,6 +48,22 @@ class ThemeManager @Inject constructor(
         prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
     )
     val themeModeFlow: StateFlow<Int> = _themeModeFlow
+
+    private val _systemDarkFlow = MutableStateFlow(false)
+
+    val isDarkFlow: kotlinx.coroutines.flow.Flow<Boolean> = kotlinx.coroutines.flow.combine(
+        _themeModeFlow, _systemDarkFlow
+    ) { mode, systemDark ->
+        when (mode) {
+            THEME_DARK  -> true
+            THEME_LIGHT -> false
+            else        -> systemDark
+        }
+    }
+
+    fun notifySystemDarkChanged(isDark: Boolean) {
+        _systemDarkFlow.value = isDark
+    }
 
     private val _colorThemeFlow = MutableStateFlow(
         AppColorTheme.fromName(

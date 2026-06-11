@@ -74,7 +74,13 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                         viewModel = viewModel,
                         spanCount = spanCount,
                         isTvDevice = DeviceUtils.isTvDevice,
-                        onChannelClick = { channel -> launchPlayer(channel, -1) },
+                        onChannelClick = { channel ->
+                            if (channel.links != null && channel.links.size > 1) {
+                                showLinkSelectionDialog(channel)
+                            } else {
+                                launchPlayer(channel, -1)
+                            }
+                        },
                         onChannelLongClick = { channel -> showFavoriteDialog(channel) },
                     )
                 }

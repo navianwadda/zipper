@@ -81,7 +81,7 @@ import com.livetvpro.app.ui.player.compose.PlayerControls
 import com.livetvpro.app.ui.player.compose.PlayerControlsState
 import com.livetvpro.app.ui.player.compose.GestureState
 import android.media.AudioManager
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.ui.player.ChannelListCache
@@ -1192,7 +1192,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         floatingComposeView.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                LiveTVProTheme(themeManager = themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
+                AppThemeContent(themeManager) {
                     val isPlaying by produceState(initialValue = false, player) {
                         while (true) {
                             value = player?.isPlaying == true

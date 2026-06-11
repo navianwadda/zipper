@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.ThemeManager
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.DeviceUtils
 import dagger.hilt.android.AndroidEntryPoint
 import java.security.MessageDigest
@@ -55,7 +55,7 @@ class DeviceIdFragment : Fragment() {
             setContent {
                 val deviceId = remember { getDeviceFingerprint() }
                 val bergenSans = FontFamily(Font(R.font.bergen_sans))
-                LiveTVProTheme(themeManager) {
+                AppThemeContent(themeManager) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()

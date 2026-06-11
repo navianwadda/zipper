@@ -67,6 +67,11 @@ class ThemeManager @Inject constructor(
         prefs.edit().putInt(KEY_THEME_MODE, mode).apply()
         _themeModeFlow.value = mode
         _primaryColorFlow.value = computePrimaryColor()
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(when (mode) {
+            THEME_LIGHT -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+            THEME_DARK  -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+            else        -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        })
     }
 
     fun getColorTheme(): AppColorTheme = _colorThemeFlow.value
@@ -89,10 +94,17 @@ class ThemeManager @Inject constructor(
         return when (_themeModeFlow.value) {
             THEME_DARK  -> true
             THEME_LIGHT -> false
-            else -> (activityContextRef?.get() ?: activityContext ?: context)
-                .resources.configuration.uiMode and
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            else -> {
+                val ctx = activityContextRef?.get() ?: activityContext
+                if (ctx != null) {
+                    ctx.resources.configuration.uiMode and
+                        android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+                        android.content.res.Configuration.UI_MODE_NIGHT_YES
+                } else {
+                    androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode() ==
+                        androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                }
+            }
         }
     }
 

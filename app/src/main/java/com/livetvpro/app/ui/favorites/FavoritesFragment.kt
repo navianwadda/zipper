@@ -19,7 +19,7 @@ import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.models.ListenerConfig
 import com.livetvpro.app.ui.player.ChannelListCache
 import com.livetvpro.app.ui.player.PlayerActivity
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.FloatingPlayerHelper
 import com.livetvpro.app.utils.NativeListenerManager
@@ -67,7 +67,7 @@ class FavoritesFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val spanCount = resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)
-                LiveTVProTheme(themeManager) {
+                AppThemeContent(themeManager) {
                     FavoritesScreen(
                         viewModel = viewModel,
                         spanCount = spanCount,

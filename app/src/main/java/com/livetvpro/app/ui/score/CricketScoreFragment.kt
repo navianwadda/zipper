@@ -8,7 +8,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import com.livetvpro.app.data.local.ThemeManager
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.NativeListenerManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -24,7 +24,7 @@ class CricketScoreFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                LiveTVProTheme(themeManager) {
+                AppThemeContent(themeManager) {
                     ScoreWebScreen(url = url)
                 }
             }

@@ -80,7 +80,7 @@ fun SportsScreen(
     PullToRefreshBox(
         isRefreshing = isLoading == true,
         onRefresh = { viewModel.refresh() },
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
         when {
             isLoading == true && channels.isEmpty() -> {

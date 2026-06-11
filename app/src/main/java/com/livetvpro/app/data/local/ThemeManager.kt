@@ -177,9 +177,19 @@ class ThemeManager @Inject constructor(
         val theme = _colorThemeFlow.value
         val isDark = isDarkMode(activityContext)
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val ctx = activityContext ?: activityContextRef?.get() ?: context
-            val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
-            return MaterialColors.getColor(dynamicContext, androidx.appcompat.R.attr.colorPrimary, Color.BLUE)
+            val ctx = activityContext ?: activityContextRef?.get()
+            if (ctx != null) {
+                val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
+                val color = MaterialColors.getColor(dynamicContext, androidx.appcompat.R.attr.colorPrimary, 0)
+                if (color != 0) return color
+            }
+            val fallback = if (isDark) AppColorTheme.Default.primaryDark else AppColorTheme.Default.primaryLight
+            return Color.argb(
+                (fallback.alpha * 255).toInt(),
+                (fallback.red   * 255).toInt(),
+                (fallback.green * 255).toInt(),
+                (fallback.blue  * 255).toInt(),
+            )
         }
         val resolved = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
         val color = if (isDark) resolved.primaryDark else resolved.primaryLight

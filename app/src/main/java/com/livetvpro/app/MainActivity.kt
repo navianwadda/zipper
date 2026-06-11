@@ -132,9 +132,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        val isDark = newConfig.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        themeManager.notifySystemDarkChanged(isDark)
     }
 
     override fun onNewIntent(intent: Intent) {

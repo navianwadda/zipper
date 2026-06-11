@@ -13,7 +13,7 @@ import androidx.fragment.app.viewModels
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.player.PlayerActivity
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.FloatingPlayerHelper
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,7 +34,7 @@ class NetworkStreamFragment : Fragment() {
     ): View = ComposeView(requireContext()).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
-            LiveTVProTheme(themeManager) {
+            AppThemeContent(themeManager) {
                 NetworkStreamScreen(
                     viewModel = viewModel,
                     onPlay = { streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme ->

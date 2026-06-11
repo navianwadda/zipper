@@ -21,7 +21,7 @@ import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ListenerConfig
 import com.livetvpro.app.ui.player.ChannelListCache
 import com.livetvpro.app.ui.player.PlayerActivity
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.FloatingPlayerHelper
 import com.livetvpro.app.utils.NativeListenerManager
@@ -69,7 +69,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val spanCount = resources.getInteger(R.integer.grid_column_count)
-                LiveTVProTheme(themeManager) {
+                AppThemeContent(themeManager) {
                     SportsScreen(
                         viewModel = viewModel,
                         spanCount = spanCount,

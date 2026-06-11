@@ -10,6 +10,7 @@ import com.livetvpro.app.ui.theme.AppColorTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import java.lang.ref.WeakReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,10 +28,6 @@ class ThemeManager @Inject constructor(
 
     fun registerActivityContext(activityContext: Context) {
         activityContextRef = WeakReference(activityContext)
-        val isDark = activityContext.resources.configuration.uiMode and
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        _systemDarkFlow.value = isDark
         _primaryColorFlow.value = computePrimaryColor()
     }
 
@@ -49,20 +46,12 @@ class ThemeManager @Inject constructor(
     )
     val themeModeFlow: StateFlow<Int> = _themeModeFlow
 
-    private val _systemDarkFlow = MutableStateFlow(false)
-
-    val isDarkFlow: kotlinx.coroutines.flow.Flow<Boolean> = kotlinx.coroutines.flow.combine(
-        _themeModeFlow, _systemDarkFlow
-    ) { mode, systemDark ->
+    val isDarkFlow = _themeModeFlow.map { mode ->
         when (mode) {
             THEME_DARK  -> true
             THEME_LIGHT -> false
-            else        -> systemDark
+            else        -> null
         }
-    }
-
-    fun notifySystemDarkChanged(isDark: Boolean) {
-        _systemDarkFlow.value = isDark
     }
 
     private val _colorThemeFlow = MutableStateFlow(

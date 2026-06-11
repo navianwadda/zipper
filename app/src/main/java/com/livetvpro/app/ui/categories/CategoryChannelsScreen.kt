@@ -102,7 +102,7 @@ fun CategoryChannelsScreen(
     val isEmpty = channels.itemCount == 0 &&
         channels.loadState.refresh is LoadState.NotLoading
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (hasGroups) {
             val selectedIndex = categoryGroups.indexOf(currentGroup).coerceAtLeast(0)
             Row(

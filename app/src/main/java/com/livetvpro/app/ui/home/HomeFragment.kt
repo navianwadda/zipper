@@ -16,7 +16,7 @@ import com.livetvpro.app.R
 import com.livetvpro.app.SearchableFragment
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.ListenerConfig
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
@@ -66,7 +66,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
             val spanCount = resources.getInteger(R.integer.grid_column_count)
-            LiveTVProTheme(themeManager) {
+            AppThemeContent(themeManager) {
                 HomeScreen(
                     viewModel = viewModel,
                     spanCount = spanCount,

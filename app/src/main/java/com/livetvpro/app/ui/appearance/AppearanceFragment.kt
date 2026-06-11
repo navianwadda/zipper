@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,7 +59,6 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.theme.AppColorTheme
-import com.livetvpro.app.ui.theme.LiveTVProTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -76,9 +74,7 @@ class AppearanceFragment : Fragment() {
     ): View = ComposeView(requireContext()).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
-            LiveTVProTheme(themeManager) {
-                AppearanceScreen(themeManager = themeManager)
-            }
+            AppearanceScreen(themeManager = themeManager)
         }
     }
 }
@@ -87,19 +83,12 @@ class AppearanceFragment : Fragment() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(themeManager: ThemeManager) {
-    val systemDarkTheme = isSystemInDarkTheme()
-
     val themeMode  by themeManager.themeModeFlow.collectAsState()
     val colorTheme by themeManager.colorThemeFlow.collectAsState()
     val amoledMode by themeManager.amoledFlow.collectAsState()
+    val isDarkMode by themeManager.isDarkFlow.collectAsState(initial = themeManager.isDarkMode())
 
-    val isDarkMode = when (themeMode) {
-        ThemeManager.THEME_DARK  -> true
-        ThemeManager.THEME_LIGHT -> false
-        else                     -> systemDarkTheme
-    }
-
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(modifier = Modifier.fillMaxWidth()) {
 
             item { PreferenceSectionHeader(title = "Theme") }
 

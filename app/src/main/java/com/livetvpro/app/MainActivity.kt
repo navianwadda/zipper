@@ -43,6 +43,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     @Inject lateinit var dataRepository: com.livetvpro.app.data.repository.NativeDataRepository
 
     var navController: NavController? = null
+    var navHostFragment: androidx.navigation.fragment.NavHostFragment? = null
     var pendingDestinationId: Int = -1
 
     var isSearchVisible by mutableStateOf(false)
@@ -90,6 +91,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     preferencesManager = preferencesManager,
                     settingsActions   = this,
                     onNavControllerReady = { navController = it },
+                    onNavHostReady = { navHostFragment = it },
                     onDestinationChanged = { destId, title, refresh ->
                         toolbarTitle    = title
                         showRefreshIcon = refresh
@@ -176,10 +178,9 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     }
 
     private inline fun <reified T> currentFragment(): T? {
-        val nhf = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_container)
-                as? androidx.navigation.fragment.NavHostFragment
-        return nhf?.childFragmentManager?.primaryNavigationFragment as? T
-            ?: nhf?.childFragmentManager?.fragments?.filterIsInstance<T>()?.firstOrNull()
+        val nhf = navHostFragment ?: return null
+        return nhf.childFragmentManager.primaryNavigationFragment as? T
+            ?: nhf.childFragmentManager.fragments.filterIsInstance<T>().firstOrNull()
     }
 
     private fun applyGlassMorphism(dialog: android.app.Dialog) {

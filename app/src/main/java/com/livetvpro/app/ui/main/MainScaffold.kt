@@ -110,6 +110,7 @@ fun MainScaffold(
     preferencesManager: PreferencesManager,
     settingsActions: SettingsActions,
     onNavControllerReady: (NavController) -> Unit,
+    onNavHostReady: (NavHostFragment) -> Unit = {},
     onDestinationChanged: (destId: Int, title: String, showRefresh: Boolean) -> Unit,
     onSearchVisibilityChanged: (Boolean) -> Unit,
 ) {
@@ -220,6 +221,7 @@ fun MainScaffold(
 
                         val nav = navHost.navController
                         onNavControllerReady(nav)
+                        onNavHostReady(navHost)
                         navController = nav
 
                         if (activity.pendingDestinationId != -1) {

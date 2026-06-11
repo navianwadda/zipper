@@ -99,7 +99,7 @@ fun AppearanceScreen(themeManager: ThemeManager) {
         else                     -> systemDarkTheme
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
 
             item { PreferenceSectionHeader(title = "Theme") }
 

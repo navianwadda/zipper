@@ -76,11 +76,13 @@ class ThemeManager @Inject constructor(
         prefs.edit().putInt(KEY_THEME_MODE, mode).apply()
         _themeModeFlow.value = mode
         _primaryColorFlow.value = computePrimaryColor()
-        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(when (mode) {
-            THEME_LIGHT -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-            THEME_DARK  -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-            else        -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        })
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+            when (mode) {
+                THEME_LIGHT -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                THEME_DARK  -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                else        -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            }
+        )
     }
 
     fun getColorTheme(): AppColorTheme = _colorThemeFlow.value
@@ -125,9 +127,9 @@ class ThemeManager @Inject constructor(
             val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
             return MaterialColors.getColor(dynamicContext, android.R.attr.colorBackground, Color.WHITE)
         }
-        val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
+        val resolved = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
         if (isDark && _amoledFlow.value) return Color.BLACK
-        val color = if (isDark) resolvedTheme.backgroundDark else resolvedTheme.backgroundLight
+        val color = if (isDark) resolved.backgroundDark else resolved.backgroundLight
         return Color.argb(
             (color.alpha * 255).toInt(),
             (color.red   * 255).toInt(),
@@ -144,30 +146,32 @@ class ThemeManager @Inject constructor(
             val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
             return MaterialColors.getColor(dynamicContext, com.google.android.material.R.attr.colorSurfaceContainer, Color.LTGRAY)
         }
-        val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
+        val resolved = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
         if (isDark && _amoledFlow.value) {
-            val primary = resolvedTheme.primaryDark
-            val base = androidx.compose.ui.graphics.Color(0xFF0D0D0D)
-            return blendOver(primary, 0.05f, base)
+            val primary = resolved.primaryDark
+            return blendOver(primary, 0.05f, androidx.compose.ui.graphics.Color(0xFF0D0D0D))
         }
-        val primary = if (isDark) resolvedTheme.primaryDark else resolvedTheme.primaryLight
-        val background = if (isDark) resolvedTheme.backgroundDark else resolvedTheme.backgroundLight
+        val primary    = if (isDark) resolved.primaryDark else resolved.primaryLight
+        val background = if (isDark) resolved.backgroundDark else resolved.backgroundLight
         return blendOver(primary, if (isDark) 0.05f else 0.06f, background)
     }
 
-    private fun blendOver(primary: androidx.compose.ui.graphics.Color, alpha: Float, background: androidx.compose.ui.graphics.Color): Int {
+    private fun blendOver(
+        primary: androidx.compose.ui.graphics.Color,
+        alpha: Float,
+        background: androidx.compose.ui.graphics.Color,
+    ): Int {
         val fgA = alpha
         val bgA = background.alpha
-        val a = fgA + bgA * (1f - fgA)
-        val r = (primary.red * fgA + background.red * bgA * (1f - fgA)) / a
-        val g = (primary.green * fgA + background.green * bgA * (1f - fgA)) / a
-        val b = (primary.blue * fgA + background.blue * bgA * (1f - fgA)) / a
+        val a   = fgA + bgA * (1f - fgA)
+        val r   = (primary.red   * fgA + background.red   * bgA * (1f - fgA)) / a
+        val g   = (primary.green * fgA + background.green * bgA * (1f - fgA)) / a
+        val b   = (primary.blue  * fgA + background.blue  * bgA * (1f - fgA)) / a
         return Color.argb((a * 255).toInt(), (r * 255).toInt(), (g * 255).toInt(), (b * 255).toInt())
     }
 
-    fun getOnSurfaceColor(activityContext: Context? = null): Int {
-        return if (isDarkMode(activityContext)) Color.WHITE else Color.BLACK
-    }
+    fun getOnSurfaceColor(activityContext: Context? = null): Int =
+        if (isDarkMode(activityContext)) Color.WHITE else Color.BLACK
 
     private fun computePrimaryColor(activityContext: Context? = null): Int {
         val theme = _colorThemeFlow.value
@@ -177,8 +181,8 @@ class ThemeManager @Inject constructor(
             val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
             return MaterialColors.getColor(dynamicContext, androidx.appcompat.R.attr.colorPrimary, Color.BLUE)
         }
-        val resolvedTheme = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
-        val color = if (isDark) resolvedTheme.primaryDark else resolvedTheme.primaryLight
+        val resolved = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
+        val color = if (isDark) resolved.primaryDark else resolved.primaryLight
         return Color.argb(
             (color.alpha * 255).toInt(),
             (color.red   * 255).toInt(),

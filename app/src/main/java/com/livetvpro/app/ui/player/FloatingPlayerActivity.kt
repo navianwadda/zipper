@@ -548,8 +548,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, true)
         windowInsetsController.apply {
-            show(WindowInsetsCompat.Type.systemBars())
-            show(WindowInsetsCompat.Type.navigationBars())
+            show(WindowInsetsCompat.Type.statusBars())
         }
     }
 
@@ -1572,7 +1571,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
 
     private fun exitFullscreen() {
         windowInsetsController.apply {
-            show(WindowInsetsCompat.Type.systemBars())
+            show(WindowInsetsCompat.Type.statusBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         }
 

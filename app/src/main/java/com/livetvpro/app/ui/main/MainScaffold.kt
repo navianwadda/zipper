@@ -300,7 +300,15 @@ private fun PhoneTopBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!isTopLevel) {
+            if (isSearchActive) {
+                IconButton(onClick = onSearchClose) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_back),
+                        contentDescription = "Back",
+                        tint = onSurface,
+                    )
+                }
+            } else if (!isTopLevel) {
                 IconButton(onClick = onBack) {
                     Icon(
                         painter = painterResource(R.drawable.ic_arrow_back),
@@ -351,17 +359,18 @@ private fun PhoneTopBar(
                 )
             }
 
-            if (showRefresh && !isSearchActive) {
-                IconButton(onClick = onRefresh) {
-                    Icon(painterResource(R.drawable.ic_refresh), contentDescription = "Refresh", tint = onSurface)
-                }
-            }
-
             if (isSearchActive) {
-                IconButton(onClick = onSearchClose) {
-                    Icon(painterResource(R.drawable.ic_close), contentDescription = "Close", tint = onSurface)
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(painterResource(R.drawable.ic_close), contentDescription = "Clear", tint = onSurface)
+                    }
                 }
             } else {
+                if (showRefresh) {
+                    IconButton(onClick = onRefresh) {
+                        Icon(painterResource(R.drawable.ic_refresh), contentDescription = "Refresh", tint = onSurface)
+                    }
+                }
                 IconButton(onClick = onSearchToggle) {
                     Icon(painterResource(R.drawable.ic_search), contentDescription = "Search", tint = onSurface)
                 }

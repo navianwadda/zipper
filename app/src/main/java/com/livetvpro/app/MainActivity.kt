@@ -141,6 +141,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
+        themeManager.registerActivityContext(this)
     }
 
     override fun onNewIntent(intent: Intent) {

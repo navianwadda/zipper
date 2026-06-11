@@ -40,7 +40,7 @@ import androidx.navigation.fragment.findNavController
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.NativeListenerManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -66,7 +66,7 @@ class SettingsFragment : Fragment() {
     ): View = ComposeView(requireContext()).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
-            LiveTVProTheme(themeManager) {
+            AppThemeContent(themeManager) {
                 SettingsScreen(
                     navController     = findNavController(),
                     listenerManager   = listenerManager,

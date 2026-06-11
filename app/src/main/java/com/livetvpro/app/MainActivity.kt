@@ -178,7 +178,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private inline fun <reified T> currentFragment(): T? {
         val nhf = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_container)
                 as? androidx.navigation.fragment.NavHostFragment
-        return nhf?.childFragmentManager?.fragments?.firstOrNull() as? T
+        return nhf?.childFragmentManager?.primaryNavigationFragment as? T
+            ?: nhf?.childFragmentManager?.fragments?.filterIsInstance<T>()?.firstOrNull()
     }
 
     private fun applyGlassMorphism(dialog: android.app.Dialog) {

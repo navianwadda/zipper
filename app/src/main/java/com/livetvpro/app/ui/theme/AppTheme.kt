@@ -2,6 +2,7 @@ package com.livetvpro.app.ui.theme
 
 import android.os.Build
 import androidx.activity.SystemBarStyle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -27,7 +28,7 @@ fun LiveTVProTheme(
     content: @Composable () -> Unit,
 ) {
     val context          = LocalContext.current
-    val activity         = LocalActivity.current
+    val activity         = LocalActivity.current as? ComponentActivity
     val colorTheme       by themeManager.colorThemeFlow.collectAsState()
     val amoled           by themeManager.amoledFlow.collectAsState()
     val forcedDark       by themeManager.isDarkFlow.collectAsState(initial = null)

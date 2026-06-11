@@ -62,7 +62,7 @@ import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.ListenerConfig
 import com.livetvpro.app.ui.player.ChannelListCache
 import com.livetvpro.app.ui.player.PlayerActivity
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.FloatingPlayerHelper
 import com.livetvpro.app.utils.NativeListenerManager
@@ -139,7 +139,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 var showGroupsDialog by remember { mutableStateOf(false) }
                 val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
-                LiveTVProTheme(themeManager) {
+                AppThemeContent(themeManager) {
                     CategoryChannelsScreen(
                         viewModel = viewModel,
                         spanCount = spanCount,

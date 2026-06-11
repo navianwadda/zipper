@@ -62,7 +62,7 @@ import com.livetvpro.app.ui.player.compose.RelatedContentState
 import com.livetvpro.app.ui.player.compose.LandscapeLinksRow
 import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog
 import com.livetvpro.app.ui.player.settings.PlayerSettingsDialog
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.ui.player.ChannelListCache
@@ -284,7 +284,7 @@ class PlayerActivity : BasePlayerActivity() {
         val binding = androidx.compose.ui.platform.ComposeView(this).also { composeRoot ->
             composeRoot.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             composeRoot.setContent {
-                LiveTVProTheme(themeManager, surfaceColor = androidx.compose.ui.graphics.Color.Transparent) {
+                AppThemeContent(themeManager) {
                     PlayerActivityRoot(
                         activity = this,
                         controlsState = controlsState,

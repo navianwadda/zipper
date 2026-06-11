@@ -21,7 +21,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.ThemeManager
-import com.livetvpro.app.ui.theme.LiveTVProTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import com.livetvpro.app.utils.DeviceUtils
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -75,7 +75,7 @@ class PlaylistsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                LiveTVProTheme(themeManager) {
+                AppThemeContent(themeManager) {
                     PlaylistsScreen(
                         viewModel = viewModel,
                         isTvDevice = DeviceUtils.isTvDevice,

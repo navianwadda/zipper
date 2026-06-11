@@ -1673,7 +1673,7 @@ class PlayerActivity : BasePlayerActivity() {
 
     private fun exitFullscreen() {
         windowInsetsController.apply {
-            show(WindowInsetsCompat.Type.systemBars())
+            show(WindowInsetsCompat.Type.statusBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         }
 

@@ -498,24 +498,25 @@ fun LiveEventCard(
         label = "cardScale"
     )
 
-    Box(
+    Card(
+        onClick = onClick,
         modifier = Modifier
             .padding(horizontal = 6.dp, vertical = 5.dp)
-            .scale(scale),
-        clipToBounds = false
+            .scale(scale)
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .onFocusChanged { hasFocus = it.hasFocus }
+            .focusable(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (hasFocus) 8.dp else 2.dp
+        )
     ) {
-        Card(
-            onClick = onClick,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .onFocusChanged { hasFocus = it.hasFocus }
-                .focusable(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = if (hasFocus) 8.dp else 2.dp
-            )
         ) {
             Column(
                 modifier = Modifier
@@ -601,13 +602,13 @@ fun LiveEventCard(
                     )
                 }
             }
-        }
 
-        if (event.wrapper.isNotEmpty()) {
-            WrapperBadge(
-                text = event.wrapper,
-                modifier = Modifier.align(Alignment.BottomStart)
-            )
+            if (event.wrapper.isNotEmpty()) {
+                WrapperBadge(
+                    text = event.wrapper,
+                    modifier = Modifier.align(Alignment.BottomStart)
+                )
+            }
         }
     }
 }
@@ -808,21 +809,23 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 
 @Composable
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
+    val badgeWidth = 96.dp
+    val badgeHeight = 22.dp
+
     Box(
         modifier = modifier
-            .width(80.dp)
-            .height(80.dp),
+            .size(badgeWidth),
         contentAlignment = Alignment.BottomStart
     ) {
         Box(
             modifier = Modifier
-                .width(110.dp)
-                .height(22.dp)
+                .width(badgeWidth)
+                .height(badgeHeight)
                 .graphicsLayer {
                     rotationZ = -45f
                     transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)
                 }
-                .background(MaterialTheme.colorScheme.primary),
+                .background(MaterialTheme.colorScheme.tertiary),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -830,7 +833,7 @@ private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 fontFamily = BergenSans,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onTertiary,
                 maxLines = 1,
                 textAlign = TextAlign.Center
             )

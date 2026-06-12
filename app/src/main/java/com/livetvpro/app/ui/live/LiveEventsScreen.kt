@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -28,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -65,10 +63,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -809,35 +805,22 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 
 @Composable
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
-    val bgColor = MaterialTheme.colorScheme.tertiary
-    val textColor = MaterialTheme.colorScheme.onTertiary
-
     Box(
         modifier = modifier
-            .height(32.dp)
-            .wrapContentWidth()
+            .height(28.dp)
+            .background(
+                MaterialTheme.colorScheme.tertiary,
+                RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.matchParentSize()) {
-            val cut = 16.dp.toPx()
-            val path = Path().apply {
-                moveTo(0f, 0f)
-                lineTo(size.width - cut, 0f)
-                lineTo(size.width, size.height / 2f)
-                lineTo(size.width - cut, size.height)
-                lineTo(0f, size.height)
-                close()
-            }
-            drawPath(path, bgColor)
-        }
         Text(
             text = text,
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 12.dp, end = 28.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             fontFamily = BergenSans,
-            color = textColor,
+            color = MaterialTheme.colorScheme.onTertiary,
             maxLines = 1
         )
     }

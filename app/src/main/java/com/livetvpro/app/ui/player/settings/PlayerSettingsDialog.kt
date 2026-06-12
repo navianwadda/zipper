@@ -7,14 +7,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -25,6 +23,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
@@ -41,11 +41,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -106,6 +106,7 @@ fun PlayerSettingsDialog(
     var selectedAudio by remember { mutableStateOf<TrackUiModel.Audio?>(null) }
     var selectedText  by remember { mutableStateOf<TrackUiModel.Text?>(null) }
     var selectedSpeed by remember { mutableStateOf(1.0f) }
+
     fun loadTracks() {
         try {
             val params = player.trackSelectionParameters
@@ -176,6 +177,7 @@ fun PlayerSettingsDialog(
             Timber.e(e, "Error applying selections")
         }
     }
+
     val tabs = remember(videoTracks.size, audioTracks.size, textTracks.size) {
         buildList {
             if (videoTracks.isNotEmpty()) add("Video")
@@ -259,7 +261,8 @@ private fun PlayerSettingsContent(
     onApply:   () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState { tabs.size }
+    val scope = rememberCoroutineScope()
 
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val screenWidthDp  = configuration.screenWidthDp.dp
@@ -277,31 +280,33 @@ private fun PlayerSettingsContent(
             .background(MaterialTheme.colorScheme.surface),
     ) {
         Column {
-            androidx.compose.material3.TabRow(
-                selectedTabIndex = selectedTab,
+            TabRow(
+                selectedTabIndex = pagerState.currentPage,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ) {
                 tabs.forEachIndexed { index, label ->
                     Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        selected = pagerState.currentPage == index,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                         text = {
                             Text(
                                 text = label,
                                 fontFamily = BergenSans,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal,
                             )
                         },
                     )
                 }
             }
-            Box(
+
+            HorizontalPager(
+                state = pagerState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-            ) {
-                val tabLabel = tabs.getOrNull(selectedTab) ?: "Speed"
+            ) { page ->
+                val tabLabel = tabs.getOrNull(page) ?: "Speed"
                 when (tabLabel) {
                     "Video" -> {
                         val useRadio = videoTracks.size == 1

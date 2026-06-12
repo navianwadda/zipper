@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,17 +86,10 @@ class AppearanceFragment : Fragment() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(themeManager: ThemeManager) {
-    val systemDarkTheme = isSystemInDarkTheme()
-
     val themeMode  by themeManager.themeModeFlow.collectAsState()
     val colorTheme by themeManager.colorThemeFlow.collectAsState()
     val amoledMode by themeManager.amoledFlow.collectAsState()
-
-    val isDarkMode = when (themeMode) {
-        ThemeManager.THEME_DARK  -> true
-        ThemeManager.THEME_LIGHT -> false
-        else                     -> systemDarkTheme
-    }
+    val isDarkMode by themeManager.resolvedIsDarkFlow.collectAsState()
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
 

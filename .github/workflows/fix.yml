@@ -1,0 +1,70 @@
+name: Apply Theme Final
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Target branch to apply theme files'
+        required: false
+        default: 'main'
+
+jobs:
+  apply-theme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decode and apply theme_final files
+        env:
+          THEME_FINAL_B64: ${{ secrets.THEME_FINAL_B64 }}
+        run: |
+          JAVA_ROOT="app/src/main/java"
+
+          echo "$THEME_FINAL_B64" | base64 -d > /tmp/theme_final.zip
+
+          unzip -o /tmp/theme_final.zip -d /tmp/theme_final_extracted
+
+          declare -A FILE_MAP=(
+            ["com/livetvpro/app/ui/appearance/AppearanceFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/appearance/AppearanceFragment.kt"
+            ["com/livetvpro/app/ui/networkstream/NetworkStreamFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/networkstream/NetworkStreamFragment.kt"
+            ["com/livetvpro/app/ui/deviceid/DeviceIdFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/deviceid/DeviceIdFragment.kt"
+            ["com/livetvpro/app/ui/categories/CategoryChannelsFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/categories/CategoryChannelsFragment.kt"
+            ["com/livetvpro/app/ui/theme/AppTheme.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/theme/AppTheme.kt"
+            ["com/livetvpro/app/ui/settings/SettingsFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/settings/SettingsFragment.kt"
+            ["com/livetvpro/app/ui/home/HomeFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/home/HomeFragment.kt"
+            ["com/livetvpro/app/ui/playlists/PlaylistsFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/playlists/PlaylistsFragment.kt"
+            ["com/livetvpro/app/ui/live/LiveEventsFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/live/LiveEventsFragment.kt"
+            ["com/livetvpro/app/ui/favorites/FavoritesFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/favorites/FavoritesFragment.kt"
+            ["com/livetvpro/app/ui/sports/SportsFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/sports/SportsFragment.kt"
+            ["com/livetvpro/app/ui/player/PlayerActivity.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/player/PlayerActivity.kt"
+            ["com/livetvpro/app/ui/player/FloatingPlayerActivity.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/player/FloatingPlayerActivity.kt"
+            ["com/livetvpro/app/ui/score/FootballScoreFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/score/FootballScoreFragment.kt"
+            ["com/livetvpro/app/ui/score/CricketScoreFragment.kt"]="$JAVA_ROOT/com/livetvpro/app/ui/score/CricketScoreFragment.kt"
+            ["com/livetvpro/app/MainActivity.kt"]="$JAVA_ROOT/com/livetvpro/app/MainActivity.kt"
+            ["com/livetvpro/app/data/local/ThemeManager.kt"]="$JAVA_ROOT/com/livetvpro/app/data/local/ThemeManager.kt"
+          )
+
+          for SRC_KEY in "${!FILE_MAP[@]}"; do
+            SRC="/tmp/theme_final_extracted/$SRC_KEY"
+            DEST="${FILE_MAP[$SRC_KEY]}"
+            mkdir -p "$(dirname "$DEST")"
+            cp "$SRC" "$DEST"
+            echo "Applied: $DEST"
+          done
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: apply theme_final file updates"
+            git push origin ${{ github.event.inputs.branch }}
+          fi

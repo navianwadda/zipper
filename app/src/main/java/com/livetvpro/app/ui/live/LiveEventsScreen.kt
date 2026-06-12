@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -801,21 +802,33 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 
 @Composable
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
+    val bgColor = MaterialTheme.colorScheme.tertiary
+    val textColor = MaterialTheme.colorScheme.onTertiary
+    val ribbonShape = GenericShape { size, _ ->
+        val cut = 16f
+        moveTo(0f, 0f)
+        lineTo(size.width - cut, 0f)
+        lineTo(size.width, size.height / 2f)
+        lineTo(size.width - cut, size.height)
+        lineTo(0f, size.height)
+        close()
+    }
+
     Box(
         modifier = modifier
-            .background(
-                MaterialTheme.colorScheme.tertiary, 
-                RoundedCornerShape(topStart = 0.dp, topEnd = 12.dp, bottomEnd = 0.dp, bottomStart = 12.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+            .height(32.dp)
+            .wrapContentWidth()
+            .clip(ribbonShape)
+            .background(bgColor)
+            .padding(start = 20.dp, end = 40.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             fontFamily = BergenSans,
-            color = MaterialTheme.colorScheme.onTertiary,
+            color = textColor,
             maxLines = 1
         )
     }

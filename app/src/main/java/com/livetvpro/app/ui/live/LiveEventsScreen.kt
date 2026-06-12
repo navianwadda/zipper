@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -495,7 +494,7 @@ fun LiveEventCard(
             .padding(horizontal = 6.dp, vertical = 5.dp)
             .scale(scale)
             .fillMaxWidth()
-            .wrapContentHeight()
+            .height(145.dp)
             .onFocusChanged { hasFocus = it.hasFocus }
             .focusable(),
         shape = RoundedCornerShape(12.dp),
@@ -505,14 +504,12 @@ fun LiveEventCard(
         )
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
+            modifier = Modifier.fillMaxSize()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .defaultMinSize(minHeight = 105.dp)
+                    .fillMaxHeight()
                     .padding(
                         start = 6.dp,
                         top = 6.dp,
@@ -602,7 +599,9 @@ fun LiveEventCard(
             if (event.wrapper.isNotEmpty()) {
                 WrapperBadge(
                     text = event.wrapper,
-                    modifier = Modifier.align(Alignment.BottomStart)
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 6.dp, bottom = 6.dp)
                 )
             }
         }
@@ -807,12 +806,12 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .height(28.dp)
+            .height(24.dp)
             .background(
                 MaterialTheme.colorScheme.tertiary,
-                RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
+                RoundedCornerShape(4.dp)
             )
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

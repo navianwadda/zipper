@@ -21,6 +21,7 @@ sealed class TrackUiModel {
         val language: String,
         val channels: Int,
         val bitrate: Int,
+        val mimeType: String,
         override val isSelected: Boolean,
         override val isRadio: Boolean = true
     ) : TrackUiModel()

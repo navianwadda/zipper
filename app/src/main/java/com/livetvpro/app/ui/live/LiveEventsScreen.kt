@@ -71,6 +71,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Path
+
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
@@ -521,6 +527,7 @@ fun LiveEventCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
+                .padding(bottom = 18.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -610,7 +617,9 @@ fun LiveEventCard(
             if (event.wrapper.isNotEmpty()) {
                 WrapperBadge(
                     text = event.wrapper,
-                    modifier = Modifier.align(Alignment.BottomStart)
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .offset(y = 17.dp)
                 )
             }
         }
@@ -811,55 +820,53 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
     }
 }
 
-@Composable
-private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
-    val bgColor = MaterialTheme.colorScheme.tertiary
-    val textColor = MaterialTheme.colorScheme.onTertiary
-    val density = LocalDensity.current
 
+class WrapperBadgeShape : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        val h = size.height
+        val r = h
+
+        val path = Path().apply {
+            moveTo(0f, 0f)
+            lineTo(size.width - r, 0f)
+            quadraticBezierTo(size.width, 0f, size.width, h)
+            lineTo(0f, h)
+            close()
+        }
+
+        return Outline.Generic(path)
+    }
+}
+
+@Composable
+private fun WrapperBadge(
+    text: String,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = modifier
-            .height(32.dp)
-            .wrapContentWidth()
-            .offset(x = 0.dp, y = 8.dp),
+            .height(34.dp)
+            .clip(WrapperBadgeShape())
+            .background(Color(0xFF00D084))
+            .padding(
+                start = 14.dp,
+                end = 18.dp,
+                top = 6.dp,
+                bottom = 6.dp
+            ),
         contentAlignment = Alignment.CenterStart
     ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .height(32.dp)
-                .wrapContentWidth()
-        ) {
-            val widthPx = with(density) { (maxWidth + 24.dp).toPx() }
-            val heightPx = with(density) { 32.dp.toPx() }
-            val cutPx = with(density) { 12.dp.toPx() }
-
-            Canvas(
-                modifier = Modifier
-                    .width(maxWidth + 24.dp)
-                    .height(32.dp)
-            ) {
-                val path = Path().apply {
-                    moveTo(0f, 0f)
-                    lineTo(widthPx - cutPx, 0f)
-                    lineTo(widthPx, heightPx / 2f)
-                    lineTo(widthPx - cutPx, heightPx)
-                    lineTo(0f, heightPx)
-                    close()
-                }
-                drawPath(path, bgColor)
-            }
-
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                fontFamily = BergenSans,
-                color = textColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 10.dp, end = 20.dp)
-            )
-        }
+        Text(
+            text = text,
+            fontFamily = BergenSans,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 12.sp,
+            color = Color.White,
+            maxLines = 1
+        )
     }
 }

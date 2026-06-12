@@ -53,6 +53,7 @@ object PlayerTrackMapper {
                     language   = languageDisplayName(format.language),
                     channels   = format.channelCount,
                     bitrate    = format.bitrate,
+                    mimeType   = format.sampleMimeType ?: "",
                     isSelected = group.isTrackSelected(i),
                     isRadio    = true
                 ))
@@ -68,15 +69,12 @@ object PlayerTrackMapper {
             for (i in 0 until group.length) {
                 val format = group.getTrackFormat(i)
 
-                // Skip embedded/forced CEA captions and tracks with no real language
-                // that ExoPlayer adds by default even when there are no real subtitles
                 val mimeType = format.sampleMimeType ?: ""
                 val isCea = mimeType == MimeTypes.APPLICATION_CEA608
                         || mimeType == MimeTypes.APPLICATION_CEA708
                         || mimeType == MimeTypes.APPLICATION_MP4CEA608
                 val isForced = (format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0
 
-                // Only include non-forced, non-CEA subtitle tracks
                 if (isCea || isForced) continue
 
                 result.add(TrackUiModel.Text(

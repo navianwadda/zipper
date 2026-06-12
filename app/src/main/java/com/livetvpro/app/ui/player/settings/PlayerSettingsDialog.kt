@@ -1,24 +1,24 @@
 package com.livetvpro.app.ui.player.settings
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.FocusInteraction
+
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,8 +33,8 @@ import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -84,9 +84,7 @@ import timber.log.Timber
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
-private val ColorPrimary   = Color(0xFFE53935)
-private val ColorOnSurface = Color(0xFFFFFFFF)
-private val ColorGray      = Color(0xFF8A8A8A)
+private val ColorPrimary = Color(0xFFE53935)
 
 @Composable
 fun PlayerSettingsDialog(
@@ -263,19 +261,26 @@ private fun PlayerSettingsContent(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val screenWidthDp  = configuration.screenWidthDp.dp
+    val screenHeightDp = configuration.screenHeightDp.dp
+
+    val dialogMaxWidth  = (screenWidthDp  * 0.88f).coerceAtMost(520.dp)
+    val dialogMaxHeight = (screenHeightDp * 0.82f).coerceAtMost(560.dp)
+
     Box(
         modifier = Modifier
-            .fillMaxWidth(if (DeviceUtils.isTvDevice) 0.55f else 0.82f)
-            .fillMaxHeight(if (DeviceUtils.isTvDevice) 0.80f else 0.65f)
+            .widthIn(max = dialogMaxWidth)
+            .heightIn(max = dialogMaxHeight)
+            .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface),
     ) {
         Column {
-            ScrollableTabRow(
+            androidx.compose.material3.TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                edgePadding = 0.dp,
             ) {
                 tabs.forEachIndexed { index, label ->
                     Tab(
@@ -314,8 +319,8 @@ private fun PlayerSettingsContent(
                     }
                     "Audio" -> {
                         val items = buildList {
-                            add(TrackUiModel.Audio(-1, -1, "Auto", 0, 0, isSelected = isAudioAuto))
-                            add(TrackUiModel.Audio(-2, -2, "None", 0, 0, isSelected = isAudioNone))
+                            add(TrackUiModel.Audio(-1, -1, "Auto", 0, 0, "", isSelected = isAudioAuto))
+                            add(TrackUiModel.Audio(-2, -2, "None", 0, 0, "", isSelected = isAudioNone))
                             addAll(audioTracks.map { t ->
                                 t.copy(isSelected = !isAudioAuto && !isAudioNone &&
                                     selectedAudio?.groupIndex == t.groupIndex &&
@@ -378,6 +383,26 @@ private fun TrackList(
     }
 }
 
+private fun formatBitrate(bps: Int): String {
+    val mbps = bps / 1_000_000.0
+    return if (mbps >= 0.1) "%.2f Mbps".format(mbps)
+    else "%.0f Kbps".format(bps / 1_000.0)
+}
+
+private fun channelLayout(channels: Int, mimeType: String): String {
+    val mime = mimeType.lowercase()
+    val isAtmos  = mime.contains("atmos") || mime.contains("ec3") || mime.contains("eac3")
+    val isSurround = channels >= 6
+    return when {
+        channels <= 0   -> ""
+        channels == 1   -> "Mono"
+        channels == 2   -> "Stereo"
+        isSurround && isAtmos -> "${channels - 1}.1 Dolby Atmos"
+        isSurround      -> "${channels - 1}.1 Surround"
+        else            -> "$channels ch"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TrackRow(
@@ -385,26 +410,34 @@ private fun TrackRow(
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-
-    val bg by animateColorAsState(
-        targetValue = when {
-            isFocused    -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
-            item.isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-            else         -> Color.Transparent
-        },
-        animationSpec = tween(120),
-        label = "rowBg",
-    )
+    val colorOnSurface = MaterialTheme.colorScheme.onSurface
+    val colorOutline = MaterialTheme.colorScheme.outline
 
     val label = when (item) {
         is TrackUiModel.Video -> when (item.groupIndex) {
-            -1 -> "Auto"
-            -2 -> "None"
-            else -> if (item.height > 0) "${item.height}p" else "Track ${item.trackIndex + 1}"
+            -1   -> "Auto"
+            -2   -> "None"
+            else -> buildString {
+                if (item.width > 0 && item.height > 0) append("${item.width} × ${item.height}")
+                else append("Track ${item.trackIndex + 1}")
+                if (item.bitrate > 0) append(",  ${formatBitrate(item.bitrate)}")
+            }
         }
-        is TrackUiModel.Audio -> item.language.ifBlank { "Track ${item.trackIndex + 1}" }
-        is TrackUiModel.Text  -> item.language.ifBlank { "Track ${item.trackIndex?.plus(1) ?: 1}" }
+        is TrackUiModel.Audio -> when (item.groupIndex) {
+            -1   -> "Auto"
+            -2   -> "None"
+            else -> buildString {
+                append(item.language.ifBlank { "Track ${item.trackIndex + 1}" })
+                val layout = channelLayout(item.channels, item.mimeType)
+                if (layout.isNotEmpty()) append(", $layout")
+                if (item.bitrate > 0) append(",  ${formatBitrate(item.bitrate)}")
+            }
+        }
+        is TrackUiModel.Text  -> when (item.groupIndex) {
+            -1   -> "Auto"
+            -2   -> "None"
+            else -> item.language.ifBlank { "Track ${item.trackIndex?.plus(1) ?: 1}" }
+        }
         is TrackUiModel.Speed -> if (item.speed == 1.0f) "Normal (1×)" else "${item.speed}×"
     }
 
@@ -412,7 +445,6 @@ private fun TrackRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .background(bg)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -425,6 +457,7 @@ private fun TrackRow(
             AnimatedTrackIndicator(
                 isSelected = item.isSelected,
                 isRadio = item.isRadio,
+                unselectedColor = colorOutline,
             )
         }
         Spacer(Modifier.width(12.dp))
@@ -433,7 +466,7 @@ private fun TrackRow(
             fontFamily = BergenSans,
             fontSize = 14.sp,
             fontWeight = if (item.isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (item.isSelected) ColorPrimary else ColorOnSurface,
+            color = if (item.isSelected) ColorPrimary else colorOnSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -442,14 +475,14 @@ private fun TrackRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AnimatedTrackIndicator(isSelected: Boolean, isRadio: Boolean) {
+private fun AnimatedTrackIndicator(isSelected: Boolean, isRadio: Boolean, unselectedColor: Color) {
     if (isRadio) {
         RadioButton(
             selected = isSelected,
             onClick = null,
             colors = RadioButtonDefaults.colors(
                 selectedColor   = ColorPrimary,
-                unselectedColor = ColorGray,
+                unselectedColor = unselectedColor,
             ),
         )
     } else {
@@ -464,7 +497,7 @@ private fun AnimatedTrackIndicator(isSelected: Boolean, isRadio: Boolean) {
             modifier = Modifier
                 .size(20.dp)
                 .drawBehind {
-                    drawCheckbox(progress.value, isSelected, ColorPrimary, ColorGray)
+                    drawCheckbox(progress.value, isSelected, ColorPrimary, unselectedColor)
                 },
         )
     }

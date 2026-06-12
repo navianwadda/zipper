@@ -494,7 +494,7 @@ fun LiveEventCard(
             .padding(horizontal = 6.dp, vertical = 5.dp)
             .scale(scale)
             .fillMaxWidth()
-            .height(145.dp)
+            .height(145.dp) // Maintained 145.dp fixed height for uniformity
             .onFocusChanged { hasFocus = it.hasFocus }
             .focusable(),
         shape = RoundedCornerShape(12.dp),
@@ -510,12 +510,7 @@ fun LiveEventCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .padding(
-                        start = 6.dp,
-                        top = 6.dp,
-                        end = 6.dp,
-                        bottom = if (event.wrapper.isNotEmpty()) 36.dp else 6.dp
-                    )
+                    .padding(6.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -599,9 +594,7 @@ fun LiveEventCard(
             if (event.wrapper.isNotEmpty()) {
                 WrapperBadge(
                     text = event.wrapper,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 6.dp, bottom = 6.dp)
+                    modifier = Modifier.align(Alignment.BottomStart)
                 )
             }
         }
@@ -806,12 +799,11 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .height(24.dp)
             .background(
-                MaterialTheme.colorScheme.tertiary,
-                RoundedCornerShape(4.dp)
+                MaterialTheme.colorScheme.tertiary, 
+                RoundedCornerShape(topStart = 0.dp, topEnd = 12.dp, bottomEnd = 0.dp, bottomStart = 12.dp)
             )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

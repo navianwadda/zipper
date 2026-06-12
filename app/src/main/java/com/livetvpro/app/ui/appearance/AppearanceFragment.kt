@@ -137,7 +137,7 @@ fun AppearanceScreen(themeManager: ThemeManager) {
                         title   = "AMOLED Black Mode",
                         summary = "Use pure black background for dark themes",
                         checked = amoledMode,
-                        enabled = themeMode != ThemeManager.THEME_LIGHT,
+                        enabled = isDarkMode,
                         onCheckedChange = { newValue ->
                             themeManager.setAmoledMode(newValue)
                         },

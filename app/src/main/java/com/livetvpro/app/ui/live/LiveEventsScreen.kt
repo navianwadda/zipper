@@ -516,8 +516,13 @@ fun LiveEventCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .defaultMinSize(minHeight = 85.dp)
-                    .padding(6.dp)
+                    .defaultMinSize(minHeight = 105.dp)
+                    .padding(
+                        start = 6.dp,
+                        top = 6.dp,
+                        end = 6.dp,
+                        bottom = if (event.wrapper.isNotEmpty()) 36.dp else 6.dp
+                    )
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -806,7 +811,6 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
     val bgColor = MaterialTheme.colorScheme.tertiary
     val textColor = MaterialTheme.colorScheme.onTertiary
-    val density = LocalDensity.current
 
     Box(
         modifier = modifier

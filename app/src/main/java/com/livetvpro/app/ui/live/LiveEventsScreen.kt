@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,7 +29,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -68,7 +70,9 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -809,33 +813,52 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 
 @Composable
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
-    val badgeWidth = 96.dp
-    val badgeHeight = 22.dp
+    val bgColor = MaterialTheme.colorScheme.tertiary
+    val textColor = MaterialTheme.colorScheme.onTertiary
+    val density = LocalDensity.current
 
     Box(
         modifier = modifier
-            .size(badgeWidth),
-        contentAlignment = Alignment.BottomStart
+            .height(32.dp)
+            .wrapContentWidth()
+            .offset(x = 0.dp, y = 8.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
-                .width(badgeWidth)
-                .height(badgeHeight)
-                .graphicsLayer {
-                    rotationZ = -45f
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)
-                }
-                .background(MaterialTheme.colorScheme.tertiary),
-            contentAlignment = Alignment.Center
+                .height(32.dp)
+                .wrapContentWidth()
         ) {
+            val widthPx = with(density) { (maxWidth + 24.dp).toPx() }
+            val heightPx = with(density) { 32.dp.toPx() }
+            val cutPx = with(density) { 12.dp.toPx() }
+
+            Canvas(
+                modifier = Modifier
+                    .width(maxWidth + 24.dp)
+                    .height(32.dp)
+            ) {
+                val path = Path().apply {
+                    moveTo(0f, 0f)
+                    lineTo(widthPx - cutPx, 0f)
+                    lineTo(widthPx, heightPx / 2f)
+                    lineTo(widthPx - cutPx, heightPx)
+                    lineTo(0f, heightPx)
+                    close()
+                }
+                drawPath(path, bgColor)
+            }
+
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 fontFamily = BergenSans,
-                color = MaterialTheme.colorScheme.onTertiary,
+                color = textColor,
                 maxLines = 1,
-                textAlign = TextAlign.Center
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 10.dp, end = 20.dp)
             )
         }
     }

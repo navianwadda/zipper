@@ -61,15 +61,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val savedMode = getSharedPreferences("live_tv_pro_prefs", android.content.Context.MODE_PRIVATE)
-            .getInt("theme_mode", 0)
-        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-            when (savedMode) {
-                1 -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
-                2 -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
-                else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            }
-        )
         super.onCreate(savedInstanceState)
 
         if (!dataRepository.isDataLoaded()) {
@@ -141,7 +132,9 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        themeManager.registerActivityContext(this)
+        val isDark = newConfig.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        themeManager.notifySystemDarkChanged(isDark)
     }
 
     override fun onNewIntent(intent: Intent) {

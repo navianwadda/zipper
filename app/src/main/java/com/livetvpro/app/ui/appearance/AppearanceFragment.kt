@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.theme.AppColorTheme
+import com.livetvpro.app.ui.theme.AppThemeContent
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -75,7 +76,9 @@ class AppearanceFragment : Fragment() {
     ): View = ComposeView(requireContext()).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
-            AppearanceScreen(themeManager = themeManager)
+            AppThemeContent(themeManager) {
+                AppearanceScreen(themeManager = themeManager)
+            }
         }
     }
 }
@@ -96,7 +99,7 @@ fun AppearanceScreen(themeManager: ThemeManager) {
         else                     -> systemDarkTheme
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
 
             item { PreferenceSectionHeader(title = "Theme") }
 

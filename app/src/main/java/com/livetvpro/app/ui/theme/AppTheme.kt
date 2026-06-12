@@ -5,7 +5,6 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,14 +26,11 @@ fun LiveTVProTheme(
     surfaceColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
-    val context          = LocalContext.current
-    val activity         = LocalActivity.current as? ComponentActivity
-    val colorTheme       by themeManager.colorThemeFlow.collectAsState()
-    val amoled           by themeManager.amoledFlow.collectAsState()
-    val forcedDark       by themeManager.isDarkFlow.collectAsState(initial = null)
-    val isSystemDarkTheme = isSystemInDarkTheme()
-
-    val isDark = forcedDark ?: isSystemDarkTheme
+    val context    = LocalContext.current
+    val activity   = LocalActivity.current as? ComponentActivity
+    val colorTheme by themeManager.colorThemeFlow.collectAsState()
+    val amoled     by themeManager.amoledFlow.collectAsState()
+    val isDark     by themeManager.resolvedIsDarkFlow.collectAsState()
 
     val colorScheme = when {
         colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
@@ -79,13 +75,10 @@ fun AppThemeContent(
     themeManager: ThemeManager,
     content: @Composable () -> Unit,
 ) {
-    val context           = LocalContext.current
-    val colorTheme        by themeManager.colorThemeFlow.collectAsState()
-    val amoled            by themeManager.amoledFlow.collectAsState()
-    val forcedDark        by themeManager.isDarkFlow.collectAsState(initial = null)
-    val isSystemDarkTheme  = isSystemInDarkTheme()
-
-    val isDark = forcedDark ?: isSystemDarkTheme
+    val context    = LocalContext.current
+    val colorTheme by themeManager.colorThemeFlow.collectAsState()
+    val amoled     by themeManager.amoledFlow.collectAsState()
+    val isDark     by themeManager.resolvedIsDarkFlow.collectAsState()
 
     val colorScheme = when {
         colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
@@ -107,6 +100,11 @@ fun AppThemeContent(
     MaterialTheme(
         colorScheme = colorScheme,
         typography  = Typography(),
-        content     = content,
-    )
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color    = MaterialTheme.colorScheme.background,
+            content  = content,
+        )
+    }
 }

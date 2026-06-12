@@ -5,15 +5,13 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -67,10 +64,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -109,17 +104,14 @@ fun LiveEventsScreen(
     onEventInteraction: ((LiveEvent, () -> Unit) -> Boolean)? = null
 ) {
     val context = LocalContext.current
-
     val filteredEvents by viewModel.filteredEvents.observeAsState(emptyList())
     val eventCategories by viewModel.eventCategories.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isEmpty by viewModel.isEmpty.observeAsState(false)
     val primaryColor by viewModel.primaryColorFlow.collectAsState()
-
     var selectedStatusFilter by remember { mutableStateOf<EventStatus?>(null) }
     var selectedCategoryId by remember { mutableStateOf("evt_cat_all") }
     var linkDialogEvent by remember { mutableStateOf<LiveEvent?>(null) }
-
     val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
 
@@ -420,7 +412,6 @@ private fun StatusFilterChips(
     onFilterSelected: (EventStatus?) -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
-
     val filters = listOf(
         null to "All",
         EventStatus.LIVE to "Live",
@@ -810,53 +801,22 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 
 @Composable
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
-    val bgColor = MaterialTheme.colorScheme.tertiary
-    val textColor = MaterialTheme.colorScheme.onTertiary
-    val density = LocalDensity.current
-
     Box(
         modifier = modifier
-            .height(32.dp)
-            .wrapContentWidth()
-            .offset(x = 0.dp, y = 8.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .height(32.dp)
-                .wrapContentWidth()
-        ) {
-            val widthPx = with(density) { (maxWidth + 24.dp).toPx() }
-            val heightPx = with(density) { 32.dp.toPx() }
-            val cutPx = with(density) { 12.dp.toPx() }
-
-            Canvas(
-                modifier = Modifier
-                    .width(maxWidth + 24.dp)
-                    .height(32.dp)
-            ) {
-                val path = Path().apply {
-                    moveTo(0f, 0f)
-                    lineTo(widthPx - cutPx, 0f)
-                    lineTo(widthPx, heightPx / 2f)
-                    lineTo(widthPx - cutPx, heightPx)
-                    lineTo(0f, heightPx)
-                    close()
-                }
-                drawPath(path, bgColor)
-            }
-
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                fontFamily = BergenSans,
-                color = textColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 10.dp, end = 20.dp)
+            .background(
+                MaterialTheme.colorScheme.tertiary, 
+                RoundedCornerShape(topStart = 0.dp, topEnd = 12.dp, bottomEnd = 0.dp, bottomStart = 12.dp)
             )
-        }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            fontFamily = BergenSans,
+            color = MaterialTheme.colorScheme.onTertiary,
+            maxLines = 1
+        )
     }
 }

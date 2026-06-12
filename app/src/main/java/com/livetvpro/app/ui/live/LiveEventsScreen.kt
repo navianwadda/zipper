@@ -11,9 +11,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,7 +29,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -37,7 +37,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -68,15 +67,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Path
-
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
@@ -86,7 +78,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -527,7 +518,6 @@ fun LiveEventCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .padding(bottom = 18.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -617,9 +607,7 @@ fun LiveEventCard(
             if (event.wrapper.isNotEmpty()) {
                 WrapperBadge(
                     text = event.wrapper,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .offset(y = 17.dp)
+                    modifier = Modifier.align(Alignment.BottomStart)
                 )
             }
         }
@@ -820,53 +808,55 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
     }
 }
 
-
-class WrapperBadgeShape : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ): Outline {
-        val h = size.height
-        val r = h
-
-        val path = Path().apply {
-            moveTo(0f, 0f)
-            lineTo(size.width - r, 0f)
-            quadraticBezierTo(size.width, 0f, size.width, h)
-            lineTo(0f, h)
-            close()
-        }
-
-        return Outline.Generic(path)
-    }
-}
-
 @Composable
-private fun WrapperBadge(
-    text: String,
-    modifier: Modifier = Modifier
-) {
+private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
+    val bgColor = MaterialTheme.colorScheme.tertiary
+    val textColor = MaterialTheme.colorScheme.onTertiary
+    val density = LocalDensity.current
+
     Box(
         modifier = modifier
-            .height(34.dp)
-            .clip(WrapperBadgeShape())
-            .background(Color(0xFF00D084))
-            .padding(
-                start = 14.dp,
-                end = 18.dp,
-                top = 6.dp,
-                bottom = 6.dp
-            ),
+            .height(32.dp)
+            .wrapContentWidth()
+            .offset(x = 0.dp, y = 8.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        Text(
-            text = text,
-            fontFamily = BergenSans,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 12.sp,
-            color = Color.White,
-            maxLines = 1
-        )
+        BoxWithConstraints(
+            modifier = Modifier
+                .height(32.dp)
+                .wrapContentWidth()
+        ) {
+            val widthPx = with(density) { (maxWidth + 24.dp).toPx() }
+            val heightPx = with(density) { 32.dp.toPx() }
+            val cutPx = with(density) { 12.dp.toPx() }
+
+            Canvas(
+                modifier = Modifier
+                    .width(maxWidth + 24.dp)
+                    .height(32.dp)
+            ) {
+                val path = Path().apply {
+                    moveTo(0f, 0f)
+                    lineTo(widthPx - cutPx, 0f)
+                    lineTo(widthPx, heightPx / 2f)
+                    lineTo(widthPx - cutPx, heightPx)
+                    lineTo(0f, heightPx)
+                    close()
+                }
+                drawPath(path, bgColor)
+            }
+
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = BergenSans,
+                color = textColor,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 10.dp, end = 20.dp)
+            )
+        }
     }
 }

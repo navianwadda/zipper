@@ -1,6 +1,5 @@
 package com.livetvpro.app
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
@@ -12,12 +11,35 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.main.MainScaffold
@@ -46,9 +68,18 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     var navHostFragment: androidx.navigation.fragment.NavHostFragment? = null
     var pendingDestinationId: Int = -1
 
-    var isSearchVisible by mutableStateOf(false)
-    var toolbarTitle    by mutableStateOf("Live TV Pro")
-    var showRefreshIcon by mutableStateOf(false)
+    var isSearchVisible      by mutableStateOf(false)
+    var toolbarTitle         by mutableStateOf("Live TV Pro")
+    var showRefreshIcon      by mutableStateOf(false)
+
+    private var showCopyrightDialog      by mutableStateOf(false)
+    private var showNoticeDialog         by mutableStateOf(false)
+    private var showOverlayPermDialog    by mutableStateOf(false)
+    private var showSaveStatesDialog     by mutableStateOf(false)
+
+    private var saveStatesRememberAR     by mutableStateOf(false)
+    private var saveStatesForceLowestQ   by mutableStateOf(false)
+    private var saveStatesCenterMode     by mutableIntStateOf(PreferencesManager.CENTER_MODE_SEEKS_ONLY)
 
     private var backPressedTime = 0L
 
@@ -85,19 +116,176 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         setContent {
             LiveTVProTheme(themeManager) {
                 MainScaffold(
-                    activity          = this,
-                    themeManager      = themeManager,
-                    listenerManager   = listenerManager,
+                    activity           = this,
+                    themeManager       = themeManager,
+                    listenerManager    = listenerManager,
                     preferencesManager = preferencesManager,
-                    settingsActions   = this,
-                    onNavControllerReady = { navController = it },
-                    onNavHostReady = { navHostFragment = it },
-                    onDestinationChanged = { destId, title, refresh ->
+                    settingsActions    = this,
+                    onNavControllerReady      = { navController = it },
+                    onNavHostReady            = { navHostFragment = it },
+                    onDestinationChanged      = { _, title, refresh ->
                         toolbarTitle    = title
                         showRefreshIcon = refresh
                     },
                     onSearchVisibilityChanged = { isSearchVisible = it },
                 )
+
+                if (showCopyrightDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showCopyrightDialog = false },
+                        title = { Text("Copyright") },
+                        text  = {
+                            Text(
+                                "Live TV Pro does not stream any of the channels included in this application, " +
+                                "all the streaming links are from third party websites available freely on the internet. " +
+                                "We're just giving way to stream and all content is the copyright of their owner."
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showCopyrightDialog = false }) {
+                                Text("OK")
+                            }
+                        },
+                    )
+                }
+
+                if (showNoticeDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showNoticeDialog = false },
+                        title = { Text("Important Notice") },
+                        text  = {
+                            Text(
+                                "We do not support gambling. If you see gambling ads on our app or website, " +
+                                "they come from the ad network, not us.\n\n" +
+                                "If you see clickable ads, you can click them, but please don't sign up. " +
+                                "We just need your clicks and impressions. Thanks for your support."
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showNoticeDialog = false }) {
+                                Text("OK")
+                            }
+                        },
+                    )
+                }
+
+                if (showOverlayPermDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showOverlayPermDialog = false },
+                        title = { Text("Permission Required") },
+                        text  = {
+                            Text("Floating Player requires permission to draw over other apps. Please enable it in the next screen.")
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                showOverlayPermDialog = false
+                                overlayPermissionLauncher.launch(
+                                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                                )
+                            }) {
+                                Text("Settings")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showOverlayPermDialog = false }) {
+                                Text("Cancel")
+                            }
+                        },
+                    )
+                }
+
+                if (showSaveStatesDialog) {
+                    val centerModeOptions = listOf(
+                        PreferencesManager.CENTER_MODE_SEEKS_ONLY    to "Seeks Only",
+                        PreferencesManager.CENTER_MODE_SEEKS_AND_NAV to "Seeks & Navigation",
+                        PreferencesManager.CENTER_MODE_NAV_ONLY      to "Navigation Only",
+                    )
+                    AlertDialog(
+                        onDismissRequest = { showSaveStatesDialog = false },
+                        title = { Text("Save States") },
+                        text  = {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Row(
+                                    modifier          = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Remember Aspect Ratio", style = MaterialTheme.typography.bodyLarge)
+                                    }
+                                    Switch(
+                                        checked         = saveStatesRememberAR,
+                                        onCheckedChange = { saveStatesRememberAR = it },
+                                    )
+                                }
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                Row(
+                                    modifier          = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Force Lowest Quality", style = MaterialTheme.typography.bodyLarge)
+                                    }
+                                    Switch(
+                                        checked         = saveStatesForceLowestQ,
+                                        onCheckedChange = { saveStatesForceLowestQ = it },
+                                    )
+                                }
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                Text(
+                                    text  = "Center Controls",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Column(modifier = Modifier.selectableGroup()) {
+                                    centerModeOptions.forEach { (mode, label) ->
+                                        Row(
+                                            modifier          = Modifier
+                                                .fillMaxWidth()
+                                                .selectable(
+                                                    selected = saveStatesCenterMode == mode,
+                                                    onClick  = { saveStatesCenterMode = mode },
+                                                    role     = Role.RadioButton,
+                                                )
+                                                .padding(vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            RadioButton(
+                                                selected = saveStatesCenterMode == mode,
+                                                onClick  = null,
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                preferencesManager.setRememberAspectRatioEnabled(saveStatesRememberAR)
+                                preferencesManager.setForceLowestQualityEnabled(saveStatesForceLowestQ)
+                                preferencesManager.setCenterControlsMode(saveStatesCenterMode)
+                                showSaveStatesDialog = false
+                            }) {
+                                Text("Apply")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showSaveStatesDialog = false }) {
+                                Text("Cancel")
+                            }
+                        },
+                    )
+                }
             }
         }
 
@@ -190,65 +378,12 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             ?: nhf.childFragmentManager.fragments.filterIsInstance<T>().firstOrNull()
     }
 
-    private fun applyGlassMorphism(dialog: android.app.Dialog) {
-        val window = dialog.window ?: return
-        val radius = 28f * resources.displayMetrics.density
-        window.setBackgroundDrawable(object : android.graphics.drawable.Drawable() {
-            private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0xCC0D0D0D.toInt()
-            }
-            private val border = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                style = android.graphics.Paint.Style.STROKE
-                color = 0x33FFFFFF
-                strokeWidth = 2f
-            }
-            private val rect = android.graphics.RectF()
-            override fun draw(c: android.graphics.Canvas) {
-                rect.set(bounds)
-                c.drawRoundRect(rect, radius, radius, paint)
-                c.drawRoundRect(rect, radius, radius, border)
-            }
-            override fun setAlpha(a: Int) { paint.alpha = a }
-            override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
-            @Suppress("OVERRIDE_DEPRECATION")
-            override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
-        })
-    }
-
-    private fun dialogWidth(): Int {
-        val dm  = resources.displayMetrics
-        val sw  = resources.configuration.smallestScreenWidthDp
-        val land = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        return when {
-            DeviceUtils.isTvDevice || DeviceUtils.isDesktop -> (dm.widthPixels * 0.45f).toInt()
-            sw >= 720 -> (dm.widthPixels * 0.45f).toInt()
-            sw >= 600 -> (dm.widthPixels * 0.55f).toInt()
-            land      -> (dm.widthPixels * 0.55f).toInt()
-            else      -> (dm.widthPixels * 0.88f).toInt()
-        }
-    }
-
     override fun onSettingsCopyright() {
-        val d = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
-            .setTitle("Copyright")
-            .setMessage("Live TV Pro does not stream any of the channels included in this application, all the streaming links are from third party websites available freely on the internet. We're just giving way to stream and all content is the copyright of their owner.")
-            .setPositiveButton("OK", null).show()
-        applyGlassMorphism(d)
-        d.window?.setLayout(dialogWidth(), android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
-        d.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
+        showCopyrightDialog = true
     }
 
     override fun onSettingsNotice() {
-        val d = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
-            .setTitle("Important Notice")
-            .setMessage(
-                "We do not support gambling. If you see gambling ads on our app or website, they come from the ad network, not us.\n\n" +
-                "If you see clickable ads, you can click them, but please don't sign up. We just need your clicks and impressions. Thanks for your support."
-            )
-            .setPositiveButton("OK", null).show()
-        applyGlassMorphism(d)
-        d.window?.setLayout(dialogWidth(), android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
-        d.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
+        showNoticeDialog = true
     }
 
     override fun onSettingsShareApp() {
@@ -270,57 +405,16 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     }
 
     override fun onSettingsSaveStates() {
-        val v      = layoutInflater.inflate(R.layout.dialog_save_states, null)
-        val swAR   = v.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_remember_aspect_ratio)
-        val swLQ   = v.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switch_force_lowest_quality)
-        val rg     = v.findViewById<android.widget.RadioGroup>(R.id.rg_center_controls)
-        val btnC   = v.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_states_cancel)
-        val btnA   = v.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_states_apply)
-
-        swAR.isChecked = preferencesManager.isRememberAspectRatioEnabled()
-        swLQ.isChecked = preferencesManager.isForceLowestQualityEnabled()
-        when (preferencesManager.getCenterControlsMode()) {
-            PreferencesManager.CENTER_MODE_SEEKS_AND_NAV -> v.findViewById<android.widget.RadioButton>(R.id.rb_seeks_and_nav).isChecked = true
-            PreferencesManager.CENTER_MODE_NAV_ONLY      -> v.findViewById<android.widget.RadioButton>(R.id.rb_nav_only).isChecked = true
-            else                                          -> v.findViewById<android.widget.RadioButton>(R.id.rb_seeks_only).isChecked = true
-        }
-
-        val d = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent).setView(v).create()
-        btnC.setOnClickListener { d.dismiss() }
-        btnA.setOnClickListener {
-            preferencesManager.setRememberAspectRatioEnabled(swAR.isChecked)
-            preferencesManager.setForceLowestQualityEnabled(swLQ.isChecked)
-            preferencesManager.setCenterControlsMode(
-                when (rg.checkedRadioButtonId) {
-                    R.id.rb_seeks_and_nav -> PreferencesManager.CENTER_MODE_SEEKS_AND_NAV
-                    R.id.rb_nav_only      -> PreferencesManager.CENTER_MODE_NAV_ONLY
-                    else                  -> PreferencesManager.CENTER_MODE_SEEKS_ONLY
-                }
-            )
-            d.dismiss()
-        }
-        d.show()
-        applyGlassMorphism(d)
-        val maxH = (resources.displayMetrics.heightPixels * 0.85f).toInt()
-        d.window?.setLayout(dialogWidth(), maxH.coerceAtMost(android.view.ViewGroup.LayoutParams.WRAP_CONTENT))
-        if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop) btnA.requestFocus()
+        saveStatesRememberAR   = preferencesManager.isRememberAspectRatioEnabled()
+        saveStatesForceLowestQ = preferencesManager.isForceLowestQualityEnabled()
+        saveStatesCenterMode   = preferencesManager.getCenterControlsMode()
+        showSaveStatesDialog   = true
     }
 
     override fun onSettingsFloatingPlayer() {
         if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            val d = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
-                .setTitle("Permission Required")
-                .setMessage("Floating Player requires permission to draw over other apps. Please enable it in the next screen.")
-                .setPositiveButton("Settings") { _, _ ->
-                    overlayPermissionLauncher.launch(
-                        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-                    )
-                }
-                .setNegativeButton("Cancel", null).show()
-            applyGlassMorphism(d)
-            d.window?.setLayout(dialogWidth(), android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
-            d.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
+            showOverlayPermDialog = true
         } else {
             FloatingPlayerDialog.newInstance().show(supportFragmentManager, FloatingPlayerDialog.TAG)
         }

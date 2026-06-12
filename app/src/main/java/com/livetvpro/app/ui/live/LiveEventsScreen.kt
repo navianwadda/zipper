@@ -501,7 +501,8 @@ fun LiveEventCard(
     Box(
         modifier = Modifier
             .padding(horizontal = 6.dp, vertical = 5.dp)
-            .scale(scale)
+            .scale(scale),
+        clipToBounds = false
     ) {
         Card(
             onClick = onClick,
@@ -605,10 +606,7 @@ fun LiveEventCard(
         if (event.wrapper.isNotEmpty()) {
             WrapperBadge(
                 text = event.wrapper,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .offset(x = (-38).dp)
-                    .padding(bottom = 18.dp)
+                modifier = Modifier.align(Alignment.BottomStart)
             )
         }
     }
@@ -810,21 +808,32 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
 
 @Composable
 private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
-    val liveRed = MaterialTheme.colorScheme.error
     Box(
         modifier = modifier
-            .size(width = 100.dp, height = 20.dp)
-            .graphicsLayer { rotationZ = 45f }
-            .background(liveRed)
-            .padding(start = 24.dp),
-        contentAlignment = Alignment.CenterStart
+            .width(80.dp)
+            .height(80.dp),
+        contentAlignment = Alignment.BottomStart
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onError,
-            maxLines = 1
-        )
+        Box(
+            modifier = Modifier
+                .width(110.dp)
+                .height(22.dp)
+                .graphicsLayer {
+                    rotationZ = -45f
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)
+                }
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                fontFamily = BergenSans,
+                color = MaterialTheme.colorScheme.onPrimary,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }

@@ -2172,31 +2172,13 @@ class FloatingPlayerService : Service() {
 
     private fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
         val builder = MediaItem.Builder().setUri(streamInfo.url)
-        val url = streamInfo.url.lowercase()
-        when {
-            url.contains("m3u8") || url.contains("extension=m3u8") ->
-                builder.setMimeType(MimeTypes.APPLICATION_M3U8)
-            url.contains(".mpd") || url.contains("/dash/") || url.contains("type=mpd") ->
-                builder.setMimeType(MimeTypes.APPLICATION_MPD)
-            url.contains(".ism") || url.contains(".isml") || url.contains("manifest(format=mpd") ->
-                builder.setMimeType(MimeTypes.APPLICATION_SS)
-            url.contains(".flv") ->
-                builder.setMimeType("video/x-flv")
-            url.contains(".ts") || url.contains("/ts") ->
-                builder.setMimeType("video/mp2t")
-            url.contains(".mp4") || url.contains(".m4v") || url.contains(".m4a") ->
-                builder.setMimeType("video/mp4")
-            url.contains(".mkv") ->
-                builder.setMimeType("video/x-matroska")
-            url.contains(".webm") ->
-                builder.setMimeType("video/webm")
-            url.contains(".avi") ->
-                builder.setMimeType("video/avi")
-            url.startsWith("rtmp://") || url.startsWith("rtmps://") ->
-                builder.setMimeType(MimeTypes.APPLICATION_RTSP)
-            url.startsWith("rtsp://") ->
-                builder.setMimeType(MimeTypes.APPLICATION_RTSP)
-        }
+        val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(streamInfo.url)
+            ?: try {
+                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                    PlayerStreamHelper.resolveContentType(streamInfo.url, headers)
+                }
+            } catch (e: Exception) { null }
+        mimeType?.let { builder.setMimeType(it) }
         if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->
                 val uuid = if (streamInfo.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID

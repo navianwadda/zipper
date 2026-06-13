@@ -17,8 +17,8 @@ android {
         applicationId = "com.livetvpro.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.6.5"
+        versionCode = 12
+        versionName = "1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -176,6 +176,7 @@ dependencies {
     
     // Activity Compose
     implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.activity:activity-ktx:1.10.1")
     
     // Compose Runtime
     implementation("androidx.compose.runtime:runtime")

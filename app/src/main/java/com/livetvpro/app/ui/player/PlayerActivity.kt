@@ -559,7 +559,7 @@ class PlayerActivity : BasePlayerActivity() {
                 val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                // topMargin is kept as-is — driven by Compose SideEffect in PlayerActivityRoot
+                // topMargin stays 0 — status bar offset owned by Compose padding
                 params.bottomMargin = 0
                 params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                 params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -2016,22 +2016,6 @@ private fun PlayerActivity.PlayerActivityRoot(
     val navBarHeight = androidx.compose.foundation.layout.WindowInsets.navigationBars
         .asPaddingValues().calculateBottomPadding()
 
-    // Single source of truth: Compose owns the status bar inset and pushes
-    // it into the XML player_container so both layers always stay in sync.
-    val statusBarHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) {
-        statusBarHeight.roundToPx()
-    }
-    androidx.compose.runtime.SideEffect {
-        if (!isLandscape) {
-            val params = activity.playerContainer.layoutParams
-                as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
-            if (params.topMargin != statusBarHeightPx) {
-                params.topMargin = statusBarHeightPx
-                activity.playerContainer.layoutParams = params
-            }
-        }
-    }
-
     val isPlaying by androidx.compose.runtime.produceState(initialValue = false, player) {
         while (true) {
             value = player?.isPlaying == true
@@ -2062,7 +2046,8 @@ private fun PlayerActivity.PlayerActivityRoot(
         } else false
 
     androidx.compose.foundation.layout.Column(
-        modifier = androidx.compose.ui.Modifier.fillMaxSize()
+        modifier = if (isLandscape) androidx.compose.ui.Modifier.fillMaxSize()
+                   else androidx.compose.ui.Modifier.fillMaxWidth().wrapContentHeight(unbounded = false)
     ) {
         if (!isLandscape) {
             val isNetworkStream = activity.contentType == PlayerActivity.ContentType.NETWORK_STREAM

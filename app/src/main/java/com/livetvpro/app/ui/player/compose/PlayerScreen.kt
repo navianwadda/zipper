@@ -4,25 +4,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -32,18 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +28,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +36,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -65,19 +47,86 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.data.models.LiveEventLink
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.livetvpro.app.ui.player.ExoPlayerView
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
-private val CardLogoBg = Color(0x80000000)
+private val CardLogoBg  = Color(0x80000000)
+
+// ---------------------------------------------------------------------------
+// Sealed state types
+// ---------------------------------------------------------------------------
 
 sealed class RelatedContentState {
-    object Hidden : RelatedContentState()
+    object Hidden  : RelatedContentState()
     object Loading : RelatedContentState()
-    data class Channels(val items: List<Channel>) : RelatedContentState()
-    data class Events(val items: List<LiveEvent>) : RelatedContentState()
+    data class Channels(val items: List<Channel>)   : RelatedContentState()
+    data class Events(val items: List<LiveEvent>)   : RelatedContentState()
 }
 
+// ---------------------------------------------------------------------------
+// VideoSurface — pure-Kotlin ExoPlayer surface embedded in Compose
+// ---------------------------------------------------------------------------
+
+/**
+ * Hosts the [ExoPlayerView] (no XML) inside the Compose hierarchy.
+ *
+ * Drop this anywhere you need the actual video surface.  Both [PlayerActivity]
+ * and [FloatingPlayerActivity] can reference the same [ExoPlayerView] instance
+ * via [remember] so the surface is never recreated unnecessarily.
+ *
+ * @param player      The active [ExoPlayer] instance, or null when not ready.
+ * @param resizeMode  One of the [AspectRatioFrameLayout].RESIZE_MODE_* constants.
+ * @param modifier    Standard Compose modifier (fill the player container box).
+ */
+@UnstableApi
+@Composable
+fun VideoSurface(
+    player: ExoPlayer?,
+    resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+
+    // Keep ONE ExoPlayerView instance alive for the lifetime of this composition.
+    val exoPlayerView = remember {
+        ExoPlayerView(context).apply {
+            this.resizeMode = resizeMode
+        }
+    }
+
+    // Re-apply resize mode whenever it changes (e.g. user toggles aspect ratio).
+    LaunchedEffect(resizeMode) {
+        exoPlayerView.resizeMode = resizeMode
+    }
+
+    AndroidView(
+        factory  = { exoPlayerView },
+        modifier = modifier,
+        update   = { view ->
+            // Attach / detach the player whenever the reference changes.
+            if (view.player !== player) {
+                view.setPlayer(player)
+            }
+        },
+    )
+
+    // Forward lifecycle: pause the surface when the composable leaves the screen.
+    DisposableEffect(exoPlayerView) {
+        exoPlayerView.onResume()
+        onDispose { exoPlayerView.onPause() }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// PlayerScreen — the full below-the-fold UI (links row + related content)
+// ---------------------------------------------------------------------------
+
+/**
+ * The scrollable content area below the player surface.
+ *
+ * Render [VideoSurface] **above** this composable in the parent layout; this
+ * composable only manages the link chips, message banner, and related grids.
+ */
 @Composable
 fun PlayerScreen(
     isLandscape: Boolean,
@@ -98,14 +147,18 @@ fun PlayerScreen(
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .background(if (isLandscape) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface)
+            .background(
+                if (isLandscape) Color.Transparent
+                else MaterialTheme.colorScheme.surface
+            )
     ) {
         if (links.size > 1) {
             LinksRow(
-                links = links,
+                links         = links,
                 selectedIndex = selectedLinkIndex,
-                onLinkClick = onLinkClick,
-                background = if (isLandscape) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface,
+                onLinkClick   = onLinkClick,
+                background    = if (isLandscape) Color.Transparent
+                                else MaterialTheme.colorScheme.surface,
             )
         }
         if (!isLandscape && messageBanner.isNotBlank()) {
@@ -115,22 +168,27 @@ fun PlayerScreen(
             )
         }
         when (relatedContentState) {
-            is RelatedContentState.Hidden -> Unit
-            is RelatedContentState.Loading -> RelatedLoadingRow()
+            is RelatedContentState.Hidden   -> Unit
+            is RelatedContentState.Loading  -> RelatedLoadingRow()
             is RelatedContentState.Channels -> RelatedChannelsGrid(
-                channels = relatedContentState.items,
-                spanCount = spanCount,
+                channels    = relatedContentState.items,
+                spanCount   = spanCount,
                 onChannelClick = onChannelClick,
-                background = if (isLandscape) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface,
+                background  = if (isLandscape) Color.Transparent
+                              else MaterialTheme.colorScheme.surface,
             )
-            is RelatedContentState.Events -> RelatedEventsGrid(
-                events = relatedContentState.items,
-                spanCount = eventSpanCount,
+            is RelatedContentState.Events   -> RelatedEventsGrid(
+                events      = relatedContentState.items,
+                spanCount   = eventSpanCount,
                 onEventClick = onEventClick,
             )
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// LinksRow / LandscapeLinksRow
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun LinksRow(
@@ -138,16 +196,16 @@ private fun LinksRow(
     selectedIndex: Int,
     onLinkClick: (LiveEventLink, Int) -> Unit,
     modifier: Modifier = Modifier,
-    background: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
+    background: Color = MaterialTheme.colorScheme.surface,
 ) {
     AnimatedVisibility(
-        visible = links.size > 1,
-        enter = fadeIn(),
-        exit = fadeOut(),
+        visible  = links.size > 1,
+        enter    = fadeIn(),
+        exit     = fadeOut(),
         modifier = modifier,
     ) {
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            contentPadding      = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -155,11 +213,34 @@ private fun LinksRow(
         ) {
             itemsIndexed(links) { index, link ->
                 LinkChip(
-                    label = link.quality,
+                    label      = link.quality,
                     isSelected = index == selectedIndex,
-                    onClick = { onLinkClick(link, index) },
+                    onClick    = { onLinkClick(link, index) },
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun LandscapeLinksRow(
+    links: List<LiveEventLink>,
+    selectedIndex: Int,
+    onLinkClick: (LiveEventLink, Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (links.size <= 1) return
+    LazyRow(
+        contentPadding        = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier              = modifier.fillMaxWidth(),
+    ) {
+        itemsIndexed(links) { index, link ->
+            LinkChip(
+                label      = link.quality,
+                isSelected = index == selectedIndex,
+                onClick    = { onLinkClick(link, index) },
+            )
         }
     }
 }
@@ -181,7 +262,7 @@ private fun LinkChip(
         else       -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Row(
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(50))
@@ -193,44 +274,26 @@ private fun LinkChip(
     ) {
         if (isSelected) {
             Icon(
-                imageVector = Icons.Default.Check,
+                imageVector    = Icons.Default.Check,
                 contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(14.dp),
+                tint           = contentColor,
+                modifier       = Modifier.size(14.dp),
             )
         }
         Text(
-            text = label,
-            color = contentColor,
+            text       = label,
+            color      = contentColor,
             fontFamily = BergenSans,
-            fontSize = 13.sp,
+            fontSize   = 13.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
+            maxLines   = 1,
         )
     }
 }
-@Composable
-fun LandscapeLinksRow(
-    links: List<LiveEventLink>,
-    selectedIndex: Int,
-    onLinkClick: (LiveEventLink, Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (links.size <= 1) return
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        itemsIndexed(links) { index, link ->
-            LinkChip(
-                label = link.quality,
-                isSelected = index == selectedIndex,
-                onClick = { onLinkClick(link, index) },
-            )
-        }
-    }
-}
+
+// ---------------------------------------------------------------------------
+// MessageBanner
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun MessageBanner(
@@ -249,18 +312,22 @@ private fun MessageBanner(
             .padding(horizontal = 12.dp, vertical = 5.dp),
     ) {
         Text(
-            text = message,
+            text     = message,
             modifier = Modifier
                 .fillMaxWidth()
                 .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
-            style = MaterialTheme.typography.bodyMedium,
+            style      = MaterialTheme.typography.bodyMedium,
             fontFamily = BergenSans,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Clip,
+            color      = MaterialTheme.colorScheme.onSurface,
+            maxLines   = 1,
+            overflow   = TextOverflow.Clip,
         )
     }
 }
+
+// ---------------------------------------------------------------------------
+// Related content rows
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun RelatedLoadingRow(modifier: Modifier = Modifier) {
@@ -271,7 +338,7 @@ private fun RelatedLoadingRow(modifier: Modifier = Modifier) {
             .height(48.dp),
     ) {
         CircularProgressIndicator(
-            modifier = Modifier.size(20.dp),
+            modifier    = Modifier.size(20.dp),
             strokeWidth = 2.dp,
         )
     }
@@ -284,14 +351,14 @@ private fun RelatedChannelsGrid(
     spanCount: Int,
     onChannelClick: (Channel) -> Unit,
     modifier: Modifier = Modifier,
-    background: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
+    background: Color = MaterialTheme.colorScheme.surface,
 ) {
     if (channels.isEmpty()) return
     LazyVerticalGrid(
-        columns = GridCells.Fixed(spanCount),
-        contentPadding = PaddingValues(4.dp),
+        columns               = GridCells.Fixed(spanCount),
+        contentPadding        = PaddingValues(4.dp),
         horizontalArrangement = Arrangement.spacedBy(0.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp),
+        verticalArrangement   = Arrangement.spacedBy(0.dp),
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
@@ -314,16 +381,16 @@ private fun RelatedChannelCard(
 ) {
     var focused by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (focused) 1.05f else 1f,
+        targetValue  = if (focused) 1.05f else 1f,
         animationSpec = tween(150),
-        label = "scale",
+        label        = "scale",
     )
     Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier
+        onClick    = onClick,
+        colors     = CardDefaults.cardColors(),
+        shape      = RoundedCornerShape(12.dp),
+        elevation  = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier   = Modifier
             .padding(4.dp)
             .fillMaxWidth()
             .wrapContentHeight()
@@ -332,9 +399,7 @@ private fun RelatedChannelCard(
             .focusable(),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
+            modifier            = Modifier.fillMaxWidth().padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
@@ -350,10 +415,10 @@ private fun RelatedChannelCard(
                         .background(CardLogoBg),
                 ) {
                     GlideImage(
-                        model = channel.logoUrl.takeIf { it.isNotBlank() },
+                        model              = channel.logoUrl.takeIf { it.isNotBlank() },
                         contentDescription = channel.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
+                        contentScale       = ContentScale.Crop,
+                        modifier           = Modifier.fillMaxSize(),
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)
                             .placeholder(R.mipmap.ic_launcher_round)
@@ -363,15 +428,15 @@ private fun RelatedChannelCard(
                 }
             }
             Text(
-                text = channel.name,
+                text       = channel.name,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Clip,
-                modifier = Modifier
+                fontSize   = 13.sp,
+                color      = MaterialTheme.colorScheme.onSurface,
+                textAlign  = TextAlign.Center,
+                maxLines   = 1,
+                overflow   = TextOverflow.Clip,
+                modifier   = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
                     .basicMarquee(iterations = Int.MAX_VALUE),
@@ -389,19 +454,15 @@ private fun RelatedEventsGrid(
 ) {
     if (events.isEmpty()) return
     LazyVerticalGrid(
-        columns = GridCells.Fixed(spanCount),
+        columns        = GridCells.Fixed(spanCount),
         contentPadding = PaddingValues(top = 4.dp, bottom = 4.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .wrapContentHeight(),
+        modifier       = modifier.fillMaxWidth().wrapContentHeight(),
     ) {
         items(events, key = { it.id }) { event ->
             com.livetvpro.app.ui.live.LiveEventCard(
-                event = event,
+                event   = event,
                 onClick = { onEventClick(event, 0) },
             )
         }
     }
 }
-
-

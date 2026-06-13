@@ -63,6 +63,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.asPaddingValues
@@ -1357,7 +1358,8 @@ class FloatingPlayerActivity : BasePlayerActivity() {
                     }
 
                     androidx.compose.foundation.layout.Column(
-                        modifier = Modifier.fillMaxSize()
+                        modifier = if (isLandscape) Modifier.fillMaxSize()
+                                   else Modifier.fillMaxWidth().wrapContentHeight(unbounded = false)
                     ) {
                         if (!isLandscape) {
                             val statusBarHeight = androidx.compose.foundation.layout.WindowInsets.statusBars

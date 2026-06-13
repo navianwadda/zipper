@@ -1,6 +1,5 @@
 package com.livetvpro.app.ui.categories
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -144,25 +143,15 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                         viewModel = viewModel,
                         spanCount = spanCount,
                         isTvDevice = DeviceUtils.isTvDevice,
-                        onChannelClick = { channel ->
-                            if (channel.links != null && channel.links.size > 1) {
-                                showLinkSelectionDialog(channel)
-                            } else {
-                                launchPlayer(channel, -1)
-                            }
+                        onChannelClick = { channel, linkIndex ->
+                            launchPlayer(channel, linkIndex)
                         },
                         onChannelLongClick = { channel -> showFavoriteDialog(channel) },
                         onShowGroupsDialog = { showGroupsDialog = true },
                         onChannelInteraction = { channel, navAction ->
-                            val action: () -> Unit =
-                                if (channel.links != null && channel.links.size > 1) {
-                                    { showLinkSelectionDialog(channel) }
-                                } else {
-                                    navAction
-                                }
                             lastPageType = ListenerConfig.PAGE_CHANNELS
                             lastUniqueId = channel.id
-                            pendingChannelAction = action
+                            pendingChannelAction = navAction
 
                             val result = RedirectHelper.tryRedirect(
                                 fragment    = this@CategoryChannelsFragment,
@@ -381,20 +370,6 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                 channelListCacheKey = cacheKey
             )
         }
-    }
-
-    private fun showLinkSelectionDialog(channel: Channel) {
-        val links = channel.links?.takeIf { it.isNotEmpty() } ?: return
-        val linkLabels = links.map { it.quality }.toTypedArray()
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Multiple Links Available")
-            .setItems(linkLabels) { dialog, which ->
-                launchPlayer(channel, which)
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-        dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.requestFocus()
     }
 
     private fun showFavoriteDialog(channel: Channel) {

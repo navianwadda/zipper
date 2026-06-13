@@ -86,7 +86,6 @@ fun FavoritesScreen(
         val favorite = linkDialogFavorite!!
         LinkSelectionDialog(
             links = favorite.links.orEmpty().map { it.toLinkItem() },
-            currentUrl = null,
             onLinkSelected = { _, index ->
                 onChannelClick(favorite, index)
             },

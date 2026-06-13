@@ -143,7 +143,6 @@ fun LiveEventsScreen(
         val event = linkDialogEvent!!
         LinkSelectionDialog(
             links = event.links.map { it.toLinkItem() },
-            currentUrl = null,
             onLinkSelected = { _, index ->
                 onEventClick(event, index)
             },

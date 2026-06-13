@@ -1,227 +1,158 @@
 package com.livetvpro.app.ui.dialogs
 
-import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
-import android.view.Gravity
-import android.view.View
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import androidx.core.content.res.ResourcesCompat
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.livetvpro.app.R
 
-object SupportDialog {
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
-    const val TAG = "SupportDialog"
+private val ColorAccent = Color(0xFFEF4444)
+private val ColorSurface = Color(0xFF0D0D0D)
+private val ColorDivider = Color(0x1AFFFFFF)
+private val ColorOnSurface = Color(0xFFFFFFFF)
+private val ColorOnSurfaceMuted = Color(0xCCFFFFFF)
+private val ColorOutline = Color(0x33FFFFFF)
 
-    fun show(
-        context: Context,
-        durationSeconds: Long,
-        onClickHere: () -> Unit,
-        onCancel: () -> Unit
+@Composable
+fun SupportDialog(
+    durationSeconds: Long,
+    onClickHere: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Dialog(onDismissRequest = onCancel) {
+        SupportDialogContent(
+            durationSeconds = durationSeconds,
+            onClickHere = onClickHere,
+            onCancel = onCancel,
+        )
+    }
+}
+
+@Composable
+private fun SupportDialogContent(
+    durationSeconds: Long,
+    onClickHere: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(ColorSurface)
     ) {
-        val dp = context.resources.displayMetrics.density
-        val bergenSans = ResourcesCompat.getFont(context, com.livetvpro.app.R.font.bergen_sans)
-        var dialog: AlertDialog? = null
+        Column {
+            // Title
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 24.dp)
+            ) {
+                Text(
+                    text = "We Need Your Support",
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = ColorOnSurface,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
 
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                color = ColorDivider,
+                thickness = 1.dp,
             )
-        }
 
-        root.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding((24 * dp).toInt(), (24 * dp).toInt(), (24 * dp).toInt(), (16 * dp).toInt())
-
-            addView(TextView(context).apply {
-                text = "We Need Your Support"
-                textSize = 18f
-                typeface = Typeface.create(bergenSans, Typeface.BOLD)
-                setTextColor(0xFFFFFFFF.toInt())
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-            })
-        })
-
-        root.addView(View(context).apply {
-            setBackgroundColor(0x1AFFFFFF)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
-            ).also {
-                it.marginStart = (16 * dp).toInt()
-                it.marginEnd = (16 * dp).toInt()
-            }
-        })
-
-        root.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding((24 * dp).toInt(), (16 * dp).toInt(), (24 * dp).toInt(), (16 * dp).toInt())
-
-            listOf(
-                "1. Click the button below",
-                "2. Wait for the page to load",
-                "3. Check out the ads page for $durationSeconds seconds",
-                "4. After $durationSeconds seconds ads will be closed automatically"
-            ).forEachIndexed { i, step ->
-                addView(TextView(context).apply {
-                    text = step
-                    textSize = 14f
-                    typeface = bergenSans
-                    setTextColor(0xCCFFFFFF.toInt())
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).also { if (i < 3) it.bottomMargin = (8 * dp).toInt() }
-                })
-            }
-        })
-
-        root.addView(View(context).apply {
-            setBackgroundColor(0x1AFFFFFF)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
-            ).also {
-                it.marginStart = (16 * dp).toInt()
-                it.marginEnd = (16 * dp).toInt()
-            }
-        })
-
-        root.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END
-            setPadding((12 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt())
-
-            val cancelBtn = MaterialButton(
-                context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle
-            ).apply {
-                text = "Cancel"
-                textSize = 14f
-                typeface = bergenSans
-                setTextColor(0xCCFFFFFF.toInt())
-                strokeColor = android.content.res.ColorStateList.valueOf(0x33FFFFFF)
-                strokeWidth = (1 * dp).toInt()
-                cornerRadius = (50 * dp).toInt()
-                insetTop = 0
-                insetBottom = 0
-                isFocusable = true
-                isFocusableInTouchMode = false
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.marginEnd = (8 * dp).toInt() }
-                setOnClickListener {
-                    dialog?.setOnCancelListener(null)
-                    dialog?.dismiss()
-                    onCancel()
+            // Steps
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(
+                    "1. Click the button below",
+                    "2. Wait for the page to load",
+                    "3. Check out the ads page for $durationSeconds seconds",
+                    "4. After $durationSeconds seconds ads will be closed automatically",
+                ).forEach { step ->
+                    Text(
+                        text = step,
+                        fontFamily = BergenSans,
+                        fontSize = 14.sp,
+                        color = ColorOnSurfaceMuted,
+                    )
                 }
             }
 
-            val clickHereBtn = MaterialButton(
-                context, null, com.google.android.material.R.attr.materialButtonStyle
-            ).apply {
-                text = "Click Here"
-                textSize = 14f
-                typeface = Typeface.create(bergenSans, Typeface.BOLD)
-                setTextColor(Color.WHITE)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFEF4444.toInt())
-                cornerRadius = (50 * dp).toInt()
-                insetTop = 0
-                insetBottom = 0
-                isFocusable = true
-                isFocusableInTouchMode = false
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                setOnClickListener {
-                    dialog?.setOnCancelListener(null)
-                    dialog?.dismiss()
-                    onClickHere()
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                color = ColorDivider,
+                thickness = 1.dp,
+            )
+
+            // Buttons
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onCancel,
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = ColorOnSurfaceMuted,
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ColorOutline),
+                ) {
+                    Text(
+                        text = "Cancel",
+                        fontFamily = BergenSans,
+                        fontSize = 14.sp,
+                    )
+                }
+
+                Spacer(Modifier.padding(horizontal = 4.dp))
+
+                TextButton(
+                    onClick = onClickHere,
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.textButtonColors(
+                        containerColor = ColorAccent,
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Text(
+                        text = "Click Here",
+                        fontFamily = BergenSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                    )
                 }
             }
-
-            cancelBtn.id = View.generateViewId()
-            clickHereBtn.id = View.generateViewId()
-
-            addView(cancelBtn)
-            addView(clickHereBtn)
-
-            cancelBtn.nextFocusRightId = clickHereBtn.id
-            clickHereBtn.nextFocusLeftId = cancelBtn.id
-
-            cancelBtn.setOnKeyListener { _, keyCode, event ->
-                if (event.action == android.view.KeyEvent.ACTION_UP && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    clickHereBtn.requestFocus(); true
-                } else false
-            }
-            clickHereBtn.setOnKeyListener { _, keyCode, event ->
-                if (event.action == android.view.KeyEvent.ACTION_UP && keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                    cancelBtn.requestFocus(); true
-                } else false
-            }
-
-            post { cancelBtn.requestFocus() }
-        })
-
-        dialog = MaterialAlertDialogBuilder(context, com.livetvpro.app.R.style.ThemeOverlay_LiveTVPro_Dialog_Transparent)
-            .setView(root)
-            .setCancelable(true)
-            .setOnCancelListener { onCancel() }
-            .create()
-
-        dialog.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP) {
-                dialog?.setOnCancelListener(null)
-                dialog?.dismiss()
-                onCancel()
-                true
-            } else false
         }
-
-        dialog.show()
-
-        val dm = context.resources.displayMetrics
-        val swDp = context.resources.configuration.smallestScreenWidthDp
-        val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        val dialogWidth = when {
-            swDp >= 720 -> (dm.widthPixels * 0.45f).toInt()
-            swDp >= 600 -> (dm.widthPixels * 0.55f).toInt()
-            isLandscape -> (dm.widthPixels * 0.55f).toInt()
-            else        -> (dm.widthPixels * 0.88f).toInt()
-        }
-        dialog.window?.setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
-
-        dialog.window?.setBackgroundDrawable(object : android.graphics.drawable.Drawable() {
-            private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0xCC0D0D0D.toInt()
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                    maskFilter = android.graphics.BlurMaskFilter(18f, android.graphics.BlurMaskFilter.Blur.NORMAL)
-                }
-            }
-            private val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                style = android.graphics.Paint.Style.STROKE
-                color = 0x33FFFFFF
-                strokeWidth = 2f
-            }
-            private val rectF = android.graphics.RectF()
-            private val radius = 28f * context.resources.displayMetrics.density
-            override fun draw(canvas: android.graphics.Canvas) {
-                rectF.set(bounds)
-                canvas.drawRoundRect(rectF, radius, radius, paint)
-                canvas.drawRoundRect(rectF, radius, radius, borderPaint)
-            }
-            override fun setAlpha(alpha: Int) { paint.alpha = alpha }
-            override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
-            @Suppress("OVERRIDE_DEPRECATION")
-            override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
-        })
     }
 }

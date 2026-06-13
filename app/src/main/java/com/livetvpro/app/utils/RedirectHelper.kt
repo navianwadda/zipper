@@ -4,10 +4,12 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import com.livetvpro.app.ui.dialogs.SupportDialog
 import com.livetvpro.app.ui.webview.WebActivity
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 object RedirectHelper {
 
@@ -15,6 +17,15 @@ object RedirectHelper {
         REDIRECTED,
         NOT_REDIRECTED
     }
+
+    data class SupportDialogState(
+        val durationSeconds: Long,
+        val onClickHere: () -> Unit,
+        val onCancel: () -> Unit,
+    )
+
+    private val _dialogState = MutableStateFlow<SupportDialogState?>(null)
+    val dialogState: StateFlow<SupportDialogState?> = _dialogState.asStateFlow()
 
     private var dialogShowing = false
     private var pendingPostDialogAction: (() -> Unit)? = null
@@ -81,6 +92,10 @@ object RedirectHelper {
         }
     }
 
+    fun dismissDialog() {
+        _dialogState.value = null
+    }
+
     private fun showSupportDialog(
         fragment: Fragment,
         pageType: String,
@@ -90,35 +105,30 @@ object RedirectHelper {
         launcher: ActivityResultLauncher<Intent>,
         onAfterDialog: (() -> Unit)? = null
     ) {
-        try {
-            val url = listenerMgr.getDirectLinkUrl()
-            if (url.isEmpty()) {
-                onAfterDialog?.invoke()
-                return
-            }
-
-            dialogShowing = true
-            SupportDialog.show(
-                context = fragment.requireContext(),
-                durationSeconds = listenerMgr.getAdDurationSeconds(),
-                onClickHere = {
-                    dialogShowing = false
-                    val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
-                        putExtra("extra_url", url)
-                        putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
-                    }
-                    pendingPostDialogAction = onAfterDialog
-                    launcher.launch(intent)
-                },
-                onCancel = {
-                    dialogShowing = false
-                    cooldownMgr.undoLastFire(pageType, uniqueId)
-                }
-            )
-        } catch (e: Exception) {
-            dialogShowing = false
-            cooldownMgr.undoLastFire(pageType, uniqueId)
+        val url = listenerMgr.getDirectLinkUrl()
+        if (url.isEmpty()) {
             onAfterDialog?.invoke()
+            return
         }
+
+        dialogShowing = true
+        _dialogState.value = SupportDialogState(
+            durationSeconds = listenerMgr.getAdDurationSeconds(),
+            onClickHere = {
+                dialogShowing = false
+                _dialogState.value = null
+                val intent = Intent(fragment.requireContext(), WebActivity::class.java).apply {
+                    putExtra("extra_url", url)
+                    putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
+                }
+                pendingPostDialogAction = onAfterDialog
+                launcher.launch(intent)
+            },
+            onCancel = {
+                dialogShowing = false
+                _dialogState.value = null
+                cooldownMgr.undoLastFire(pageType, uniqueId)
+            }
+        )
     }
 }

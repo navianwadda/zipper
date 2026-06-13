@@ -8,8 +8,8 @@
     <color name="on_secondary">#FFFFFF</color>
     <color name="on_error">#FFFFFF</color>
     <color name="status_bar">#00000000</color>
-    <color name="ic_launcher_background">#121212</color>
-    <color name="ic_launcher_black_background">#000000</color>
+    <color name="ic_launcher_background">#EF4444</color>
+    <color name="ic_launcher_background_black">#121212</color>
     <color name="background">#F5F5F5</color>
     <color name="surface">#F5F5F5</color>
     <color name="on_background">#000000</color>

@@ -43,7 +43,7 @@ import androidx.navigation.NavOptions
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.main.MainScaffold
-import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog
+import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialogContent
 import com.livetvpro.app.ui.settings.SettingsActions
 import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
@@ -76,6 +76,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private var showNoticeDialog         by mutableStateOf(false)
     private var showOverlayPermDialog    by mutableStateOf(false)
     private var showSaveStatesDialog     by mutableStateOf(false)
+    private var showFloatingPlayerDialog by mutableStateOf(false)
 
     private var saveStatesRememberAR     by mutableStateOf(false)
     private var saveStatesForceLowestQ   by mutableStateOf(false)
@@ -87,7 +88,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         ActivityResultContracts.StartActivityForResult()
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-            FloatingPlayerDialog.newInstance().show(supportFragmentManager, FloatingPlayerDialog.TAG)
+            showFloatingPlayerDialog = true
         }
     }
 
@@ -286,6 +287,13 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                         },
                     )
                 }
+
+                if (showFloatingPlayerDialog) {
+                    FloatingPlayerDialogContent(
+                        preferencesManager = preferencesManager,
+                        onDismiss = { showFloatingPlayerDialog = false },
+                    )
+                }
             }
         }
 
@@ -416,7 +424,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             showOverlayPermDialog = true
         } else {
-            FloatingPlayerDialog.newInstance().show(supportFragmentManager, FloatingPlayerDialog.TAG)
+            showFloatingPlayerDialog = true
         }
     }
 }

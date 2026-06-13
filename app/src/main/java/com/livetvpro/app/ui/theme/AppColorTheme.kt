@@ -27,6 +27,17 @@ enum class AppColorTheme(
         backgroundLight = Color(0xFFF5F5F5),
         backgroundDark  = Color(0xFF0D1117),
     ),
+    DefaultLegacy(
+        displayName     = "Default (Legacy)",
+        primaryLight    = Color(0xFFEF4444),
+        primaryDark     = Color(0xFFEF4444),
+        secondaryLight  = Color(0xFFDC2626),
+        secondaryDark   = Color(0xFFF87171),
+        tertiaryLight   = Color(0xFFB91C1C),
+        tertiaryDark    = Color(0xFFFCA5A5),
+        backgroundLight = Color(0xFFFFF5F5),
+        backgroundDark  = Color(0xFF1A1010),
+    ),
     Dynamic(
         displayName     = "Dynamic",
         primaryLight    = Color(0xFF6750A4),

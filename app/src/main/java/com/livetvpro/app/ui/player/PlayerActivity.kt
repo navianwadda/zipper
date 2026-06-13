@@ -422,7 +422,8 @@ class PlayerActivity : BasePlayerActivity() {
                             userAgent = it.userAgent,
                             xForwardedFor = it.xForwardedFor,
                             drmScheme = it.drmScheme,
-                            drmLicenseUrl = it.drmLicenseUrl
+                            drmLicenseUrl = it.drmLicenseUrl,
+                            customHeaders = it.customHeaders
                         )
                     }
 
@@ -1139,7 +1140,8 @@ class PlayerActivity : BasePlayerActivity() {
                     drmScheme = parsed.drmScheme ?: "",
                     drmLicenseUrl = parsed.drmLicenseUrl
                         ?: parsed.drmKeyId?.let { id -> parsed.drmKey?.let { k -> "$id:$k" } }
-                        ?: ""
+                        ?: "",
+                    customHeaders = parsed.customHeaders
                 )
             )
             currentLinkIndex = 0
@@ -1199,7 +1201,8 @@ class PlayerActivity : BasePlayerActivity() {
                     xForwardedFor = parsed.headers["X-Forwarded-For"],
                     drmScheme = resolvedDrmScheme,
                     drmLicenseUrl = resolvedDrmLicenseUrl
-                        ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } }
+                        ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } },
+                    customHeaders = parsed.customHeaders
                 )
                 streamUrl = PlayerStreamHelper.buildStreamUrl(mergedLink)
 
@@ -1272,7 +1275,8 @@ class PlayerActivity : BasePlayerActivity() {
                         userAgent = it.userAgent,
                         xForwardedFor = it.xForwardedFor,
                         drmScheme = it.drmScheme,
-                        drmLicenseUrl = it.drmLicenseUrl
+                        drmLicenseUrl = it.drmLicenseUrl,
+                        customHeaders = it.customHeaders
                     )
                 }
 
@@ -1384,7 +1388,8 @@ class PlayerActivity : BasePlayerActivity() {
                     userAgent = it.userAgent,
                     xForwardedFor = it.xForwardedFor,
                     drmScheme = it.drmScheme,
-                    drmLicenseUrl = it.drmLicenseUrl
+                    drmLicenseUrl = it.drmLicenseUrl,
+                    customHeaders = it.customHeaders
                 )
             }
             currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0

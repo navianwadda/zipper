@@ -69,6 +69,8 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
+import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
+import com.livetvpro.app.ui.player.dialogs.toLinkItem
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val CardLogoBg = Color(0x80000000)
@@ -78,7 +80,7 @@ fun CategoryChannelsScreen(
     viewModel: CategoryChannelsViewModel,
     spanCount: Int = 3,
     isTvDevice: Boolean = false,
-    onChannelClick: (Channel) -> Unit,
+    onChannelClick: (Channel, Int) -> Unit,
     onChannelLongClick: (Channel) -> Unit,
     onChannelInteraction: ((Channel, () -> Unit) -> Boolean)? = null,
     onShowGroupsDialog: (() -> Unit)? = null
@@ -90,8 +92,22 @@ fun CategoryChannelsScreen(
 
     val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
+    var linkDialogChannel by remember { mutableStateOf<Channel?>(null) }
 
     val hasGroups = categoryGroups.isNotEmpty()
+
+    if (linkDialogChannel != null) {
+        val channel = linkDialogChannel!!
+        val links = channel.links.orEmpty()
+        LinkSelectionDialog(
+            links = links.map { it.toLinkItem() },
+            currentUrl = null,
+            onLinkSelected = { _, index ->
+                onChannelClick(channel, index)
+            },
+            onDismiss = { linkDialogChannel = null },
+        )
+    }
 
     if (isTvDevice) {
         LaunchedEffect(channels.itemCount) {
@@ -207,7 +223,13 @@ fun CategoryChannelsScreen(
                                     channel = channel,
                                     isFavorite = viewModel.isFavorite(channel.id),
                                     onClick = {
-                                        val action: () -> Unit = { onChannelClick(channel) }
+                                        val action: () -> Unit = {
+                                            if ((channel.links?.size ?: 0) > 1) {
+                                                linkDialogChannel = channel
+                                            } else {
+                                                onChannelClick(channel, 0)
+                                            }
+                                        }
                                         val redirected =
                                             onChannelInteraction?.invoke(channel, action) ?: false
                                         if (!redirected) action()

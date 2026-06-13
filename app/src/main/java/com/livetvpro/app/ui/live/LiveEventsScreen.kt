@@ -36,7 +36,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +44,6 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -84,6 +82,7 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.EventCategory
 import com.livetvpro.app.data.models.EventStatus
 import com.livetvpro.app.data.models.LiveEvent
+import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -140,46 +139,15 @@ fun LiveEventsScreen(
 
     if (linkDialogEvent != null) {
         val event = linkDialogEvent!!
-        AlertDialog(
-            onDismissRequest = { linkDialogEvent = null },
-            title = {
-                Text(
-                    text = "Multiple Links Available",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = BergenSans
-                )
+        LinkSelectionDialog(
+            links = event.links,
+            currentLink = null,
+            onLinkSelected = { link ->
+                val index = event.links.indexOf(link)
+                onEventClick(event, index)
+                linkDialogEvent = null
             },
-            text = {
-                Column {
-                    event.links.forEachIndexed { index, link ->
-                        Text(
-                            text = link.quality,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontFamily = BergenSans,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onEventClick(event, index)
-                                    linkDialogEvent = null
-                                }
-                                .padding(vertical = 12.dp, horizontal = 8.dp)
-                        )
-                    }
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { linkDialogEvent = null }) {
-                    Text(
-                        text = "Cancel",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontFamily = BergenSans
-                    )
-                }
-            }
+            onDismiss = { linkDialogEvent = null },
         )
     }
 

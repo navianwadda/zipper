@@ -37,7 +37,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import com.livetvpro.app.data.local.PreferencesManager
@@ -132,50 +136,90 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 )
 
                 if (showCopyrightDialog) {
+                    val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
                         onDismissRequest = { showCopyrightDialog = false },
-                        title = { Text("Copyright") },
-                        text  = {
+                        title = {
                             Text(
-                                "Live TV Pro does not stream any of the channels included in this application, " +
-                                "all the streaming links are from third party websites available freely on the internet. " +
-                                "We're just giving way to stream and all content is the copyright of their owner."
+                                text = "Copyright",
+                                fontFamily = bergenSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = "Live TV Pro does not stream any of the channels included in this application, " +
+                                    "all the streaming links are from third party websites available freely on the internet. " +
+                                    "We're just giving way to stream and all content is the copyright of their owner.",
+                                fontFamily = bergenSans,
+                                fontSize = 14.sp,
                             )
                         },
                         confirmButton = {
                             TextButton(onClick = { showCopyrightDialog = false }) {
-                                Text("OK")
+                                Text(
+                                    text = "OK",
+                                    fontFamily = bergenSans,
+                                    fontWeight = FontWeight.Medium,
+                                )
                             }
                         },
                     )
                 }
 
                 if (showNoticeDialog) {
+                    val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
                         onDismissRequest = { showNoticeDialog = false },
-                        title = { Text("Important Notice") },
-                        text  = {
+                        title = {
                             Text(
-                                "We do not support gambling. If you see gambling ads on our app or website, " +
-                                "they come from the ad network, not us.\n\n" +
-                                "If you see clickable ads, you can click them, but please don't sign up. " +
-                                "We just need your clicks and impressions. Thanks for your support."
+                                text = "Important Notice",
+                                fontFamily = bergenSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = "We do not support gambling. If you see gambling ads on our app or website, " +
+                                    "they come from the ad network, not us.\n\n" +
+                                    "If you see clickable ads, you can click them, but please don't sign up. " +
+                                    "We just need your clicks and impressions. Thanks for your support.",
+                                fontFamily = bergenSans,
+                                fontSize = 14.sp,
                             )
                         },
                         confirmButton = {
                             TextButton(onClick = { showNoticeDialog = false }) {
-                                Text("OK")
+                                Text(
+                                    text = "OK",
+                                    fontFamily = bergenSans,
+                                    fontWeight = FontWeight.Medium,
+                                )
                             }
                         },
                     )
                 }
 
                 if (showOverlayPermDialog) {
+                    val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
                         onDismissRequest = { showOverlayPermDialog = false },
-                        title = { Text("Permission Required") },
-                        text  = {
-                            Text("Floating Player requires permission to draw over other apps. Please enable it in the next screen.")
+                        title = {
+                            Text(
+                                text = "Permission Required",
+                                fontFamily = bergenSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = "Floating Player requires permission to draw over other apps. Please enable it in the next screen.",
+                                fontFamily = bergenSans,
+                                fontSize = 14.sp,
+                            )
                         },
                         confirmButton = {
                             TextButton(onClick = {
@@ -184,18 +228,27 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                     Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
                                 )
                             }) {
-                                Text("Settings")
+                                Text(
+                                    text = "Settings",
+                                    fontFamily = bergenSans,
+                                    fontWeight = FontWeight.Medium,
+                                )
                             }
                         },
                         dismissButton = {
                             TextButton(onClick = { showOverlayPermDialog = false }) {
-                                Text("Cancel")
+                                Text(
+                                    text = "Cancel",
+                                    fontFamily = bergenSans,
+                                    fontWeight = FontWeight.Medium,
+                                )
                             }
                         },
                     )
                 }
 
                 if (showSaveStatesDialog) {
+                    val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     val centerModeOptions = listOf(
                         PreferencesManager.CENTER_MODE_SEEKS_ONLY    to "Seeks Only",
                         PreferencesManager.CENTER_MODE_SEEKS_AND_NAV to "Seeks & Navigation",
@@ -203,7 +256,14 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     )
                     AlertDialog(
                         onDismissRequest = { showSaveStatesDialog = false },
-                        title = { Text("Save States") },
+                        title = {
+                            Text(
+                                text = "Save States",
+                                fontFamily = bergenSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                            )
+                        },
                         text  = {
                             Column(
                                 modifier = Modifier
@@ -212,27 +272,45 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
                                 Row(
-                                    modifier          = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .selectable(
+                                            selected = saveStatesRememberAR,
+                                            onClick  = { saveStatesRememberAR = !saveStatesRememberAR },
+                                            role     = Role.Switch,
+                                        )
+                                        .padding(vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text("Remember Aspect Ratio", style = MaterialTheme.typography.bodyLarge)
-                                    }
+                                    Text(
+                                        text = "Remember Aspect Ratio",
+                                        fontFamily = bergenSans,
+                                        fontSize = 15.sp,
+                                        modifier = Modifier.weight(1f),
+                                    )
                                     Switch(
                                         checked         = saveStatesRememberAR,
                                         onCheckedChange = { saveStatesRememberAR = it },
                                     )
                                 }
 
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
                                 Row(
-                                    modifier          = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .selectable(
+                                            selected = saveStatesForceLowestQ,
+                                            onClick  = { saveStatesForceLowestQ = !saveStatesForceLowestQ },
+                                            role     = Role.Switch,
+                                        )
+                                        .padding(vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text("Force Lowest Quality", style = MaterialTheme.typography.bodyLarge)
-                                    }
+                                    Text(
+                                        text = "Force Lowest Quality",
+                                        fontFamily = bergenSans,
+                                        fontSize = 15.sp,
+                                        modifier = Modifier.weight(1f),
+                                    )
                                     Switch(
                                         checked         = saveStatesForceLowestQ,
                                         onCheckedChange = { saveStatesForceLowestQ = it },
@@ -242,14 +320,16 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                                 Text(
-                                    text  = "Center Controls",
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    text = "Center Controls",
+                                    fontFamily = bergenSans,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Column(modifier = Modifier.selectableGroup()) {
                                     centerModeOptions.forEach { (mode, label) ->
                                         Row(
-                                            modifier          = Modifier
+                                            modifier = Modifier
                                                 .fillMaxWidth()
                                                 .selectable(
                                                     selected = saveStatesCenterMode == mode,
@@ -264,7 +344,11 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                                 onClick  = null,
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                                            Text(
+                                                text = label,
+                                                fontFamily = bergenSans,
+                                                fontSize = 14.sp,
+                                            )
                                         }
                                     }
                                 }
@@ -277,12 +361,20 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                 preferencesManager.setCenterControlsMode(saveStatesCenterMode)
                                 showSaveStatesDialog = false
                             }) {
-                                Text("Apply")
+                                Text(
+                                    text = "Apply",
+                                    fontFamily = bergenSans,
+                                    fontWeight = FontWeight.Medium,
+                                )
                             }
                         },
                         dismissButton = {
                             TextButton(onClick = { showSaveStatesDialog = false }) {
-                                Text("Cancel")
+                                Text(
+                                    text = "Cancel",
+                                    fontFamily = bergenSans,
+                                    fontWeight = FontWeight.Medium,
+                                )
                             }
                         },
                     )

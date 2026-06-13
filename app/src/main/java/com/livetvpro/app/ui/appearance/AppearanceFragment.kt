@@ -1,5 +1,7 @@
 package com.livetvpro.app.ui.appearance
 
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -43,6 +45,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +55,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -93,57 +99,63 @@ fun AppearanceScreen(themeManager: ThemeManager) {
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
 
-            item { PreferenceSectionHeader(title = "Theme") }
+        item { PreferenceSectionHeader(title = "App Icon") }
 
-            item {
-                PreferenceCard {
-                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                        MultiChoiceSegmentedButton(
-                            choices = listOf("Dark", "Light", "System"),
-                            selectedIndices = listOf(when (themeMode) {
-                                ThemeManager.THEME_DARK  -> 0
-                                ThemeManager.THEME_LIGHT -> 1
-                                else                     -> 2
-                            }),
-                            onClick = { uiIndex ->
-                                val mode = when (uiIndex) {
-                                    0    -> ThemeManager.THEME_DARK
-                                    1    -> ThemeManager.THEME_LIGHT
-                                    else -> ThemeManager.THEME_AUTO
-                                }
-                                if (mode != themeMode) {
-                                    themeManager.setThemeMode(mode)
-                                }
-                            },
-                        )
-                    }
+        item { AppIconPickerCard() }
 
-                    PreferenceDivider()
+        item { Spacer(modifier = Modifier.height(8.dp)) }
 
-                    ThemePicker(
-                        currentTheme    = colorTheme,
-                        isDarkMode      = isDarkMode,
-                        onThemeSelected = { chosen ->
-                            if (chosen != colorTheme) {
-                                themeManager.setColorTheme(chosen)
+        item { PreferenceSectionHeader(title = "Theme") }
+
+        item {
+            PreferenceCard {
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    MultiChoiceSegmentedButton(
+                        choices = listOf("Dark", "Light", "System"),
+                        selectedIndices = listOf(when (themeMode) {
+                            ThemeManager.THEME_DARK  -> 0
+                            ThemeManager.THEME_LIGHT -> 1
+                            else                     -> 2
+                        }),
+                        onClick = { uiIndex ->
+                            val mode = when (uiIndex) {
+                                0    -> ThemeManager.THEME_DARK
+                                1    -> ThemeManager.THEME_LIGHT
+                                else -> ThemeManager.THEME_AUTO
                             }
-                        },
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
-
-                    PreferenceDivider()
-
-                    SwitchPreferenceRow(
-                        title   = "AMOLED Black Mode",
-                        summary = "Use pure black background for dark themes",
-                        checked = amoledMode,
-                        enabled = isDarkMode,
-                        onCheckedChange = { newValue ->
-                            themeManager.setAmoledMode(newValue)
+                            if (mode != themeMode) {
+                                themeManager.setThemeMode(mode)
+                            }
                         },
                     )
                 }
+
+                PreferenceDivider()
+
+                ThemePicker(
+                    currentTheme    = colorTheme,
+                    isDarkMode      = isDarkMode,
+                    onThemeSelected = { chosen ->
+                        if (chosen != colorTheme) {
+                            themeManager.setColorTheme(chosen)
+                        }
+                    },
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+
+                PreferenceDivider()
+
+                SwitchPreferenceRow(
+                    title   = "AMOLED Black Mode",
+                    summary = "Use pure black background for dark themes",
+                    checked = amoledMode,
+                    enabled = isDarkMode,
+                    onCheckedChange = { newValue ->
+                        themeManager.setAmoledMode(newValue)
+                    },
+                )
             }
+        }
     }
 }
 
@@ -368,6 +380,131 @@ fun MultiChoiceSegmentedButton(
                 shape    = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
             ) {
                 Text(text = choice)
+            }
+        }
+    }
+}
+
+
+private data class AppIconOption(
+    val label: String,
+    val aliasName: String,
+    val previewColor: Color,
+    val accentColor: Color,
+)
+
+private val APP_ICON_OPTIONS = listOf(
+    AppIconOption(
+        label        = "Red",
+        aliasName    = "com.livetvpro.app.ui.SplashActivityIconRed",
+        previewColor = Color(0xFF1A1A1A),
+        accentColor  = Color(0xFFEF4444),
+    ),
+    AppIconOption(
+        label        = "Black",
+        aliasName    = "com.livetvpro.app.ui.SplashActivityIconBlack",
+        previewColor = Color(0xFF000000),
+        accentColor  = Color(0xFFFFFFFF),
+    ),
+)
+
+@Composable
+fun AppIconPickerCard() {
+    val context = LocalContext.current
+
+    var selectedAlias by remember {
+        val pm = context.packageManager
+        val active = APP_ICON_OPTIONS.firstOrNull { option ->
+            val cn = ComponentName(context, option.aliasName)
+            pm.getComponentEnabledSetting(cn) ==
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        } ?: APP_ICON_OPTIONS.first()
+        mutableStateOf(active)
+    }
+
+    fun switchIcon(option: AppIconOption) {
+        if (option == selectedAlias) return
+        val pm = context.packageManager
+        APP_ICON_OPTIONS.forEach { o ->
+            val cn = ComponentName(context, o.aliasName)
+            val state = if (o == option)
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            else
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            pm.setComponentEnabledSetting(cn, state, PackageManager.DONT_KILL_APP)
+        }
+        selectedAlias = option
+    }
+
+    PreferenceCard {
+        Column(modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)) {
+            Text(
+                text  = "Choose App Icon",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                APP_ICON_OPTIONS.forEach { option ->
+                    val isSelected = option == selectedAlias
+                    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary
+                                      else MaterialTheme.colorScheme.outlineVariant
+                    val borderWidth = if (isSelected) 3.dp else 1.dp
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { switchIcon(option) },
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(72.dp)
+                                .shadow(if (isSelected) 6.dp else 2.dp, RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(option.previewColor)
+                                .border(borderWidth, borderColor, RoundedCornerShape(16.dp)),
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(width = 36.dp, height = 26.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.White.copy(alpha = 0.12f))
+                                        .border(1.5.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(4.dp)),
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(RoundedCornerShape(1.dp))
+                                            .background(option.accentColor),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 16.dp, height = 3.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(Color.White.copy(alpha = 0.5f)),
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text       = option.label,
+                            style      = MaterialTheme.typography.bodySmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color      = if (isSelected) MaterialTheme.colorScheme.primary
+                                         else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
             }
         }
     }

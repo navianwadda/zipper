@@ -1,6 +1,5 @@
 package com.livetvpro.app.ui.sports
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
@@ -74,12 +73,8 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                         viewModel = viewModel,
                         spanCount = spanCount,
                         isTvDevice = DeviceUtils.isTvDevice,
-                        onChannelClick = { channel ->
-                            if (channel.links != null && channel.links.size > 1) {
-                                showLinkSelectionDialog(channel)
-                            } else {
-                                launchPlayer(channel, -1)
-                            }
+                        onChannelClick = { channel, linkIndex ->
+                            launchPlayer(channel, linkIndex)
                         },
                         onChannelLongClick = { channel -> showFavoriteDialog(channel) },
                     )
@@ -179,20 +174,6 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
             }
             .setNegativeButton("Cancel", null)
             .show()
-    }
-
-    private fun showLinkSelectionDialog(channel: Channel) {
-        val links = channel.links?.takeIf { it.isNotEmpty() } ?: return
-        val linkLabels = links.map { it.quality }.toTypedArray()
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Multiple Links Available")
-            .setItems(linkLabels) { d, which ->
-                launchPlayer(channel, which)
-                d.dismiss()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-        dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.requestFocus()
     }
 
     override fun onResume() {

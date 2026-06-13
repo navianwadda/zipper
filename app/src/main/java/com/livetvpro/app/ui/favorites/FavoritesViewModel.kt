@@ -1,5 +1,6 @@
 package com.livetvpro.app.ui.favorites
 
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,22 @@ class FavoritesViewModel @Inject constructor(
 ) : ViewModel() {
 
     val favorites = favoritesRepository.getFavoritesFlow().asLiveData()
+
+    private val _filteredFavorites = MutableLiveData<List<FavoriteChannel>>(emptyList())
+    val filteredFavorites: androidx.lifecycle.LiveData<List<FavoriteChannel>> = _filteredFavorites
+    private var searchQuery = ""
+
+    fun searchFavorites(query: String) {
+        searchQuery = query
+        val all = favorites.value ?: emptyList()
+        _filteredFavorites.value = if (query.isBlank()) all
+        else all.filter { it.name.contains(query, ignoreCase = true) }
+    }
+
+    fun onFavoritesChanged(all: List<FavoriteChannel>) {
+        _filteredFavorites.value = if (searchQuery.isBlank()) all
+        else all.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
 
     fun getLiveChannel(channelId: String): Channel? {
         return try {

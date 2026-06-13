@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.Font
@@ -45,7 +45,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
-private val ColorAccent = Color(0xFFE53935)
 
 private val windowOptions = listOf(
     "Disable (1 window)",
@@ -130,7 +129,12 @@ internal fun FloatingPlayerDialogContent(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            isEnabled = !isEnabled
+                            preferencesManager.setFloatingPlayerEnabled(isEnabled)
+                        },
                 ) {
                     Text(
                         text = "Floating Player",
@@ -146,9 +150,9 @@ internal fun FloatingPlayerDialogContent(
                             preferencesManager.setFloatingPlayerEnabled(it)
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor   = Color.White,
-                            checkedTrackColor   = ColorAccent,
-                            uncheckedThumbColor = Color.White,
+                            checkedThumbColor   = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor   = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
                     )
                 }
@@ -177,9 +181,9 @@ internal fun FloatingPlayerDialogContent(
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(dropdownExpanded) },
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor   = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor   = ColorAccent,
+                                focusedContainerColor   = androidx.compose.ui.graphics.Color.Transparent,
+                                unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                focusedIndicatorColor   = MaterialTheme.colorScheme.primary,
                             ),
                             textStyle = androidx.compose.ui.text.TextStyle(
                                 fontFamily = BergenSans,
@@ -222,7 +226,7 @@ internal fun FloatingPlayerDialogContent(
                     text = "Close",
                     fontFamily = BergenSans,
                     fontWeight = FontWeight.Medium,
-                    color = ColorAccent,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         },

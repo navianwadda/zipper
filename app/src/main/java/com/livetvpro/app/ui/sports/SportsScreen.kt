@@ -86,7 +86,6 @@ fun SportsScreen(
         val links = channel.links.orEmpty()
         LinkSelectionDialog(
             links = links.map { it.toLinkItem() },
-            currentUrl = null,
             onLinkSelected = { _, index ->
                 onChannelClick(channel, index)
             },

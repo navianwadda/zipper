@@ -20,7 +20,6 @@ import android.util.Rational
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
-import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.TextView
@@ -286,7 +285,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
 
         setupWindowFlags(isLandscape)
         setupSystemUI(isLandscape)
-        setupWindowInsets(binding.root)
+        /* insets handled by Compose in setupComposeControls */
 
         parseIntent()
 
@@ -472,15 +471,10 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         } else {
 
             if (contentType == ContentType.NETWORK_STREAM) {
-                val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    window.decorView.rootWindowInsets?.getInsets(WindowInsets.Type.systemBars())?.top ?: 0
-                } else {
-                    @Suppress("DEPRECATION") window.decorView.rootWindowInsets?.systemWindowInsetTop ?: 0
-                }
                 val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.topMargin = topInset
+                // topMargin kept as-is — driven by Compose SideEffect in setupComposeControls
                 params.bottomMargin = 0
                 params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                 params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1187,7 +1181,10 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         floatingComposeView.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                AppThemeContent(themeManager) {
+                com.livetvpro.app.ui.theme.LiveTVProTheme(
+                    themeManager = themeManager,
+                    surfaceColor = androidx.compose.ui.graphics.Color.Transparent,
+                ) {
                     val isPlaying by produceState(initialValue = false, player) {
                         while (true) {
                             value = player?.isPlaying == true
@@ -1367,6 +1364,19 @@ class FloatingPlayerActivity : BasePlayerActivity() {
                                 .asPaddingValues().calculateTopPadding()
                             val navBarHeight = androidx.compose.foundation.layout.WindowInsets.navigationBars
                                 .asPaddingValues().calculateBottomPadding()
+
+                            // Single source of truth: Compose drives the XML player_container top margin.
+                            val statusBarHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) {
+                                statusBarHeight.roundToPx()
+                            }
+                            androidx.compose.runtime.SideEffect {
+                                val params = binding.playerContainer.layoutParams
+                                    as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+                                if (params.topMargin != statusBarHeightPx) {
+                                    params.topMargin = statusBarHeightPx
+                                    binding.playerContainer.layoutParams = params
+                                }
+                            }
                             val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                             Box(
                                 modifier = Modifier

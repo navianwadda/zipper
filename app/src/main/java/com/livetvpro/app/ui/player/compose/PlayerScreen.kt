@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -36,10 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -47,7 +42,6 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.data.models.LiveEventLink
-import com.livetvpro.app.ui.player.ExoPlayerView
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val CardLogoBg  = Color(0x80000000)
@@ -64,68 +58,13 @@ sealed class RelatedContentState {
 }
 
 // ---------------------------------------------------------------------------
-// VideoSurface — pure-Kotlin ExoPlayer surface embedded in Compose
-// ---------------------------------------------------------------------------
-
-/**
- * Hosts the [ExoPlayerView] (no XML) inside the Compose hierarchy.
- *
- * Drop this anywhere you need the actual video surface.  Both [PlayerActivity]
- * and [FloatingPlayerActivity] can reference the same [ExoPlayerView] instance
- * via [remember] so the surface is never recreated unnecessarily.
- *
- * @param player      The active [ExoPlayer] instance, or null when not ready.
- * @param resizeMode  One of the [AspectRatioFrameLayout].RESIZE_MODE_* constants.
- * @param modifier    Standard Compose modifier (fill the player container box).
- */
-@UnstableApi
-@Composable
-fun VideoSurface(
-    player: ExoPlayer?,
-    resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-
-    // Keep ONE ExoPlayerView instance alive for the lifetime of this composition.
-    val exoPlayerView = remember {
-        ExoPlayerView(context).apply {
-            this.resizeMode = resizeMode
-        }
-    }
-
-    // Re-apply resize mode whenever it changes (e.g. user toggles aspect ratio).
-    LaunchedEffect(resizeMode) {
-        exoPlayerView.resizeMode = resizeMode
-    }
-
-    AndroidView(
-        factory  = { exoPlayerView },
-        modifier = modifier,
-        update   = { view ->
-            // Attach / detach the player whenever the reference changes.
-            if (view.player !== player) {
-                view.setPlayer(player)
-            }
-        },
-    )
-
-    // Forward lifecycle: pause the surface when the composable leaves the screen.
-    DisposableEffect(exoPlayerView) {
-        exoPlayerView.onResume()
-        onDispose { exoPlayerView.onPause() }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // PlayerScreen — the full below-the-fold UI (links row + related content)
 // ---------------------------------------------------------------------------
 
 /**
  * The scrollable content area below the player surface.
  *
- * Render [VideoSurface] **above** this composable in the parent layout; this
- * composable only manages the link chips, message banner, and related grids.
+ * Manages the link chips, message banner, and related content grids.
  */
 @Composable
 fun PlayerScreen(

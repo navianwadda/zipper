@@ -329,14 +329,7 @@ object FloatingPlayerHelper {
                 "x-requested-with" -> extraHeaders["X-Requested-With"] = value
                 "authorization" -> extraHeaders["Authorization"] = value
                 "host" -> extraHeaders["Host"] = value
-                else -> {
-                    if (key.startsWith("x-", ignoreCase = true) ||
-                        key.startsWith("sec-", ignoreCase = true) ||
-                        key.equals("accept", ignoreCase = true) ||
-                        key.equals("range", ignoreCase = true)) {
-                        extraHeaders[key] = value
-                    }
-                }
+                else -> extraHeaders[key] = value
             }
         }
 
@@ -349,7 +342,8 @@ object FloatingPlayerHelper {
             userAgent = userAgent,
             xForwardedFor = xForwardedFor,
             drmScheme = drmScheme,
-            drmLicenseUrl = drmLicenseUrl
+            drmLicenseUrl = drmLicenseUrl,
+            customHeaders = extraHeaders
         )
     }
 }

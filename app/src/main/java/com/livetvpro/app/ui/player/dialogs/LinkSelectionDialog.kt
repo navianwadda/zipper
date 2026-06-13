@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -28,16 +29,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.livetvpro.app.R
+import com.livetvpro.app.data.models.ChannelLink
 import com.livetvpro.app.data.models.LiveEventLink
+
+data class LinkItem(val quality: String, val url: String)
+
+fun LiveEventLink.toLinkItem() = LinkItem(quality = quality, url = url)
+fun ChannelLink.toLinkItem() = LinkItem(quality = quality, url = url)
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val ColorAccent = Color(0xFFE53935)
 
 @Composable
 fun LinkSelectionDialog(
-    links: List<LiveEventLink>,
-    currentLink: String?,
-    onLinkSelected: (LiveEventLink) -> Unit,
+    links: List<LinkItem>,
+    currentUrl: String?,
+    onLinkSelected: (LinkItem, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -54,10 +61,11 @@ fun LinkSelectionDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 520.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
                 links.forEachIndexed { index, link ->
-                    val isSelected = link.url == currentLink
+                    val isSelected = link.url == currentUrl
 
                     if (index > 0) {
                         HorizontalDivider(
@@ -72,7 +80,7 @@ fun LinkSelectionDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                onLinkSelected(link)
+                                onLinkSelected(link, index)
                                 onDismiss()
                             }
                             .padding(vertical = 14.dp),
@@ -101,9 +109,7 @@ fun LinkSelectionDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-            ) {
+            TextButton(onClick = onDismiss) {
                 Text(
                     text = "Cancel",
                     fontFamily = BergenSans,

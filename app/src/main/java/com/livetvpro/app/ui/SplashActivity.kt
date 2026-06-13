@@ -1,30 +1,66 @@
 package com.livetvpro.app.ui
 
 import android.Manifest
-import android.animation.AnimatorInflater
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
-import android.view.View
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
 import com.google.firebase.messaging.FirebaseMessaging
 import com.livetvpro.app.BuildConfig
 import com.livetvpro.app.MainActivity
@@ -41,6 +77,17 @@ import java.io.FileOutputStream
 import java.net.URL
 import javax.inject.Inject
 
+private val AccentRed   = Color(0xFFEF4444)
+private val Background  = Color(0xFF0D1117)
+private val TextWhite   = Color(0xFFFFFFFF)
+private val TextGray    = Color(0xFFB0B0B0)
+
+private sealed interface SplashState {
+    object Loading : SplashState
+    data class Error(val message: String) : SplashState
+    object UpdateRequired : SplashState
+}
+
 @SuppressLint("CustomSplashScreen")
 @AndroidEntryPoint
 class SplashActivity : AppCompatActivity() {
@@ -48,158 +95,64 @@ class SplashActivity : AppCompatActivity() {
     @Inject lateinit var dataRepository: NativeDataRepository
     @Inject lateinit var listenerManager: NativeListenerManager
 
-    private lateinit var splashScreen: View
-    private lateinit var signalLoader: View
-    private lateinit var bar1: View
-    private lateinit var bar2: View
-    private lateinit var bar3: View
-    private lateinit var bar4: View
-    private lateinit var bar5: View
-    private lateinit var errorText: TextView
-    private lateinit var buttonsRow: LinearLayout
-    private lateinit var retryButton: MaterialButton
-    private lateinit var versionText: TextView
-
-    private lateinit var updateScreen: View
-    private lateinit var btnPrimaryAction: MaterialButton
-    private lateinit var btnDownloadWebsite: MaterialButton
-    private lateinit var btnUpdateLater: MaterialButton
-    private lateinit var updateProgress: ProgressBar
-    private lateinit var tvProgress: TextView
-
-    private lateinit var updateScreenLand: View
-    private lateinit var btnPrimaryActionLand: MaterialButton
-    private lateinit var btnDownloadWebsiteLand: MaterialButton
-    private lateinit var btnUpdateLaterLand: MaterialButton
-    private lateinit var updateProgressLand: ProgressBar
-    private lateinit var tvProgressLand: TextView
-
-    private val barAnimators = mutableListOf<android.animation.Animator>()
-
-    private var downloadCancelled = false
-    private var isDownloading = false
+    private var uiState        by mutableStateOf<SplashState>(SplashState.Loading)
+    private var downloadProgress by mutableFloatStateOf(0f)
+    private var downloadLabel  by mutableStateOf("")
+    private var isDownloading  by mutableStateOf(false)
     private var downloadedApk: File? = null
-    private var cachedWebUrl: String = ""
-
-    companion object {
-        private const val REQUEST_INSTALL_PERMISSION = 1001
-    }
+    private var cachedWebUrl   = ""
+    private var downloadCancelled = false
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) {
-        startFetch()
-    }
+    ) { startFetch() }
 
     private val installPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
         val apk = downloadedApk
-        if (apk != null && apk.exists()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && packageManager.canRequestPackageInstalls()) {
-                launchInstaller(apk)
-            }
-        }
+        if (apk != null && apk.exists() &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            packageManager.canRequestPackageInstalls()
+        ) launchInstaller(apk)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_splash)
-
         if (DeviceUtils.isTvDevice) {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
 
-        val bergenSans = ResourcesCompat.getFont(this, R.font.bergen_sans)
-
-        splashScreen = findViewById(R.id.splash_screen)
-        signalLoader = findViewById(R.id.signal_loader)
-        bar1 = findViewById(R.id.bar1)
-        bar2 = findViewById(R.id.bar2)
-        bar3 = findViewById(R.id.bar3)
-        bar4 = findViewById(R.id.bar4)
-        bar5 = findViewById(R.id.bar5)
-        errorText = findViewById(R.id.error_text)
-        buttonsRow = findViewById(R.id.buttons_row)
-        retryButton = findViewById(R.id.retry_button)
-        versionText = findViewById(R.id.version_text)
-
-        updateScreen = findViewById(R.id.update_screen)
-        btnPrimaryAction = findViewById(R.id.btn_primary_action)
-        btnDownloadWebsite = findViewById(R.id.btn_download_website)
-        btnUpdateLater = findViewById(R.id.btn_update_later)
-        updateProgress = findViewById(R.id.update_progress)
-        tvProgress = findViewById(R.id.tv_progress)
-
-        updateScreenLand = findViewById(R.id.update_screen_land)
-        btnPrimaryActionLand = findViewById(R.id.btn_primary_action_land)
-        btnDownloadWebsiteLand = findViewById(R.id.btn_download_website_land)
-        btnUpdateLaterLand = findViewById(R.id.btn_update_later_land)
-        updateProgressLand = findViewById(R.id.update_progress_land)
-        tvProgressLand = findViewById(R.id.tv_progress_land)
-
-        errorText.typeface = bergenSans
-        retryButton.typeface = bergenSans
-        versionText.typeface = bergenSans
-        tvProgress.typeface = bergenSans
-        btnPrimaryAction.typeface = bergenSans
-        btnDownloadWebsite.typeface = bergenSans
-        btnUpdateLater.typeface = bergenSans
-        tvProgressLand.typeface = bergenSans
-        btnPrimaryActionLand.typeface = bergenSans
-        btnDownloadWebsiteLand.typeface = bergenSans
-        btnUpdateLaterLand.typeface = bergenSans
-
-        versionText.text = "VERSION ${BuildConfig.VERSION_NAME}"
-
-        retryButton.setOnClickListener { startFetch() }
-
-        btnUpdateLater.setOnClickListener { finishAndRemoveTask() }
-        btnDownloadWebsite.setOnClickListener {
-            val url = listenerManager.getWebUrl().ifBlank { cachedWebUrl }
-            if (url.isNotBlank()) openUrl(url)
-        }
-        btnPrimaryAction.setOnClickListener {
-            when {
-                isDownloading -> cancelDownload()
-                downloadedApk?.exists() == true -> installApk(downloadedApk!!)
-                else -> startDownload()
-            }
-        }
-
-        btnUpdateLaterLand.setOnClickListener { finishAndRemoveTask() }
-        btnDownloadWebsiteLand.setOnClickListener {
-            val url = listenerManager.getWebUrl().ifBlank { cachedWebUrl }
-            if (url.isNotBlank()) openUrl(url)
-        }
-        btnPrimaryActionLand.setOnClickListener {
-            when {
-                isDownloading -> cancelDownload()
-                downloadedApk?.exists() == true -> installApk(downloadedApk!!)
-                else -> startDownload()
-            }
-        }
-
-        if (DeviceUtils.isTvDevice) {
-            btnPrimaryAction.visibility = View.GONE
-            btnPrimaryActionLand.visibility = View.GONE
-
-            btnDownloadWebsite.visibility = View.GONE
-            btnDownloadWebsiteLand.visibility = View.GONE
-            
-            retryButton.isFocusable = true
-            retryButton.isFocusableInTouchMode = false
+        setContent {
+            SplashScreen(
+                state            = uiState,
+                versionName      = BuildConfig.VERSION_NAME,
+                isDownloading    = isDownloading,
+                downloadProgress = downloadProgress,
+                downloadLabel    = downloadLabel,
+                hasApkReady      = downloadedApk?.exists() == true,
+                onRetry          = { startFetch() },
+                onUpdate         = {
+                    when {
+                        isDownloading              -> cancelDownload()
+                        downloadedApk?.exists() == true -> installApk(downloadedApk!!)
+                        else                       -> startDownload()
+                    }
+                },
+                onWebsite        = {
+                    val url = listenerManager.getWebUrl().ifBlank { cachedWebUrl }
+                    if (url.isNotBlank()) openUrl(url)
+                },
+                onLater          = { finishAndRemoveTask() },
+                isTv             = DeviceUtils.isTvDevice,
+            )
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (updateScreen.visibility == View.VISIBLE || updateScreenLand.visibility == View.VISIBLE) {
-                    finishAndRemoveTask()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
+                if (uiState is SplashState.UpdateRequired) finishAndRemoveTask()
+                else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
             }
         })
 
@@ -209,81 +162,61 @@ class SplashActivity : AppCompatActivity() {
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this, Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
             ) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-                startFetch()
-            }
-        } else {
-            startFetch()
-        }
+            } else startFetch()
+        } else startFetch()
     }
 
     private fun startFetch() {
-        showLoading()
+        uiState = SplashState.Loading
         lifecycleScope.launch {
             val success = fetchData()
             if (success) {
                 val remoteSignatures = dataRepository.getAppSignature()
-                val localSignature = getApkSignature()
-                val allowed = remoteSignatures.split(",").map { it.trim() }
+                val localSignature   = getApkSignature()
+                val allowed          = remoteSignatures.split(",").map { it.trim() }
                 if (localSignature.isEmpty() || allowed.none { it.equals(localSignature, ignoreCase = true) }) {
-                    showRetry("Connection error")
+                    uiState = SplashState.Error("Connection error")
                     return@launch
                 }
                 val url = listenerManager.getWebUrl()
                 if (url.isNotBlank()) cachedWebUrl = url
-                if (isUpdateRequired()) {
-                    showUpdateScreen()
-                } else {
-                    navigateToMain()
-                }
+                if (isUpdateRequired()) uiState = SplashState.UpdateRequired
+                else navigateToMain()
             } else {
-                showRetry("Connection error")
+                uiState = SplashState.Error("Connection error")
             }
         }
     }
 
     private fun getApkSignature(): String {
         return try {
-            val signatures = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                val info = packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
-                info.signingInfo?.apkContentsSigners
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                    .signingInfo?.apkContentsSigners
             } else {
                 @Suppress("DEPRECATION")
-                val info = packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNATURES)
-                @Suppress("DEPRECATION")
-                info.signatures
+                packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures
             }
-            val cert = signatures?.firstOrNull()?.toByteArray() ?: return ""
+            val cert   = signatures?.firstOrNull()?.toByteArray() ?: return ""
             val digest = java.security.MessageDigest.getInstance("SHA-256").digest(cert)
             digest.joinToString(":") { "%02X".format(it) }
-        } catch (e: Exception) {
-            ""
-        }
+        } catch (e: Exception) { "" }
     }
 
-    private suspend fun fetchData(): Boolean {
-        return try {
-            dataRepository.fetchRemoteConfig()
-            dataRepository.refreshData()
-        } catch (e: Exception) {
-            false
-        }
-    }
+    private suspend fun fetchData(): Boolean = try {
+        dataRepository.fetchRemoteConfig()
+        dataRepository.refreshData()
+    } catch (e: Exception) { false }
 
-    private fun isUpdateRequired(): Boolean {
-        return try {
-            val remote = listenerManager.getAppVersion().trim()
-            if (remote.isEmpty()) return false
-            compareVersions(remote, BuildConfig.VERSION_NAME.trim()) > 0
-        } catch (e: Exception) {
-            false
-        }
-    }
+    private fun isUpdateRequired(): Boolean = try {
+        val remote = listenerManager.getAppVersion().trim()
+        if (remote.isEmpty()) false
+        else compareVersions(remote, BuildConfig.VERSION_NAME.trim()) > 0
+    } catch (e: Exception) { false }
 
     private fun compareVersions(v1: String, v2: String): Int {
         val p1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
@@ -295,220 +228,74 @@ class SplashActivity : AppCompatActivity() {
         return 0
     }
 
-    private fun showLoading() {
-        splashScreen.visibility = View.VISIBLE
-        updateScreen.visibility = View.GONE
-        updateScreenLand.visibility = View.GONE
-        signalLoader.visibility = View.VISIBLE
-        errorText.visibility = View.GONE
-        buttonsRow.visibility = View.GONE
-        startBarAnimations()
-    }
-
-    private fun showRetry(message: String) {
-        stopBarAnimations()
-        signalLoader.visibility = View.GONE
-        errorText.text = message
-        errorText.visibility = View.VISIBLE
-        buttonsRow.visibility = View.VISIBLE
-    }
-
-    private fun showUpdateScreen() {
-        stopBarAnimations()
-        splashScreen.visibility = View.GONE
-        val isLandscape = resources.configuration.orientation ==
-                android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        if (isLandscape || DeviceUtils.isTvDevice) {
-            updateScreen.visibility = View.GONE
-            updateScreenLand.visibility = View.VISIBLE
-        } else {
-            updateScreen.visibility = View.VISIBLE
-            updateScreenLand.visibility = View.GONE
-        }
-        if (DeviceUtils.isTvDevice) {
-            val url = listenerManager.getDownloadUrl().ifBlank { listenerManager.getWebUrl() }
-            if (url.isNotBlank()) {
-                try {
-                    val hints = mapOf(com.google.zxing.EncodeHintType.MARGIN to 1)
-                    val bits = com.google.zxing.qrcode.QRCodeWriter()
-                        .encode(url, com.google.zxing.BarcodeFormat.QR_CODE, 240, 240, hints)
-                    val bmp = Bitmap.createBitmap(240, 240, Bitmap.Config.RGB_565)
-                    for (y in 0 until 240) for (x in 0 until 240)
-                        bmp.setPixel(x, y, if (bits[x, y]) Color.BLACK else Color.WHITE)
-
-                    val iconView = findViewById<ImageView>(R.id.update_app_icon_land)
-                    val parent = iconView.parent as? androidx.constraintlayout.widget.ConstraintLayout
-                        ?: return
-
-                    val existing = parent.findViewWithTag<View>("tv_qr_block")
-                    if (existing != null) return
-
-                    val qrImage = ImageView(this).apply {
-                        setImageBitmap(bmp)
-                        scaleType = ImageView.ScaleType.FIT_CENTER
-                        layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
-                            resources.getDimensionPixelSize(R.dimen.splash_icon_size),
-                            resources.getDimensionPixelSize(R.dimen.splash_icon_size)
-                        )
-                    }
-                    val qrLabel = android.widget.TextView(this).apply {
-                        text = "Scan to download"
-                        textSize = 11f
-                        setTextColor(Color.WHITE)
-                        gravity = android.view.Gravity.CENTER
-                        layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
-                            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.WRAP_CONTENT,
-                            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.WRAP_CONTENT
-                        )
-                    }
-                    val block = LinearLayout(this).apply {
-                        id = View.generateViewId()
-                        tag = "tv_qr_block"
-                        orientation = LinearLayout.VERTICAL
-                        gravity = android.view.Gravity.CENTER_HORIZONTAL
-                        addView(qrImage)
-                        addView(qrLabel)
-                        layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
-                            0,
-                            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.WRAP_CONTENT
-                        ).also { lp ->
-                            lp.topToBottom = iconView.id
-                            lp.startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
-                            lp.endToStart = R.id.guide_center
-                            lp.topMargin = resources.getDimensionPixelSize(R.dimen.splash_icon_size) / 4
-                        }
-                    }
-                    parent.addView(block)
-                } catch (e: Exception) { }
-            }
-        }
-    }
-
     private fun navigateToMain() {
         startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
 
-    private fun startBarAnimations() {
-        val bars = listOf(bar1, bar2, bar3, bar4, bar5)
-        val animRes = listOf(
-            R.anim.signal_bar1, R.anim.signal_bar2, R.anim.signal_bar3,
-            R.anim.signal_bar4, R.anim.signal_bar5
-        )
-        barAnimators.clear()
-        bars.forEachIndexed { i, bar ->
-            val anim = AnimatorInflater.loadAnimator(this, animRes[i])
-            anim.setTarget(bar)
-            anim.start()
-            barAnimators.add(anim)
-        }
-    }
-
-    private fun stopBarAnimations() {
-        barAnimators.forEach { it.cancel() }
-        barAnimators.clear()
-        listOf(bar1, bar2, bar3, bar4, bar5).forEach { it.scaleY = 1f }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (signalLoader.visibility == View.VISIBLE) startBarAnimations()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        stopBarAnimations()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        downloadedApk?.let { if (it.exists()) it.delete() }
-    }
-
     private fun startDownload() {
         val url = listenerManager.getDownloadUrl()
         if (url.isBlank()) return
-        isDownloading = true
+        isDownloading     = true
         downloadCancelled = false
-        for (btn in listOf(btnPrimaryAction, btnPrimaryActionLand)) btn.text = "CANCEL"
-        for (pb in listOf(updateProgress, updateProgressLand)) { pb.progress = 0; pb.visibility = View.VISIBLE }
-        for (tv in listOf(tvProgress, tvProgressLand)) { tv.text = "Preparing…"; tv.visibility = View.VISIBLE }
-
+        downloadProgress  = 0f
+        downloadLabel     = "Preparing…"
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) { downloadApk(url) }
             isDownloading = false
             if (result != null) {
                 downloadedApk = result
-                for (pb in listOf(updateProgress, updateProgressLand)) pb.visibility = View.INVISIBLE
-                for (tv in listOf(tvProgress, tvProgressLand)) tv.visibility = View.INVISIBLE
-                for (btn in listOf(btnPrimaryAction, btnPrimaryActionLand)) btn.text = "INSTALL"
                 installApk(result)
-            } else {
-                for (pb in listOf(updateProgress, updateProgressLand)) pb.visibility = View.INVISIBLE
-                for (tv in listOf(tvProgress, tvProgressLand)) tv.visibility = View.INVISIBLE
-                for (btn in listOf(btnPrimaryAction, btnPrimaryActionLand)) btn.text = "UPDATE APP"
             }
         }
     }
 
     private fun cancelDownload() {
         downloadCancelled = true
-        isDownloading = false
-        for (btn in listOf(btnPrimaryAction, btnPrimaryActionLand)) btn.text = "UPDATE APP"
-        for (pb in listOf(updateProgress, updateProgressLand)) pb.visibility = View.INVISIBLE
-        for (tv in listOf(tvProgress, tvProgressLand)) tv.visibility = View.INVISIBLE
+        isDownloading     = false
+        downloadProgress  = 0f
+        downloadLabel     = ""
     }
 
-    @SuppressLint("SetTextI18n")
-    private suspend fun downloadApk(url: String): File? {
-        return try {
-            val dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: cacheDir
-            val apkFile = File(dir, "update.apk")
-            if (apkFile.exists()) apkFile.delete()
-
-            val connection = (URL(url).openConnection()).also {
-                it.connectTimeout = 15_000
-                it.readTimeout = 30_000
-                it.connect()
-            }
-            val totalBytes = connection.contentLength.toLong()
-
-            connection.getInputStream().use { input ->
-                FileOutputStream(apkFile).use { output ->
-                    val buffer = ByteArray(8192)
-                    var downloaded = 0L
-                    var bytes: Int
-                    while (input.read(buffer).also { bytes = it } != -1) {
-                        if (downloadCancelled) { apkFile.delete(); return null }
-                        output.write(buffer, 0, bytes)
-                        downloaded += bytes
-                        val pct = if (totalBytes > 0) ((downloaded * 100) / totalBytes).toInt() else 0
-                        val dlMb = "%.1f".format(downloaded / 1_048_576.0)
-                        val totMb = if (totalBytes > 0) "%.1f".format(totalBytes / 1_048_576.0) else "?"
-                        withContext(Dispatchers.Main) {
-                            for (pb in listOf(updateProgress, updateProgressLand)) pb.progress = pct
-                            for (tv in listOf(tvProgress, tvProgressLand)) tv.text = "$dlMb MB / $totMb MB    $pct%"
-                        }
+    private suspend fun downloadApk(url: String): File? = try {
+        val dir     = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: cacheDir
+        val apkFile = File(dir, "update.apk").also { if (it.exists()) it.delete() }
+        val conn    = URL(url).openConnection().also {
+            it.connectTimeout = 15_000; it.readTimeout = 30_000; it.connect()
+        }
+        val total = conn.contentLength.toLong()
+        conn.getInputStream().use { input ->
+            FileOutputStream(apkFile).use { output ->
+                val buf = ByteArray(8192)
+                var downloaded = 0L
+                var bytes: Int
+                while (input.read(buf).also { bytes = it } != -1) {
+                    if (downloadCancelled) { apkFile.delete(); return null }
+                    output.write(buf, 0, bytes)
+                    downloaded += bytes
+                    val pct   = if (total > 0) downloaded.toFloat() / total else 0f
+                    val dlMb  = "%.1f".format(downloaded / 1_048_576.0)
+                    val totMb = if (total > 0) "%.1f".format(total / 1_048_576.0) else "?"
+                    withContext(Dispatchers.Main) {
+                        downloadProgress = pct
+                        downloadLabel    = "$dlMb MB / $totMb MB  ${(pct * 100).toInt()}%"
                     }
                 }
             }
-            apkFile
-        } catch (e: Exception) {
-            null
         }
-    }
+        apkFile
+    } catch (e: Exception) { null }
 
     private fun installApk(apkFile: File) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (!packageManager.canRequestPackageInstalls()) {
-                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+                installPermissionLauncher.launch(
+                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
                         data = Uri.parse("package:$packageName")
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
-                    installPermissionLauncher.launch(intent)
-                    return
-                }
+                )
+                return
             }
             launchInstaller(apkFile)
         } catch (e: Exception) { }
@@ -516,11 +303,9 @@ class SplashActivity : AppCompatActivity() {
 
     private fun launchInstaller(apkFile: File) {
         try {
-            val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                FileProvider.getUriForFile(this, "${packageName}.fileprovider", apkFile)
-            } else {
-                Uri.fromFile(apkFile)
-            }
+            val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+                FileProvider.getUriForFile(this, "$packageName.fileprovider", apkFile)
+            else Uri.fromFile(apkFile)
             startActivity(Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -532,4 +317,414 @@ class SplashActivity : AppCompatActivity() {
     private fun openUrl(url: String) {
         try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (e: Exception) { }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        downloadedApk?.let { if (it.exists()) it.delete() }
+    }
 }
+
+// ─────────────────────────────────────────────────────────────
+//  Composables
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun SplashScreen(
+    state: SplashState,
+    versionName: String,
+    isDownloading: Boolean,
+    downloadProgress: Float,
+    downloadLabel: String,
+    hasApkReady: Boolean,
+    onRetry: () -> Unit,
+    onUpdate: () -> Unit,
+    onWebsite: () -> Unit,
+    onLater: () -> Unit,
+    isTv: Boolean,
+) {
+    Box(
+        modifier          = Modifier
+            .fillMaxSize()
+            .background(Background),
+        contentAlignment  = Alignment.Center,
+    ) {
+        when (state) {
+            is SplashState.Loading ->
+                LoadingScreen(versionName = versionName)
+
+            is SplashState.Error ->
+                ErrorScreen(
+                    message     = state.message,
+                    versionName = versionName,
+                    onRetry     = onRetry,
+                )
+
+            is SplashState.UpdateRequired ->
+                if (isTv) {
+                    UpdateScreenLandscape(
+                        isDownloading    = isDownloading,
+                        downloadProgress = downloadProgress,
+                        downloadLabel    = downloadLabel,
+                        hasApkReady      = hasApkReady,
+                        onUpdate         = onUpdate,
+                        onWebsite        = onWebsite,
+                        onLater          = onLater,
+                        isTv             = true,
+                    )
+                } else {
+                    UpdateScreenPortrait(
+                        isDownloading    = isDownloading,
+                        downloadProgress = downloadProgress,
+                        downloadLabel    = downloadLabel,
+                        hasApkReady      = hasApkReady,
+                        onUpdate         = onUpdate,
+                        onWebsite        = onWebsite,
+                        onLater          = onLater,
+                    )
+                }
+        }
+    }
+}
+
+@Composable
+private fun LoadingScreen(versionName: String) {
+    Column(
+        modifier            = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Spacer(Modifier.weight(0.38f))
+
+        Image(
+            painter            = painterResource(R.mipmap.ic_launcher),
+            contentDescription = "App Icon",
+            modifier           = Modifier.size(100.dp),
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text       = "Live TV Pro",
+            color      = TextWhite,
+            fontSize   = 26.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.08.sp,
+        )
+
+        Spacer(Modifier.weight(0.1f))
+
+        SignalBars()
+
+        Spacer(Modifier.weight(0.1f))
+
+        Spacer(Modifier.weight(0.42f))
+
+        Text(
+            text     = "VERSION $versionName",
+            color    = TextGray,
+            fontSize = 12.sp,
+            letterSpacing = 0.1.sp,
+            modifier = Modifier.padding(bottom = 24.dp),
+        )
+    }
+}
+
+@Composable
+private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Unit) {
+    Column(
+        modifier            = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Spacer(Modifier.weight(0.38f))
+
+        Image(
+            painter            = painterResource(R.mipmap.ic_launcher),
+            contentDescription = "App Icon",
+            modifier           = Modifier.size(100.dp),
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text       = "Live TV Pro",
+            color      = TextWhite,
+            fontSize   = 26.sp,
+            fontWeight = FontWeight.Bold,
+        )
+
+        Spacer(Modifier.weight(0.1f))
+
+        Text(
+            text      = message,
+            color     = TextWhite,
+            fontSize  = 16.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.weight(0.1f))
+
+        SplashButton(text = "RETRY", onClick = onRetry)
+
+        Spacer(Modifier.weight(0.42f))
+
+        Text(
+            text     = "VERSION $versionName",
+            color    = TextGray,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 24.dp),
+        )
+    }
+}
+
+@Composable
+private fun UpdateScreenPortrait(
+    isDownloading: Boolean,
+    downloadProgress: Float,
+    downloadLabel: String,
+    hasApkReady: Boolean,
+    onUpdate: () -> Unit,
+    onWebsite: () -> Unit,
+    onLater: () -> Unit,
+) {
+    Column(
+        modifier            = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.height(32.dp))
+
+        Image(
+            painter            = painterResource(R.mipmap.ic_launcher),
+            contentDescription = "App Icon",
+            modifier           = Modifier.size(100.dp),
+        )
+
+        Spacer(Modifier.height(14.dp))
+
+        Text(
+            text       = "New Update Available",
+            color      = TextWhite,
+            fontSize   = 22.sp,
+            fontWeight = FontWeight.Bold,
+        )
+
+        if (isDownloading) {
+            Spacer(Modifier.height(14.dp))
+            LinearProgressIndicator(
+                progress       = { downloadProgress },
+                modifier       = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color          = AccentRed,
+                trackColor     = Color(0xFF555555),
+                strokeCap      = StrokeCap.Round,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp)
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        SplashButton(
+            text    = when {
+                isDownloading    -> "CANCEL"
+                hasApkReady      -> "INSTALL"
+                else             -> "UPDATE APP"
+            },
+            onClick = onUpdate,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text            = "You need to install the latest version. We will discontinue all the old version soon. Please download and install it. If the in-app update does not work, please download from our website.",
+            color           = TextWhite,
+            fontSize        = 13.sp,
+            lineHeight      = 20.sp,
+            modifier        = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        SplashButton(text = "DOWNLOAD FROM WEBSITE", onClick = onWebsite)
+
+        Spacer(Modifier.height(8.dp))
+
+        SplashButton(text = "UPDATE LATER", onClick = onLater)
+
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun UpdateScreenLandscape(
+    isDownloading: Boolean,
+    downloadProgress: Float,
+    downloadLabel: String,
+    hasApkReady: Boolean,
+    onUpdate: () -> Unit,
+    onWebsite: () -> Unit,
+    onLater: () -> Unit,
+    isTv: Boolean,
+) {
+    Row(
+        modifier          = Modifier.fillMaxSize(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Left — icon
+        Box(
+            modifier         = Modifier.weight(0.45f).fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter            = painterResource(R.mipmap.ic_launcher),
+                contentDescription = "App Icon",
+                modifier           = Modifier.size(100.dp),
+            )
+        }
+
+        // Divider
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .fillMaxSize()
+                .background(Color.White.copy(alpha = 0.13f))
+        )
+
+        // Right — content
+        Column(
+            modifier            = Modifier
+                .weight(0.55f)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start,
+        ) {
+            Spacer(Modifier.height(24.dp))
+
+            Text(
+                text       = "New Update Available",
+                color      = TextWhite,
+                fontSize   = 22.sp,
+                fontWeight = FontWeight.Bold,
+            )
+
+            if (isDownloading) {
+                Spacer(Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress   = { downloadProgress },
+                    modifier   = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color      = AccentRed,
+                    trackColor = Color(0xFF555555),
+                    strokeCap  = StrokeCap.Round,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp)
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            if (!isTv) {
+                SplashButton(
+                    text    = when {
+                        isDownloading -> "CANCEL"
+                        hasApkReady   -> "INSTALL"
+                        else          -> "UPDATE APP"
+                    },
+                    onClick = onUpdate,
+                )
+                Spacer(Modifier.height(10.dp))
+            }
+
+            Text(
+                text       = "You need to install the latest version. We will discontinue all the old version soon. Please download and install it. If the in-app update does not work, please download from our website.",
+                color      = TextWhite,
+                fontSize   = 13.sp,
+                lineHeight = 20.sp,
+                maxLines   = 3,
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            if (!isTv) {
+                SplashButton(text = "DOWNLOAD FROM WEBSITE", onClick = onWebsite)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            SplashButton(text = "UPDATE LATER", onClick = onLater)
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun SplashButton(text: String, onClick: () -> Unit) {
+    Button(
+        onClick  = onClick,
+        modifier = Modifier.fillMaxWidth().height(52.dp),
+        shape    = RoundedCornerShape(8.dp),
+        colors   = ButtonDefaults.buttonColors(containerColor = AccentRed),
+    ) {
+        Text(
+            text       = text,
+            color      = TextWhite,
+            fontSize   = 14.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.08.sp,
+        )
+    }
+}
+
+@Composable
+private fun SignalBars() {
+    val transition = rememberInfiniteTransition(label = "signal")
+
+    // Each bar: from, to, duration, startOffset — matches original XML animators
+    val barDefs = listOf(
+        BarDef(from = 0.15f, to = 1.00f, duration = 500,  delay = 0),
+        BarDef(from = 1.00f, to = 0.20f, duration = 650,  delay = 100),
+        BarDef(from = 0.40f, to = 1.00f, duration = 450,  delay = 200),
+        BarDef(from = 0.80f, to = 0.15f, duration = 600,  delay = 80),
+        BarDef(from = 0.20f, to = 0.90f, duration = 550,  delay = 300),
+    )
+
+    Row(
+        modifier              = Modifier.height(40.dp),
+        verticalAlignment     = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        barDefs.forEach { def ->
+            val scale by transition.animateFloat(
+                initialValue   = def.from,
+                targetValue    = def.to,
+                animationSpec  = infiniteRepeatable(
+                    animation  = tween(
+                        durationMillis = def.duration,
+                        delayMillis    = def.delay,
+                        easing         = FastOutSlowInEasing,
+                    ),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "bar",
+            )
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .height(40.dp)
+                    .scale(scaleX = 1f, scaleY = scale)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(AccentRed),
+            )
+        }
+    }
+}
+
+private data class BarDef(val from: Float, val to: Float, val duration: Int, val delay: Int)

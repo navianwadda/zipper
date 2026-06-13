@@ -85,6 +85,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import android.media.AudioManager
 import androidx.recyclerview.widget.RecyclerView
@@ -2228,4 +2230,125 @@ private fun PlayerActivity.PlayerActivityRoot(
                                     val idx = items.indexOfFirst { it.id == activity.contentId }.takeIf { it != -1 } ?: 0
                                     val prev = (idx - 1).coerceAtLeast(0)
                                     if (prev != idx) activity.switchToChannel(items[prev])
-                           
+                                }
+                            }
+                            else -> {}
+                        }
+                    },
+                    onNextClick = {
+                        when (activity.contentType) {
+                            PlayerActivity.ContentType.EVENT -> {
+                                if (activity.allEventLinks.size > 1) {
+                                    val next = (activity.currentLinkIndex + 1).coerceAtMost(activity.allEventLinks.size - 1)
+                                    if (next != activity.currentLinkIndex) activity.switchToLink(activity.allEventLinks[next], next)
+                                }
+                            }
+                            PlayerActivity.ContentType.CHANNEL -> {
+                                val items = activity.viewModel.channelListItems.value
+                                if (!items.isNullOrEmpty()) {
+                                    val idx = items.indexOfFirst { it.id == activity.contentId }.takeIf { it != -1 } ?: 0
+                                    val next = (idx + 1).coerceAtMost(items.size - 1)
+                                    if (next != idx) activity.switchToChannel(items[next])
+                                }
+                            }
+                            else -> {}
+                        }
+                    },
+                    onAspectRatioClick = { if (activity.contentType == PlayerActivity.ContentType.NETWORK_STREAM) activity.cycleAspectRatio() else activity.cycleAspectRatio() },
+                    onFullscreenClick = { activity.toggleFullscreen() },
+                    onVolumeSwipe = { vol ->
+                        activity.gestureVolume = vol
+                        val am = activity.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                        am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (vol / 100f * am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)).toInt(), 0)
+                    },
+                    onBrightnessSwipe = { bri ->
+                        activity.gestureBrightness = bri
+                        val lp = activity.window.attributes
+                        lp.screenBrightness = if (bri == 0) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else bri / 100f
+                        activity.window.attributes = lp
+                    },
+                    initialVolume = activity.gestureVolume,
+                    initialBrightness = activity.gestureBrightness,
+                )
+                if (links.size > 1) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = controlsState.isVisible && !controlsState.isLocked,
+                        enter = androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.fadeOut(),
+                        modifier = androidx.compose.ui.Modifier
+                            .align(androidx.compose.ui.Alignment.TopCenter)
+                            .padding(top = 44.dp),
+                    ) {
+                        com.livetvpro.app.ui.player.compose.PlayerScreen(
+                            isLandscape = true,
+                            relatedContentState = com.livetvpro.app.ui.player.compose.RelatedContentState.Hidden,
+                            links = links,
+                            selectedLinkIndex = selectedLinkIndex,
+                            messageBanner = "",
+                            messageBannerUrl = "",
+                            onLinkClick = onLinkClick,
+                            onChannelClick = onChannelClick,
+                            onEventClick = onEventClick,
+                            onMessageBannerClick = onMessageBannerClick,
+                            spanCount = spanCount,
+                            eventSpanCount = eventSpanCount,
+                        )
+                    }
+                }
+            }
+        }
+        if (!isLandscape && activity.contentType != PlayerActivity.ContentType.NETWORK_STREAM) {
+            com.livetvpro.app.ui.player.compose.PlayerScreen(
+                isLandscape = false,
+                relatedContentState = relatedContentState,
+                links = links,
+                selectedLinkIndex = selectedLinkIndex,
+                messageBanner = messageBanner,
+                messageBannerUrl = messageBannerUrl,
+                onLinkClick = onLinkClick,
+                onChannelClick = onChannelClick,
+                onEventClick = onEventClick,
+                onMessageBannerClick = onMessageBannerClick,
+                spanCount = spanCount,
+                eventSpanCount = eventSpanCount,
+            )
+        }
+    }
+    
+    if (isLandscape && errorMessage.isNotBlank()) {
+        androidx.compose.foundation.layout.Box(
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+            modifier = androidx.compose.ui.Modifier.fillMaxSize()
+        ) {
+            androidx.compose.material3.Text(
+                text = errorMessage,
+                color = androidx.compose.ui.graphics.Color.White,
+                fontFamily = androidx.compose.ui.text.font.FontFamily(
+                    androidx.compose.ui.text.font.Font(com.livetvpro.app.R.font.bergen_sans)
+                ),
+                fontSize = 15.sp,
+                modifier = androidx.compose.ui.Modifier
+                    .background(
+                        androidx.compose.ui.graphics.Color(0xFF1A1A1A),
+                        androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 24.dp, vertical = 10.dp)
+            )
+        }
+    }
+    if (showSettingsDialog && player != null) {
+        com.livetvpro.app.ui.player.settings.PlayerSettingsDialog(
+            player = player,
+            onDismiss = onSettingsDismiss,
+        )
+    }
+    if (showFloatingDialog) {
+        com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog(
+            preferencesManager = preferencesManager,
+            onDismiss = onFloatingDismiss,
+        )
+    }
+
+}
+
+

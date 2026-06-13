@@ -24,7 +24,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
-import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -284,7 +283,10 @@ class PlayerActivity : BasePlayerActivity() {
         val binding = androidx.compose.ui.platform.ComposeView(this).also { composeRoot ->
             composeRoot.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             composeRoot.setContent {
-                AppThemeContent(themeManager) {
+                com.livetvpro.app.ui.theme.LiveTVProTheme(
+                    themeManager = themeManager,
+                    surfaceColor = androidx.compose.ui.graphics.Color.Transparent,
+                ) {
                     PlayerActivityRoot(
                         activity = this,
                         controlsState = controlsState,
@@ -351,7 +353,7 @@ class PlayerActivity : BasePlayerActivity() {
 
         setupWindowFlags(isLandscape)
         setupSystemUI(isLandscape)
-        if (!DeviceUtils.isTvDevice) setupWindowInsets(window.decorView)
+        if (!DeviceUtils.isTvDevice) { /* insets handled by Compose in PlayerActivityRoot */ }
 
         parseIntent()
 
@@ -554,15 +556,10 @@ class PlayerActivity : BasePlayerActivity() {
         } else {
 
             if (contentType == ContentType.NETWORK_STREAM) {
-                val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    window.decorView.rootWindowInsets?.getInsets(WindowInsets.Type.systemBars())?.top ?: 0
-                } else {
-                    @Suppress("DEPRECATION") window.decorView.rootWindowInsets?.systemWindowInsetTop ?: 0
-                }
                 val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.topMargin = topInset
+                // topMargin is kept as-is — driven by Compose SideEffect in PlayerActivityRoot
                 params.bottomMargin = 0
                 params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                 params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -2018,6 +2015,22 @@ private fun PlayerActivity.PlayerActivityRoot(
         .asPaddingValues().calculateTopPadding()
     val navBarHeight = androidx.compose.foundation.layout.WindowInsets.navigationBars
         .asPaddingValues().calculateBottomPadding()
+
+    // Single source of truth: Compose owns the status bar inset and pushes
+    // it into the XML player_container so both layers always stay in sync.
+    val statusBarHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) {
+        statusBarHeight.roundToPx()
+    }
+    androidx.compose.runtime.SideEffect {
+        if (!isLandscape) {
+            val params = activity.playerContainer.layoutParams
+                as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+            if (params.topMargin != statusBarHeightPx) {
+                params.topMargin = statusBarHeightPx
+                activity.playerContainer.layoutParams = params
+            }
+        }
+    }
 
     val isPlaying by androidx.compose.runtime.produceState(initialValue = false, player) {
         while (true) {

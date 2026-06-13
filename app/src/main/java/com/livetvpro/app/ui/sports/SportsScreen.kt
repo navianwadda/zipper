@@ -38,8 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValueimport androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -58,6 +57,9 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
+import com.livetvpro.app.ui.player.dialogs.LinkItem
+import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
+import com.livetvpro.app.ui.player.dialogs.toLinkItem
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 
@@ -70,12 +72,26 @@ fun SportsScreen(
     viewModel: SportsViewModel,
     spanCount: Int = 3,
     isTvDevice: Boolean = false,
-    onChannelClick: (Channel) -> Unit,
+    onChannelClick: (Channel, Int) -> Unit,
     onChannelLongClick: (Channel) -> Unit,
 ) {
     val channels by viewModel.filteredChannels.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
     val gridState = rememberLazyGridState()
+    var linkDialogChannel by remember { mutableStateOf<Channel?>(null) }
+
+    if (linkDialogChannel != null) {
+        val channel = linkDialogChannel!!
+        val links = channel.links.orEmpty()
+        LinkSelectionDialog(
+            links = links.map { it.toLinkItem() },
+            currentUrl = null,
+            onLinkSelected = { _, index ->
+                onChannelClick(channel, index)
+            },
+            onDismiss = { linkDialogChannel = null },
+        )
+    }
 
     PullToRefreshBox(
         isRefreshing = isLoading == true,
@@ -132,7 +148,13 @@ fun SportsScreen(
                         SportChannelCard(
                             channel = channel,
                             isFavorite = viewModel.isFavorite(channel.id),
-                            onClick = { onChannelClick(channel) },
+                            onClick = {
+                                if ((channel.links?.size ?: 0) > 1) {
+                                    linkDialogChannel = channel
+                                } else {
+                                    onChannelClick(channel, 0)
+                                }
+                            },
                             onLongClick = { onChannelLongClick(channel) }
                         )
                     }

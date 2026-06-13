@@ -17,6 +17,7 @@ data class StreamInfo(
     val drmKeyId: String?,
     val drmKey: String?,
     val drmLicenseUrl: String? = null,
+    val customHeaders: Map<String, String> = emptyMap(),
 )
 
 object PlayerStreamHelper {
@@ -45,6 +46,7 @@ object PlayerStreamHelper {
         }
 
         val headers = mutableMapOf<String, String>()
+        val customHeaders = mutableMapOf<String, String>()
         var drmScheme: String? = null
         var drmKeyId: String? = null
         var drmKey: String? = null
@@ -80,11 +82,11 @@ object PlayerStreamHelper {
                 "origin" -> headers["Origin"] = value
                 "cookie" -> headers["Cookie"] = value
                 "x-forwarded-for" -> headers["X-Forwarded-For"] = value
-                else -> headers[key] = value
+                else -> customHeaders[key] = value
             }
         }
 
-        return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
+        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders)
     }
 
     fun normalizeDrmScheme(scheme: String): String {
@@ -109,6 +111,7 @@ object PlayerStreamHelper {
         link.xForwardedFor?.let { if (it.isNotEmpty()) params.add("x-forwarded-for=$it") }
         link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
+        link.customHeaders.forEach { (k, v) -> if (v.isNotEmpty()) params.add("$k=$v") }
 
         if (params.isNotEmpty()) {
             url += "|" + params.joinToString("|")

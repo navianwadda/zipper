@@ -646,7 +646,8 @@ class FloatingPlayerActivity : BasePlayerActivity() {
                     xForwardedFor = parsed.headers["X-Forwarded-For"],
                     drmScheme = resolvedDrmScheme,
                     drmLicenseUrl = resolvedDrmLicenseUrl
-                        ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } }
+                        ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } },
+                    customHeaders = parsed.customHeaders
                 )
 
                 allEventLinks = listOf(mergedLink)

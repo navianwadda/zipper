@@ -89,7 +89,7 @@ class FloatingPlayerDialog : DialogFragment() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @androidx.compose.runtime.Composable
-private fun FloatingPlayerDialogContent(
+internal fun FloatingPlayerDialogContent(
     preferencesManager: PreferencesManager,
     onDismiss: () -> Unit,
 ) {

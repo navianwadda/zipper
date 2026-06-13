@@ -105,7 +105,7 @@ class PlayerActivity : BasePlayerActivity() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     internal val viewModel: PlayerViewModel by viewModels()
-    private var player: ExoPlayer? = null
+    private var player: ExoPlayer? by mutableStateOf(null)
     private var trackSelector: DefaultTrackSelector? = null
     private var playerListener: Player.Listener? = null
 

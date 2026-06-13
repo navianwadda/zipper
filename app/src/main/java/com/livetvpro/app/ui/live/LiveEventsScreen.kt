@@ -82,7 +82,9 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.EventCategory
 import com.livetvpro.app.data.models.EventStatus
 import com.livetvpro.app.data.models.LiveEvent
+import com.livetvpro.app.ui.player.dialogs.LinkItem
 import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
+import com.livetvpro.app.ui.player.dialogs.toLinkItem
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -140,12 +142,10 @@ fun LiveEventsScreen(
     if (linkDialogEvent != null) {
         val event = linkDialogEvent!!
         LinkSelectionDialog(
-            links = event.links,
-            currentLink = null,
-            onLinkSelected = { link ->
-                val index = event.links.indexOf(link)
+            links = event.links.map { it.toLinkItem() },
+            currentUrl = null,
+            onLinkSelected = { _, index ->
                 onEventClick(event, index)
-                linkDialogEvent = null
             },
             onDismiss = { linkDialogEvent = null },
         )

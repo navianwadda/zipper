@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.DialogFragment
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
+import com.livetvpro.app.data.local.ThemeManager
+import com.livetvpro.app.ui.theme.AppThemeContent
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -67,6 +69,9 @@ class FloatingPlayerDialog : DialogFragment() {
     @Inject
     lateinit var preferencesManager: PreferencesManager
 
+    @Inject
+    lateinit var themeManager: ThemeManager
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -74,10 +79,12 @@ class FloatingPlayerDialog : DialogFragment() {
     ): View = ComposeView(requireContext()).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
-            FloatingPlayerDialogContent(
-                preferencesManager = preferencesManager,
-                onDismiss = { dismiss() },
-            )
+            AppThemeContent(themeManager = themeManager) {
+                FloatingPlayerDialogContent(
+                    preferencesManager = preferencesManager,
+                    onDismiss = { dismiss() },
+                )
+            }
         }
     }
 

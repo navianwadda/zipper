@@ -62,6 +62,8 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.FavoriteChannel
+import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
+import com.livetvpro.app.ui.player.dialogs.toLinkItem
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val CardLogoBg = Color(0x80000000)
@@ -71,13 +73,26 @@ fun FavoritesScreen(
     viewModel: FavoritesViewModel,
     spanCount: Int = 3,
     isTvDevice: Boolean = false,
-    onChannelClick: (FavoriteChannel) -> Unit,
+    onChannelClick: (FavoriteChannel, Int) -> Unit,
     onRemoveFavorite: (FavoriteChannel) -> Unit,
     onClearAll: () -> Unit
 ) {
-    val favorites by viewModel.favorites.observeAsState(emptyList())
+    val favorites by viewModel.filteredFavorites.observeAsState(emptyList())
 
     var showClearAllDialog by remember { mutableStateOf(false) }
+    var linkDialogFavorite by remember { mutableStateOf<FavoriteChannel?>(null) }
+
+    if (linkDialogFavorite != null) {
+        val favorite = linkDialogFavorite!!
+        LinkSelectionDialog(
+            links = favorite.links.orEmpty().map { it.toLinkItem() },
+            currentUrl = null,
+            onLinkSelected = { _, index ->
+                onChannelClick(favorite, index)
+            },
+            onDismiss = { linkDialogFavorite = null },
+        )
+    }
 
     if (showClearAllDialog) {
         AlertDialog(
@@ -159,7 +174,13 @@ fun FavoritesScreen(
                         FavoriteCard(
                             favorite = favorite,
                             isTvDevice = isTvDevice,
-                            onClick = { onChannelClick(favorite) },
+                            onClick = {
+                                if ((favorite.links?.size ?: 0) > 1) {
+                                    linkDialogFavorite = favorite
+                                } else {
+                                    onChannelClick(favorite, 0)
+                                }
+                            },
                             onRemove = { onRemoveFavorite(favorite) }
                         )
                     }

@@ -4,7 +4,7 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.livetvpro.app.ui.webview.WebActivity
 import kotlinx.coroutines.flow.MutableStateFlow

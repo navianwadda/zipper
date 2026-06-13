@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.player
 
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.drm.FrameworkMediaDrm
@@ -114,6 +115,51 @@ object PlayerStreamHelper {
         }
 
         return url
+    }
+
+    fun detectMimeTypeFromUrl(url: String): String? {
+        val lower = url.lowercase()
+        return when {
+            lower.contains("m3u8") || lower.contains("extension=m3u8") -> MimeTypes.APPLICATION_M3U8
+            lower.contains(".mpd") || lower.contains("/dash/") || lower.contains("type=mpd") -> MimeTypes.APPLICATION_MPD
+            lower.contains(".ism") || lower.contains(".isml") || lower.contains("manifest(format=mpd") -> MimeTypes.APPLICATION_SS
+            lower.contains(".flv") -> "video/x-flv"
+            lower.contains(".mp4") || lower.contains(".m4v") || lower.contains(".m4a") -> "video/mp4"
+            lower.contains(".ts") || lower.contains("/ts") -> "video/mp2t"
+            lower.contains(".mkv") -> "video/x-matroska"
+            lower.contains(".webm") -> "video/webm"
+            lower.contains(".avi") -> "video/avi"
+            lower.startsWith("rtmp://") || lower.startsWith("rtmps://") -> MimeTypes.APPLICATION_RTSP
+            lower.startsWith("rtsp://") -> MimeTypes.APPLICATION_RTSP
+            else -> null
+        }
+    }
+
+    suspend fun resolveContentType(url: String, headers: Map<String, String>): String? {
+        return try {
+            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "HEAD"
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.instanceFollowRedirects = true
+            headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
+            connection.connect()
+            val contentType = connection.contentType ?: ""
+            connection.disconnect()
+            when {
+                contentType.contains("mpegurl", ignoreCase = true) ||
+                contentType.contains("m3u8", ignoreCase = true) -> MimeTypes.APPLICATION_M3U8
+                contentType.contains("dash+xml", ignoreCase = true) -> MimeTypes.APPLICATION_MPD
+                contentType.contains("mp4", ignoreCase = true) -> "video/mp4"
+                contentType.contains("mp2t", ignoreCase = true) || contentType.contains("mpeg2", ignoreCase = true) -> "video/mp2t"
+                contentType.contains("webm", ignoreCase = true) -> "video/webm"
+                contentType.contains("matroska", ignoreCase = true) -> "video/x-matroska"
+                contentType.contains("flv", ignoreCase = true) -> "video/x-flv"
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {

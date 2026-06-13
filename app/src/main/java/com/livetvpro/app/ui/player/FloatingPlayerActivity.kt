@@ -1046,142 +1046,136 @@ class FloatingPlayerActivity : BasePlayerActivity() {
             return
         }
 
-        val parsed = PlayerStreamHelper.parseStreamUrl(streamUrl)
-        val headers = parsed.headers.toMutableMap()
-        if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
-            headers["User-Agent"] = "okhttp/4.12.0"
-        }
+        lifecycleScope.launch {
+            val parsed = PlayerStreamHelper.parseStreamUrl(streamUrl)
+            val headers = parsed.headers.toMutableMap()
+            if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
+                headers["User-Agent"] = "okhttp/4.12.0"
+            }
 
-        val dataSourceFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
-            .setDefaultRequestProperties(headers)
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(15_000)
-            .setAllowCrossProtocolRedirects(true)
-            .setKeepPostFor302Redirects(true)
+            val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
+                ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    PlayerStreamHelper.resolveContentType(parsed.url, headers)
+                }
 
-        val clearKeyMgr: androidx.media3.exoplayer.drm.DefaultDrmSessionManager? = when {
-            parsed.drmScheme != "clearkey" -> null
-            parsed.drmKeyId != null && parsed.drmKey != null ->
-                PlayerStreamHelper.buildClearKeyInlineManager(parsed.drmKeyId, parsed.drmKey)
-            parsed.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
-                PlayerStreamHelper.buildClearKeyJwkManager(parsed.drmLicenseUrl)
-            parsed.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
-                PlayerStreamHelper.buildClearKeyServerManager(parsed.drmLicenseUrl, headers)
-            else -> null
-        }
+            val dataSourceFactory = DefaultHttpDataSource.Factory()
+                .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
+                .setDefaultRequestProperties(headers)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
+                .setAllowCrossProtocolRedirects(true)
+                .setKeepPostFor302Redirects(true)
 
-        val mediaSourceFactory = if (clearKeyMgr != null) {
-            DefaultMediaSourceFactory(this)
-                .setDataSourceFactory(dataSourceFactory)
-                .setDrmSessionManagerProvider { clearKeyMgr }
-        } else {
-            DefaultMediaSourceFactory(this).setDataSourceFactory(dataSourceFactory)
-        }
+            val clearKeyMgr: androidx.media3.exoplayer.drm.DefaultDrmSessionManager? = when {
+                parsed.drmScheme != "clearkey" -> null
+                parsed.drmKeyId != null && parsed.drmKey != null ->
+                    PlayerStreamHelper.buildClearKeyInlineManager(parsed.drmKeyId, parsed.drmKey)
+                parsed.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->
+                    PlayerStreamHelper.buildClearKeyJwkManager(parsed.drmLicenseUrl)
+                parsed.drmLicenseUrl?.startsWith("http", ignoreCase = true) == true ->
+                    PlayerStreamHelper.buildClearKeyServerManager(parsed.drmLicenseUrl, headers)
+                else -> null
+            }
 
-        val renderersFactory = DefaultRenderersFactory(this)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-            .setEnableDecoderFallback(true)
+            val mediaSourceFactory = if (clearKeyMgr != null) {
+                DefaultMediaSourceFactory(this@FloatingPlayerActivity)
+                    .setDataSourceFactory(dataSourceFactory)
+                    .setDrmSessionManagerProvider { clearKeyMgr }
+            } else {
+                DefaultMediaSourceFactory(this@FloatingPlayerActivity).setDataSourceFactory(dataSourceFactory)
+            }
 
-        val ts = DefaultTrackSelector(this).apply {
-            parameters = buildUponParameters()
-                .setAllowVideoMixedMimeTypeAdaptiveness(true)
-                .setAllowAudioMixedMimeTypeAdaptiveness(true)
-                .setAllowAudioMixedChannelCountAdaptiveness(true)
-                .build()
-        }
-        trackSelector = ts
+            val renderersFactory = DefaultRenderersFactory(this@FloatingPlayerActivity)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
 
-        val exo = ExoPlayer.Builder(this)
-            .setRenderersFactory(renderersFactory)
-            .setTrackSelector(ts)
-            .setMediaSourceFactory(mediaSourceFactory)
-            .setWakeMode(C.WAKE_MODE_NETWORK)
-            .setHandleAudioBecomingNoisy(true)
-            .setAudioAttributes(
-                androidx.media3.common.AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                    .build(),
-                true
-            )
-            .build()
-
-        player = exo
-        binding.playerView.player = exo
-
-        val urlLower = parsed.url.lowercase()
-        val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
-        when {
-            urlLower.contains("m3u8") || urlLower.contains("extension=m3u8") ->
-                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
-            urlLower.contains(".mpd") || urlLower.contains("/dash/") || urlLower.contains("type=mpd") ->
-                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_MPD)
-            urlLower.contains(".ism") || urlLower.contains(".isml") ->
-                mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_SS)
-            urlLower.contains(".mp4") || urlLower.contains(".m4v") ->
-                mediaItemBuilder.setMimeType("video/mp4")
-            urlLower.contains(".ts") || urlLower.contains("/ts") ->
-                mediaItemBuilder.setMimeType("video/mp2t")
-            urlLower.contains(".mkv") ->
-                mediaItemBuilder.setMimeType("video/x-matroska")
-        }
-        if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
-            val uuid = if (parsed.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
-            val licHeaders = headers.filter { (k, _) -> k.lowercase() !in setOf("referer", "origin") }
-            mediaItemBuilder.setDrmConfiguration(
-                MediaItem.DrmConfiguration.Builder(uuid)
-                    .setLicenseUri(parsed.drmLicenseUrl)
-                    .setLicenseRequestHeaders(licHeaders)
-                    .setForceDefaultLicenseUri(true)
-                    .setMultiSession(false)
+            val ts = DefaultTrackSelector(this@FloatingPlayerActivity).apply {
+                parameters = buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedChannelCountAdaptiveness(true)
                     .build()
-            )
-        }
+            }
+            trackSelector = ts
 
-        val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(state: Int) {
-                when (state) {
-                    Player.STATE_BUFFERING -> {
-                        binding.progressBar.visibility = View.VISIBLE
-                        binding.errorView.visibility = View.GONE
-                    }
-                    Player.STATE_READY -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.errorView.visibility = View.GONE
-                        if (!resizeModesRestoredFromState) {
-                            val savedLandscape = preferencesManager.getSavedAspectRatio()
-                            val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
-                            if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
-                            if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
-                            resizeModesRestoredFromState = true
-                            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                            applyResizeModeForOrientation(isLandscape)
+            val exo = ExoPlayer.Builder(this@FloatingPlayerActivity)
+                .setRenderersFactory(renderersFactory)
+                .setTrackSelector(ts)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(true)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    true
+                )
+                .build()
+
+            player = exo
+            binding.playerView.player = exo
+
+            val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
+            mimeType?.let { mediaItemBuilder.setMimeType(it) }
+
+            if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
+                val uuid = if (parsed.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
+                val licHeaders = headers.filter { (k, _) -> k.lowercase() !in setOf("referer", "origin") }
+                mediaItemBuilder.setDrmConfiguration(
+                    MediaItem.DrmConfiguration.Builder(uuid)
+                        .setLicenseUri(parsed.drmLicenseUrl)
+                        .setLicenseRequestHeaders(licHeaders)
+                        .setForceDefaultLicenseUri(true)
+                        .setMultiSession(false)
+                        .build()
+                )
+            }
+
+            val listener = object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    when (state) {
+                        Player.STATE_BUFFERING -> {
+                            binding.progressBar.visibility = View.VISIBLE
+                            binding.errorView.visibility = View.GONE
                         }
-                        setSubtitleTextSize()
+                        Player.STATE_READY -> {
+                            binding.progressBar.visibility = View.GONE
+                            binding.errorView.visibility = View.GONE
+                            if (!resizeModesRestoredFromState) {
+                                val savedLandscape = preferencesManager.getSavedAspectRatio()
+                                val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
+                                if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
+                                if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
+                                resizeModesRestoredFromState = true
+                                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                applyResizeModeForOrientation(isLandscape)
+                            }
+                            setSubtitleTextSize()
+                        }
+                        Player.STATE_ENDED -> {
+                            binding.progressBar.visibility = View.GONE
+                        }
+                        else -> {}
                     }
-                    Player.STATE_ENDED -> {
-                        binding.progressBar.visibility = View.GONE
-                    }
-                    else -> {}
+                }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    binding.progressBar.visibility = View.GONE
+                    binding.errorView.visibility = View.VISIBLE
                 }
             }
+            playerListener = listener
+            exo.addListener(listener)
 
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                binding.progressBar.visibility = View.GONE
-                binding.errorView.visibility = View.VISIBLE
+            exo.setMediaItem(mediaItemBuilder.build())
+            if (savedPlaybackPosition > 0) {
+                exo.seekTo(savedPlaybackPosition)
+                savedPlaybackPosition = -1L
             }
+            exo.prepare()
+            exo.playWhenReady = true
         }
-        playerListener = listener
-        exo.addListener(listener)
-
-        exo.setMediaItem(mediaItemBuilder.build())
-        if (savedPlaybackPosition > 0) {
-            exo.seekTo(savedPlaybackPosition)
-            savedPlaybackPosition = -1L
-        }
-        exo.prepare()
-        exo.playWhenReady = true
     }
 
     private fun toggleMute() {

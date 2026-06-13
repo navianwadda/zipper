@@ -2,6 +2,7 @@ package com.livetvpro.app.ui.favorites
 
 import android.content.DialogInterface
 import android.content.Intent
+import android.view.KeyEvent
 import androidx.activity.result.ActivityResultLauncher
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -72,7 +73,7 @@ class FavoritesFragment : Fragment() {
                         viewModel = viewModel,
                         spanCount = spanCount,
                         isTvDevice = DeviceUtils.isTvDevice,
-                        onChannelClick = { favorite -> handleChannelClick(favorite) },
+                        onChannelClick = { favorite, linkIndex -> handleChannelClick(favorite, linkIndex) },
                         onRemoveFavorite = { favorite -> showRemoveConfirmation(favorite) },
                         onClearAll = { viewModel.clearAll() }
                     )
@@ -85,6 +86,54 @@ class FavoritesFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         viewModel.favorites.observe(viewLifecycleOwner) { favorites ->
             refreshFavoritesCache(favorites)
+            viewModel.onFavoritesChanged(favorites ?: emptyList())
+        }
+        if (DeviceUtils.isTvDevice) setupTvNumpadSearch(view)
+    }
+
+    private fun setupTvNumpadSearch(rootView: View) {
+        rootView.isFocusableInTouchMode = true
+        rootView.requestFocus()
+        var numpadBuffer = ""
+        val numpadHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        val numpadResetRunnable = Runnable {
+            numpadBuffer = ""
+            viewModel.searchFavorites("")
+        }
+        rootView.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener false
+            val digit: String? = when (keyCode) {
+                KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_NUMPAD_0 -> "0"
+                KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_NUMPAD_1 -> "1"
+                KeyEvent.KEYCODE_2, KeyEvent.KEYCODE_NUMPAD_2 -> "2"
+                KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_NUMPAD_3 -> "3"
+                KeyEvent.KEYCODE_4, KeyEvent.KEYCODE_NUMPAD_4 -> "4"
+                KeyEvent.KEYCODE_5, KeyEvent.KEYCODE_NUMPAD_5 -> "5"
+                KeyEvent.KEYCODE_6, KeyEvent.KEYCODE_NUMPAD_6 -> "6"
+                KeyEvent.KEYCODE_7, KeyEvent.KEYCODE_NUMPAD_7 -> "7"
+                KeyEvent.KEYCODE_8, KeyEvent.KEYCODE_NUMPAD_8 -> "8"
+                KeyEvent.KEYCODE_9, KeyEvent.KEYCODE_NUMPAD_9 -> "9"
+                else -> null
+            }
+            if (digit != null) {
+                numpadBuffer += digit
+                numpadHandler.removeCallbacksAndMessages(null)
+                numpadHandler.postDelayed(numpadResetRunnable, 2000L)
+                viewModel.searchFavorites(numpadBuffer)
+                return@setOnKeyListener true
+            }
+            if (keyCode == KeyEvent.KEYCODE_DEL && numpadBuffer.isNotEmpty()) {
+                numpadBuffer = numpadBuffer.dropLast(1)
+                numpadHandler.removeCallbacksAndMessages(null)
+                if (numpadBuffer.isEmpty()) {
+                    viewModel.searchFavorites("")
+                } else {
+                    viewModel.searchFavorites(numpadBuffer)
+                    numpadHandler.postDelayed(numpadResetRunnable, 2000L)
+                }
+                return@setOnKeyListener true
+            }
+            false
         }
     }
 
@@ -121,7 +170,7 @@ class FavoritesFragment : Fragment() {
         }
     }
 
-    private fun handleChannelClick(favorite: FavoriteChannel) {
+    private fun handleChannelClick(favorite: FavoriteChannel, linkIndex: Int) {
         val liveChannel = viewModel.getLiveChannel(favorite.id)
         val channelToUse = if (liveChannel != null) {
             liveChannel
@@ -140,28 +189,16 @@ class FavoritesFragment : Fragment() {
             )
         }
 
-        val links = channelToUse.links
-        val playerAction: () -> Unit = when {
-            links.isNullOrEmpty() -> {
-                if (channelToUse.streamUrl.isNotEmpty()) {
-                    { launchPlayer(channelToUse, 0) }
-                } else {
-                    {
-                        android.widget.Toast.makeText(
-                            requireContext(),
-                            "No stream available for ${favorite.name}",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-            }
-            links.size > 1 -> {
-                { showLinkSelectionDialog(channelToUse, links) }
-            }
-            else -> {
-                { launchPlayer(channelToUse, 0) }
-            }
+        if (channelToUse.streamUrl.isEmpty() && channelToUse.links.isNullOrEmpty()) {
+            android.widget.Toast.makeText(
+                requireContext(),
+                "No stream available for ${favorite.name}",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
         }
+
+        val playerAction: () -> Unit = { launchPlayer(channelToUse, linkIndex) }
 
         lastPageType = ListenerConfig.PAGE_FAVORITES
         lastUniqueId = favorite.id
@@ -185,22 +222,6 @@ class FavoritesFragment : Fragment() {
             pendingChannelAction = null
             playerAction()
         }
-    }
-
-    private fun showLinkSelectionDialog(
-        channel: Channel,
-        links: List<com.livetvpro.app.data.models.ChannelLink>
-    ) {
-        val linkLabels = links.map { it.quality }.toTypedArray()
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Multiple Links Available")
-            .setItems(linkLabels) { d, which ->
-                launchPlayer(channel, which)
-                d.dismiss()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-        dialog.getButton(DialogInterface.BUTTON_NEGATIVE)?.requestFocus()
     }
 
     private fun showRemoveConfirmation(favorite: FavoriteChannel) {

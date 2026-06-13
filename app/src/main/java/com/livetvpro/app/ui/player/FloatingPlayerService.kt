@@ -523,13 +523,13 @@ class FloatingPlayerService : Service() {
                 channel != null -> {
                     val links = channel.links
                     val sel = if (links != null && linkIndex in links.indices) links[linkIndex] else links?.firstOrNull()
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor)
+                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
                     else streamUrl
                 }
                 event != null -> {
                     val links = event.links
                     val sel = if (linkIndex in links.indices) links[linkIndex] else links.firstOrNull()
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor)
+                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
                     else streamUrl
                 }
                 else -> streamUrl
@@ -1017,14 +1017,14 @@ class FloatingPlayerService : Service() {
                         if (linkIndex in channel.links!!.indices) channel.links!![linkIndex]
                         else channel.links!!.firstOrNull()
                     } else null
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor)
+                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
                     else channel.streamUrl.takeIf { it.isNotBlank() } ?: return
                 }
                 event != null -> {
                     val links = event.links
                     if (links.isEmpty()) return
                     val sel = if (linkIndex in links.indices) links[linkIndex] else links.firstOrNull() ?: return
-                    buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor)
+                    buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
                 }
                 else -> return
             }
@@ -1894,7 +1894,8 @@ class FloatingPlayerService : Service() {
         val drmScheme: String?,
         val drmKeyId: String?,
         val drmKey: String?,
-        val drmLicenseUrl: String?
+        val drmLicenseUrl: String?,
+        val customHeaders: Map<String, String> = emptyMap()
     )
 
     private fun buildLinkPipeUrl(
@@ -1905,7 +1906,8 @@ class FloatingPlayerService : Service() {
         userAgent: String?,
         drmScheme: String?,
         drmLicenseUrl: String?,
-        xForwardedFor: String? = null
+        xForwardedFor: String? = null,
+        customHeaders: Map<String, String> = emptyMap()
     ): String {
         val params = mutableListOf<String>()
         referer?.takeIf { it.isNotEmpty() }?.let { params.add("referer=$it") }
@@ -1915,6 +1917,7 @@ class FloatingPlayerService : Service() {
         xForwardedFor?.takeIf { it.isNotEmpty() }?.let { params.add("x-forwarded-for=$it") }
         drmScheme?.takeIf { it.isNotEmpty() }?.let { params.add("drmScheme=$it") }
         drmLicenseUrl?.takeIf { it.isNotEmpty() }?.let { params.add("drmLicense=$it") }
+        customHeaders.forEach { (k, v) -> if (v.isNotEmpty()) params.add("$k=$v") }
         return if (params.isNotEmpty()) "$url|${params.joinToString("|")}" else url
     }
 
@@ -1937,6 +1940,7 @@ class FloatingPlayerService : Service() {
             }
         }
         val headers = mutableMapOf<String, String>()
+        val customHeaders = mutableMapOf<String, String>()
         var drmScheme: String? = null
         var drmKeyId: String? = null
         var drmKey: String? = null
@@ -1968,10 +1972,10 @@ class FloatingPlayerService : Service() {
                 "cookie" -> headers["Cookie"] = value
                 "origin" -> headers["Origin"] = value
                 "x-forwarded-for" -> headers["X-Forwarded-For"] = value
-                else -> headers[key] = value
+                else -> customHeaders[key] = value
             }
         }
-        return StreamInfo(url, headers, drmScheme, drmKeyId, drmKey, drmLicenseUrl)
+        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders)
     }
 
     private fun buildStreamInfoFromDrmFields(
@@ -2014,7 +2018,8 @@ class FloatingPlayerService : Service() {
             drmScheme = resolvedScheme,
             drmKeyId = parsed.drmKeyId ?: explicitInfo.drmKeyId,
             drmKey = parsed.drmKey ?: explicitInfo.drmKey,
-            drmLicenseUrl = parsed.drmLicenseUrl ?: explicitInfo.drmLicenseUrl
+            drmLicenseUrl = parsed.drmLicenseUrl ?: explicitInfo.drmLicenseUrl,
+            customHeaders = parsed.customHeaders
         )
     }
 

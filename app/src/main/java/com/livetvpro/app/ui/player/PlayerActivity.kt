@@ -169,7 +169,11 @@ class PlayerActivity : BasePlayerActivity() {
     private var intentSelectedGroup: String? = null
     private var intentIsSports: Boolean = false
 
-    enum class ContentType {
+private val statusBarHeightPx: Int
+    get() = ViewCompat.getRootWindowInsets(window.decorView)
+        ?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: 0
+
+enum class ContentType {
         CHANNEL, EVENT, NETWORK_STREAM
     }
 
@@ -561,7 +565,7 @@ class PlayerActivity : BasePlayerActivity() {
                 val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                // topMargin stays 0 — status bar offset owned by Compose padding
+                params.topMargin = statusBarHeightPx
                 params.bottomMargin = 0
                 params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                 params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1676,16 +1680,17 @@ class PlayerActivity : BasePlayerActivity() {
         }
 
         val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
-        params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-        params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-        params.dimensionRatio = "H,16:9"
-        params.matchConstraintPercentHeight = -1f
-        params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-        params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-        params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-        playerContainer.layoutParams = params
-        playerContainer.visibility = View.VISIBLE
+params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+params.dimensionRatio = "H,16:9"
+params.matchConstraintPercentHeight = -1f
+params.topMargin = statusBarHeightPx
+params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
+playerContainer.layoutParams = params
+playerContainer.visibility = View.VISIBLE
 
         if (allEventLinks.size > 1) {
         }

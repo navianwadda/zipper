@@ -40,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
@@ -134,7 +136,11 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val spanCount = resources.getInteger(R.integer.grid_column_count)
+                val configuration = LocalConfiguration.current
+                val context = LocalContext.current
+                val spanCount = remember(configuration) {
+                    context.resources.getInteger(R.integer.grid_column_count)
+                }
                 var showGroupsDialog by remember { mutableStateOf(false) }
                 val BergenSans = FontFamily(Font(R.font.bergen_sans))
 

@@ -79,7 +79,7 @@ import java.net.URL
 import javax.inject.Inject
 
 private val AccentRed   = Color(0xFFEF4444)
-private val Background  = Color(0xFF0D1117)
+private val Background  = Color(0xFF000000) // Changed to pure black
 private val TextWhite   = Color(0xFFFFFFFF)
 private val TextGray    = Color(0xFFB0B0B0)
 private val BergenSans  = FontFamily(Font(R.font.bergen_sans))
@@ -409,7 +409,7 @@ private fun LoadingScreen(versionName: String) {
             androidx.compose.material3.Icon(
                 painter            = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "App Icon",
-                tint               = androidx.compose.ui.graphics.Color.Unspecified,
+                tint               = Color.White,
                 modifier           = Modifier.size(72.dp),
             )
         }
@@ -465,7 +465,7 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
             androidx.compose.material3.Icon(
                 painter            = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "App Icon",
-                tint               = androidx.compose.ui.graphics.Color.Unspecified,
+                tint               = Color.White,
                 modifier           = Modifier.size(72.dp),
             )
         }
@@ -536,7 +536,7 @@ private fun UpdateScreenPortrait(
             androidx.compose.material3.Icon(
                 painter            = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "App Icon",
-                tint               = androidx.compose.ui.graphics.Color.Unspecified,
+                tint               = Color.White,
                 modifier           = Modifier.size(72.dp),
             )
         }
@@ -627,7 +627,7 @@ private fun UpdateScreenLandscape(
                 androidx.compose.material3.Icon(
                     painter            = painterResource(R.drawable.ic_launcher_foreground),
                     contentDescription = "App Icon",
-                    tint               = androidx.compose.ui.graphics.Color.Unspecified,
+                    tint               = Color.White,
                     modifier           = Modifier.size(72.dp),
                 )
             }

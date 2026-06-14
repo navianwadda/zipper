@@ -53,6 +53,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -80,6 +82,7 @@ private val AccentRed   = Color(0xFFEF4444)
 private val Background  = Color(0xFF0D1117)
 private val TextWhite   = Color(0xFFFFFFFF)
 private val TextGray    = Color(0xFFB0B0B0)
+private val BergenSans  = FontFamily(Font(R.font.bergen_sans))
 
 private sealed interface SplashState {
     object Loading : SplashState
@@ -418,6 +421,7 @@ private fun LoadingScreen(versionName: String) {
             color      = TextWhite,
             fontSize   = 26.sp,
             fontWeight = FontWeight.Bold,
+            fontFamily = BergenSans,
             letterSpacing = 0.08.sp,
         )
 
@@ -433,6 +437,7 @@ private fun LoadingScreen(versionName: String) {
             text     = "VERSION $versionName",
             color    = TextGray,
             fontSize = 12.sp,
+            fontFamily = BergenSans,
             letterSpacing = 0.1.sp,
             modifier = Modifier.padding(bottom = 24.dp),
         )
@@ -472,16 +477,18 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
             color      = TextWhite,
             fontSize   = 26.sp,
             fontWeight = FontWeight.Bold,
+            fontFamily = BergenSans,
         )
 
         Spacer(Modifier.weight(0.1f))
 
         Text(
-            text      = message,
-            color     = TextWhite,
-            fontSize  = 16.sp,
+            text       = message,
+            color      = TextWhite,
+            fontSize   = 16.sp,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
+            fontFamily = BergenSans,
+            textAlign  = TextAlign.Center,
         )
 
         Spacer(Modifier.weight(0.1f))
@@ -491,10 +498,11 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
         Spacer(Modifier.weight(0.42f))
 
         Text(
-            text     = "VERSION $versionName",
-            color    = TextGray,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 24.dp),
+            text       = "VERSION $versionName",
+            color      = TextGray,
+            fontSize   = 12.sp,
+            fontFamily = BergenSans,
+            modifier   = Modifier.padding(bottom = 24.dp),
         )
     }
 }
@@ -540,6 +548,7 @@ private fun UpdateScreenPortrait(
             color      = TextWhite,
             fontSize   = 22.sp,
             fontWeight = FontWeight.Bold,
+            fontFamily = BergenSans,
         )
 
         if (isDownloading) {
@@ -552,7 +561,7 @@ private fun UpdateScreenPortrait(
                 strokeCap      = StrokeCap.Round,
             )
             Spacer(Modifier.height(4.dp))
-            Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp)
+            Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp, fontFamily = BergenSans)
         }
 
         Spacer(Modifier.height(14.dp))
@@ -569,11 +578,12 @@ private fun UpdateScreenPortrait(
         Spacer(Modifier.height(12.dp))
 
         Text(
-            text            = "You need to install the latest version. We will discontinue all the old version soon. Please download and install it. If the in-app update does not work, please download from our website.",
-            color           = TextWhite,
-            fontSize        = 13.sp,
-            lineHeight      = 20.sp,
-            modifier        = Modifier.fillMaxWidth(),
+            text       = "You need to install the latest version. We will discontinue all the old version soon. Please download and install it. If the in-app update does not work, please download from our website.",
+            color      = TextWhite,
+            fontSize   = 13.sp,
+            fontFamily = BergenSans,
+            lineHeight = 20.sp,
+            modifier   = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(12.dp))
@@ -603,7 +613,6 @@ private fun UpdateScreenLandscape(
         modifier          = Modifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Left — icon
         Box(
             modifier         = Modifier.weight(0.45f).fillMaxSize(),
             contentAlignment = Alignment.Center,
@@ -624,7 +633,6 @@ private fun UpdateScreenLandscape(
             }
         }
 
-        // Divider
         Box(
             modifier = Modifier
                 .width(1.dp)
@@ -632,7 +640,6 @@ private fun UpdateScreenLandscape(
                 .background(Color.White.copy(alpha = 0.13f))
         )
 
-        // Right — content
         Column(
             modifier            = Modifier
                 .weight(0.55f)
@@ -649,6 +656,7 @@ private fun UpdateScreenLandscape(
                 color      = TextWhite,
                 fontSize   = 22.sp,
                 fontWeight = FontWeight.Bold,
+                fontFamily = BergenSans,
             )
 
             if (isDownloading) {
@@ -661,7 +669,7 @@ private fun UpdateScreenLandscape(
                     strokeCap  = StrokeCap.Round,
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp)
+                Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp, fontFamily = BergenSans)
             }
 
             Spacer(Modifier.height(14.dp))
@@ -682,6 +690,7 @@ private fun UpdateScreenLandscape(
                 text       = "You need to install the latest version. We will discontinue all the old version soon. Please download and install it. If the in-app update does not work, please download from our website.",
                 color      = TextWhite,
                 fontSize   = 13.sp,
+                fontFamily = BergenSans,
                 lineHeight = 20.sp,
                 maxLines   = 3,
             )
@@ -709,10 +718,11 @@ private fun SplashButton(text: String, onClick: () -> Unit) {
         colors   = ButtonDefaults.buttonColors(containerColor = AccentRed),
     ) {
         Text(
-            text       = text,
-            color      = TextWhite,
-            fontSize   = 14.sp,
-            fontWeight = FontWeight.Bold,
+            text          = text,
+            color         = TextWhite,
+            fontSize      = 14.sp,
+            fontWeight    = FontWeight.Bold,
+            fontFamily    = BergenSans,
             letterSpacing = 0.08.sp,
         )
     }
@@ -722,7 +732,6 @@ private fun SplashButton(text: String, onClick: () -> Unit) {
 private fun SignalBars() {
     val transition = rememberInfiniteTransition(label = "signal")
 
-    // Each bar: from, to, duration, startOffset — matches original XML animators
     val barDefs = listOf(
         BarDef(from = 0.15f, to = 1.00f, duration = 500,  delay = 0),
         BarDef(from = 1.00f, to = 0.20f, duration = 650,  delay = 100),

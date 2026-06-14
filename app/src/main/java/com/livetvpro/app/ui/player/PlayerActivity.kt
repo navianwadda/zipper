@@ -656,20 +656,27 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     override fun onResume() {
-        super.onResume()
-        isScreenOff = false
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        applyOrientationSettings(isLandscape)
+    super.onResume()
+    isScreenOff = false
+    val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    applyOrientationSettings(isLandscape)
 
-        if (player == null) {
-            setupPlayer()
-        }
-        if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
-            viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
-        }
-        playerViewRef.onResume()
-        playerViewRef.player = player
+    WindowCompat.getInsetsController(window, window.decorView).apply {
+        isAppearanceLightStatusBars = false
+        isAppearanceLightNavigationBars = false
     }
+    window.statusBarColor = android.graphics.Color.TRANSPARENT
+    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+    if (player == null) {
+        setupPlayer()
+    }
+    if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
+        viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
+    }
+    playerViewRef.onResume()
+    playerViewRef.player = player
+}
 
     override fun onPictureInPictureModeChanged(
         isInPictureInPictureMode: Boolean,

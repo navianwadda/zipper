@@ -6,7 +6,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
@@ -65,7 +68,11 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
     ): View = ComposeView(requireContext()).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
         setContent {
-            val spanCount = resources.getInteger(R.integer.grid_column_count)
+            val configuration = LocalConfiguration.current
+            val context = LocalContext.current
+            val spanCount = remember(configuration) {
+                context.resources.getInteger(R.integer.grid_column_count)
+            }
             AppThemeContent(themeManager) {
                 HomeScreen(
                     viewModel = viewModel,

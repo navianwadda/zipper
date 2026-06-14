@@ -37,17 +37,13 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 startLoading()
-
                 val categories = categoryRepository.getCategories()
-
                 _categories.value = categories
-                searchCategories(currentSearchQuery)
-
+                applyFilter()
                 finishLoading(dataIsEmpty = categories.isEmpty())
             } catch (e: Exception) {
                 _categories.value = emptyList()
                 _filteredCategories.value = emptyList()
-
                 finishLoading(dataIsEmpty = true, error = e)
             }
         }
@@ -56,17 +52,31 @@ class HomeViewModel @Inject constructor(
     override fun onResume() {
     }
 
-    fun searchCategories(query: String) {
-        try {
-            currentSearchQuery = query
-            val allCategories = _categories.value ?: emptyList()
+    fun refreshSilent() {
+        viewModelScope.launch {
+            try {
+                val categories = categoryRepository.getCategories()
+                _categories.value = categories
+                applyFilter()
+            } catch (e: Exception) {
+            }
+        }
+    }
 
-            if (query.isBlank()) {
-                _filteredCategories.value = allCategories
+    fun searchCategories(query: String) {
+        currentSearchQuery = query
+        applyFilter()
+    }
+
+    private fun applyFilter() {
+        try {
+            val allCategories = _categories.value ?: emptyList()
+            _filteredCategories.value = if (currentSearchQuery.isBlank()) {
+                allCategories
             } else {
-                _filteredCategories.value = allCategories.filter {
-                    it.name.contains(query, ignoreCase = true) ||
-                    it.slug.contains(query, ignoreCase = true)
+                allCategories.filter {
+                    it.name.contains(currentSearchQuery, ignoreCase = true) ||
+                    it.slug.contains(currentSearchQuery, ignoreCase = true)
                 }
             }
         } catch (e: Exception) {

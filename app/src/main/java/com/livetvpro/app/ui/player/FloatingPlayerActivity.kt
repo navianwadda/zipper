@@ -114,6 +114,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
     private val selectedLinkState   = androidx.compose.runtime.mutableStateOf(0)
     private val messageBannerText   = androidx.compose.runtime.mutableStateOf("")
     private val messageBannerUrl    = androidx.compose.runtime.mutableStateOf("")
+    private val isLandscapeState    = androidx.compose.runtime.mutableStateOf(false)
 
     private val controlsState = PlayerControlsState(initialVisible = false)
     private var gestureVolume: Int = 100
@@ -435,6 +436,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
     private fun applyAdapterColors() {  }
 
     private fun applyOrientationSettings(isLandscape: Boolean) {
+        isLandscapeState.value = isLandscape
         adjustLayoutForOrientation(isLandscape)
         updateLinksForOrientation(isLandscape)
         applyResizeModeForOrientation(isLandscape)
@@ -1204,7 +1206,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
                             delay(500L)
                         }
                     }
-                    val isLandscape = DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    val isLandscape = DeviceUtils.isTvDevice || isLandscapeState.value
 
                     var showChannelList by remember { mutableStateOf(false) }
                     val channelListItems by viewModel.channelListItems.observeAsState(emptyList())
@@ -1591,6 +1593,21 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         binding.playerContainer.layoutParams = params
         binding.playerContainer.visibility = View.VISIBLE
 
+        val relatedChannels = when (contentType) {
+            ContentType.CHANNEL -> (viewModel.relatedItems.value ?: emptyList())
+            ContentType.EVENT   -> null
+            else                -> null
+        }
+        val relatedEvents = when (contentType) {
+            ContentType.EVENT   -> (viewModel.relatedLiveEvents.value ?: emptyList())
+            else                -> null
+        }
+        relatedContentState.value = when {
+            contentType == ContentType.NETWORK_STREAM || DeviceUtils.isTvDevice -> RelatedContentState.Hidden
+            relatedChannels != null -> if (relatedChannels.isEmpty()) RelatedContentState.Hidden else RelatedContentState.Channels(relatedChannels)
+            relatedEvents   != null -> if (relatedEvents.isEmpty())   RelatedContentState.Hidden else RelatedContentState.Events(relatedEvents)
+            else                    -> RelatedContentState.Hidden
+        }
     }
 
     private fun enterFullscreen() {

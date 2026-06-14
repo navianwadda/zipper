@@ -14,7 +14,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livetvpro.app.R
 import com.livetvpro.app.SearchableFragment
 import com.livetvpro.app.data.local.PreferencesManager
@@ -83,7 +82,6 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                         onChannelClick = { channel, linkIndex ->
                             launchPlayer(channel, linkIndex)
                         },
-                        onChannelLongClick = { channel -> showFavoriteDialog(channel) },
                     )
                 }
             }
@@ -165,22 +163,6 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
         } else {
             PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true, channelListCacheKey = cacheKey)
         }
-    }
-
-    private fun showFavoriteDialog(channel: Channel) {
-        val isFav = viewModel.isFavorite(channel.id)
-        val title = if (isFav) "Remove from Favorites?" else "Add to Favorites?"
-        val message = if (isFav) "Remove \"${channel.name}\" from favorites?" else "Add \"${channel.name}\" to favorites?"
-        val posBtnLabel = if (isFav) "Remove" else "Add"
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton(posBtnLabel) { dialog, _ ->
-                viewModel.toggleFavorite(channel)
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     override fun onResume() {

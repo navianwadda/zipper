@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -20,6 +19,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -44,15 +43,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -78,11 +79,11 @@ import java.io.FileOutputStream
 import java.net.URL
 import javax.inject.Inject
 
-private val AccentRed   = Color(0xFFEF4444)
-private val Background  = Color(0xFF000000) // Changed to pure black
-private val TextWhite   = Color(0xFFFFFFFF)
-private val TextGray    = Color(0xFFB0B0B0)
-private val BergenSans  = FontFamily(Font(R.font.bergen_sans))
+private val AccentRed  = Color(0xFFEF4444)
+private val Background = Color(0xFF000000)
+private val TextWhite  = Color(0xFFFFFFFF)
+private val TextGray   = Color(0xFFB0B0B0)
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 private sealed interface SplashState {
     object Loading : SplashState
@@ -97,12 +98,12 @@ class SplashActivity : AppCompatActivity() {
     @Inject lateinit var dataRepository: NativeDataRepository
     @Inject lateinit var listenerManager: NativeListenerManager
 
-    private var uiState        by mutableStateOf<SplashState>(SplashState.Loading)
+    private var uiState          by mutableStateOf<SplashState>(SplashState.Loading)
     private var downloadProgress by mutableFloatStateOf(0f)
-    private var downloadLabel  by mutableStateOf("")
-    private var isDownloading  by mutableStateOf(false)
+    private var downloadLabel    by mutableStateOf("")
+    private var isDownloading    by mutableStateOf(false)
     private var downloadedApk: File? = null
-    private var cachedWebUrl   = ""
+    private var cachedWebUrl     = ""
     private var downloadCancelled = false
 
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -137,9 +138,9 @@ class SplashActivity : AppCompatActivity() {
                 onRetry          = { startFetch() },
                 onUpdate         = {
                     when {
-                        isDownloading              -> cancelDownload()
+                        isDownloading               -> cancelDownload()
                         downloadedApk?.exists() == true -> installApk(downloadedApk!!)
-                        else                       -> startDownload()
+                        else                        -> startDownload()
                     }
                 },
                 onWebsite        = {
@@ -327,6 +328,101 @@ class SplashActivity : AppCompatActivity() {
 }
 
 // ─────────────────────────────────────────────────────────────
+//  Monitor Icon — pure Compose Canvas, no drawable needed
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun MonitorIcon(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val white = Color.White
+
+        // --- Screen body ---
+        val screenLeft   = w * 0.07f
+        val screenTop    = h * 0.08f
+        val screenRight  = w * 0.93f
+        val screenBottom = h * 0.62f
+        val screenW      = screenRight - screenLeft
+        val screenH      = screenBottom - screenTop
+        val cornerR      = w * 0.06f
+
+        // Outer white rounded rect (monitor border)
+        drawRoundRect(
+            color       = white,
+            topLeft     = Offset(screenLeft, screenTop),
+            size        = Size(screenW, screenH),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR),
+            style       = Fill,
+        )
+
+        // Inner red rect (screen — blends with red background box)
+        val borderThick = w * 0.055f
+        drawRoundRect(
+            color        = AccentRed,
+            topLeft      = Offset(screenLeft + borderThick, screenTop + borderThick),
+            size         = Size(screenW - borderThick * 2, screenH - borderThick * 2),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerR * 0.5f),
+            style        = Fill,
+        )
+
+        // Play triangle (white)
+        val cx = w * 0.5f
+        val cy = (screenTop + screenBottom) / 2f
+        val triH = h * 0.22f
+        val triW = triH * 0.9f
+        val playPath = Path().apply {
+            moveTo(cx - triW * 0.4f, cy - triH / 2f)
+            lineTo(cx + triW * 0.6f, cy)
+            lineTo(cx - triW * 0.4f, cy + triH / 2f)
+            close()
+        }
+        drawPath(path = playPath, color = white, style = Fill)
+
+        // Stand neck (white)
+        val neckW    = w * 0.12f
+        val neckTop  = screenBottom
+        val neckBot  = h * 0.82f
+        drawRect(
+            color   = white,
+            topLeft = Offset(cx - neckW / 2f, neckTop),
+            size    = Size(neckW, neckBot - neckTop),
+            style   = Fill,
+        )
+
+        // Base (white rounded rect)
+        val baseH    = h * 0.10f
+        val baseW    = w * 0.60f
+        val baseTop  = neckBot
+        val baseBot  = baseTop + baseH
+        drawRoundRect(
+            color        = white,
+            topLeft      = Offset(cx - baseW / 2f, baseTop),
+            size         = Size(baseW, baseH),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(baseH / 2f),
+            style        = Fill,
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Shared App Icon Box
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun AppIconBox() {
+    Box(
+        modifier         = Modifier
+            .size(100.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(AccentRed),
+        contentAlignment = Alignment.Center,
+    ) {
+        MonitorIcon(modifier = Modifier.size(68.dp))
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
 //  Composables
 // ─────────────────────────────────────────────────────────────
 
@@ -345,10 +441,8 @@ private fun SplashScreen(
     isTv: Boolean,
 ) {
     Box(
-        modifier          = Modifier
-            .fillMaxSize()
-            .background(Background),
-        contentAlignment  = Alignment.Center,
+        modifier         = Modifier.fillMaxSize().background(Background),
+        contentAlignment = Alignment.Center,
     ) {
         when (state) {
             is SplashState.Loading ->
@@ -391,37 +485,22 @@ private fun SplashScreen(
 @Composable
 private fun LoadingScreen(versionName: String) {
     Column(
-        modifier            = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
+        modifier            = Modifier.fillMaxSize().padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Spacer(Modifier.weight(0.38f))
 
-        Box(
-            modifier         = Modifier
-                .size(100.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color(0xFFEF4444)),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Icon(
-                painter            = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "App Icon",
-                tint               = Color.White,
-                modifier           = Modifier.size(72.dp),
-            )
-        }
+        AppIconBox()
 
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text       = "Live TV Pro",
-            color      = TextWhite,
-            fontSize   = 26.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = BergenSans,
+            text          = "Live TV Pro",
+            color         = TextWhite,
+            fontSize      = 26.sp,
+            fontWeight    = FontWeight.Bold,
+            fontFamily    = BergenSans,
             letterSpacing = 0.08.sp,
         )
 
@@ -434,12 +513,12 @@ private fun LoadingScreen(versionName: String) {
         Spacer(Modifier.weight(0.42f))
 
         Text(
-            text     = "VERSION $versionName",
-            color    = TextGray,
-            fontSize = 12.sp,
-            fontFamily = BergenSans,
+            text          = "VERSION $versionName",
+            color         = TextGray,
+            fontSize      = 12.sp,
+            fontFamily    = BergenSans,
             letterSpacing = 0.1.sp,
-            modifier = Modifier.padding(bottom = 24.dp),
+            modifier      = Modifier.padding(bottom = 24.dp),
         )
     }
 }
@@ -447,28 +526,13 @@ private fun LoadingScreen(versionName: String) {
 @Composable
 private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Unit) {
     Column(
-        modifier            = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
+        modifier            = Modifier.fillMaxSize().padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Spacer(Modifier.weight(0.38f))
 
-        Box(
-            modifier         = Modifier
-                .size(100.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color(0xFFEF4444)),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Icon(
-                painter            = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "App Icon",
-                tint               = Color.White,
-                modifier           = Modifier.size(72.dp),
-            )
-        }
+        AppIconBox()
 
         Spacer(Modifier.height(16.dp))
 
@@ -498,11 +562,11 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
         Spacer(Modifier.weight(0.42f))
 
         Text(
-            text       = "VERSION $versionName",
-            color      = TextGray,
-            fontSize   = 12.sp,
+            text     = "VERSION $versionName",
+            color    = TextGray,
+            fontSize = 12.sp,
             fontFamily = BergenSans,
-            modifier   = Modifier.padding(bottom = 24.dp),
+            modifier = Modifier.padding(bottom = 24.dp),
         )
     }
 }
@@ -526,20 +590,7 @@ private fun UpdateScreenPortrait(
     ) {
         Spacer(Modifier.height(32.dp))
 
-        Box(
-            modifier         = Modifier
-                .size(100.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color(0xFFEF4444)),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Icon(
-                painter            = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "App Icon",
-                tint               = Color.White,
-                modifier           = Modifier.size(72.dp),
-            )
-        }
+        AppIconBox()
 
         Spacer(Modifier.height(14.dp))
 
@@ -554,11 +605,11 @@ private fun UpdateScreenPortrait(
         if (isDownloading) {
             Spacer(Modifier.height(14.dp))
             LinearProgressIndicator(
-                progress       = { downloadProgress },
-                modifier       = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color          = AccentRed,
-                trackColor     = Color(0xFF555555),
-                strokeCap      = StrokeCap.Round,
+                progress   = { downloadProgress },
+                modifier   = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color      = AccentRed,
+                trackColor = Color(0xFF555555),
+                strokeCap  = StrokeCap.Round,
             )
             Spacer(Modifier.height(4.dp))
             Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp, fontFamily = BergenSans)
@@ -567,10 +618,10 @@ private fun UpdateScreenPortrait(
         Spacer(Modifier.height(14.dp))
 
         SplashButton(
-            text    = when {
-                isDownloading    -> "CANCEL"
-                hasApkReady      -> "INSTALL"
-                else             -> "UPDATE APP"
+            text = when {
+                isDownloading -> "CANCEL"
+                hasApkReady   -> "INSTALL"
+                else          -> "UPDATE APP"
             },
             onClick = onUpdate,
         )
@@ -617,20 +668,7 @@ private fun UpdateScreenLandscape(
             modifier         = Modifier.weight(0.45f).fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier         = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFFEF4444)),
-                contentAlignment = Alignment.Center,
-            ) {
-                androidx.compose.material3.Icon(
-                    painter            = painterResource(R.drawable.ic_launcher_foreground),
-                    contentDescription = "App Icon",
-                    tint               = Color.White,
-                    modifier           = Modifier.size(72.dp),
-                )
-            }
+            AppIconBox()
         }
 
         Box(
@@ -676,7 +714,7 @@ private fun UpdateScreenLandscape(
 
             if (!isTv) {
                 SplashButton(
-                    text    = when {
+                    text = when {
                         isDownloading -> "CANCEL"
                         hasApkReady   -> "INSTALL"
                         else          -> "UPDATE APP"
@@ -733,11 +771,11 @@ private fun SignalBars() {
     val transition = rememberInfiniteTransition(label = "signal")
 
     val barDefs = listOf(
-        BarDef(from = 0.15f, to = 1.00f, duration = 500,  delay = 0),
-        BarDef(from = 1.00f, to = 0.20f, duration = 650,  delay = 100),
-        BarDef(from = 0.40f, to = 1.00f, duration = 450,  delay = 200),
-        BarDef(from = 0.80f, to = 0.15f, duration = 600,  delay = 80),
-        BarDef(from = 0.20f, to = 0.90f, duration = 550,  delay = 300),
+        BarDef(from = 0.15f, to = 1.00f, duration = 500, delay = 0),
+        BarDef(from = 1.00f, to = 0.20f, duration = 650, delay = 100),
+        BarDef(from = 0.40f, to = 1.00f, duration = 450, delay = 200),
+        BarDef(from = 0.80f, to = 0.15f, duration = 600, delay = 80),
+        BarDef(from = 0.20f, to = 0.90f, duration = 550, delay = 300),
     )
 
     Row(
@@ -747,9 +785,9 @@ private fun SignalBars() {
     ) {
         barDefs.forEach { def ->
             val scale by transition.animateFloat(
-                initialValue   = def.from,
-                targetValue    = def.to,
-                animationSpec  = infiniteRepeatable(
+                initialValue  = def.from,
+                targetValue   = def.to,
+                animationSpec = infiniteRepeatable(
                     animation  = tween(
                         durationMillis = def.duration,
                         delayMillis    = def.delay,

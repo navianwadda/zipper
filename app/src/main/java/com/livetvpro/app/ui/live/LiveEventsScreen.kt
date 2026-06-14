@@ -127,7 +127,7 @@ fun LiveEventsScreen(
     LaunchedEffect(selectedStatusFilter, selectedCategoryId) {
         while (true) {
             delay(10_000)
-            viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
+            viewModel.filterEventsSilent(selectedStatusFilter, selectedCategoryId)
         }
     }
 
@@ -461,7 +461,7 @@ fun LiveEventCard(
             .padding(horizontal = 6.dp, vertical = 5.dp)
             .scale(scale)
             .fillMaxWidth()
-            .height(145.dp) // Maintained 145.dp fixed height for uniformity
+            .height(145.dp)
             .onFocusChanged { hasFocus = it.hasFocus }
             .focusable(),
         shape = RoundedCornerShape(12.dp),
@@ -767,7 +767,7 @@ private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .background(
-                MaterialTheme.colorScheme.tertiary, 
+                MaterialTheme.colorScheme.tertiary,
                 RoundedCornerShape(topStart = 0.dp, topEnd = 12.dp, bottomEnd = 0.dp, bottomStart = 12.dp)
             )
             .padding(horizontal = 12.dp, vertical = 6.dp),

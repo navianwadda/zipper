@@ -340,42 +340,36 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         loadRelatedContent()
 
         viewModel.refreshedChannel.observe(this) { freshChannel ->
-            if (freshChannel != null && freshChannel.links != null && freshChannel.links.isNotEmpty()) {
-                if (allEventLinks.isEmpty() || allEventLinks.size < freshChannel.links.size) {
-                    allEventLinks = freshChannel.links.map {
-                        LiveEventLink(
-                            quality = it.quality,
-                            url = it.url,
-                            cookie = it.cookie,
-                            referer = it.referer,
-                            origin = it.origin,
-                            userAgent = it.userAgent,
-                            xForwardedFor = it.xForwardedFor,
-                            drmScheme = it.drmScheme,
-                            drmLicenseUrl = it.drmLicenseUrl
-                        )
-                    }
-
-                    val matchIndex = allEventLinks.indexOfFirst { it.url == streamUrl }
-                    if (matchIndex != -1) {
-                        currentLinkIndex = matchIndex
-                    }
-
-                    val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                    updateLinksForOrientation(isLandscape)
-                }
+    if (freshChannel != null && freshChannel.links != null && freshChannel.links.isNotEmpty()) {
+        if (allEventLinks.isEmpty() || allEventLinks.size < freshChannel.links.size) {
+            allEventLinks = freshChannel.links.map {
+                LiveEventLink(
+                    quality = it.quality,
+                    url = it.url,
+                    cookie = it.cookie,
+                    referer = it.referer,
+                    origin = it.origin,
+                    userAgent = it.userAgent,
+                    xForwardedFor = it.xForwardedFor,
+                    drmScheme = it.drmScheme,
+                    drmLicenseUrl = it.drmLicenseUrl
+                )
             }
 
-            if (freshChannel != null && contentType == ContentType.CHANNEL) {
-                channelData = freshChannel
-                if (intentIsSports) {
-                    viewModel.loadRandomRelatedSports(freshChannel.id)
-                } else {
-                    val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: freshChannel.categoryId
-                    if (categoryId.isNotEmpty()) {
-                        viewModel.loadRandomRelatedChannels(categoryId, freshChannel.id, intentSelectedGroup)
-                    }
-                }
+            val matchIndex = allEventLinks.indexOfFirst { it.url == streamUrl }
+            if (matchIndex != -1) {
+                currentLinkIndex = matchIndex
+            }
+
+            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            updateLinksForOrientation(isLandscape)
+        }
+    }
+
+    if (freshChannel != null) {
+        channelData = freshChannel
+    }
+}
             }
         }
 
@@ -787,68 +781,84 @@ class FloatingPlayerActivity : BasePlayerActivity() {
     }
 
     private fun loadRelatedContent() {
-        if (DeviceUtils.isTvDevice) return
-        when (contentType) {
-            ContentType.CHANNEL -> {
-                channelData?.let { channel ->
-                    if (intentIsSports) {
-                        viewModel.loadRandomRelatedSports(channel.id)
-                    } else {
-                        val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
-                        viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
-                    }
+    if (DeviceUtils.isTvDevice) return
+    when (contentType) {
+        ContentType.CHANNEL -> {
+            channelData?.let { channel ->
+                val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+                val isFavoritesSource = channelListKey == "favorites_session"
+
+                if (isFavoritesSource) {
+                    val favList = ChannelListCache.get("favorites_session")
+                        ?.filter { it.id != channel.id }
+                        ?: emptyList()
+                    viewModel.setRelatedChannels(favList)
+                } else if (intentIsSports) {
+                    viewModel.loadRandomRelatedSports(channel.id)
+                } else {
+                    val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
+                    viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
                 }
             }
-            ContentType.EVENT -> {
-                eventData?.let { event ->
-                    viewModel.loadRelatedEvents(event.id)
-                }
+        }
+        ContentType.EVENT -> {
+            eventData?.let { event ->
+                viewModel.loadRelatedEvents(event.id)
             }
-            ContentType.NETWORK_STREAM -> {
-            }
+        }
+        ContentType.NETWORK_STREAM -> {
         }
     }
+}
 
-    private fun switchToChannel(newChannel: Channel) {
-        releasePlayer()
-        channelData = newChannel
-        eventData = null
-        contentType = ContentType.CHANNEL
-        contentId = newChannel.id
-        contentName = newChannel.name
+private fun switchToChannel(newChannel: Channel) {
+    releasePlayer()
+    channelData = newChannel
+    eventData = null
+    contentType = ContentType.CHANNEL
+    contentId = newChannel.id
+    contentName = newChannel.name
 
-        if (newChannel.links != null && newChannel.links.isNotEmpty()) {
-            allEventLinks = newChannel.links.map {
-                LiveEventLink(
-                    quality = it.quality,
-                    url = it.url,
-                    cookie = it.cookie,
-                    referer = it.referer,
-                    origin = it.origin,
-                    userAgent = it.userAgent,
-                    xForwardedFor = it.xForwardedFor,
-                    drmScheme = it.drmScheme,
-                    drmLicenseUrl = it.drmLicenseUrl
-                )
-            }
-            currentLinkIndex = 0
-            streamUrl = allEventLinks.firstOrNull()?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
-        } else {
-            allEventLinks = emptyList()
-            streamUrl = newChannel.streamUrl
+    if (newChannel.links != null && newChannel.links.isNotEmpty()) {
+        allEventLinks = newChannel.links.map {
+            LiveEventLink(
+                quality = it.quality,
+                url = it.url,
+                cookie = it.cookie,
+                referer = it.referer,
+                origin = it.origin,
+                userAgent = it.userAgent,
+                xForwardedFor = it.xForwardedFor,
+                drmScheme = it.drmScheme,
+                drmLicenseUrl = it.drmLicenseUrl
+            )
         }
-
-        setupPlayer()
-        setupLinksUI()
-        setupRelatedChannels()
-
-        if (intentIsSports) {
-            viewModel.loadRandomRelatedSports(newChannel.id)
-        } else {
-            val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
-            viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
-        }
+        currentLinkIndex = 0
+        streamUrl = allEventLinks.firstOrNull()?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
+    } else {
+        allEventLinks = emptyList()
+        streamUrl = newChannel.streamUrl
     }
+
+    setupPlayer()
+    setupLinksUI()
+    setupRelatedChannels()
+
+    val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+    val isFavoritesSource = channelListKey == "favorites_session"
+
+    if (isFavoritesSource) {
+        val favList = ChannelListCache.get("favorites_session")
+            ?.filter { it.id != newChannel.id }
+            ?: emptyList()
+        viewModel.setRelatedChannels(favList)
+    } else if (intentIsSports) {
+        viewModel.loadRandomRelatedSports(newChannel.id)
+    } else {
+        val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
+        viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
+    }
+}
 
     private fun switchToEvent(relatedChannel: Channel) {
         switchToChannel(relatedChannel)

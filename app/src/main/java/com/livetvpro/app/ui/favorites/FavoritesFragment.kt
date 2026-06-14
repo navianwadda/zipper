@@ -1,6 +1,5 @@
 package com.livetvpro.app.ui.favorites
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.view.KeyEvent
 import androidx.activity.result.ActivityResultLauncher
@@ -15,7 +14,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.models.Channel
@@ -81,7 +79,7 @@ class FavoritesFragment : Fragment() {
                         spanCount = spanCount,
                         isTvDevice = DeviceUtils.isTvDevice,
                         onChannelClick = { favorite, linkIndex -> handleChannelClick(favorite, linkIndex) },
-                        onRemoveFavorite = { favorite -> showRemoveConfirmation(favorite) },
+                        onRemoveFavorite = { favorite -> viewModel.removeFavorite(favorite.id) },
                         onClearAll = { viewModel.clearAll() }
                     )
                 }
@@ -229,16 +227,6 @@ class FavoritesFragment : Fragment() {
             pendingChannelAction = null
             playerAction()
         }
-    }
-
-    private fun showRemoveConfirmation(favorite: FavoriteChannel) {
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Remove Favorite")
-            .setMessage("Remove \"${favorite.name}\" from your favorites list?")
-            .setPositiveButton("Remove") { _, _ -> viewModel.removeFavorite(favorite.id) }
-            .setNegativeButton("Cancel", null)
-            .show()
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.requestFocus()
     }
 
     private fun launchPlayer(channel: Channel, linkIndex: Int) {

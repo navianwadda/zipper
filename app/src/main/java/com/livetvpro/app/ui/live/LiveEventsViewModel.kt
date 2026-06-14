@@ -96,14 +96,32 @@ class LiveEventsViewModel @Inject constructor(
     fun filterEvents(status: EventStatus?, categoryId: String = "evt_cat_all") {
         pendingStatusFilter = status
         pendingCategoryId = categoryId
+        applyFilter()
+    }
+
+    fun filterEventsSilent(status: EventStatus?, categoryId: String = "evt_cat_all") {
+        viewModelScope.launch {
+            try {
+                val events = liveEventRepository.getLiveEvents()
+                _events.value = events
+                pendingStatusFilter = status
+                pendingCategoryId = categoryId
+                applyFilter()
+            } catch (e: Exception) {
+                Timber.e(e, "Error in silent refresh")
+            }
+        }
+    }
+
+    private fun applyFilter() {
         val allEvents = _events.value ?: return
         val currentTime = System.currentTimeMillis()
 
         var filtered = allEvents
 
-        if (categoryId != "evt_cat_all") {
+        if (pendingCategoryId != "evt_cat_all") {
             filtered = filtered.filter { event ->
-                event.eventCategoryId == categoryId
+                event.eventCategoryId == pendingCategoryId
             }
         }
 
@@ -116,7 +134,7 @@ class LiveEventsViewModel @Inject constructor(
             }
         }
 
-        filtered = when (status) {
+        filtered = when (pendingStatusFilter) {
             EventStatus.LIVE -> {
                 filtered.filter { event ->
                     event.isLive || isEventLiveByTime(event, currentTime)

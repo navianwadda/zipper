@@ -244,8 +244,7 @@ private fun StreamTextField(
         },
         textStyle = TextStyle(
             fontFamily = BergenSans,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            fontSize = 14.sp
         ),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = primaryColor,
@@ -255,6 +254,8 @@ private fun StreamTextField(
             cursorColor = primaryColor,
             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
         ),
         shape = RoundedCornerShape(12.dp),
         singleLine = true,
@@ -298,8 +299,7 @@ private fun StreamDropdown(
             },
             textStyle = TextStyle(
                 fontFamily = BergenSans,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface
+                fontSize = 14.sp
             ),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = primaryColor,
@@ -309,6 +309,8 @@ private fun StreamDropdown(
                 cursorColor = primaryColor,
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                 focusedTrailingIconColor = primaryColor,
                 unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
             ),

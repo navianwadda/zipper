@@ -73,6 +73,7 @@ import com.livetvpro.app.ui.components.ComposeFloatingNav
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.data.local.PreferencesManager
+import com.livetvpro.app.ui.dialogs.SupportDialogHost
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 private val PHONE_TOP_LEVEL = setOf(
@@ -201,6 +202,8 @@ fun MainScaffold(
         val containerId = remember { android.view.View.generateViewId() }
 
         Box(modifier = Modifier.weight(1f)) {
+            SupportDialogHost()
+
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->

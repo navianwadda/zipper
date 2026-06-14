@@ -113,6 +113,7 @@ fun LiveEventsScreen(
     var linkDialogEvent by remember { mutableStateOf<LiveEvent?>(null) }
     val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
+    var isRefreshing by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadEventCategories()
@@ -128,6 +129,14 @@ fun LiveEventsScreen(
         while (true) {
             delay(10_000)
             viewModel.filterEventsSilent(selectedStatusFilter, selectedCategoryId)
+        }
+    }
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            viewModel.refresh()
+            delay(1_000)
+            isRefreshing = false
         }
     }
 
@@ -185,8 +194,8 @@ fun LiveEventsScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
             PullToRefreshBox(
-                isRefreshing = isLoading,
-                onRefresh = { if (!isTvDevice) viewModel.refresh() },
+                isRefreshing = isRefreshing,
+                onRefresh = { if (!isTvDevice) isRefreshing = true },
                 state = pullToRefreshState,
                 modifier = Modifier.fillMaxSize()
             ) {

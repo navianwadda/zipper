@@ -304,7 +304,8 @@ private fun PlayerSettingsContent(
                 state = pagerState,
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
             ) { page ->
                 val tabLabel = tabs.getOrNull(page) ?: "Speed"
                 when (tabLabel) {
@@ -381,7 +382,12 @@ private fun TrackList(
     items: List<TrackUiModel>,
     onClick: (TrackUiModel) -> Unit,
 ) {
-    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+        verticalArrangement = Arrangement.Top,
+    ) {
         items(items) { item ->
             TrackRow(item = item, onClick = { onClick(item) })
         }

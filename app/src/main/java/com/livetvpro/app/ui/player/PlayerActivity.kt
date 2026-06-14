@@ -125,7 +125,7 @@ class PlayerActivity : BasePlayerActivity() {
     internal var gestureVolume: Int = 100
     internal var gestureBrightness: Int = 0
 
-    private var isInPipMode = false
+    internal var isInPipMode by mutableStateOf(false)
     private var isEnteringPip = false
     private var isMuted by mutableStateOf(false)
     internal val skipMs = 10_000L
@@ -354,7 +354,7 @@ class PlayerActivity : BasePlayerActivity() {
 
         setupWindowFlags(isLandscape)
         setupSystemUI(isLandscape)
-        if (!DeviceUtils.isTvDevice) { /* insets handled by Compose in PlayerActivityRoot */ }
+        if (!DeviceUtils.isTvDevice) { }
 
         parseIntent()
 
@@ -362,11 +362,9 @@ class PlayerActivity : BasePlayerActivity() {
             val cacheKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
             val cachedList = cacheKey?.let { ChannelListCache.get(it) }
             if (!cachedList.isNullOrEmpty()) {
-
                 viewModel.setChannelList(cachedList)
                 viewModel.refreshChannelData(contentId)
             } else {
-
                 viewModel.loadAllChannelsForList(
                     categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "",
                     refreshChannelId = contentId
@@ -455,7 +453,6 @@ class PlayerActivity : BasePlayerActivity() {
                     channelNumberHandler.removeCallbacks(overlayHideRunnable)
                     channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
                 } else {
-
                     showChannelOverlayState.value = null
                 }
                 return@observe
@@ -469,7 +466,6 @@ class PlayerActivity : BasePlayerActivity() {
                 if (targetChannel.id != contentId) {
                     switchToChannel(targetChannel)
                 }
-
                 showChannelOverlay((targetIndex + 1).toString(), targetChannel)
                 channelNumberHandler.removeCallbacks(overlayHideRunnable)
                 channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
@@ -561,7 +557,6 @@ class PlayerActivity : BasePlayerActivity() {
                 val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                // topMargin is kept as-is — driven by Compose SideEffect in PlayerActivityRoot
                 params.bottomMargin = 0
                 params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                 params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -656,61 +651,61 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     override fun onResume() {
-    super.onResume()
-    isScreenOff = false
-    val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    applyOrientationSettings(isLandscape)
+        super.onResume()
+        isScreenOff = false
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        applyOrientationSettings(isLandscape)
 
-    WindowCompat.getInsetsController(window, window.decorView).apply {
-        isAppearanceLightStatusBars = false
-        isAppearanceLightNavigationBars = false
-    }
-    window.statusBarColor = android.graphics.Color.TRANSPARENT
-    window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
-    if (player == null) {
-        setupPlayer()
-    }
-    if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
-        viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
-    }
-    playerViewRef.onResume()
-    playerViewRef.player = player
-}
-
-    override fun onPictureInPictureModeChanged(
-    isInPictureInPictureMode: Boolean,
-    newConfig: Configuration
-) {
-    if (!isInPictureInPictureMode) {
-        pipReceiver?.let {
-            unregisterReceiver(it)
-            pipReceiver = null
-        }
-        isInPipMode = false
-        isEnteringPip = false
-        isInPip = false
-        updateLinksState()
-
-        super.onPictureInPictureModeChanged(false, newConfig)
-
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false
         }
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
-        controlsState.show(lifecycleScope)
-
-        if (wasLockedBeforePip) {
-            controlsState.lock()
-            wasLockedBeforePip = false
+        if (player == null) {
+            setupPlayer()
         }
-
-        exitPipUIMode(newConfig)
-        return
+        if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
+            viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
+        }
+        playerViewRef.onResume()
+        playerViewRef.player = player
     }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        if (!isInPictureInPictureMode) {
+            pipReceiver?.let {
+                unregisterReceiver(it)
+                pipReceiver = null
+            }
+            isInPipMode = false
+            isEnteringPip = false
+            isInPip = false
+            updateLinksState()
+
+            super.onPictureInPictureModeChanged(false, newConfig)
+
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            WindowCompat.getInsetsController(window, window.decorView).apply {
+                isAppearanceLightStatusBars = false
+                isAppearanceLightNavigationBars = false
+            }
+
+            controlsState.show(lifecycleScope)
+
+            if (wasLockedBeforePip) {
+                controlsState.lock()
+                wasLockedBeforePip = false
+            }
+
+            exitPipUIMode(newConfig)
+            return
+        }
 
         isInPipMode = true
         isEnteringPip = false
@@ -739,55 +734,55 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     private fun exitPipUIMode(newConfig: Configuration) {
-    setSubtitleTextSize()
+        setSubtitleTextSize()
 
-    val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    window.statusBarColor = android.graphics.Color.TRANSPARENT
-    window.navigationBarColor = android.graphics.Color.TRANSPARENT
-    WindowCompat.getInsetsController(window, window.decorView).apply {
-        isAppearanceLightStatusBars = false
-        isAppearanceLightNavigationBars = false
-    }
-
-    setupWindowFlags(isLandscape)
-    setupSystemUI(isLandscape)
-
-    applyOrientationSettings(isLandscape)
-
-    if (!isLandscape) {
-        val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
-        params.dimensionRatio = "H,16:9"
-        params.topMargin = 0
-        params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-        playerContainer.layoutParams = params
-
-        val hasRelated = relatedChannels.isNotEmpty() ||
-            (contentType == ContentType.EVENT)
-        if (hasRelated) {
-            relatedContentState.value = when (contentType) {
-                ContentType.EVENT -> {
-                    val events = viewModel.relatedLiveEvents.value
-                    if (!events.isNullOrEmpty()) RelatedContentState.Events(events) else RelatedContentState.Loading
-                }
-                ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
-                else -> RelatedContentState.Hidden
-            }
-        } else if (contentType == ContentType.CHANNEL) {
-            relatedContentState.value = RelatedContentState.Loading
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
         }
-    }
 
-    if (wasLockedBeforePip) {
-        controlsState.isLocked = true
-        wasLockedBeforePip = false
-    } else {
-        controlsState.isLocked = false
-    }
+        setupWindowFlags(isLandscape)
+        setupSystemUI(isLandscape)
 
-    playerViewRef.useController = false
-    updateLinksForOrientation(isLandscape)
-}
+        applyOrientationSettings(isLandscape)
+
+        if (!isLandscape) {
+            val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
+            params.dimensionRatio = "H,16:9"
+            params.topMargin = 0
+            params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
+            playerContainer.layoutParams = params
+
+            val hasRelated = relatedChannels.isNotEmpty() ||
+                (contentType == ContentType.EVENT)
+            if (hasRelated) {
+                relatedContentState.value = when (contentType) {
+                    ContentType.EVENT -> {
+                        val events = viewModel.relatedLiveEvents.value
+                        if (!events.isNullOrEmpty()) RelatedContentState.Events(events) else RelatedContentState.Loading
+                    }
+                    ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
+                    else -> RelatedContentState.Hidden
+                }
+            } else if (contentType == ContentType.CHANNEL) {
+                relatedContentState.value = RelatedContentState.Loading
+            }
+        }
+
+        if (wasLockedBeforePip) {
+            controlsState.isLocked = true
+            wasLockedBeforePip = false
+        } else {
+            controlsState.isLocked = false
+        }
+
+        playerViewRef.useController = false
+        updateLinksForOrientation(isLandscape)
+    }
 
     @SuppressLint("NewApi")
     override fun onUserLeaveHint() {
@@ -830,7 +825,6 @@ class PlayerActivity : BasePlayerActivity() {
         channelNumberInput = ""
         channelNumberHandler.removeCallbacks(channelNumberRunnable)
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
-
     }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
@@ -1078,8 +1072,8 @@ class PlayerActivity : BasePlayerActivity() {
     private fun showChannelOverlay(number: String, channel: com.livetvpro.app.data.models.Channel?) {
         showChannelOverlayState.value = null
         return
-
     }
+
     private fun navigateToChannelByNumber() {
         val number = channelNumberInput.toIntOrNull()
         channelNumberInput = ""
@@ -1093,7 +1087,6 @@ class PlayerActivity : BasePlayerActivity() {
         }
         val items = viewModel.channelListItems.value
         if (items.isNullOrEmpty()) {
-
             pendingChannelNumber = number
             showChannelOverlay("...", null)
             viewModel.loadAllChannelsForList(
@@ -1321,9 +1314,6 @@ class PlayerActivity : BasePlayerActivity() {
                 allEventLinks = emptyList()
             }
 
-            if (allEventLinks.isEmpty()) {
-            }
-
         } else if (eventData != null) {
             contentType = ContentType.EVENT
             val event = eventData!!
@@ -1368,98 +1358,98 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     private fun loadRelatedContent() {
-    if (DeviceUtils.isTvDevice) return
-    when (contentType) {
-        ContentType.CHANNEL -> {
-            channelData?.let { channel ->
-                val passedRelatedChannels: List<Channel>? =
-                    intent.getStringExtra(EXTRA_RELATED_CHANNELS_KEY)?.let { ChannelListCache.get(it) }
+        if (DeviceUtils.isTvDevice) return
+        when (contentType) {
+            ContentType.CHANNEL -> {
+                channelData?.let { channel ->
+                    val passedRelatedChannels: List<Channel>? =
+                        intent.getStringExtra(EXTRA_RELATED_CHANNELS_KEY)?.let { ChannelListCache.get(it) }
 
-                val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-                val isFavoritesSource = channelListKey == "favorites_session"
+                    val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+                    val isFavoritesSource = channelListKey == "favorites_session"
 
-                if (passedRelatedChannels != null && passedRelatedChannels.isNotEmpty()) {
-                    val filteredChannels = passedRelatedChannels.filter { it.id != channel.id }
-                    viewModel.setRelatedChannels(filteredChannels)
-                } else if (isFavoritesSource) {
-                    val favList = ChannelListCache.get("favorites_session")
-                        ?.filter { it.id != channel.id }
-                        ?: emptyList()
-                    viewModel.setRelatedChannels(favList)
-                } else if (intentIsSports) {
-                    viewModel.loadRandomRelatedSports(channel.id)
-                } else {
-                    val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
-                    viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
+                    if (passedRelatedChannels != null && passedRelatedChannels.isNotEmpty()) {
+                        val filteredChannels = passedRelatedChannels.filter { it.id != channel.id }
+                        viewModel.setRelatedChannels(filteredChannels)
+                    } else if (isFavoritesSource) {
+                        val favList = ChannelListCache.get("favorites_session")
+                            ?.filter { it.id != channel.id }
+                            ?: emptyList()
+                        viewModel.setRelatedChannels(favList)
+                    } else if (intentIsSports) {
+                        viewModel.loadRandomRelatedSports(channel.id)
+                    } else {
+                        val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
+                        viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
+                    }
                 }
             }
-        }
-        ContentType.EVENT -> {
-            eventData?.let { event ->
-                viewModel.loadRelatedEvents(event.id)
+            ContentType.EVENT -> {
+                eventData?.let { event ->
+                    viewModel.loadRelatedEvents(event.id)
+                }
+            }
+            ContentType.NETWORK_STREAM -> {
             }
         }
-        ContentType.NETWORK_STREAM -> {
-        }
-    }
-}
-
-internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
-    releasePlayer()
-    val previousContentType = contentType
-    channelData = newChannel
-    eventData = null
-    contentType = ContentType.CHANNEL
-    contentId = newChannel.id
-    contentName = newChannel.name
-
-    if (newChannel.links != null && newChannel.links.isNotEmpty()) {
-        allEventLinks = newChannel.links.map {
-            LiveEventLink(
-                quality = it.quality,
-                url = it.url,
-                cookie = it.cookie,
-                referer = it.referer,
-                origin = it.origin,
-                userAgent = it.userAgent,
-                xForwardedFor = it.xForwardedFor,
-                drmScheme = it.drmScheme,
-                drmLicenseUrl = it.drmLicenseUrl,
-                customHeaders = it.customHeaders
-            )
-        }
-        currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
-        streamUrl = allEventLinks.getOrNull(currentLinkIndex)?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
-    } else {
-        allEventLinks = emptyList()
-        streamUrl = newChannel.streamUrl
     }
 
-    setupPlayer()
-    setupLinksUI()
+    internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
+        releasePlayer()
+        val previousContentType = contentType
+        channelData = newChannel
+        eventData = null
+        contentType = ContentType.CHANNEL
+        contentId = newChannel.id
+        contentName = newChannel.name
 
-    relatedContentState.value = RelatedContentState.Loading
-
-    val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-    val isFavoritesSource = channelListKey == "favorites_session"
-
-    if (isFavoritesSource) {
-        val favList = ChannelListCache.get("favorites_session")
-            ?.filter { it.id != newChannel.id }
-            ?: emptyList()
-        viewModel.setRelatedChannels(favList)
-    } else {
-        val isSports = newChannel.categoryId == "sports" || intentIsSports && previousContentType != ContentType.EVENT
-        val categoryId = newChannel.categoryId.takeIf { it.isNotEmpty() } ?: intentCategoryId ?: ""
-        val group = if (previousContentType == ContentType.EVENT) null else intentSelectedGroup
-
-        if (isSports) {
-            viewModel.loadRandomRelatedSports(newChannel.id)
+        if (newChannel.links != null && newChannel.links.isNotEmpty()) {
+            allEventLinks = newChannel.links.map {
+                LiveEventLink(
+                    quality = it.quality,
+                    url = it.url,
+                    cookie = it.cookie,
+                    referer = it.referer,
+                    origin = it.origin,
+                    userAgent = it.userAgent,
+                    xForwardedFor = it.xForwardedFor,
+                    drmScheme = it.drmScheme,
+                    drmLicenseUrl = it.drmLicenseUrl,
+                    customHeaders = it.customHeaders
+                )
+            }
+            currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
+            streamUrl = allEventLinks.getOrNull(currentLinkIndex)?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
         } else {
-            viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, group)
+            allEventLinks = emptyList()
+            streamUrl = newChannel.streamUrl
+        }
+
+        setupPlayer()
+        setupLinksUI()
+
+        relatedContentState.value = RelatedContentState.Loading
+
+        val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+        val isFavoritesSource = channelListKey == "favorites_session"
+
+        if (isFavoritesSource) {
+            val favList = ChannelListCache.get("favorites_session")
+                ?.filter { it.id != newChannel.id }
+                ?: emptyList()
+            viewModel.setRelatedChannels(favList)
+        } else {
+            val isSports = newChannel.categoryId == "sports" || intentIsSports && previousContentType != ContentType.EVENT
+            val categoryId = newChannel.categoryId.takeIf { it.isNotEmpty() } ?: intentCategoryId ?: ""
+            val group = if (previousContentType == ContentType.EVENT) null else intentSelectedGroup
+
+            if (isSports) {
+                viewModel.loadRandomRelatedSports(newChannel.id)
+            } else {
+                viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, group)
+            }
         }
     }
-}
 
     private fun switchToEvent(relatedChannel: Channel) {
         switchToChannel(relatedChannel)
@@ -1699,11 +1689,9 @@ internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
     }
 
     private fun configurePlayerInteractions() {
-
     }
 
     private fun setupLockOverlay() {
-
     }
 
     internal fun toggleFullscreen() {
@@ -1734,8 +1722,6 @@ internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
         playerContainer.layoutParams = params
         playerContainer.visibility = View.VISIBLE
 
-        if (allEventLinks.size > 1) {
-        }
         relatedContentState.value = when (contentType) {
             ContentType.EVENT -> {
                 val events = viewModel.relatedLiveEvents.value
@@ -1826,7 +1812,6 @@ internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
                         } else {
                             currentPlayer.play()
                         }
-
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             setPictureInPictureParams(updatePipParams())
                         }
@@ -1837,7 +1822,6 @@ internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
                         } else {
                             currentPlayer.pause()
                         }
-
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             setPictureInPictureParams(updatePipParams())
                         }
@@ -2008,11 +1992,9 @@ internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
 
     @SuppressLint("NewApi")
     private fun showUnlockButton() {
-
     }
 
     private fun hideUnlockButton() {
-
     }
 
     private fun unregisterPipReceiver() {
@@ -2022,7 +2004,6 @@ internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
                 pipReceiver = null
             }
         } catch (e: Exception) {
-
         }
     }
 }
@@ -2051,6 +2032,8 @@ private fun PlayerActivity.PlayerActivityRoot(
     onEventClick: (com.livetvpro.app.data.models.LiveEvent, Int) -> Unit,
     onMessageBannerClick: () -> Unit,
 ) {
+    if (activity.isInPipMode) return
+
     val isLandscape = activity.isLandscapeState.value
     val spanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)
     val eventSpanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.event_span_count)
@@ -2060,8 +2043,6 @@ private fun PlayerActivity.PlayerActivityRoot(
     val navBarHeight = androidx.compose.foundation.layout.WindowInsets.navigationBars
         .asPaddingValues().calculateBottomPadding()
 
-    // Single source of truth: Compose owns the status bar inset and pushes
-    // it into the XML player_container so both layers always stay in sync.
     val statusBarHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) {
         statusBarHeight.roundToPx()
     }
@@ -2321,7 +2302,7 @@ private fun PlayerActivity.PlayerActivityRoot(
                             else -> {}
                         }
                     },
-                    onAspectRatioClick = { if (activity.contentType == PlayerActivity.ContentType.NETWORK_STREAM) activity.cycleAspectRatio() else activity.cycleAspectRatio() },
+                    onAspectRatioClick = { activity.cycleAspectRatio() },
                     onFullscreenClick = { activity.toggleFullscreen() },
                     onVolumeSwipe = { vol ->
                         activity.gestureVolume = vol
@@ -2391,7 +2372,7 @@ private fun PlayerActivity.PlayerActivityRoot(
             )
         }
     }
-    
+
     if (isLandscape && errorMessage.isNotBlank()) {
         androidx.compose.foundation.layout.Box(
             contentAlignment = androidx.compose.ui.Alignment.Center,
@@ -2425,7 +2406,6 @@ private fun PlayerActivity.PlayerActivityRoot(
             onDismiss = onFloatingDismiss,
         )
     }
-
 }
 
 private val Int.dp: androidx.compose.ui.unit.Dp get() = androidx.compose.ui.unit.Dp(this.toFloat())

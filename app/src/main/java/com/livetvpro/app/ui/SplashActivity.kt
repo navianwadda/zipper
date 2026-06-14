@@ -403,9 +403,10 @@ private fun LoadingScreen(versionName: String) {
                 .background(Color(0xFFEF4444)),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
+            androidx.compose.material3.Icon(
                 painter            = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "App Icon",
+                tint               = androidx.compose.ui.graphics.Color.Unspecified,
                 modifier           = Modifier.size(72.dp),
             )
         }
@@ -456,9 +457,10 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
                 .background(Color(0xFFEF4444)),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
+            androidx.compose.material3.Icon(
                 painter            = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "App Icon",
+                tint               = androidx.compose.ui.graphics.Color.Unspecified,
                 modifier           = Modifier.size(72.dp),
             )
         }
@@ -523,9 +525,10 @@ private fun UpdateScreenPortrait(
                 .background(Color(0xFFEF4444)),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
+            androidx.compose.material3.Icon(
                 painter            = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "App Icon",
+                tint               = androidx.compose.ui.graphics.Color.Unspecified,
                 modifier           = Modifier.size(72.dp),
             )
         }
@@ -605,11 +608,20 @@ private fun UpdateScreenLandscape(
             modifier         = Modifier.weight(0.45f).fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
-                painter            = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "App Icon",
-                modifier           = Modifier.size(100.dp),
-            )
+            Box(
+                modifier         = Modifier
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color(0xFFEF4444)),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.Icon(
+                    painter            = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = "App Icon",
+                    tint               = androidx.compose.ui.graphics.Color.Unspecified,
+                    modifier           = Modifier.size(72.dp),
+                )
+            }
         }
 
         // Divider

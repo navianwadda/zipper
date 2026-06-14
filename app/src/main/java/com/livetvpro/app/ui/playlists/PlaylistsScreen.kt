@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,7 +56,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -120,8 +121,6 @@ fun PlaylistsScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // Local mutable copy for live reordering during drag.
-    // Synced from viewModel whenever not dragging.
     var localPlaylists by remember { mutableStateOf(playlists) }
     var isDraggingActive by remember { mutableStateOf(false) }
     LaunchedEffect(playlists) {
@@ -139,7 +138,6 @@ fun PlaylistsScreen(
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var dragStartY by remember { mutableStateOf<Float?>(null) }
     var draggedPlaylist by remember { mutableStateOf<Playlist?>(null) }
-    // Measured height (px) of one item slot (card + spacing). Captured on first layout.
     var itemSlotHeightPx by remember { mutableFloatStateOf(0f) }
 
     val selectionColors = TextSelectionColors(
@@ -250,7 +248,6 @@ fun PlaylistsScreen(
                                     },
                                     onDragEnd = {
                                         val finalIndex = localPlaylists.indexOfFirst { it.id == draggedId }
-                                        // localPlaylists is the ground truth — just persist its current order
                                         if (finalIndex != -1) {
                                             viewModel.persistOrder(localPlaylists)
                                         }
@@ -260,7 +257,6 @@ fun PlaylistsScreen(
                                         dragStartY = null
                                         isDraggingActive = false
                                     },
-                                    // Invisible placeholder while dragging — keeps layout space
                                     modifier = if (isDragging) Modifier.alpha(0f) else Modifier
                                 )
                             }
@@ -602,25 +598,39 @@ private fun AddPlaylistDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                titleError = title.isBlank()
-                urlError   = !isFile && url.isBlank()
-                if (!titleError && !urlError) {
-                    onConfirm(title.trim(), url.trim(), isFile, url.trim())
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primaryColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("Cancel", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
                 }
-            }) {
-                Text("Add", fontFamily = BergenSans, color = primaryColor)
+                Button(
+                    onClick = {
+                        titleError = title.isBlank()
+                        urlError   = !isFile && url.isBlank()
+                        if (!titleError && !urlError) {
+                            onConfirm(title.trim(), url.trim(), isFile, url.trim())
+                        }
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primaryColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("Add", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
+                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    "Cancel",
-                    fontFamily = BergenSans,
-                    color      = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
+        dismissButton = null,
         containerColor    = MaterialTheme.colorScheme.surfaceContainer,
         titleContentColor = MaterialTheme.colorScheme.onSurface,
         textContentColor  = MaterialTheme.colorScheme.onSurface,
@@ -671,39 +681,54 @@ private fun EditPlaylistDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                titleError = title.isBlank()
-                urlError   = !playlist.isFile && url.isBlank()
-                if (!titleError && !urlError) {
-                    onConfirm(
-                        playlist.copy(
-                            title = title.trim(),
-                            url   = if (!playlist.isFile) url.trim() else playlist.url
-                        )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Button(
+                    onClick = { onDismiss(); onDelete() },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
                     )
+                ) {
+                    Text("Delete", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
                 }
-            }) {
-                Text("Update", fontFamily = BergenSans, color = primaryColor)
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primaryColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("Cancel", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
+                }
+                Button(
+                    onClick = {
+                        titleError = title.isBlank()
+                        urlError   = !playlist.isFile && url.isBlank()
+                        if (!titleError && !urlError) {
+                            onConfirm(
+                                playlist.copy(
+                                    title = title.trim(),
+                                    url   = if (!playlist.isFile) url.trim() else playlist.url
+                                )
+                            )
+                        }
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primaryColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("Update", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
+                }
             }
         },
-        dismissButton = {
-            Row {
-                TextButton(onClick = { onDismiss(); onDelete() }) {
-                    Text(
-                        "Delete",
-                        fontFamily = BergenSans,
-                        color      = MaterialTheme.colorScheme.error
-                    )
-                }
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        "Cancel",
-                        fontFamily = BergenSans,
-                        color      = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        },
+        dismissButton = null,
         containerColor    = MaterialTheme.colorScheme.surfaceContainer,
         titleContentColor = MaterialTheme.colorScheme.onSurface,
         textContentColor  = MaterialTheme.colorScheme.onSurface,
@@ -734,19 +759,33 @@ private fun DeletePlaylistDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Delete", fontFamily = BergenSans, color = MaterialTheme.colorScheme.error)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primaryColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("Cancel", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
+                }
+                Button(
+                    onClick = onConfirm,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Delete", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
+                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    "Cancel",
-                    fontFamily = BergenSans,
-                    color      = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
+        dismissButton = null,
         containerColor    = MaterialTheme.colorScheme.surfaceContainer,
         titleContentColor = MaterialTheme.colorScheme.onSurface,
         textContentColor  = MaterialTheme.colorScheme.onSurface,

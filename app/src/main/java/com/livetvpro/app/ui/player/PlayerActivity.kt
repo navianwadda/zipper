@@ -679,32 +679,38 @@ class PlayerActivity : BasePlayerActivity() {
 }
 
     override fun onPictureInPictureModeChanged(
-        isInPictureInPictureMode: Boolean,
-        newConfig: Configuration
-    ) {
-        if (!isInPictureInPictureMode) {
-
-            pipReceiver?.let {
-                unregisterReceiver(it)
-                pipReceiver = null
-            }
-            isInPipMode = false
-            isEnteringPip = false
-            isInPip = false
-            updateLinksState()
-
-            super.onPictureInPictureModeChanged(false, newConfig)
-
-            controlsState.show(lifecycleScope)
-
-            if (wasLockedBeforePip) {
-                controlsState.lock()
-                wasLockedBeforePip = false
-            }
-
-            exitPipUIMode(newConfig)
-            return
+    isInPictureInPictureMode: Boolean,
+    newConfig: Configuration
+) {
+    if (!isInPictureInPictureMode) {
+        pipReceiver?.let {
+            unregisterReceiver(it)
+            pipReceiver = null
         }
+        isInPipMode = false
+        isEnteringPip = false
+        isInPip = false
+        updateLinksState()
+
+        super.onPictureInPictureModeChanged(false, newConfig)
+
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
+
+        controlsState.show(lifecycleScope)
+
+        if (wasLockedBeforePip) {
+            controlsState.lock()
+            wasLockedBeforePip = false
+        }
+
+        exitPipUIMode(newConfig)
+        return
+    }
 
         isInPipMode = true
         isEnteringPip = false
@@ -733,48 +739,55 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     private fun exitPipUIMode(newConfig: Configuration) {
-        setSubtitleTextSize()
+    setSubtitleTextSize()
 
-        val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-        setupWindowFlags(isLandscape)
-        setupSystemUI(isLandscape)
-
-        applyOrientationSettings(isLandscape)
-
-        if (!isLandscape) {
-            val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
-            params.dimensionRatio = "H,16:9"
-            params.topMargin = 0
-            params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-            playerContainer.layoutParams = params
-
-            val hasRelated = relatedChannels.isNotEmpty() ||
-                (contentType == ContentType.EVENT)
-            if (hasRelated) {
-                relatedContentState.value = when (contentType) {
-                    ContentType.EVENT -> {
-                        val events = viewModel.relatedLiveEvents.value
-                        if (!events.isNullOrEmpty()) RelatedContentState.Events(events) else RelatedContentState.Loading
-                    }
-                    ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
-                    else -> RelatedContentState.Hidden
-                }
-            } else if (contentType == ContentType.CHANNEL) {
-                relatedContentState.value = RelatedContentState.Loading
-            }
-        }
-
-        if (wasLockedBeforePip) {
-            controlsState.isLocked = true
-            wasLockedBeforePip = false
-        } else {
-            controlsState.isLocked = false
-        }
-
-        playerViewRef.useController = false
-        updateLinksForOrientation(isLandscape)
+    window.statusBarColor = android.graphics.Color.TRANSPARENT
+    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+    WindowCompat.getInsetsController(window, window.decorView).apply {
+        isAppearanceLightStatusBars = false
+        isAppearanceLightNavigationBars = false
     }
+
+    setupWindowFlags(isLandscape)
+    setupSystemUI(isLandscape)
+
+    applyOrientationSettings(isLandscape)
+
+    if (!isLandscape) {
+        val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
+        params.dimensionRatio = "H,16:9"
+        params.topMargin = 0
+        params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
+        playerContainer.layoutParams = params
+
+        val hasRelated = relatedChannels.isNotEmpty() ||
+            (contentType == ContentType.EVENT)
+        if (hasRelated) {
+            relatedContentState.value = when (contentType) {
+                ContentType.EVENT -> {
+                    val events = viewModel.relatedLiveEvents.value
+                    if (!events.isNullOrEmpty()) RelatedContentState.Events(events) else RelatedContentState.Loading
+                }
+                ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
+                else -> RelatedContentState.Hidden
+            }
+        } else if (contentType == ContentType.CHANNEL) {
+            relatedContentState.value = RelatedContentState.Loading
+        }
+    }
+
+    if (wasLockedBeforePip) {
+        controlsState.isLocked = true
+        wasLockedBeforePip = false
+    } else {
+        controlsState.isLocked = false
+    }
+
+    playerViewRef.useController = false
+    updateLinksForOrientation(isLandscape)
+}
 
     @SuppressLint("NewApi")
     override fun onUserLeaveHint() {

@@ -100,6 +100,7 @@ class PlayerActivity : BasePlayerActivity() {
     private val showSettingsDialog  = mutableStateOf(false)
     private val showFloatingDialog  = mutableStateOf(false)
     internal val errorMessage        = mutableStateOf("")
+    internal val isLandscapeState    = mutableStateOf(false)
     private var relatedChannels = listOf<Channel>()
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -529,6 +530,7 @@ class PlayerActivity : BasePlayerActivity() {
     }
 
     private fun applyOrientationSettings(isLandscape: Boolean) {
+        isLandscapeState.value = isLandscape
         adjustLayoutForOrientation(isLandscape)
         applyResizeModeForOrientation(isLandscape)
     }
@@ -743,7 +745,16 @@ class PlayerActivity : BasePlayerActivity() {
             val hasRelated = relatedChannels.isNotEmpty() ||
                 (contentType == ContentType.EVENT)
             if (hasRelated) {
-                relatedContentState.value = RelatedContentState.Channels(relatedChannels)
+                relatedContentState.value = when (contentType) {
+                    ContentType.EVENT -> {
+                        val events = viewModel.relatedLiveEvents.value
+                        if (!events.isNullOrEmpty()) RelatedContentState.Events(events) else RelatedContentState.Loading
+                    }
+                    ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
+                    else -> RelatedContentState.Hidden
+                }
+            } else if (contentType == ContentType.CHANNEL) {
+                relatedContentState.value = RelatedContentState.Loading
             }
         }
 
@@ -1687,17 +1698,15 @@ class PlayerActivity : BasePlayerActivity() {
 
         if (allEventLinks.size > 1) {
         }
-        val hasRelated = relatedChannels.isNotEmpty() ||
-            (contentType == ContentType.EVENT)
-        if (hasRelated) {
-            relatedContentState.value = when {
-                contentType == ContentType.EVENT -> {
-                    val events = viewModel.relatedLiveEvents.value
-                    if (!events.isNullOrEmpty()) RelatedContentState.Events(events) else RelatedContentState.Loading
-                }
-                relatedChannels.isNotEmpty() -> RelatedContentState.Channels(relatedChannels)
-                else -> RelatedContentState.Loading
+        relatedContentState.value = when (contentType) {
+            ContentType.EVENT -> {
+                val events = viewModel.relatedLiveEvents.value
+                if (!events.isNullOrEmpty()) RelatedContentState.Events(events) else RelatedContentState.Loading
             }
+            ContentType.CHANNEL -> {
+                if (relatedChannels.isNotEmpty()) RelatedContentState.Channels(relatedChannels) else RelatedContentState.Loading
+            }
+            else -> RelatedContentState.Hidden
         }
     }
 
@@ -2004,10 +2013,7 @@ private fun PlayerActivity.PlayerActivityRoot(
     onEventClick: (com.livetvpro.app.data.models.LiveEvent, Int) -> Unit,
     onMessageBannerClick: () -> Unit,
 ) {
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val isLandscape = configuration.orientation ==
-        android.content.res.Configuration.ORIENTATION_LANDSCAPE ||
-        com.livetvpro.app.utils.DeviceUtils.isTvDevice
+    val isLandscape = activity.isLandscapeState.value
     val spanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)
     val eventSpanCount = activity.resources.getInteger(com.livetvpro.app.R.integer.event_span_count)
 

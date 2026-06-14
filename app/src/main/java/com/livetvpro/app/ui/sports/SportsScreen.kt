@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -58,11 +59,11 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
-import com.livetvpro.app.ui.player.dialogs.LinkItem
 import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
 import com.livetvpro.app.ui.player.dialogs.toLinkItem
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.delay
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val CardLogoBg = Color(0x80000000)
@@ -80,6 +81,13 @@ fun SportsScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val gridState = rememberLazyGridState()
     var linkDialogChannel by remember { mutableStateOf<Channel?>(null) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10_000)
+            viewModel.loadData()
+        }
+    }
 
     if (linkDialogChannel != null) {
         val channel = linkDialogChannel!!

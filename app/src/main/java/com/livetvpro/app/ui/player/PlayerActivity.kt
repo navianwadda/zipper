@@ -2194,6 +2194,16 @@ private fun PlayerActivity.PlayerActivityRoot(
                     initialVolume = activity.gestureVolume,
                     initialBrightness = activity.gestureBrightness,
                 )
+                if (isChannelListAvailable) {
+                    com.livetvpro.app.ui.player.compose.ChannelListPanel(
+                        visible = showChannelList.value,
+                        channels = channelListItems,
+                        currentChannelId = activity.contentId,
+                        onChannelClick = { channel -> activity.switchToChannel(channel) },
+                        onDismiss = { showChannelList.value = false },
+                        modifier = androidx.compose.ui.Modifier.fillMaxSize()
+                    )
+                }
             }
         } else {
             androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.fillMaxSize()) {
@@ -2313,6 +2323,16 @@ private fun PlayerActivity.PlayerActivityRoot(
                             eventSpanCount = eventSpanCount,
                         )
                     }
+                }
+                if (isChannelListAvailable) {
+                    com.livetvpro.app.ui.player.compose.ChannelListPanel(
+                        visible = showChannelList.value,
+                        channels = channelListItems,
+                        currentChannelId = activity.contentId,
+                        onChannelClick = { channel -> activity.switchToChannel(channel) },
+                        onDismiss = { showChannelList.value = false },
+                        modifier = androidx.compose.ui.Modifier.fillMaxSize()
+                    )
                 }
             }
         }

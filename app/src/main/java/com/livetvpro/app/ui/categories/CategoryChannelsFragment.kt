@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -185,6 +186,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                             if (query.isBlank()) allGroups
                             else allGroups.filter { it.contains(query, ignoreCase = true) }
                         }
+                        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
                         Dialog(
                             onDismissRequest = { showGroupsDialog = false },
@@ -192,8 +194,8 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                         ) {
                             Surface(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxSize(0.80f),
+                                    .fillMaxWidth(0.95f)
+                                    .heightIn(min = 200.dp, max = screenHeight * 0.75f),
                                 shape = MaterialTheme.shapes.large,
                                 color = MaterialTheme.colorScheme.surface
                             ) {

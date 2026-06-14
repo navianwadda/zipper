@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +63,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.Fragment
+import com.livetvpro.app.R
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.theme.AppColorTheme
 import com.livetvpro.app.ui.theme.AppThemeContent
@@ -283,11 +286,11 @@ fun AppIconOption(
                 .clickable { onClick() },
             contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f)),
+            Icon(
+                painter            = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = null,
+                tint               = Color.Unspecified,
+                modifier           = Modifier.size(64.dp),
             )
         }
         Spacer(modifier = Modifier.height(6.dp))

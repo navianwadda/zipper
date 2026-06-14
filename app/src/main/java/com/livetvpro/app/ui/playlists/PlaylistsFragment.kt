@@ -106,15 +106,7 @@ class PlaylistsFragment : Fragment() {
     private fun openFilePicker() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/x-mpegURL"
-            putExtra(
-                Intent.EXTRA_MIME_TYPES,
-                arrayOf(
-                    "application/x-mpegURL",
-                    "audio/x-mpegurl",
-                    "application/vnd.apple.mpegurl"
-                )
-            )
+            type = "*/*"
         }
         filePickerLauncher.launch(intent)
     }

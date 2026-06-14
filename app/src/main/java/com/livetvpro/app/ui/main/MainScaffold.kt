@@ -59,8 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.FragmentContainerView
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
@@ -74,6 +72,7 @@ import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.ui.dialogs.SupportDialogHost
+
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 private val PHONE_TOP_LEVEL = setOf(
@@ -90,10 +89,10 @@ private val DRAWER_FRAGMENTS = setOf(
 data class NavTab(val destId: Int, val labelRes: Int, val filledIcon: Int, val outlineIcon: Int)
 
 private val PHONE_TABS = listOf(
-    NavTab(R.id.liveEventsFragment, R.string.nav_live,   R.drawable.ic_live_filled,    R.drawable.ic_live_outline),
-    NavTab(R.id.homeFragment,       R.string.nav_home,   R.drawable.ic_tv_filled,      R.drawable.ic_tv_outline),
-    NavTab(R.id.sportsFragment,     R.string.nav_sports, R.drawable.ic_sports_filled,  R.drawable.ic_sports_outline),
-    NavTab(R.id.settingsFragment,   R.string.nav_settings, R.drawable.ic_settings,     R.drawable.ic_settings),
+    NavTab(R.id.liveEventsFragment, R.string.nav_live,     R.drawable.ic_live_filled,   R.drawable.ic_live_outline),
+    NavTab(R.id.homeFragment,       R.string.nav_home,     R.drawable.ic_tv_filled,     R.drawable.ic_tv_outline),
+    NavTab(R.id.sportsFragment,     R.string.nav_sports,   R.drawable.ic_sports_filled, R.drawable.ic_sports_outline),
+    NavTab(R.id.settingsFragment,   R.string.nav_settings, R.drawable.ic_settings,      R.drawable.ic_settings),
 )
 private val TV_TABS = listOf(
     NavTab(R.id.liveEventsFragment, R.string.nav_live,      R.drawable.ic_live_filled,   R.drawable.ic_live_outline),
@@ -101,6 +100,12 @@ private val TV_TABS = listOf(
     NavTab(R.id.sportsFragment,     R.string.nav_sports,    R.drawable.ic_sports_filled, R.drawable.ic_sports_outline),
     NavTab(R.id.favoritesFragment,  R.string.nav_favorites, R.drawable.ic_star_filled,   R.drawable.ic_star_outline),
     NavTab(R.id.settingsFragment,   R.string.nav_settings,  R.drawable.ic_settings,      R.drawable.ic_settings),
+)
+
+// Fragments where the refresh button should be visible
+private val REFRESH_DESTINATIONS = setOf(
+    R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment,
+    R.id.categoryChannelsFragment, R.id.playlistsFragment, R.id.favoritesFragment
 )
 
 @Composable
@@ -121,38 +126,33 @@ fun MainScaffold(
 
     val primaryColor by themeManager.primaryColorFlow.collectAsState()
 
-
-    var navController     by remember { mutableStateOf<NavController?>(null) }
-    var currentDestId     by remember { mutableIntStateOf(-1) }
-    var toolbarTitle      by remember { mutableStateOf("Live TV Pro") }
-    var showRefreshIcon   by remember { mutableStateOf(false) }
-    var isSearchActive    by remember { mutableStateOf(false) }
-    var searchQuery       by remember { mutableStateOf("") }
-    var isTopLevel        by remember { mutableStateOf(true) }
+    var navController   by remember { mutableStateOf<NavController?>(null) }
+    var currentDestId   by remember { mutableIntStateOf(-1) }
+    var toolbarTitle    by remember { mutableStateOf("Live TV Pro") }
+    // FIX: single source of truth for refresh visibility, derived from currentDestId
+    val showRefreshIcon  = currentDestId in REFRESH_DESTINATIONS
+    var isSearchActive  by remember { mutableStateOf(false) }
+    var searchQuery     by remember { mutableStateOf("") }
+    var isTopLevel      by remember { mutableStateOf(true) }
 
     val topLevelSet = if (isTvOrDesktop || isTablet) TV_TOP_LEVEL else PHONE_TOP_LEVEL
     val tabs        = if (isTvOrDesktop || isTablet) TV_TABS      else PHONE_TABS
 
     fun resolveTitle(destId: Int): String = when (destId) {
-        R.id.homeFragment            -> "Categories"
+        R.id.homeFragment             -> "Categories"
         R.id.categoryChannelsFragment -> "Channels"
-        R.id.liveEventsFragment      -> context.getString(R.string.app_name)
-        R.id.favoritesFragment       -> "Favorites"
-        R.id.sportsFragment          -> "Sports"
-        R.id.settingsFragment        -> "Settings"
-        R.id.networkStreamFragment   -> "Network Stream"
-        R.id.playlistsFragment       -> "Playlists"
-        R.id.cricketScoreFragment    -> "Cricket Score"
-        R.id.footballScoreFragment   -> "Football Score"
-        R.id.deviceIdFragment        -> "Device ID"
-        R.id.appearanceFragment      -> "Appearance"
-        else                          -> "Live TV Pro"
+        R.id.liveEventsFragment       -> context.getString(R.string.app_name)
+        R.id.favoritesFragment        -> "Favorites"
+        R.id.sportsFragment           -> "Sports"
+        R.id.settingsFragment         -> "Settings"
+        R.id.networkStreamFragment    -> "Network Stream"
+        R.id.playlistsFragment        -> "Playlists"
+        R.id.cricketScoreFragment     -> "Cricket Score"
+        R.id.footballScoreFragment    -> "Football Score"
+        R.id.deviceIdFragment         -> "Device ID"
+        R.id.appearanceFragment       -> "Appearance"
+        else                           -> "Live TV Pro"
     }
-
-    fun resolveShowRefresh(destId: Int) = destId in setOf(
-        R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment,
-        R.id.categoryChannelsFragment, R.id.playlistsFragment, R.id.favoritesFragment
-    )
 
     fun navigate(destId: Int) {
         val nav = navController ?: return
@@ -172,15 +172,15 @@ fun MainScaffold(
     Column(modifier = Modifier.fillMaxSize()) {
         if (isTvOrDesktop || isTablet) {
             TvTopBar(
-                title         = toolbarTitle,
-                tabs          = tabs,
-                currentDestId = currentDestId,
+                title          = toolbarTitle,
+                tabs           = tabs,
+                currentDestId  = currentDestId,
                 isSearchActive = isSearchActive,
-                searchQuery   = searchQuery,
-                onTabSelected = { navigate(it) },
+                searchQuery    = searchQuery,
+                onTabSelected  = { navigate(it) },
                 onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) { searchQuery = ""; activity.dispatchSearchQuery("") } },
-                onQueryChange = { q -> searchQuery = q; activity.dispatchSearchQuery(q) },
-                onSearchClose = { isSearchActive = false; searchQuery = ""; activity.dispatchSearchQuery("") },
+                onQueryChange  = { q -> searchQuery = q; activity.dispatchSearchQuery(q) },
+                onSearchClose  = { isSearchActive = false; searchQuery = ""; activity.dispatchSearchQuery("") },
             )
         } else {
             PhoneTopBar(
@@ -223,6 +223,16 @@ fun MainScaffold(
                         fm.executePendingTransactions()
 
                         val nav = navHost.navController
+
+                        // FIX: navigate to liveEventsFragment as the first screen,
+                        // keeping homeFragment as the graph root so back-stack pop works.
+                        nav.navigate(
+                            R.id.liveEventsFragment, null,
+                            NavOptions.Builder()
+                                .setLaunchSingleTop(true)
+                                .build()
+                        )
+
                         onNavControllerReady(nav)
                         onNavHostReady(navHost)
                         navController = nav
@@ -233,12 +243,12 @@ fun MainScaffold(
                         }
 
                         nav.addOnDestinationChangedListener { _, destination, _ ->
-                            currentDestId   = destination.id
-                            toolbarTitle    = resolveTitle(destination.id)
-                            showRefreshIcon = resolveShowRefresh(destination.id)
-                            isTopLevel      = destination.id in topLevelSet
+                            currentDestId = destination.id
+                            toolbarTitle  = resolveTitle(destination.id)
+                            isTopLevel    = destination.id in topLevelSet
                             if (isSearchActive) { isSearchActive = false; searchQuery = "" }
-                            onDestinationChanged(destination.id, toolbarTitle, showRefreshIcon)
+                            // showRefreshIcon is now derived state — no assignment needed here
+                            onDestinationChanged(destination.id, toolbarTitle, destination.id in REFRESH_DESTINATIONS)
                         }
                     }
                 }
@@ -284,8 +294,8 @@ private fun PhoneTopBar(
     onFavorites: () -> Unit,
     onRefresh: () -> Unit,
 ) {
-    val surface   = MaterialTheme.colorScheme.surface
-    val onSurface = MaterialTheme.colorScheme.onSurface
+    val surface        = MaterialTheme.colorScheme.surface
+    val onSurface      = MaterialTheme.colorScheme.onSurface
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(isSearchActive) {
@@ -308,26 +318,26 @@ private fun PhoneTopBar(
             if (isSearchActive) {
                 IconButton(onClick = onSearchClose) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_arrow_back),
+                        painter           = painterResource(R.drawable.ic_arrow_back),
                         contentDescription = "Back",
-                        tint = onSurface,
+                        tint              = onSurface,
                     )
                 }
             } else if (!isTopLevel) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_arrow_back),
+                        painter           = painterResource(R.drawable.ic_arrow_back),
                         contentDescription = null,
-                        tint = onSurface,
+                        tint              = onSurface,
                     )
                 }
             }
 
             AnimatedVisibility(
-                visible = !isSearchActive,
+                visible  = !isSearchActive,
                 modifier = Modifier.weight(1f),
-                enter = fadeIn(tween(120)),
-                exit  = fadeOut(tween(80)),
+                enter    = fadeIn(tween(120)),
+                exit     = fadeOut(tween(80)),
             ) {
                 Text(
                     text       = title,
@@ -341,17 +351,17 @@ private fun PhoneTopBar(
             }
 
             AnimatedVisibility(
-                visible = isSearchActive,
+                visible  = isSearchActive,
                 modifier = Modifier.weight(1f),
-                enter = fadeIn(tween(120)),
-                exit  = fadeOut(tween(80)),
+                enter    = fadeIn(tween(120)),
+                exit     = fadeOut(tween(80)),
             ) {
                 BasicTextField(
-                    value        = searchQuery,
+                    value         = searchQuery,
                     onValueChange = onQueryChange,
-                    singleLine   = true,
-                    cursorBrush  = SolidColor(primaryColor),
-                    textStyle    = TextStyle(color = onSurface, fontSize = 16.sp, fontFamily = BergenSans),
+                    singleLine    = true,
+                    cursorBrush   = SolidColor(primaryColor),
+                    textStyle     = TextStyle(color = onSurface, fontSize = 16.sp, fontFamily = BergenSans),
                     decorationBox = { inner ->
                         Box(contentAlignment = Alignment.CenterStart) {
                             if (searchQuery.isEmpty()) {
@@ -384,7 +394,6 @@ private fun PhoneTopBar(
                 }
             }
         }
-
     }
 }
 
@@ -400,11 +409,11 @@ private fun TvTopBar(
     onQueryChange: (String) -> Unit,
     onSearchClose: () -> Unit,
 ) {
-    val surface      = MaterialTheme.colorScheme.surface
-    val onSurface    = MaterialTheme.colorScheme.onSurface
-    val primary      = MaterialTheme.colorScheme.primary
-    val surfaceVar   = MaterialTheme.colorScheme.surfaceVariant
-    val outline      = MaterialTheme.colorScheme.outline
+    val surface        = MaterialTheme.colorScheme.surface
+    val onSurface      = MaterialTheme.colorScheme.onSurface
+    val primary        = MaterialTheme.colorScheme.primary
+    val surfaceVar     = MaterialTheme.colorScheme.surfaceVariant
+    val outline        = MaterialTheme.colorScheme.outline
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(isSearchActive) {
@@ -444,11 +453,11 @@ private fun TvTopBar(
 
             AnimatedVisibility(isSearchActive, enter = fadeIn(), exit = fadeOut()) {
                 BasicTextField(
-                    value        = searchQuery,
+                    value         = searchQuery,
                     onValueChange = onQueryChange,
-                    singleLine   = true,
-                    cursorBrush  = SolidColor(primary),
-                    textStyle    = TextStyle(color = onSurface, fontSize = 15.sp, fontFamily = BergenSans),
+                    singleLine    = true,
+                    cursorBrush   = SolidColor(primary),
+                    textStyle     = TextStyle(color = onSurface, fontSize = 15.sp, fontFamily = BergenSans),
                     decorationBox = { inner ->
                         Box(
                             modifier = Modifier
@@ -485,7 +494,6 @@ private fun TvTopBar(
                 modifier   = Modifier.padding(start = 4.dp),
             )
         }
-
     }
 }
 
@@ -520,4 +528,3 @@ private fun TvTabChip(
         )
     }
 }
-

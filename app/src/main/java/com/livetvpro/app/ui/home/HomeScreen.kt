@@ -59,6 +59,7 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Category
+import kotlinx.coroutines.delay
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
@@ -79,6 +80,13 @@ fun HomeScreen(
 
     val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10_000)
+            viewModel.refreshSilent()
+        }
+    }
 
     if (isTvDevice) {
         LaunchedEffect(filteredCategories) {

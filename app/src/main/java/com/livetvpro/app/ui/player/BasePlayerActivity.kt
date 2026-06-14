@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.player
 
 import android.os.Build
+import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -24,6 +25,10 @@ abstract class BasePlayerActivity : AppCompatActivity() {
             }
         }
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         if (!isLandscape) {
@@ -47,4 +52,26 @@ abstract class BasePlayerActivity : AppCompatActivity() {
         }
     }
 
+    internal fun setupWindowInsets(rootView: android.view.View) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+            rootView.setOnApplyWindowInsetsListener { view, insets ->
+                val isLandscape = resources.configuration.orientation ==
+                    android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
+                if (!isLandscape) {
+                    val topInset = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        insets.getInsets(WindowInsets.Type.systemBars()).top
+                    } else {
+                        @Suppress("DEPRECATION") insets.systemWindowInsetTop
+                    }
+                    params.topMargin = topInset
+                } else {
+                    params.topMargin = 0
+                }
+                playerContainer.layoutParams = params
+                playerContainer.setPadding(0, 0, 0, 0)
+                view.onApplyWindowInsets(insets)
+            }
+        }
+    }
 }

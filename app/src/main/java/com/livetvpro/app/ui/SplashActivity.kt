@@ -20,7 +20,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -397,11 +396,19 @@ private fun LoadingScreen(versionName: String) {
     ) {
         Spacer(Modifier.weight(0.38f))
 
-        Image(
-            painter            = painterResource(R.mipmap.ic_launcher),
-            contentDescription = "App Icon",
-            modifier           = Modifier.size(100.dp),
-        )
+        Box(
+            modifier         = Modifier
+                .size(100.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFFEF4444)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter            = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = "App Icon",
+                modifier           = Modifier.size(72.dp),
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -442,11 +449,19 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
     ) {
         Spacer(Modifier.weight(0.38f))
 
-        Image(
-            painter            = painterResource(R.mipmap.ic_launcher),
-            contentDescription = "App Icon",
-            modifier           = Modifier.size(100.dp),
-        )
+        Box(
+            modifier         = Modifier
+                .size(100.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFFEF4444)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter            = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = "App Icon",
+                modifier           = Modifier.size(72.dp),
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -501,11 +516,19 @@ private fun UpdateScreenPortrait(
     ) {
         Spacer(Modifier.height(32.dp))
 
-        Image(
-            painter            = painterResource(R.mipmap.ic_launcher),
-            contentDescription = "App Icon",
-            modifier           = Modifier.size(100.dp),
-        )
+        Box(
+            modifier         = Modifier
+                .size(100.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFFEF4444)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter            = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = "App Icon",
+                modifier           = Modifier.size(72.dp),
+            )
+        }
 
         Spacer(Modifier.height(14.dp))
 
@@ -583,7 +606,7 @@ private fun UpdateScreenLandscape(
             contentAlignment = Alignment.Center,
         ) {
             Image(
-                painter            = painterResource(R.mipmap.ic_launcher),
+                painter            = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "App Icon",
                 modifier           = Modifier.size(100.dp),
             )

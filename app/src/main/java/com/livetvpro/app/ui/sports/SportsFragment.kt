@@ -7,7 +7,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -67,7 +70,11 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val spanCount = resources.getInteger(R.integer.grid_column_count)
+                val configuration = LocalConfiguration.current
+                val context = LocalContext.current
+                val spanCount = remember(configuration) {
+                    context.resources.getInteger(R.integer.grid_column_count)
+                }
                 AppThemeContent(themeManager) {
                     SportsScreen(
                         viewModel = viewModel,

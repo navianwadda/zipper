@@ -49,18 +49,11 @@
 
         <activity
             android:name=".ui.SplashActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.LiveTVPro"
             android:screenOrientation="user"
             android:resizeableActivity="true"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <category android:name="com.amazon.tv.leanbacklauncher" />
-            </intent-filter>
         </activity>
 
         <activity
@@ -181,6 +174,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="com.amazon.tv.leanbacklauncher" />
             </intent-filter>
         </activity-alias>
 
@@ -194,6 +189,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="com.amazon.tv.leanbacklauncher" />
             </intent-filter>
         </activity-alias>
 

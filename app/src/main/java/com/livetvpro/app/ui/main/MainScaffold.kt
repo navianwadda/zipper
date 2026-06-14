@@ -102,7 +102,6 @@ private val TV_TABS = listOf(
     NavTab(R.id.settingsFragment,   R.string.nav_settings,  R.drawable.ic_settings,      R.drawable.ic_settings),
 )
 
-// Fragments where the refresh button should be visible
 private val REFRESH_DESTINATIONS = setOf(
     R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment,
     R.id.categoryChannelsFragment, R.id.playlistsFragment, R.id.favoritesFragment
@@ -126,14 +125,13 @@ fun MainScaffold(
 
     val primaryColor by themeManager.primaryColorFlow.collectAsState()
 
-    var navController   by remember { mutableStateOf<NavController?>(null) }
-    var currentDestId   by remember { mutableIntStateOf(-1) }
-    var toolbarTitle    by remember { mutableStateOf("Live TV Pro") }
-    // FIX: single source of truth for refresh visibility, derived from currentDestId
-    val showRefreshIcon  = currentDestId in REFRESH_DESTINATIONS
-    var isSearchActive  by remember { mutableStateOf(false) }
-    var searchQuery     by remember { mutableStateOf("") }
-    var isTopLevel      by remember { mutableStateOf(true) }
+    var navController  by remember { mutableStateOf<NavController?>(null) }
+    var currentDestId  by remember { mutableIntStateOf(-1) }
+    var toolbarTitle   by remember { mutableStateOf("Live TV Pro") }
+    val showRefreshIcon = currentDestId in REFRESH_DESTINATIONS
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery    by remember { mutableStateOf("") }
+    var isTopLevel     by remember { mutableStateOf(true) }
 
     val topLevelSet = if (isTvOrDesktop || isTablet) TV_TOP_LEVEL else PHONE_TOP_LEVEL
     val tabs        = if (isTvOrDesktop || isTablet) TV_TABS      else PHONE_TABS
@@ -224,12 +222,12 @@ fun MainScaffold(
 
                         val nav = navHost.navController
 
-                        // FIX: navigate to liveEventsFragment as the first screen,
-                        // keeping homeFragment as the graph root so back-stack pop works.
                         nav.navigate(
                             R.id.liveEventsFragment, null,
                             NavOptions.Builder()
+                                .setPopUpTo(nav.graph.startDestinationId, true, saveState = true)
                                 .setLaunchSingleTop(true)
+                                .setRestoreState(true)
                                 .build()
                         )
 
@@ -247,7 +245,6 @@ fun MainScaffold(
                             toolbarTitle  = resolveTitle(destination.id)
                             isTopLevel    = destination.id in topLevelSet
                             if (isSearchActive) { isSearchActive = false; searchQuery = "" }
-                            // showRefreshIcon is now derived state — no assignment needed here
                             onDestinationChanged(destination.id, toolbarTitle, destination.id in REFRESH_DESTINATIONS)
                         }
                     }
@@ -318,17 +315,17 @@ private fun PhoneTopBar(
             if (isSearchActive) {
                 IconButton(onClick = onSearchClose) {
                     Icon(
-                        painter           = painterResource(R.drawable.ic_arrow_back),
+                        painter            = painterResource(R.drawable.ic_arrow_back),
                         contentDescription = "Back",
-                        tint              = onSurface,
+                        tint               = onSurface,
                     )
                 }
             } else if (!isTopLevel) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        painter           = painterResource(R.drawable.ic_arrow_back),
+                        painter            = painterResource(R.drawable.ic_arrow_back),
                         contentDescription = null,
-                        tint              = onSurface,
+                        tint               = onSurface,
                     )
                 }
             }

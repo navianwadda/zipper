@@ -1790,7 +1790,7 @@ class PlayerActivity : BasePlayerActivity() {
                         }
 
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            updatePipParams()
+                            setPictureInPictureParams(updatePipParams())
                         }
                     }
                     CONTROL_TYPE_PAUSE -> {
@@ -1801,7 +1801,7 @@ class PlayerActivity : BasePlayerActivity() {
                         }
 
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            updatePipParams()
+                            setPictureInPictureParams(updatePipParams())
                         }
                     }
                     CONTROL_TYPE_REWIND -> {
@@ -1893,7 +1893,7 @@ class PlayerActivity : BasePlayerActivity() {
                 context, requestCode,
                 Intent(ACTION_MEDIA_CONTROL).setPackage(context.packageName)
                     .putExtra(EXTRA_CONTROL_TYPE, controlType),
-                PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
 
         val playPauseAction = if (isPaused) {

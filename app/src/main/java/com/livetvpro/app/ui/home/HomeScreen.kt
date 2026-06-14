@@ -80,11 +80,20 @@ fun HomeScreen(
 
     val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
+    var isRefreshing by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
             delay(10_000)
             viewModel.refreshSilent()
+        }
+    }
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            viewModel.refresh()
+            delay(1_000)
+            isRefreshing = false
         }
     }
 
@@ -102,8 +111,8 @@ fun HomeScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         PullToRefreshBox(
-            isRefreshing = isLoading,
-            onRefresh = { if (!isTvDevice) viewModel.refresh() },
+            isRefreshing = isRefreshing,
+            onRefresh = { if (!isTvDevice) isRefreshing = true },
             state = pullToRefreshState,
             modifier = Modifier.fillMaxSize()
         ) {

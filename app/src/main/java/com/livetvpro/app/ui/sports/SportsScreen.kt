@@ -25,6 +25,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,6 +35,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +53,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,8 +67,6 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
 import com.livetvpro.app.ui.player.dialogs.toLinkItem
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.delay
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
@@ -75,12 +79,12 @@ fun SportsScreen(
     spanCount: Int = 3,
     isTvDevice: Boolean = false,
     onChannelClick: (Channel, Int) -> Unit,
-    onChannelLongClick: (Channel) -> Unit,
 ) {
     val channels by viewModel.filteredChannels.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
     val gridState = rememberLazyGridState()
     var linkDialogChannel by remember { mutableStateOf<Channel?>(null) }
+    var favoriteDialogChannel by remember { mutableStateOf<Channel?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -98,6 +102,48 @@ fun SportsScreen(
                 onChannelClick(channel, index)
             },
             onDismiss = { linkDialogChannel = null },
+        )
+    }
+
+    favoriteDialogChannel?.let { channel ->
+        val isFav = viewModel.isFavorite(channel.id)
+        AlertDialog(
+            onDismissRequest = { favoriteDialogChannel = null },
+            title = {
+                Text(
+                    text = if (isFav) "Remove from Favorites?" else "Add to Favorites?",
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (isFav) "Remove \"${channel.name}\" from favorites?"
+                           else "Add \"${channel.name}\" to favorites?",
+                    fontFamily = BergenSans
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.toggleFavorite(channel)
+                        favoriteDialogChannel = null
+                    },
+                    colors = if (isFav) ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ) else ButtonDefaults.buttonColors()
+                ) {
+                    Text(
+                        text = if (isFav) "Remove" else "Add",
+                        fontFamily = BergenSans
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { favoriteDialogChannel = null }) {
+                    Text("Cancel", fontFamily = BergenSans)
+                }
+            }
         )
     }
 
@@ -163,7 +209,7 @@ fun SportsScreen(
                                     onChannelClick(channel, 0)
                                 }
                             },
-                            onLongClick = { onChannelLongClick(channel) }
+                            onLongClick = { favoriteDialogChannel = channel }
                         )
                     }
                 }

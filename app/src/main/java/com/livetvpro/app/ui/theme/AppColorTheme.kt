@@ -449,7 +449,7 @@ enum class AppColorTheme(
 
     companion object {
         fun fromName(name: String): AppColorTheme =
-            entries.firstOrNull { it.name == name } ?: Default
+            entries.firstOrNull { it.name == name } ?: Legacy
     }
 }
 

@@ -27,7 +27,6 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.WindowCompat
-import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -64,7 +63,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.asPaddingValues
@@ -140,9 +138,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
     private var intentCategoryId: String? = null
     private var intentSelectedGroup: String? = null
     private var intentIsSports: Boolean = false
-    private val statusBarHeightPx: Int
-    get() = ViewCompat.getRootWindowInsets(window.decorView)
-        ?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: 0
+
     private var networkPortraitResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     private var networkLandscapeResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
     private var resizeModesRestoredFromState = false
@@ -478,7 +474,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
                 val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.topMargin = statusBarHeightPx
+                // topMargin kept as-is — driven by Compose SideEffect in setupComposeControls
                 params.bottomMargin = 0
                 params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                 params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1361,8 +1357,7 @@ class FloatingPlayerActivity : BasePlayerActivity() {
                     }
 
                     androidx.compose.foundation.layout.Column(
-                        modifier = if (isLandscape) Modifier.fillMaxSize()
-                                   else Modifier.fillMaxWidth().wrapContentHeight(unbounded = false)
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         if (!isLandscape) {
                             val statusBarHeight = androidx.compose.foundation.layout.WindowInsets.statusBars
@@ -1589,8 +1584,6 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
         params.dimensionRatio = "H,16:9"
-        params.matchConstraintPercentHeight = -1f
-        params.topMargin = statusBarHeightPx
         params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
         params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID

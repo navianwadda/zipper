@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -81,6 +82,7 @@ fun FavoritesScreen(
 
     var showClearAllDialog by remember { mutableStateOf(false) }
     var linkDialogFavorite by remember { mutableStateOf<FavoriteChannel?>(null) }
+    var removeConfirmFavorite by remember { mutableStateOf<FavoriteChannel?>(null) }
 
     if (linkDialogFavorite != null) {
         val favorite = linkDialogFavorite!!
@@ -93,13 +95,52 @@ fun FavoritesScreen(
         )
     }
 
+    if (removeConfirmFavorite != null) {
+        val favorite = removeConfirmFavorite!!
+        AlertDialog(
+            onDismissRequest = { removeConfirmFavorite = null },
+            title = {
+                Text(
+                    text = "Remove Favorite",
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Remove \"${favorite.name}\" from your favorites list?",
+                    fontFamily = BergenSans
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onRemoveFavorite(favorite)
+                        removeConfirmFavorite = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Remove", fontFamily = BergenSans)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { removeConfirmFavorite = null }) {
+                    Text("Cancel", fontFamily = BergenSans)
+                }
+            }
+        )
+    }
+
     if (showClearAllDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllDialog = false },
             title = {
                 Text(
                     text = "Clear All Favorites",
-                    fontFamily = BergenSans
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.Bold
                 )
             },
             text = {
@@ -109,10 +150,15 @@ fun FavoritesScreen(
                 )
             },
             confirmButton = {
-                Button(onClick = {
-                    onClearAll()
-                    showClearAllDialog = false
-                }) {
+                Button(
+                    onClick = {
+                        onClearAll()
+                        showClearAllDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
                     Text("Clear All", fontFamily = BergenSans)
                 }
             },
@@ -180,7 +226,7 @@ fun FavoritesScreen(
                                     onChannelClick(favorite, 0)
                                 }
                             },
-                            onRemove = { onRemoveFavorite(favorite) }
+                            onRemove = { removeConfirmFavorite = favorite }
                         )
                     }
                 }
@@ -189,7 +235,12 @@ fun FavoritesScreen(
                     onClick = { showClearAllDialog = true },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = navBarBottom + dimensionResource(R.dimen.nav_bottom_margin) + dimensionResource(R.dimen.nav_height) + 4.dp)
+                        .padding(
+                            bottom = navBarBottom
+                                + dimensionResource(R.dimen.nav_bottom_margin)
+                                + dimensionResource(R.dimen.nav_height)
+                                + 4.dp
+                        )
                 ) {
                     Text("Clear All", fontFamily = BergenSans)
                 }

@@ -26,6 +26,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -81,7 +85,6 @@ fun CategoryChannelsScreen(
     spanCount: Int = 3,
     isTvDevice: Boolean = false,
     onChannelClick: (Channel, Int) -> Unit,
-    onChannelLongClick: (Channel) -> Unit,
     onChannelInteraction: ((Channel, () -> Unit) -> Boolean)? = null,
     onShowGroupsDialog: (() -> Unit)? = null
 ) {
@@ -93,6 +96,7 @@ fun CategoryChannelsScreen(
     val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
     var linkDialogChannel by remember { mutableStateOf<Channel?>(null) }
+    var favoriteDialogChannel by remember { mutableStateOf<Channel?>(null) }
 
     val hasGroups = categoryGroups.isNotEmpty()
 
@@ -105,6 +109,48 @@ fun CategoryChannelsScreen(
                 onChannelClick(channel, index)
             },
             onDismiss = { linkDialogChannel = null },
+        )
+    }
+
+    favoriteDialogChannel?.let { channel ->
+        val isFav = viewModel.isFavorite(channel.id)
+        AlertDialog(
+            onDismissRequest = { favoriteDialogChannel = null },
+            title = {
+                Text(
+                    text = if (isFav) "Remove from Favorites?" else "Add to Favorites?",
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (isFav) "Remove \"${channel.name}\" from favorites?"
+                           else "Add \"${channel.name}\" to favorites?",
+                    fontFamily = BergenSans
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.toggleFavorite(channel)
+                        favoriteDialogChannel = null
+                    },
+                    colors = if (isFav) ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ) else ButtonDefaults.buttonColors()
+                ) {
+                    Text(
+                        text = if (isFav) "Remove" else "Add",
+                        fontFamily = BergenSans
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { favoriteDialogChannel = null }) {
+                    Text("Cancel", fontFamily = BergenSans)
+                }
+            }
         )
     }
 
@@ -233,7 +279,7 @@ fun CategoryChannelsScreen(
                                             onChannelInteraction?.invoke(channel, action) ?: false
                                         if (!redirected) action()
                                     },
-                                    onLongClick = { onChannelLongClick(channel) }
+                                    onLongClick = { favoriteDialogChannel = channel }
                                 )
                             }
                         }

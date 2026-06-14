@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,6 +84,8 @@ fun SportsScreen(
     val channels by viewModel.filteredChannels.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
     val gridState = rememberLazyGridState()
+    val pullToRefreshState = rememberPullToRefreshState()
+    var isRefreshing by remember { mutableStateOf(false) }
     var linkDialogChannel by remember { mutableStateOf<Channel?>(null) }
     var favoriteDialogChannel by remember { mutableStateOf<Channel?>(null) }
 
@@ -90,6 +93,14 @@ fun SportsScreen(
         while (true) {
             delay(10_000)
             viewModel.loadData()
+        }
+    }
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            viewModel.refresh()
+            delay(1_000)
+            isRefreshing = false
         }
     }
 
@@ -148,9 +159,12 @@ fun SportsScreen(
     }
 
     PullToRefreshBox(
-        isRefreshing = isLoading == true,
-        onRefresh = { viewModel.refresh() },
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+        isRefreshing = isRefreshing,
+        onRefresh = { if (!isTvDevice) isRefreshing = true },
+        state = pullToRefreshState,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
     ) {
         when {
             isLoading == true && channels.isEmpty() -> {

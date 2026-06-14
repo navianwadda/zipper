@@ -29,7 +29,6 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.WindowCompat
-import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -86,8 +85,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import android.media.AudioManager
 import androidx.recyclerview.widget.RecyclerView
@@ -170,11 +167,7 @@ class PlayerActivity : BasePlayerActivity() {
     private var intentSelectedGroup: String? = null
     private var intentIsSports: Boolean = false
 
-private val statusBarHeightPx: Int
-    get() = ViewCompat.getRootWindowInsets(window.decorView)
-        ?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: 0
-
-enum class ContentType {
+    enum class ContentType {
         CHANNEL, EVENT, NETWORK_STREAM
     }
 
@@ -566,7 +559,7 @@ enum class ContentType {
                 val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
                 params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
                 params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.topMargin = statusBarHeightPx
+                // topMargin is kept as-is — driven by Compose SideEffect in PlayerActivityRoot
                 params.bottomMargin = 0
                 params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                 params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1681,17 +1674,16 @@ enum class ContentType {
         }
 
         val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
-params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-params.dimensionRatio = "H,16:9"
-params.matchConstraintPercentHeight = -1f
-params.topMargin = statusBarHeightPx
-params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
-playerContainer.layoutParams = params
-playerContainer.visibility = View.VISIBLE
+        params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+        params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+        params.dimensionRatio = "H,16:9"
+        params.matchConstraintPercentHeight = -1f
+        params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+        params.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
+        playerContainer.layoutParams = params
+        playerContainer.visibility = View.VISIBLE
 
         if (allEventLinks.size > 1) {
         }
@@ -2024,6 +2016,22 @@ private fun PlayerActivity.PlayerActivityRoot(
     val navBarHeight = androidx.compose.foundation.layout.WindowInsets.navigationBars
         .asPaddingValues().calculateBottomPadding()
 
+    // Single source of truth: Compose owns the status bar inset and pushes
+    // it into the XML player_container so both layers always stay in sync.
+    val statusBarHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) {
+        statusBarHeight.roundToPx()
+    }
+    androidx.compose.runtime.SideEffect {
+        if (!isLandscape) {
+            val params = activity.playerContainer.layoutParams
+                as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+            if (params.topMargin != statusBarHeightPx) {
+                params.topMargin = statusBarHeightPx
+                activity.playerContainer.layoutParams = params
+            }
+        }
+    }
+
     val isPlaying by androidx.compose.runtime.produceState(initialValue = false, player) {
         while (true) {
             value = player?.isPlaying == true
@@ -2054,8 +2062,7 @@ private fun PlayerActivity.PlayerActivityRoot(
         } else false
 
     androidx.compose.foundation.layout.Column(
-        modifier = if (isLandscape) androidx.compose.ui.Modifier.fillMaxSize()
-                   else androidx.compose.ui.Modifier.fillMaxWidth().wrapContentHeight()
+        modifier = androidx.compose.ui.Modifier.fillMaxSize()
     ) {
         if (!isLandscape) {
             val isNetworkStream = activity.contentType == PlayerActivity.ContentType.NETWORK_STREAM
@@ -2357,4 +2364,5 @@ private fun PlayerActivity.PlayerActivityRoot(
 
 }
 
-
+private val Int.dp: androidx.compose.ui.unit.Dp get() = androidx.compose.ui.unit.Dp(this.toFloat())
+private val Float.dp: androidx.compose.ui.unit.Dp get() = androidx.compose.ui.unit.Dp(this)

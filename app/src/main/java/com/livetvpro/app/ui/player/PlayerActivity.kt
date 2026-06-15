@@ -1443,14 +1443,16 @@ class PlayerActivity : BasePlayerActivity() {
         val isFavoritesSource = channelListKey == "favorites_session"
 
         if (isFavoritesSource) {
-            val favList = ChannelListCache.get("favorites_session")
-                ?.filter { it.id != newChannel.id }
-                ?: emptyList()
-            viewModel.setRelatedChannels(favList)
+            val favList = ChannelListCache.get("favorites_session") ?: emptyList()
+            viewModel.setChannelList(favList)
+            val filteredFavList = favList.filter { it.id != newChannel.id }
+            viewModel.setRelatedChannels(filteredFavList)
         } else {
             val isSports = newChannel.categoryId == "sports" || intentIsSports && previousContentType != ContentType.EVENT
             val categoryId = newChannel.categoryId.takeIf { it.isNotEmpty() } ?: intentCategoryId ?: ""
             val group = if (previousContentType == ContentType.EVENT) null else intentSelectedGroup
+
+            viewModel.loadAllChannelsForList(categoryId, newChannel.id)
 
             if (isSports) {
                 viewModel.loadRandomRelatedSports(newChannel.id)

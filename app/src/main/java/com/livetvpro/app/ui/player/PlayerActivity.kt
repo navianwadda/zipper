@@ -667,8 +667,17 @@ class PlayerActivity : BasePlayerActivity() {
             setupPlayer()
         }
         if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
-            viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
+    val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+    val isFavoritesSource = channelListKey == "favorites_session"
+    if (isFavoritesSource) {
+        val favList = ChannelListCache.get("favorites_session")
+        if (!favList.isNullOrEmpty()) {
+            viewModel.setChannelList(favList)
         }
+    } else {
+        viewModel.loadAllChannelsForList(intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: "")
+    }
+}
         playerViewRef.onResume()
         playerViewRef.player = player
     }

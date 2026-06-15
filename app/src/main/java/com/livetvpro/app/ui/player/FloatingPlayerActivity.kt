@@ -463,18 +463,23 @@ class FloatingPlayerActivity : BasePlayerActivity() {
         } else {
 
             if (contentType == ContentType.NETWORK_STREAM) {
-                val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
-                params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.bottomMargin = 0
-                params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-                params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-                params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-                params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-                params.dimensionRatio = null
+    windowInsetsController.apply {
+        show(WindowInsetsCompat.Type.statusBars())
+        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+    }
 
-                binding.playerContainer.setPadding(0, 0, 0, 0)
-                binding.playerContainer.layoutParams = params
+    val params = binding.playerContainer.layoutParams as ConstraintLayout.LayoutParams
+    params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+    params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+    params.bottomMargin = 0
+    params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+    params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+    params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+    params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+    params.dimensionRatio = null
+
+    binding.playerContainer.setPadding(0, 0, 0, 0)
+    binding.playerContainer.layoutParams = params
             } else {
                 exitFullscreen()
             }

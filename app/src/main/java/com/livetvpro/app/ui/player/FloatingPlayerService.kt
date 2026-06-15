@@ -76,7 +76,8 @@ class FloatingPlayerService : Service() {
         var networkXForwardedFor: String? = null,
         var currentLinkIndex: Int = 0,
         var channelList: List<Channel>? = null,
-        var isSports: Boolean = false
+var channelListCacheKey: String? = null,
+var isSports: Boolean = false
     )
 
     private var windowManager: WindowManager? = null
@@ -439,10 +440,11 @@ class FloatingPlayerService : Service() {
 
         if (channel != null || event != null) {
             if (useTransferredPlayer) {
-                createFloatingPlayerInstanceFromTransfer(instanceId, channel, event, restorePosition, parsedChannelList, isSports)
-            } else {
-                createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition, parsedChannelList, isSports)
-            }
+    createFloatingPlayerInstanceFromTransfer(instanceId, channel, event, restorePosition, parsedChannelList, isSports)
+} else {
+    createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition, parsedChannelList, isSports)
+}
+activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             updateNotification()
         }
 
@@ -1290,12 +1292,13 @@ class FloatingPlayerService : Service() {
                         putExtra("X_FORWARDED_FOR", inst.networkXForwardedFor ?: "")
                     } else {
                         if (currentChannel != null) putExtra("extra_channel", currentChannel)
-                        if (currentEvent != null) putExtra("extra_event", currentEvent)
-                        putExtra("extra_selected_link_index", inst?.currentLinkIndex ?: 0)
-                        putExtra("extra_is_sports", inst?.isSports ?: false)
-                        currentChannel?.categoryId?.takeIf { it.isNotEmpty() }?.let {
-                            putExtra("extra_category_id", it)
-                        }
+if (currentEvent != null) putExtra("extra_event", currentEvent)
+putExtra("extra_selected_link_index", inst?.currentLinkIndex ?: 0)
+putExtra("extra_is_sports", inst?.isSports ?: false)
+currentChannel?.categoryId?.takeIf { it.isNotEmpty() }?.let {
+    putExtra("extra_category_id", it)
+}
+inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                     }
                     putExtra("use_transferred_player", true)
                     putExtra("source_instance_id", instanceId)

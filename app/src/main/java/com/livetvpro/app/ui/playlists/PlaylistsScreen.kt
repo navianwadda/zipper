@@ -600,11 +600,14 @@ private fun AddPlaylistDialog(
         confirmButton = {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Button(
                     onClick = onDismiss,
                     shape = RoundedCornerShape(50),
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = primaryColor,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -621,6 +624,7 @@ private fun AddPlaylistDialog(
                         }
                     },
                     shape = RoundedCornerShape(50),
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = primaryColor,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -683,14 +687,17 @@ private fun EditPlaylistDialog(
         confirmButton = {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Button(
                     onClick = { onDismiss(); onDelete() },
                     shape = RoundedCornerShape(50),
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
+                        containerColor = primaryColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text("Delete", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
@@ -698,6 +705,7 @@ private fun EditPlaylistDialog(
                 Button(
                     onClick = onDismiss,
                     shape = RoundedCornerShape(50),
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = primaryColor,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -719,6 +727,7 @@ private fun EditPlaylistDialog(
                         }
                     },
                     shape = RoundedCornerShape(50),
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = primaryColor,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -761,11 +770,14 @@ private fun DeletePlaylistDialog(
         confirmButton = {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Button(
                     onClick = onDismiss,
                     shape = RoundedCornerShape(50),
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = primaryColor,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -776,9 +788,10 @@ private fun DeletePlaylistDialog(
                 Button(
                     onClick = onConfirm,
                     shape = RoundedCornerShape(50),
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
+                        containerColor = primaryColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text("Delete", fontFamily = BergenSans, fontWeight = FontWeight.Bold)

@@ -554,18 +554,23 @@ class PlayerActivity : BasePlayerActivity() {
         } else {
 
             if (contentType == ContentType.NETWORK_STREAM) {
-                val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
-                params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
-                params.bottomMargin = 0
-                params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-                params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-                params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-                params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-                params.dimensionRatio = null
+    windowInsetsController.apply {
+        show(WindowInsetsCompat.Type.statusBars())
+        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+    }
 
-                playerContainer.setPadding(0, 0, 0, 0)
-                playerContainer.layoutParams = params
+    val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams
+    params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+    params.height = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT
+    params.bottomMargin = 0
+    params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+    params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+    params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+    params.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+    params.dimensionRatio = null
+
+    playerContainer.setPadding(0, 0, 0, 0)
+    playerContainer.layoutParams = params
             } else {
                 exitFullscreen()
             }

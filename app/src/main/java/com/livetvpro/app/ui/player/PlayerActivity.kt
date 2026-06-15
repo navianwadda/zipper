@@ -760,9 +760,13 @@ class PlayerActivity : BasePlayerActivity() {
         }
 
         setupWindowFlags(isLandscape)
-        setupSystemUI(isLandscape)
+setupSystemUI(isLandscape)
 
-        applyOrientationSettings(isLandscape)
+if (contentType == ContentType.NETWORK_STREAM && !isLandscape) {
+    windowInsetsController.show(WindowInsetsCompat.Type.statusBars())
+}
+
+applyOrientationSettings(isLandscape)
 
         if (!isLandscape) {
             val params = playerContainer.layoutParams as ConstraintLayout.LayoutParams

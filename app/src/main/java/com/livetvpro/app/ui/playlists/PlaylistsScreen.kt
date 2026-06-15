@@ -556,6 +556,34 @@ private fun PlaylistCard(
 }
 
 @Composable
+private fun DialogButton(
+    text: String,
+    onClick: () -> Unit,
+    primaryColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = primaryColor,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+    ) {
+        Text(
+            text = text,
+            fontFamily = BergenSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
 private fun AddPlaylistDialog(
     isFile: Boolean,
     fileUri: Uri?,
@@ -604,18 +632,14 @@ private fun AddPlaylistDialog(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Button(
+                DialogButton(
+                    text = "Cancel",
                     onClick = onDismiss,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("Cancel", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
-                }
-                Button(
+                    primaryColor = primaryColor,
+                    modifier = Modifier.weight(1f)
+                )
+                DialogButton(
+                    text = "Add",
                     onClick = {
                         titleError = title.isBlank()
                         urlError   = !isFile && url.isBlank()
@@ -623,15 +647,9 @@ private fun AddPlaylistDialog(
                             onConfirm(title.trim(), url.trim(), isFile, url.trim())
                         }
                     },
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("Add", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
-                }
+                    primaryColor = primaryColor,
+                    modifier = Modifier.weight(1f)
+                )
             }
         },
         dismissButton = null,
@@ -691,29 +709,20 @@ private fun EditPlaylistDialog(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Button(
+                DialogButton(
+                    text = "Delete",
                     onClick = { onDismiss(); onDelete() },
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("Delete", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
-                }
-                Button(
+                    primaryColor = primaryColor,
+                    modifier = Modifier.weight(1f)
+                )
+                DialogButton(
+                    text = "Cancel",
                     onClick = onDismiss,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("Cancel", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
-                }
-                Button(
+                    primaryColor = primaryColor,
+                    modifier = Modifier.weight(1f)
+                )
+                DialogButton(
+                    text = "Update",
                     onClick = {
                         titleError = title.isBlank()
                         urlError   = !playlist.isFile && url.isBlank()
@@ -726,15 +735,9 @@ private fun EditPlaylistDialog(
                             )
                         }
                     },
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("Update", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
-                }
+                    primaryColor = primaryColor,
+                    modifier = Modifier.weight(1f)
+                )
             }
         },
         dismissButton = null,
@@ -774,28 +777,18 @@ private fun DeletePlaylistDialog(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Button(
+                DialogButton(
+                    text = "Cancel",
                     onClick = onDismiss,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("Cancel", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
-                }
-                Button(
+                    primaryColor = primaryColor,
+                    modifier = Modifier.weight(1f)
+                )
+                DialogButton(
+                    text = "Delete",
                     onClick = onConfirm,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("Delete", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
-                }
+                    primaryColor = primaryColor,
+                    modifier = Modifier.weight(1f)
+                )
             }
         },
         dismissButton = null,

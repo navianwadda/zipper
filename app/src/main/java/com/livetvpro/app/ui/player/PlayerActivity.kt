@@ -1922,12 +1922,12 @@ class PlayerActivity : BasePlayerActivity() {
         val centerMode = preferencesManager.getCenterControlsMode()
 
         fun makePendingIntent(requestCode: Int, controlType: Int) =
-            PendingIntent.getBroadcast(
-                context, requestCode,
-                Intent(ACTION_MEDIA_CONTROL).setPackage(context.packageName)
-                    .putExtra(EXTRA_CONTROL_TYPE, controlType),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            )
+    PendingIntent.getBroadcast(
+        context, requestCode,
+        Intent(ACTION_MEDIA_CONTROL).setPackage(context.packageName)
+            .putExtra(EXTRA_CONTROL_TYPE, controlType),
+        PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
 
         val playPauseAction = if (isPaused) {
             RemoteAction(

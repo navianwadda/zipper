@@ -686,9 +686,16 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun setupSystemUI() {
+        val isLandscape = DeviceUtils.isTvDevice ||
+            resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         windowInsetsController.apply {
-            hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            if (isLandscape) {
+                hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                hide(WindowInsetsCompat.Type.navigationBars())
+                show(WindowInsetsCompat.Type.statusBars())
+            }
         }
     }
 
@@ -791,10 +798,8 @@ class PlayerActivity : ComponentActivity() {
         isScreenOff = false
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         applyOrientationSettings(isLandscape)
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars     = false
-            isAppearanceLightNavigationBars = false
-        }
+        setupWindowFlags(isLandscape)
+        setupSystemUI()
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         if (player == null) setupPlayer()

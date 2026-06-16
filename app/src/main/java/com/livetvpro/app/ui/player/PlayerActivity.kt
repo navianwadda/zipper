@@ -357,12 +357,9 @@ class PlayerActivity : ComponentActivity() {
 
     @Composable
     private fun PlayerActivityRoot() {
-        if (isInPipMode) return
-
         val isLandscape     = isLandscapeState.value
         val spanCount       = resources.getInteger(R.integer.grid_column_count)
         val eventSpanCount  = resources.getInteger(R.integer.event_span_count)
-        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
         val isPlaying by produceState(initialValue = false, player) {
             while (true) { value = player?.isPlaying == true; delay(100) }
@@ -500,13 +497,15 @@ class PlayerActivity : ComponentActivity() {
             )
         }
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .then(if (!isLandscape) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier)
+        ) {
             if (!isLandscape) {
                 val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = statusBarHeight)
                         .then(
                             if (isNetworkStream) Modifier.weight(1f)
                             else Modifier.aspectRatio(16f / 9f)
@@ -518,21 +517,23 @@ class PlayerActivity : ComponentActivity() {
                         modifier    = Modifier.fillMaxSize(),
                     )
 
-                    if (errorMessage.value.isNotBlank()) {
-                        ErrorOverlay(errorMessage.value)
-                    }
+                    if (!isInPipMode) {
+                        if (errorMessage.value.isNotBlank()) {
+                            ErrorOverlay(errorMessage.value)
+                        }
 
-                    Controls(isLandscape = false)
+                        Controls(isLandscape = false)
 
-                    if (isChannelListAvailable) {
-                        ChannelListPanel(
-                            visible          = showChannelList.value,
-                            channels         = channelListItems,
-                            currentChannelId = contentId,
-                            onChannelClick   = { switchToChannel(it) },
-                            onDismiss        = { showChannelList.value = false },
-                            modifier         = Modifier.fillMaxSize(),
-                        )
+                        if (isChannelListAvailable) {
+                            ChannelListPanel(
+                                visible          = showChannelList.value,
+                                channels         = channelListItems,
+                                currentChannelId = contentId,
+                                onChannelClick   = { switchToChannel(it) },
+                                onDismiss        = { showChannelList.value = false },
+                                modifier         = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                 }
             } else {
@@ -543,52 +544,54 @@ class PlayerActivity : ComponentActivity() {
                         modifier    = Modifier.fillMaxSize(),
                     )
 
-                    if (errorMessage.value.isNotBlank()) {
-                        ErrorOverlay(errorMessage.value)
-                    }
+                    if (!isInPipMode) {
+                        if (errorMessage.value.isNotBlank()) {
+                            ErrorOverlay(errorMessage.value)
+                        }
 
-                    Controls(isLandscape = true)
+                        Controls(isLandscape = true)
 
-                    if (linksState.value.size > 1) {
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible  = controlsState.isVisible && !controlsState.isLocked,
-                            enter    = fadeIn(),
-                            exit     = fadeOut(),
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 44.dp),
-                        ) {
-                            PlayerScreen(
-                                isLandscape          = true,
-                                relatedContentState  = RelatedContentState.Hidden,
-                                links                = linksState.value,
-                                selectedLinkIndex    = selectedLinkState.value,
-                                messageBanner        = "",
-                                messageBannerUrl     = "",
-                                onLinkClick          = { link, idx -> switchToLink(link, idx) },
-                                onChannelClick       = { switchToChannel(it) },
-                                onEventClick         = { event, linkIdx -> switchToEventFromLiveEvent(event, linkIdx) },
-                                onMessageBannerClick = {},
-                                spanCount            = spanCount,
-                                eventSpanCount       = eventSpanCount,
+                        if (linksState.value.size > 1) {
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible  = controlsState.isVisible && !controlsState.isLocked,
+                                enter    = fadeIn(),
+                                exit     = fadeOut(),
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 44.dp),
+                            ) {
+                                PlayerScreen(
+                                    isLandscape          = true,
+                                    relatedContentState  = RelatedContentState.Hidden,
+                                    links                = linksState.value,
+                                    selectedLinkIndex    = selectedLinkState.value,
+                                    messageBanner        = "",
+                                    messageBannerUrl     = "",
+                                    onLinkClick          = { link, idx -> switchToLink(link, idx) },
+                                    onChannelClick       = { switchToChannel(it) },
+                                    onEventClick         = { event, linkIdx -> switchToEventFromLiveEvent(event, linkIdx) },
+                                    onMessageBannerClick = {},
+                                    spanCount            = spanCount,
+                                    eventSpanCount       = eventSpanCount,
+                                )
+                            }
+                        }
+
+                        if (isChannelListAvailable) {
+                            ChannelListPanel(
+                                visible          = showChannelList.value,
+                                channels         = channelListItems,
+                                currentChannelId = contentId,
+                                onChannelClick   = { switchToChannel(it) },
+                                onDismiss        = { showChannelList.value = false },
+                                modifier         = Modifier.fillMaxSize(),
                             )
                         }
-                    }
-
-                    if (isChannelListAvailable) {
-                        ChannelListPanel(
-                            visible          = showChannelList.value,
-                            channels         = channelListItems,
-                            currentChannelId = contentId,
-                            onChannelClick   = { switchToChannel(it) },
-                            onDismiss        = { showChannelList.value = false },
-                            modifier         = Modifier.fillMaxSize(),
-                        )
                     }
                 }
             }
 
-            if (!isLandscape && contentType != ContentType.NETWORK_STREAM) {
+            if (!isLandscape && !isInPipMode && contentType != ContentType.NETWORK_STREAM) {
                 PlayerScreen(
                     isLandscape          = false,
                     relatedContentState  = relatedContentState.value,
@@ -612,13 +615,13 @@ class PlayerActivity : ComponentActivity() {
             }
         }
 
-        if (showSettingsDialog.value && player != null) {
+        if (!isInPipMode && showSettingsDialog.value && player != null) {
             PlayerSettingsDialog(
                 player    = player!!,
                 onDismiss = { showSettingsDialog.value = false; isShowingSettingsDialog = false },
             )
         }
-        if (showFloatingDialog.value) {
+        if (!isInPipMode && showFloatingDialog.value) {
             FloatingPlayerDialog(
                 preferencesManager = preferencesManager,
                 onDismiss          = { showFloatingDialog.value = false },

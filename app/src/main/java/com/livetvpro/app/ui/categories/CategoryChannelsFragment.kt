@@ -148,7 +148,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
                     CategoryChannelsScreen(
                         viewModel = viewModel,
                         spanCount = spanCount,
-                        isTvDevice = DeviceUtils.isTvDevice,
+                        isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
                         onChannelClick = { channel, linkIndex ->
                             launchPlayer(channel, linkIndex)
                         },
@@ -286,7 +286,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if (DeviceUtils.isTvDevice) setupTvNumpadSearch(view)
+        if (DeviceUtils.isTvDevice || DeviceUtils.isTablet) setupTvNumpadSearch(view)
     }
 
     private fun setupTvNumpadSearch(rootView: View) {
@@ -336,7 +336,7 @@ class CategoryChannelsFragment : Fragment(), SearchableFragment, Refreshable {
         val floatingEnabled = preferencesManager.isFloatingPlayerEnabled()
         val hasPermission = FloatingPlayerHelper.hasOverlayPermission(requireContext())
 
-        if (DeviceUtils.isTvDevice) {
+        if (DeviceUtils.isTvDevice || DeviceUtils.isTablet) {
             PlayerActivity.startWithChannel(
                 requireContext(), channel, linkIndex,
                 categoryId = currentCategoryId,

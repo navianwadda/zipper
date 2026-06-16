@@ -550,7 +550,7 @@ class PlayerActivity : ComponentActivity() {
                     Controls(isLandscape = true)
 
                     if (linksState.value.size > 1) {
-                        AnimatedVisibility(
+                        androidx.compose.animation.AnimatedVisibility(
                             visible  = controlsState.isVisible && !controlsState.isLocked,
                             enter    = fadeIn(),
                             exit     = fadeOut(),
@@ -1614,7 +1614,7 @@ private inline fun <reified T : Parcelable> Bundle.parcelableArrayListCompat(key
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelableArrayList(key, T::class.java)
     else @Suppress("DEPRECATION") getParcelableArrayList<T>(key)
 
-private fun com.livetvpro.app.data.models.Channel.Link.toLiveEventLink() = com.livetvpro.app.data.models.LiveEventLink(
+private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.livetvpro.app.data.models.LiveEventLink(
     quality       = quality,
     url           = url,
     cookie        = cookie,

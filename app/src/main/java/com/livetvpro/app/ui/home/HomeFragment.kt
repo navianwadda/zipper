@@ -77,7 +77,7 @@ class HomeFragment : Fragment(), SearchableFragment, Refreshable {
                 HomeScreen(
                     viewModel = viewModel,
                     spanCount = spanCount,
-                    isTvDevice = DeviceUtils.isTvDevice,
+                    isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
                     onCategoryClick = { category ->
                         val bundle = bundleOf(
                             "categoryId" to category.id,

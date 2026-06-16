@@ -78,7 +78,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
                     SportsScreen(
                         viewModel = viewModel,
                         spanCount = spanCount,
-                        isTvDevice = DeviceUtils.isTvDevice,
+                        isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
                         onChannelClick = { channel, linkIndex ->
                             launchPlayer(channel, linkIndex)
                         },
@@ -90,7 +90,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if (DeviceUtils.isTvDevice) setupTvNumpadSearch(view)
+        if (DeviceUtils.isTvDevice || DeviceUtils.isTablet) setupTvNumpadSearch(view)
     }
 
     private fun setupTvNumpadSearch(rootView: View) {
@@ -144,7 +144,7 @@ class SportsFragment : Fragment(), SearchableFragment, Refreshable {
         val cacheKey = "sports_${channel.id}"
         if (channelList.isNotEmpty()) ChannelListCache.put(cacheKey, channelList)
 
-        if (DeviceUtils.isTvDevice) {
+        if (DeviceUtils.isTvDevice || DeviceUtils.isTablet) {
             PlayerActivity.startWithChannel(requireContext(), channel, linkIndex, isSports = true, channelListCacheKey = cacheKey)
             return
         }

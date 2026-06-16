@@ -1,407 +1,985 @@
 package com.livetvpro.app.ui.player.compose
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.material3.ripple
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.livetvpro.app.R
-import com.livetvpro.app.data.models.Channel
-import com.livetvpro.app.data.models.LiveEvent
-import com.livetvpro.app.data.models.LiveEventLink
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.ui.res.painterResource
 
-private val BergenSans = FontFamily(Font(R.font.bergen_sans))
-private val CardLogoBg  = Color(0x80000000)
+private val exoEnterAnim = fadeIn(tween(150, easing = LinearEasing))
+private val exoExitAnim  = fadeOut(tween(150, easing = LinearEasing))
 
-// ---------------------------------------------------------------------------
-// Sealed state types
-// ---------------------------------------------------------------------------
-
-sealed class RelatedContentState {
-    object Hidden  : RelatedContentState()
-    object Loading : RelatedContentState()
-    data class Channels(val items: List<Channel>)   : RelatedContentState()
-    data class Events(val items: List<LiveEvent>)   : RelatedContentState()
-}
-
-// ---------------------------------------------------------------------------
-// PlayerScreen — the full below-the-fold UI (links row + related content)
-// ---------------------------------------------------------------------------
-
-/**
- * The scrollable content area below the player surface.
- *
- * Manages the link chips, message banner, and related content grids.
- */
-@Composable
-fun PlayerScreen(
-    isLandscape: Boolean,
-    relatedContentState: RelatedContentState,
-    links: List<LiveEventLink>,
-    selectedLinkIndex: Int,
-    messageBanner: String,
-    messageBannerUrl: String,
-    onLinkClick: (LiveEventLink, Int) -> Unit,
-    onChannelClick: (Channel) -> Unit,
-    onEventClick: (LiveEvent, Int) -> Unit,
-    onMessageBannerClick: () -> Unit,
-    spanCount: Int = 3,
-    eventSpanCount: Int = 2,
-    modifier: Modifier = Modifier,
+class PlayerControlsState(
+    initialVisible: Boolean = true,
+    val autoHideDelay: Long = 5000L,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .background(
-                if (isLandscape) Color.Transparent
-                else MaterialTheme.colorScheme.surface
-            )
-    ) {
-        if (links.size > 1) {
-            LinksRow(
-                links         = links,
-                selectedIndex = selectedLinkIndex,
-                onLinkClick   = onLinkClick,
-                background    = if (isLandscape) Color.Transparent
-                                else MaterialTheme.colorScheme.surface,
-            )
-        }
-        if (!isLandscape && messageBanner.isNotBlank()) {
-            MessageBanner(
-                message = messageBanner,
-                onClick = onMessageBannerClick,
-            )
-        }
-        when (relatedContentState) {
-            is RelatedContentState.Hidden   -> Unit
-            is RelatedContentState.Loading  -> RelatedLoadingRow()
-            is RelatedContentState.Channels -> RelatedChannelsGrid(
-                channels    = relatedContentState.items,
-                spanCount   = spanCount,
-                onChannelClick = onChannelClick,
-                background  = if (isLandscape) Color.Transparent
-                              else MaterialTheme.colorScheme.surface,
-            )
-            is RelatedContentState.Events   -> RelatedEventsGrid(
-                events      = relatedContentState.items,
-                spanCount   = eventSpanCount,
-                onEventClick = onEventClick,
-            )
+    var isVisible by mutableStateOf(initialVisible)
+        private set
+
+    var isLocked by mutableStateOf(false)
+
+    var isLockOverlayVisible by mutableStateOf(false)
+        private set
+
+    private var hideJob: Job? = null
+    private var lockOverlayHideJob: Job? = null
+
+    fun show(coroutineScope: CoroutineScope) {
+        hideJob?.cancel()
+        isVisible = true
+        if (!isLocked) {
+            hideJob = coroutineScope.launch {
+                delay(autoHideDelay)
+                isVisible = false
+            }
         }
     }
-}
 
-// ---------------------------------------------------------------------------
-// LinksRow / LandscapeLinksRow
-// ---------------------------------------------------------------------------
+    fun showPersistent() {
+        hideJob?.cancel()
+        isVisible = true
+    }
 
-@Composable
-private fun LinksRow(
-    links: List<LiveEventLink>,
-    selectedIndex: Int,
-    onLinkClick: (LiveEventLink, Int) -> Unit,
-    modifier: Modifier = Modifier,
-    background: Color = MaterialTheme.colorScheme.surface,
-) {
-    AnimatedVisibility(
-        visible  = links.size > 1,
-        enter    = fadeIn(),
-        exit     = fadeOut(),
-        modifier = modifier,
-    ) {
-        LazyRow(
-            contentPadding      = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(background),
-        ) {
-            itemsIndexed(links) { index, link ->
-                LinkChip(
-                    label      = link.quality,
-                    isSelected = index == selectedIndex,
-                    onClick    = { onLinkClick(link, index) },
-                )
+    fun hide() {
+        if (!isLocked) {
+            hideJob?.cancel()
+            isVisible = false
+        }
+    }
+
+    fun toggle(coroutineScope: CoroutineScope) {
+        if (isLocked) toggleLockOverlay(coroutineScope)
+        else if (isVisible) hide() else show(coroutineScope)
+    }
+
+    fun lock() {
+        isLocked = true
+        hideJob?.cancel()
+        isVisible = false
+        isLockOverlayVisible = false
+    }
+
+    fun unlock(coroutineScope: CoroutineScope) {
+        lockOverlayHideJob?.cancel()
+        isLocked = false
+        isLockOverlayVisible = false
+        show(coroutineScope)
+    }
+
+    private fun toggleLockOverlay(coroutineScope: CoroutineScope) {
+        lockOverlayHideJob?.cancel()
+        isLockOverlayVisible = !isLockOverlayVisible
+        if (isLockOverlayVisible) {
+            lockOverlayHideJob = coroutineScope.launch {
+                delay(autoHideDelay)
+                isLockOverlayVisible = false
             }
         }
     }
 }
 
 @Composable
-fun LandscapeLinksRow(
-    links: List<LiveEventLink>,
-    selectedIndex: Int,
-    onLinkClick: (LiveEventLink, Int) -> Unit,
+fun PlayerControls(
     modifier: Modifier = Modifier,
+    state: PlayerControlsState = remember { PlayerControlsState() },
+    isPlaying: Boolean,
+    isMuted: Boolean,
+    currentPosition: Long,
+    duration: Long,
+    bufferedPosition: Long,
+    channelName: String,
+    showPipButton: Boolean,
+    showAspectRatioButton: Boolean,
+    isLandscape: Boolean,
+    isTvMode: Boolean = false,
+    centerControlsMode: Int = 0,
+    isNetworkStream: Boolean = false,
+    onBackClick: () -> Unit,
+    onPipClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onMuteClick: () -> Unit,
+    onLockClick: (Boolean) -> Unit,
+    onPlayPauseClick: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onRewindClick: () -> Unit,
+    onForwardClick: () -> Unit,
+    onPrevClick: () -> Unit = {},
+    onNextClick: () -> Unit = {},
+    onAspectRatioClick: () -> Unit,
+    onFullscreenClick: () -> Unit,
+    onChannelListClick: () -> Unit = {},
+    isChannelListAvailable: Boolean = false,
+    onVolumeSwipe: (Int) -> Unit = {},
+    onBrightnessSwipe: (Int) -> Unit = {},
+    initialVolume: Int = 100,
+    initialBrightness: Int = 0,
 ) {
-    if (links.size <= 1) return
-    LazyRow(
-        contentPadding        = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier              = modifier.fillMaxWidth(),
-    ) {
-        itemsIndexed(links) { index, link ->
-            LinkChip(
-                label      = link.quality,
-                isSelected = index == selectedIndex,
-                onClick    = { onLinkClick(link, index) },
-            )
+    val scope = rememberCoroutineScope()
+
+    var gestureVolume     by remember { mutableIntStateOf(initialVolume) }
+    var gestureBrightness by remember { mutableIntStateOf(initialBrightness) }
+    var showVolumeOsd     by remember { mutableStateOf(false) }
+    var showBrightnessOsd by remember { mutableStateOf(false) }
+
+    var isTvFocusWithinControls    by remember { mutableStateOf(false) }
+    var isMouseHoverWithinControls by remember { mutableStateOf(false) }
+
+    val shouldKeepControlsOpen = isTvFocusWithinControls || isMouseHoverWithinControls
+
+    LaunchedEffect(shouldKeepControlsOpen) {
+        if (shouldKeepControlsOpen) {
+            state.showPersistent()
+        } else {
+            if (state.isVisible && !state.isLocked) {
+                state.show(scope)
+            }
         }
     }
-}
 
-@Composable
-private fun LinkChip(
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val bg = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        focused    -> MaterialTheme.colorScheme.primaryContainer
-        else       -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val contentColor = when {
-        isSelected -> MaterialTheme.colorScheme.onPrimary
-        else       -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Row(
-        verticalAlignment     = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(bg)
-            .clickable(onClick = onClick)
-            .onFocusChanged { focused = it.isFocused }
-            .focusable()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    ) {
-        if (isSelected) {
-            Icon(
-                imageVector    = Icons.Default.Check,
-                contentDescription = null,
-                tint           = contentColor,
-                modifier       = Modifier.size(14.dp),
+    Box(modifier = modifier.fillMaxSize()) {
+
+        if (!isTvMode) {
+            GestureOverlay(
+                modifier            = Modifier
+                    .fillMaxSize()
+                    .pointerInput("mouse-reveal") {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val isMouse = event.changes.any { it.type == PointerType.Mouse }
+                                if (isMouse && (event.type == PointerEventType.Move ||
+                                    event.type == PointerEventType.Enter)
+                                ) {
+                                    state.show(scope)
+                                }
+                            }
+                        }
+                    },
+                gestureState        = GestureState(
+                    volumePercent     = gestureVolume,
+                    brightnessPercent = gestureBrightness,
+                ),
+                isLocked            = state.isLocked,
+                onVolumeChange      = { v -> gestureVolume = v; onVolumeSwipe(v) },
+                onBrightnessChange  = { b -> gestureBrightness = b; onBrightnessSwipe(b) },
+                onTap               = { state.show(scope) },
+                onShowVolumeOsd     = { show -> showVolumeOsd = show },
+                onShowBrightnessOsd = { show -> showBrightnessOsd = show },
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput("tap") {
+                        detectTapGestures(onTap = { state.show(scope) })
+                    }
+                    .pointerInput("mouse-reveal") {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.type == PointerEventType.Move ||
+                                    event.type == PointerEventType.Enter
+                                ) {
+                                    state.show(scope)
+                                }
+                            }
+                        }
+                    }
             )
         }
-        Text(
-            text       = label,
-            color      = contentColor,
-            fontFamily = BergenSans,
-            fontSize   = 13.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            maxLines   = 1,
-        )
-    }
-}
 
-// ---------------------------------------------------------------------------
-// MessageBanner
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun MessageBanner(
-    message: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val bannerShape = RoundedCornerShape(6.dp)
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 8.dp, end = 8.dp, top = 6.dp)
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.16f), bannerShape)
-            .border(1.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.55f), bannerShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 5.dp),
-    ) {
-        Text(
-            text     = message,
-            modifier = Modifier
-                .fillMaxWidth()
-                .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
-            style      = MaterialTheme.typography.bodyMedium,
-            fontFamily = BergenSans,
-            color      = MaterialTheme.colorScheme.onSurface,
-            maxLines   = 1,
-            overflow   = TextOverflow.Clip,
-        )
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Related content rows
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun RelatedLoadingRow(modifier: Modifier = Modifier) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp),
-    ) {
-        CircularProgressIndicator(
-            modifier    = Modifier.size(20.dp),
-            strokeWidth = 2.dp,
-        )
-    }
-}
-
-@OptIn(ExperimentalGlideComposeApi::class)
-@Composable
-private fun RelatedChannelsGrid(
-    channels: List<Channel>,
-    spanCount: Int,
-    onChannelClick: (Channel) -> Unit,
-    modifier: Modifier = Modifier,
-    background: Color = MaterialTheme.colorScheme.surface,
-) {
-    if (channels.isEmpty()) return
-    LazyVerticalGrid(
-        columns               = GridCells.Fixed(spanCount),
-        contentPadding        = PaddingValues(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(0.dp),
-        verticalArrangement   = Arrangement.spacedBy(0.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .background(background),
-    ) {
-        items(channels, key = { it.id }) { channel ->
-            RelatedChannelCard(
-                channel = channel,
-                onClick = { onChannelClick(channel) },
+        if (state.isLocked) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput("lock-tap") {
+                        detectTapGestures(onTap = { state.toggle(scope) })
+                    }
+                    .pointerInput("lock-mouse-reveal") {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if ((event.type == PointerEventType.Move ||
+                                     event.type == PointerEventType.Enter) &&
+                                    !state.isLockOverlayVisible
+                                ) {
+                                    state.toggle(scope)
+                                }
+                            }
+                        }
+                    }
             )
         }
-    }
-}
 
-@OptIn(ExperimentalGlideComposeApi::class)
-@Composable
-private fun RelatedChannelCard(
-    channel: Channel,
-    onClick: () -> Unit,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue  = if (focused) 1.05f else 1f,
-        animationSpec = tween(150),
-        label        = "scale",
-    )
-    Card(
-        onClick    = onClick,
-        colors     = CardDefaults.cardColors(),
-        shape      = RoundedCornerShape(12.dp),
-        elevation  = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier   = Modifier
-            .padding(4.dp)
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .scale(scale)
-            .onFocusChanged { focused = it.isFocused }
-            .focusable(),
-    ) {
-        Column(
-            modifier            = Modifier.fillMaxWidth().padding(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        AnimatedVisibility(
+            visible = state.isVisible && !state.isLocked,
+            enter   = exoEnterAnim,
+            exit    = exoExitAnim,
+        ) {
+            PlayerControlsContent(
+                isPlaying              = isPlaying,
+                isMuted                = isMuted,
+                currentPosition        = currentPosition,
+                duration               = duration,
+                bufferedPosition       = bufferedPosition,
+                channelName            = channelName,
+                showPipButton          = showPipButton,
+                showAspectRatioButton  = showAspectRatioButton,
+                isLandscape            = isLandscape,
+                isTvMode               = isTvMode,
+                centerControlsMode     = centerControlsMode,
+                isNetworkStream        = isNetworkStream,
+                onBackClick            = onBackClick,
+                onPipClick             = onPipClick,
+                onSettingsClick        = onSettingsClick,
+                onMuteClick            = onMuteClick,
+                onLockClick            = { state.lock(); onLockClick(true) },
+                onPlayPauseClick       = onPlayPauseClick,
+                onSeek                 = onSeek,
+                onRewindClick          = onRewindClick,
+                onForwardClick         = onForwardClick,
+                onPrevClick            = onPrevClick,
+                onNextClick            = onNextClick,
+                onAspectRatioClick     = onAspectRatioClick,
+                onFullscreenClick      = onFullscreenClick,
+                onChannelListClick     = onChannelListClick,
+                isChannelListAvailable = isChannelListAvailable,
+                onInteraction          = { state.show(scope) },
+                onToggle               = { state.toggle(scope) },
+                onTvFocusWithinControls    = { isTvFocusWithinControls = it },
+                onMouseHoverWithinControls = { if (!isTvMode) isMouseHoverWithinControls = it },
+            )
+        }
+
+        AnimatedVisibility(
+            visible = state.isLockOverlayVisible,
+            enter   = exoEnterAnim,
+            exit    = exoExitAnim,
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .padding(2.dp),
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .pointerInput("lock-overlay-dismiss") {
+                        detectTapGestures(onTap = { state.toggle(scope) })
+                    }
             ) {
+                val lockInteractionSource = remember { MutableInteractionSource() }
+                var isUnlockFocused     by remember { mutableStateOf(false) }
+                val isUnlockHovered     by lockInteractionSource.collectIsHoveredAsState()
+                val isUnlockHighlighted = isUnlockFocused || isUnlockHovered
+                val unlockFocusRequester= remember { FocusRequester() }
+
+                LaunchedEffect(Unit) { runCatching { unlockFocusRequester.requestFocus() } }
+
                 Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(CardLogoBg),
+                        .align(Alignment.TopStart)
+                        .padding(start = 4.dp, top = 4.dp)
+                        .size(40.dp)
+                        .hoverable(interactionSource = lockInteractionSource)
+                        .focusRequester(unlockFocusRequester)
+                        .focusable(interactionSource = lockInteractionSource)
+                        .onFocusChanged { isUnlockFocused = it.isFocused }
+                        .onKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyUp &&
+                                (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                            ) {
+                                state.unlock(scope); onLockClick(false); true
+                            } else false
+                        }
+                        .clickable(
+                            interactionSource = lockInteractionSource,
+                            indication        = ripple(bounded = true, color = Color.White.copy(alpha = 0.25f)),
+                            onClick           = { state.unlock(scope); onLockClick(false) },
+                        )
+                        .then(
+                            if (isUnlockHighlighted) Modifier.background(
+                                Color.White.copy(alpha = 0.18f),
+                                androidx.compose.foundation.shape.CircleShape,
+                            ) else Modifier
+                        )
                 ) {
-                    GlideImage(
-                        model              = channel.logoUrl.takeIf { it.isNotBlank() },
-                        contentDescription = channel.name,
-                        contentScale       = ContentScale.Crop,
-                        modifier           = Modifier.fillMaxSize(),
-                    ) {
-                        it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .placeholder(R.mipmap.ic_launcher_round)
-                            .error(R.mipmap.ic_launcher_round)
-                            .fallback(R.mipmap.ic_launcher_round)
+                    Icon(
+                        painter            = painterResource(R.drawable.ic_lock_closed),
+                        contentDescription = "Unlock controls",
+                        tint               = if (isUnlockHighlighted) Color(0xFFEF4444) else Color.White,
+                        modifier           = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+
+        VolumeOsd(
+            visible  = showVolumeOsd,
+            volume   = gestureVolume,
+            modifier = Modifier.align(Alignment.Center),
+        )
+        BrightnessOsd(
+            visible    = showBrightnessOsd,
+            brightness = gestureBrightness,
+            modifier   = Modifier.align(Alignment.Center),
+        )
+    }
+}
+
+private val BergenSans = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(R.font.bergen_sans)
+)
+
+@Composable
+private fun PlayerControlsContent(
+    isPlaying: Boolean,
+    isMuted: Boolean,
+    currentPosition: Long,
+    duration: Long,
+    bufferedPosition: Long,
+    channelName: String,
+    showPipButton: Boolean,
+    showAspectRatioButton: Boolean,
+    isLandscape: Boolean,
+    isTvMode: Boolean,
+    centerControlsMode: Int = 0,
+    isNetworkStream: Boolean = false,
+    onBackClick: () -> Unit,
+    onPipClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onMuteClick: () -> Unit,
+    onLockClick: () -> Unit,
+    onPlayPauseClick: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onRewindClick: () -> Unit,
+    onForwardClick: () -> Unit,
+    onPrevClick: () -> Unit = {},
+    onNextClick: () -> Unit = {},
+    onAspectRatioClick: () -> Unit,
+    onFullscreenClick: () -> Unit,
+    onChannelListClick: () -> Unit,
+    isChannelListAvailable: Boolean,
+    onInteraction: () -> Unit,
+    onToggle: () -> Unit = {},
+    onTvFocusWithinControls: (Boolean) -> Unit = {},
+    onMouseHoverWithinControls: (Boolean) -> Unit = {},
+) {
+    val playPauseFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        if (isTvMode) {
+            delay(160)
+            runCatching { playPauseFocusRequester.requestFocus() }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onFocusChanged { onTvFocusWithinControls(it.hasFocus) }
+            .pointerInput("controls-tap-toggle") {
+                detectTapGestures(onTap = { onToggle() })
+            }
+            .pointerInput("controls-hover") {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val isMouse = event.changes.any { it.type == PointerType.Mouse }
+                        if (isMouse) {
+                            when (event.type) {
+                                PointerEventType.Enter,
+                                PointerEventType.Move -> onMouseHoverWithinControls(true)
+                                PointerEventType.Exit -> onMouseHoverWithinControls(false)
+                                else -> {}
+                            }
+                        }
                     }
                 }
             }
-            Text(
-                text       = channel.name,
-                fontFamily = BergenSans,
-                fontWeight = FontWeight.Bold,
-                fontSize   = 13.sp,
-                color      = MaterialTheme.colorScheme.onSurface,
-                textAlign  = TextAlign.Center,
-                maxLines   = 1,
-                overflow   = TextOverflow.Clip,
-                modifier   = Modifier
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent)
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            BoxWithConstraints(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .basicMarquee(iterations = Int.MAX_VALUE),
-            )
+                    .padding(start = 4.dp, end = 4.dp, top = 0.dp, bottom = 4.dp),
+            ) {
+                val isCompact = maxWidth < 360.dp
+                val topIconSize = when {
+                    isTvMode    -> 44
+                    isLandscape -> 40
+                    isCompact   -> 32
+                    else        -> 40
+                }
+                val topTitleSize = when {
+                    isTvMode    -> 18.sp
+                    isLandscape -> 16.sp
+                    isCompact   -> 13.sp
+                    else        -> 16.sp
+                }
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start,
+                ) {
+                    PlayerIconButton(
+                        onClick            = { onBackClick(); onInteraction() },
+                        iconRes            = R.drawable.ic_arrow_back,
+                        contentDescription = "Back",
+                        size               = topIconSize,
+                        isTvMode           = isTvMode,
+                    )
+                    Text(
+                        text       = channelName,
+                        color      = Color.White,
+                        fontSize   = topTitleSize,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = BergenSans,
+                        maxLines   = 1,
+                        overflow   = TextOverflow.Ellipsis,
+                        modifier   = Modifier
+                            .weight(1f)
+                            .padding(start = 12.dp),
+                    )
+                    if (showPipButton) {
+                        PlayerIconButton(
+                            onClick            = { onPipClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_pip,
+                            contentDescription = "Picture in Picture",
+                            size               = topIconSize,
+                            isTvMode           = isTvMode,
+                        )
+                    }
+                    PlayerIconButton(
+                        onClick            = { onSettingsClick(); onInteraction() },
+                        iconRes            = R.drawable.ic_settings,
+                        contentDescription = "Settings",
+                        size               = topIconSize,
+                        isTvMode           = isTvMode,
+                    )
+                    PlayerIconButton(
+                        onClick            = { onMuteClick(); onInteraction() },
+                        iconRes            = if (isMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_up,
+                        contentDescription = if (isMuted) "Unmute" else "Mute",
+                        size               = topIconSize,
+                        isTvMode           = isTvMode,
+                    )
+                    if (!isTvMode) {
+                        PlayerIconButton(
+                            onClick            = { onLockClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_lock_open,
+                            contentDescription = "Lock controls",
+                            size               = topIconSize,
+                            modifier           = Modifier.padding(start = 4.dp),
+                            isTvMode           = isTvMode,
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 8.dp, bottom = 0.dp),
+            ) {
+                val isCompactBottom = maxWidth < 360.dp
+                Column(modifier = Modifier.fillMaxWidth()) {
+                ExoPlayerTimeBar(
+                    currentPosition  = currentPosition,
+                    duration         = duration,
+                    bufferedPosition = bufferedPosition,
+                    onSeek           = { pos -> onSeek(pos); onInteraction() },
+                    isTvMode         = isTvMode,
+                    isCompact        = isCompactBottom,
+                    modifier         = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                )
+
+                val showSeeks = centerControlsMode == 0 || centerControlsMode == 1
+                val showNav   = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
+
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                ) {
+                    val isCompact = maxWidth < 360.dp
+                    val slotSize = when {
+                        isTvMode    -> 44
+                        isLandscape -> 40
+                        isCompact   -> 32
+                        else        -> 36
+                    }
+                    val seekSize = when {
+                        isTvMode    -> 48
+                        isLandscape -> 48
+                        isCompact   -> 36
+                        else        -> 40
+                    }
+                    val playSize = when {
+                        isTvMode    -> 64
+                        isLandscape -> 64
+                        isCompact   -> 48
+                        else        -> 56
+                    }
+                    val spacing = when {
+                        isLandscape -> 8.dp
+                        isCompact   -> 4.dp
+                        else        -> 6.dp
+                    }
+
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment     = Alignment.CenterVertically,
+                    ) {
+                        if (showAspectRatioButton) {
+                            PlayerIconButton(
+                                onClick            = { onAspectRatioClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_aspect_ratio,
+                                contentDescription = "Aspect ratio",
+                                size               = slotSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if (showNav) {
+                            PlayerIconButton(
+                                onClick            = { onPrevClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_prev_channel,
+                                contentDescription = "Previous channel",
+                                size               = seekSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if (showSeeks) {
+                            PlayerIconButton(
+                                onClick            = { onRewindClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_backward,
+                                contentDescription = "Rewind 10 seconds",
+                                size               = seekSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        PlayerIconButton(
+                            onClick            = { onPlayPauseClick(); onInteraction() },
+                            iconRes            = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            size               = playSize,
+                            modifier           = Modifier
+                                .padding(end = spacing)
+                                .focusRequester(playPauseFocusRequester),
+                            isTvMode           = isTvMode,
+                        )
+
+                        if (showSeeks) {
+                            PlayerIconButton(
+                                onClick            = { onForwardClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_forward,
+                                contentDescription = "Forward 10 seconds",
+                                size               = seekSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if (showNav) {
+                            PlayerIconButton(
+                                onClick            = { onNextClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_next_channel,
+                                contentDescription = "Next channel",
+                                size               = seekSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if ((isLandscape || isTvMode) && isChannelListAvailable) {
+                            PlayerIconButton(
+                                onClick            = { onChannelListClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_list,
+                                contentDescription = "Channel list",
+                                size               = slotSize,
+                                modifier           = Modifier.padding(end = spacing),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        if (!isTvMode) {
+                            PlayerIconButton(
+                                onClick            = { onFullscreenClick(); onInteraction() },
+                                iconRes            = if (isLandscape) R.drawable.ic_fullscreen_exit
+                                                     else R.drawable.ic_fullscreen,
+                                contentDescription = "Toggle fullscreen",
+                                size               = slotSize,
+                                isTvMode           = isTvMode,
+                            )
+                        }
+                    }
+                }
+
+                if (isTvMode) TvRemoteHintBar(isCompact = isCompactBottom)
+                } // Column
+            } // BoxWithConstraints
         }
     }
 }
 
 @Composable
-private fun RelatedEventsGrid(
-    events: List<LiveEvent>,
-    spanCount: Int,
-    onEventClick: (LiveEvent, Int) -> Unit,
+private fun TvRemoteHintBar(isCompact: Boolean = false) {
+    val hints = listOf(
+        "◀▶"    to "Seek",
+        "▼"     to "Channels",
+        "CH+/−" to "Prev / Next",
+        "OK"    to "Play / Pause",
+        "BACK"  to "Close / Exit",
+    )
+    val hintFontSize = if (isCompact) 9.sp else 10.sp
+
+    @Composable
+    fun HintRow(items: List<Pair<String, String>>) {
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment     = Alignment.CenterVertically,
+        ) {
+            items.forEachIndexed { i, (key, label) ->
+                if (i > 0) Text("  ·  ", color = Color.White.copy(alpha = 0.3f), fontSize = hintFontSize)
+                Text(text = key,       color = Color(0xFFEF4444),              fontSize = hintFontSize, fontWeight = FontWeight.Bold, fontFamily = BergenSans)
+                Text(text = " $label", color = Color.White.copy(alpha = 0.55f), fontSize = hintFontSize, fontFamily = BergenSans)
+            }
+        }
+    }
+
+    Column(
+        modifier              = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp, start = 4.dp, end = 4.dp),
+        horizontalAlignment   = Alignment.CenterHorizontally,
+        verticalArrangement   = Arrangement.spacedBy(2.dp),
+    ) {
+        if (isCompact) {
+            // Two rows: first 3 hints, last 2 hints
+            HintRow(hints.take(3))
+            HintRow(hints.drop(3))
+        } else {
+            HintRow(hints)
+        }
+    }
+}
+
+@Composable
+internal fun PlayerIconButton(
+    onClick: () -> Unit,
+    iconRes: Int,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    size: Int = 40,
+    tint: Color = Color.White,
+    isTvMode: Boolean = false,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    var isFocused by remember { mutableStateOf(false) }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val isHighlighted = isFocused || isHovered
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size.dp)
+            .hoverable(interactionSource = interactionSource)
+            .focusable(interactionSource = interactionSource)
+            .onFocusChanged { isFocused = it.isFocused }
+            .then(
+                if (isTvMode) Modifier.onKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyUp && event.key == Key.DirectionCenter) {
+                        onClick(); true
+                    } else false
+                } else Modifier
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication        = ripple(bounded = true, color = Color.White.copy(alpha = 0.25f)),
+                onClick           = onClick,
+            )
+            .then(
+                if (isHighlighted) Modifier.background(
+                    Color.White.copy(alpha = 0.18f),
+                    androidx.compose.foundation.shape.CircleShape,
+                ) else Modifier
+            )
+    ) {
+        Icon(
+            painter            = painterResource(iconRes),
+            contentDescription = contentDescription,
+            tint               = if (isHighlighted) Color(0xFFEF4444) else tint,
+            modifier           = Modifier.size((size * 0.6f).toInt().dp),
+        )
+    }
+}
+
+@Composable
+private fun ExoPlayerTimeBar(
+    currentPosition: Long,
+    duration: Long,
+    bufferedPosition: Long,
+    onSeek: (Long) -> Unit,
+    isTvMode: Boolean = false,
+    isCompact: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    if (events.isEmpty()) return
-    LazyVerticalGrid(
-        columns        = GridCells.Fixed(spanCount),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 4.dp),
-        modifier       = modifier.fillMaxWidth().wrapContentHeight(),
+    var isFocused by remember { mutableStateOf(false) }
+
+    val timeFontSize = when {
+        isTvMode   -> 16.sp
+        isCompact  -> 11.sp
+        else       -> 14.sp
+    }
+    val timeMinWidth = when {
+        isTvMode   -> 68.dp
+        isCompact  -> 48.dp
+        else       -> 60.dp
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .focusable()
+            .onFocusChanged { isFocused = it.isFocused }
+            .then(
+                if (isFocused && isTvMode) Modifier.border(
+                    width = 1.5.dp,
+                    color = Color.White.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(4.dp),
+                ) else Modifier
+            )
+            .onKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                val step = 10_000L
+                when (event.key) {
+                    Key.DirectionRight -> { onSeek((currentPosition + step).coerceAtMost(duration)); true }
+                    Key.DirectionLeft  -> { onSeek((currentPosition - step).coerceAtLeast(0L));     true }
+                    else               -> false
+                }
+            },
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
-        items(events, key = { it.id }) { event ->
-            com.livetvpro.app.ui.live.LiveEventCard(
-                event   = event,
-                onClick = { onEventClick(event, 0) },
+        Text(
+            text      = formatTime(currentPosition),
+            color     = Color.White,
+            fontSize  = timeFontSize,
+            fontFamily= BergenSans,
+            modifier  = Modifier.widthIn(min = timeMinWidth),
+            textAlign = TextAlign.End,
+            maxLines  = 1,
+        )
+        CustomTimeBar(
+            currentPosition  = currentPosition,
+            duration         = duration,
+            bufferedPosition = bufferedPosition,
+            onSeek           = onSeek,
+            isFocused        = isFocused,
+            modifier         = Modifier
+                .weight(1f)
+                .padding(horizontal = 8.dp)
+                .height(24.dp),
+        )
+        Text(
+            text      = formatTime(duration),
+            color     = Color.White,
+            fontSize  = timeFontSize,
+            fontFamily= BergenSans,
+            modifier  = Modifier.widthIn(min = timeMinWidth),
+            textAlign = TextAlign.Start,
+            maxLines  = 1,
+        )
+    }
+}
+
+@Composable
+private fun CustomTimeBar(
+    currentPosition: Long,
+    duration: Long,
+    bufferedPosition: Long,
+    onSeek: (Long) -> Unit,
+    isFocused: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    var isDragging   by remember { mutableStateOf(false) }
+    var dragPosition by remember { mutableFloatStateOf(0f) }
+    var isHovering   by remember { mutableStateOf(false) }
+    var hoverX       by remember { mutableFloatStateOf(0f) }
+
+    val progress = if (duration > 0)
+        (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    else 0f
+
+    val bufferedProgress = if (duration > 0)
+        (bufferedPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    else 0f
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .pointerInput("seek") {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    isDragging   = true
+                    dragPosition = (down.position.x / size.width).coerceIn(0f, 1f)
+                    down.consume()
+                    while (true) {
+                        val event  = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) {
+                            isDragging = false
+                            onSeek((dragPosition * duration).toLong())
+                            break
+                        }
+                        val newX = (change.position.x / size.width).coerceIn(0f, 1f)
+                        if (newX != dragPosition) {
+                            dragPosition = newX
+                            change.consume()
+                        }
+                    }
+                }
+            }
+            .pointerInput("hover") {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        when (event.type) {
+                            PointerEventType.Enter -> isHovering = true
+                            PointerEventType.Exit  -> isHovering = false
+                            PointerEventType.Move  -> {
+                                isHovering = true
+                                hoverX = event.changes.firstOrNull()?.position?.x ?: hoverX
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+            }
+    ) {
+        val barHeight            = 4.dp.toPx()
+        val barHeightActive      = 6.dp.toPx()
+        val scrubberRadius       = 6.dp.toPx()
+        val scrubberRadiusActive = 9.dp.toPx()
+        val centerY              = size.height / 2f
+
+        val active         = isHovering || isDragging || isFocused
+        val activeBar      = if (active) barHeightActive      else barHeight
+        val activeScrubber = if (active) scrubberRadiusActive else scrubberRadius
+
+        drawLine(
+            color = Color.White.copy(alpha = 0.3f),
+            start = Offset(0f, centerY), end = Offset(size.width, centerY),
+            strokeWidth = activeBar, cap = StrokeCap.Round,
+        )
+        val bufferedWidth = size.width * bufferedProgress
+        if (bufferedWidth > 0f) {
+            drawLine(
+                color = Color.White.copy(alpha = 0.5f),
+                start = Offset(0f, centerY), end = Offset(bufferedWidth, centerY),
+                strokeWidth = activeBar, cap = StrokeCap.Round,
+            )
+        }
+        val currentProgress = if (isDragging) dragPosition else progress
+        val playedWidth     = size.width * currentProgress
+        if (playedWidth > 0f) {
+            drawLine(
+                color = Color.White,
+                start = Offset(0f, centerY), end = Offset(playedWidth, centerY),
+                strokeWidth = activeBar, cap = StrokeCap.Round,
+            )
+        }
+        drawCircle(
+            color  = Color.White,
+            radius = activeScrubber,
+            center = Offset(playedWidth, centerY),
+        )
+        if (isHovering && !isDragging && duration > 0L) {
+            drawCircle(
+                color  = Color.White.copy(alpha = 0.45f),
+                radius = 4.dp.toPx(),
+                center = Offset(hoverX.coerceIn(0f, size.width), centerY),
             )
         }
     }
+}
+
+private fun formatTime(timeMs: Long): String {
+    val formatter  = StringBuilder()
+    val formatter2 = java.util.Formatter(formatter, java.util.Locale.getDefault())
+    return androidx.media3.common.util.Util.getStringForTime(formatter, formatter2, timeMs)
 }

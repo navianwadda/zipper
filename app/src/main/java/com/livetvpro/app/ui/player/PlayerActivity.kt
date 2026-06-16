@@ -524,19 +524,19 @@ class PlayerActivity : ComponentActivity() {
                         modifier    = Modifier.fillMaxSize(),
                     )
 
+                    if (errorMessage.value.isNotBlank()) {
+                        ErrorOverlay(errorMessage.value)
+                    }
+
+                    if (isBuffering && errorMessage.value.isBlank()) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center).size(48.dp),
+                            color    = Color.White,
+                            strokeWidth = 3.dp,
+                        )
+                    }
+
                     if (!isInPipMode) {
-                        if (errorMessage.value.isNotBlank()) {
-                            ErrorOverlay(errorMessage.value)
-                        }
-
-                        if (isBuffering && errorMessage.value.isBlank()) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.align(Alignment.Center).size(48.dp),
-                                color    = Color.White,
-                                strokeWidth = 3.dp,
-                            )
-                        }
-
                         Controls(isLandscape = false)
 
                         if (isChannelListAvailable) {
@@ -559,19 +559,19 @@ class PlayerActivity : ComponentActivity() {
                         modifier    = Modifier.fillMaxSize(),
                     )
 
+                    if (errorMessage.value.isNotBlank()) {
+                        ErrorOverlay(errorMessage.value)
+                    }
+
+                    if (isBuffering && errorMessage.value.isBlank()) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center).size(48.dp),
+                            color    = Color.White,
+                            strokeWidth = 3.dp,
+                        )
+                    }
+
                     if (!isInPipMode) {
-                        if (errorMessage.value.isNotBlank()) {
-                            ErrorOverlay(errorMessage.value)
-                        }
-
-                        if (isBuffering && errorMessage.value.isBlank()) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.align(Alignment.Center).size(48.dp),
-                                color    = Color.White,
-                                strokeWidth = 3.dp,
-                            )
-                        }
-
                         Controls(isLandscape = true)
 
                         if (linksState.value.size > 1) {

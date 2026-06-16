@@ -32,19 +32,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -66,7 +67,9 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.livetvpro.app.BuildConfig
 import com.livetvpro.app.MainActivity
 import com.livetvpro.app.R
+import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.repository.NativeDataRepository
+import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -78,11 +81,7 @@ import java.io.FileOutputStream
 import java.net.URL
 import javax.inject.Inject
 
-private val AccentRed   = Color(0xFFEF4444)
-private val Background  = Color(0xFF0D1117)
-private val TextWhite   = Color(0xFFFFFFFF)
-private val TextGray    = Color(0xFFB0B0B0)
-private val BergenSans  = FontFamily(Font(R.font.bergen_sans))
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 private sealed interface SplashState {
     object Loading : SplashState
@@ -96,13 +95,14 @@ class SplashActivity : AppCompatActivity() {
 
     @Inject lateinit var dataRepository: NativeDataRepository
     @Inject lateinit var listenerManager: NativeListenerManager
+    @Inject lateinit var themeManager: ThemeManager
 
-    private var uiState        by mutableStateOf<SplashState>(SplashState.Loading)
+    private var uiState          by mutableStateOf<SplashState>(SplashState.Loading)
     private var downloadProgress by mutableFloatStateOf(0f)
-    private var downloadLabel  by mutableStateOf("")
-    private var isDownloading  by mutableStateOf(false)
+    private var downloadLabel    by mutableStateOf("")
+    private var isDownloading    by mutableStateOf(false)
     private var downloadedApk: File? = null
-    private var cachedWebUrl   = ""
+    private var cachedWebUrl     = ""
     private var downloadCancelled = false
 
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -122,33 +122,37 @@ class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        themeManager.registerActivityContext(this)
+
         if (DeviceUtils.isTvDevice) {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
 
         setContent {
-            SplashScreen(
-                state            = uiState,
-                versionName      = BuildConfig.VERSION_NAME,
-                isDownloading    = isDownloading,
-                downloadProgress = downloadProgress,
-                downloadLabel    = downloadLabel,
-                hasApkReady      = downloadedApk?.exists() == true,
-                onRetry          = { startFetch() },
-                onUpdate         = {
-                    when {
-                        isDownloading              -> cancelDownload()
-                        downloadedApk?.exists() == true -> installApk(downloadedApk!!)
-                        else                       -> startDownload()
-                    }
-                },
-                onWebsite        = {
-                    val url = listenerManager.getWebUrl().ifBlank { cachedWebUrl }
-                    if (url.isNotBlank()) openUrl(url)
-                },
-                onLater          = { finishAndRemoveTask() },
-                isTv             = DeviceUtils.isTvDevice,
-            )
+            LiveTVProTheme(themeManager = themeManager) {
+                SplashScreen(
+                    state            = uiState,
+                    versionName      = BuildConfig.VERSION_NAME,
+                    isDownloading    = isDownloading,
+                    downloadProgress = downloadProgress,
+                    downloadLabel    = downloadLabel,
+                    hasApkReady      = downloadedApk?.exists() == true,
+                    onRetry          = { startFetch() },
+                    onUpdate         = {
+                        when {
+                            isDownloading               -> cancelDownload()
+                            downloadedApk?.exists() == true -> installApk(downloadedApk!!)
+                            else                        -> startDownload()
+                        }
+                    },
+                    onWebsite        = {
+                        val url = listenerManager.getWebUrl().ifBlank { cachedWebUrl }
+                        if (url.isNotBlank()) openUrl(url)
+                    },
+                    onLater          = { finishAndRemoveTask() },
+                    isTv             = DeviceUtils.isTvDevice,
+                )
+            }
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -344,11 +348,10 @@ private fun SplashScreen(
     onLater: () -> Unit,
     isTv: Boolean,
 ) {
+    val background = MaterialTheme.colorScheme.background
     Box(
-        modifier          = Modifier
-            .fillMaxSize()
-            .background(Background),
-        contentAlignment  = Alignment.Center,
+        modifier         = Modifier.fillMaxSize().background(background),
+        contentAlignment = Alignment.Center,
     ) {
         when (state) {
             is SplashState.Loading ->
@@ -390,91 +393,67 @@ private fun SplashScreen(
 
 @Composable
 private fun LoadingScreen(versionName: String) {
+    val primary   = MaterialTheme.colorScheme.primary
+    val onBg      = MaterialTheme.colorScheme.onBackground
+
     Column(
-        modifier            = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
+        modifier            = Modifier.fillMaxSize().padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Spacer(Modifier.weight(0.38f))
 
-        Box(
-            modifier         = Modifier
-                .size(100.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color(0xFFEF4444)),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Icon(
-                painter            = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "App Icon",
-                tint               = androidx.compose.ui.graphics.Color.Unspecified,
-                modifier           = Modifier.size(72.dp),
-            )
-        }
+        AppIcon(primary)
 
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text       = "Live TV Pro",
-            color      = TextWhite,
-            fontSize   = 26.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = BergenSans,
+            text          = "Live TV Pro",
+            color         = onBg,
+            fontSize      = 26.sp,
+            fontWeight    = FontWeight.Bold,
+            fontFamily    = BergenSans,
             letterSpacing = 0.08.sp,
         )
 
         Spacer(Modifier.weight(0.1f))
 
-        SignalBars()
+        SignalBars(color = primary)
 
         Spacer(Modifier.weight(0.1f))
 
         Spacer(Modifier.weight(0.42f))
 
         Text(
-            text     = "VERSION $versionName",
-            color    = TextGray,
-            fontSize = 12.sp,
-            fontFamily = BergenSans,
+            text          = "VERSION $versionName",
+            color         = onBg.copy(alpha = 0.5f),
+            fontSize      = 12.sp,
+            fontFamily    = BergenSans,
             letterSpacing = 0.1.sp,
-            modifier = Modifier.padding(bottom = 24.dp),
+            modifier      = Modifier.padding(bottom = 24.dp),
         )
     }
 }
 
 @Composable
 private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Unit) {
+    val primary = MaterialTheme.colorScheme.primary
+    val onBg    = MaterialTheme.colorScheme.onBackground
+
     Column(
-        modifier            = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
+        modifier            = Modifier.fillMaxSize().padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Spacer(Modifier.weight(0.38f))
 
-        Box(
-            modifier         = Modifier
-                .size(100.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color(0xFFEF4444)),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Icon(
-                painter            = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "App Icon",
-                tint               = androidx.compose.ui.graphics.Color.Unspecified,
-                modifier           = Modifier.size(72.dp),
-            )
-        }
+        AppIcon(primary)
 
         Spacer(Modifier.height(16.dp))
 
         Text(
             text       = "Live TV Pro",
-            color      = TextWhite,
+            color      = onBg,
             fontSize   = 26.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = BergenSans,
@@ -484,7 +463,7 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
 
         Text(
             text       = message,
-            color      = TextWhite,
+            color      = onBg,
             fontSize   = 16.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = BergenSans,
@@ -499,7 +478,7 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
 
         Text(
             text       = "VERSION $versionName",
-            color      = TextGray,
+            color      = onBg.copy(alpha = 0.5f),
             fontSize   = 12.sp,
             fontFamily = BergenSans,
             modifier   = Modifier.padding(bottom = 24.dp),
@@ -517,6 +496,9 @@ private fun UpdateScreenPortrait(
     onWebsite: () -> Unit,
     onLater: () -> Unit,
 ) {
+    val primary = MaterialTheme.colorScheme.primary
+    val onBg    = MaterialTheme.colorScheme.onBackground
+
     Column(
         modifier            = Modifier
             .fillMaxSize()
@@ -526,26 +508,13 @@ private fun UpdateScreenPortrait(
     ) {
         Spacer(Modifier.height(32.dp))
 
-        Box(
-            modifier         = Modifier
-                .size(100.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color(0xFFEF4444)),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Icon(
-                painter            = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "App Icon",
-                tint               = androidx.compose.ui.graphics.Color.Unspecified,
-                modifier           = Modifier.size(72.dp),
-            )
-        }
+        AppIcon(primary)
 
         Spacer(Modifier.height(14.dp))
 
         Text(
             text       = "New Update Available",
-            color      = TextWhite,
+            color      = onBg,
             fontSize   = 22.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = BergenSans,
@@ -554,23 +523,23 @@ private fun UpdateScreenPortrait(
         if (isDownloading) {
             Spacer(Modifier.height(14.dp))
             LinearProgressIndicator(
-                progress       = { downloadProgress },
-                modifier       = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color          = AccentRed,
-                trackColor     = Color(0xFF555555),
-                strokeCap      = StrokeCap.Round,
+                progress   = { downloadProgress },
+                modifier   = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color      = primary,
+                trackColor = primary.copy(alpha = 0.2f),
+                strokeCap  = StrokeCap.Round,
             )
             Spacer(Modifier.height(4.dp))
-            Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp, fontFamily = BergenSans)
+            Text(text = downloadLabel, color = onBg, fontSize = 12.sp, fontFamily = BergenSans)
         }
 
         Spacer(Modifier.height(14.dp))
 
         SplashButton(
-            text    = when {
-                isDownloading    -> "CANCEL"
-                hasApkReady      -> "INSTALL"
-                else             -> "UPDATE APP"
+            text = when {
+                isDownloading -> "CANCEL"
+                hasApkReady   -> "INSTALL"
+                else          -> "UPDATE APP"
             },
             onClick = onUpdate,
         )
@@ -579,7 +548,7 @@ private fun UpdateScreenPortrait(
 
         Text(
             text       = "You need to install the latest version. We will discontinue all the old version soon. Please download and install it. If the in-app update does not work, please download from our website.",
-            color      = TextWhite,
+            color      = onBg.copy(alpha = 0.8f),
             fontSize   = 13.sp,
             fontFamily = BergenSans,
             lineHeight = 20.sp,
@@ -609,6 +578,10 @@ private fun UpdateScreenLandscape(
     onLater: () -> Unit,
     isTv: Boolean,
 ) {
+    val primary  = MaterialTheme.colorScheme.primary
+    val onBg     = MaterialTheme.colorScheme.onBackground
+    val divider  = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.13f)
+
     Row(
         modifier          = Modifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
@@ -617,27 +590,11 @@ private fun UpdateScreenLandscape(
             modifier         = Modifier.weight(0.45f).fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier         = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFFEF4444)),
-                contentAlignment = Alignment.Center,
-            ) {
-                androidx.compose.material3.Icon(
-                    painter            = painterResource(R.drawable.ic_launcher_foreground),
-                    contentDescription = "App Icon",
-                    tint               = androidx.compose.ui.graphics.Color.Unspecified,
-                    modifier           = Modifier.size(72.dp),
-                )
-            }
+            AppIcon(primary)
         }
 
         Box(
-            modifier = Modifier
-                .width(1.dp)
-                .fillMaxSize()
-                .background(Color.White.copy(alpha = 0.13f))
+            modifier = Modifier.width(1.dp).fillMaxSize().background(divider)
         )
 
         Column(
@@ -653,7 +610,7 @@ private fun UpdateScreenLandscape(
 
             Text(
                 text       = "New Update Available",
-                color      = TextWhite,
+                color      = onBg,
                 fontSize   = 22.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = BergenSans,
@@ -664,19 +621,19 @@ private fun UpdateScreenLandscape(
                 LinearProgressIndicator(
                     progress   = { downloadProgress },
                     modifier   = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                    color      = AccentRed,
-                    trackColor = Color(0xFF555555),
+                    color      = primary,
+                    trackColor = primary.copy(alpha = 0.2f),
                     strokeCap  = StrokeCap.Round,
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(text = downloadLabel, color = TextWhite, fontSize = 12.sp, fontFamily = BergenSans)
+                Text(text = downloadLabel, color = onBg, fontSize = 12.sp, fontFamily = BergenSans)
             }
 
             Spacer(Modifier.height(14.dp))
 
             if (!isTv) {
                 SplashButton(
-                    text    = when {
+                    text = when {
                         isDownloading -> "CANCEL"
                         hasApkReady   -> "INSTALL"
                         else          -> "UPDATE APP"
@@ -688,7 +645,7 @@ private fun UpdateScreenLandscape(
 
             Text(
                 text       = "You need to install the latest version. We will discontinue all the old version soon. Please download and install it. If the in-app update does not work, please download from our website.",
-                color      = TextWhite,
+                color      = onBg.copy(alpha = 0.8f),
                 fontSize   = 13.sp,
                 fontFamily = BergenSans,
                 lineHeight = 20.sp,
@@ -710,16 +667,39 @@ private fun UpdateScreenLandscape(
 }
 
 @Composable
+private fun AppIcon(primary: Color) {
+    Box(
+        modifier         = Modifier
+            .size(100.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(primary),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter            = painterResource(R.drawable.ic_launcher_foreground),
+            contentDescription = "App Icon",
+            tint               = Color.Unspecified,
+            modifier           = Modifier.size(72.dp),
+        )
+    }
+}
+
+@Composable
 private fun SplashButton(text: String, onClick: () -> Unit) {
+    val primary  = MaterialTheme.colorScheme.primary
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+
     Button(
         onClick  = onClick,
         modifier = Modifier.fillMaxWidth().height(52.dp),
         shape    = RoundedCornerShape(8.dp),
-        colors   = ButtonDefaults.buttonColors(containerColor = AccentRed),
+        colors   = ButtonDefaults.buttonColors(
+            containerColor = primary,
+            contentColor   = onPrimary,
+        ),
     ) {
         Text(
             text          = text,
-            color         = TextWhite,
             fontSize      = 14.sp,
             fontWeight    = FontWeight.Bold,
             fontFamily    = BergenSans,
@@ -729,15 +709,15 @@ private fun SplashButton(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SignalBars() {
+private fun SignalBars(color: Color) {
     val transition = rememberInfiniteTransition(label = "signal")
 
     val barDefs = listOf(
-        BarDef(from = 0.15f, to = 1.00f, duration = 500,  delay = 0),
-        BarDef(from = 1.00f, to = 0.20f, duration = 650,  delay = 100),
-        BarDef(from = 0.40f, to = 1.00f, duration = 450,  delay = 200),
-        BarDef(from = 0.80f, to = 0.15f, duration = 600,  delay = 80),
-        BarDef(from = 0.20f, to = 0.90f, duration = 550,  delay = 300),
+        BarDef(from = 0.15f, to = 1.00f, duration = 500, delay = 0),
+        BarDef(from = 1.00f, to = 0.20f, duration = 650, delay = 100),
+        BarDef(from = 0.40f, to = 1.00f, duration = 450, delay = 200),
+        BarDef(from = 0.80f, to = 0.15f, duration = 600, delay = 80),
+        BarDef(from = 0.20f, to = 0.90f, duration = 550, delay = 300),
     )
 
     Row(
@@ -747,9 +727,9 @@ private fun SignalBars() {
     ) {
         barDefs.forEach { def ->
             val scale by transition.animateFloat(
-                initialValue   = def.from,
-                targetValue    = def.to,
-                animationSpec  = infiniteRepeatable(
+                initialValue  = def.from,
+                targetValue   = def.to,
+                animationSpec = infiniteRepeatable(
                     animation  = tween(
                         durationMillis = def.duration,
                         delayMillis    = def.delay,
@@ -765,7 +745,7 @@ private fun SignalBars() {
                     .height(40.dp)
                     .scale(scaleX = 1f, scaleY = scale)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(AccentRed),
+                    .background(color),
             )
         }
     }

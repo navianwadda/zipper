@@ -129,7 +129,7 @@ class SplashActivity : AppCompatActivity() {
         }
 
         setContent {
-            LiveTVProTheme(themeManager = themeManager) {
+            LiveTVProTheme() {
                 SplashScreen(
                     state            = uiState,
                     versionName      = BuildConfig.VERSION_NAME,
@@ -140,9 +140,9 @@ class SplashActivity : AppCompatActivity() {
                     onRetry          = { startFetch() },
                     onUpdate         = {
                         when {
-                            isDownloading               -> cancelDownload()
+                            isDownloading                    -> cancelDownload()
                             downloadedApk?.exists() == true -> installApk(downloadedApk!!)
-                            else                        -> startDownload()
+                            else                             -> startDownload()
                         }
                     },
                     onWebsite        = {
@@ -151,6 +151,7 @@ class SplashActivity : AppCompatActivity() {
                     },
                     onLater          = { finishAndRemoveTask() },
                     isTv             = DeviceUtils.isTvDevice,
+                
                 )
             }
         }
@@ -347,6 +348,7 @@ private fun SplashScreen(
     onWebsite: () -> Unit,
     onLater: () -> Unit,
     isTv: Boolean,
+    themeManager: ThemeManager,
 ) {
     val background = MaterialTheme.colorScheme.background
     Box(
@@ -359,9 +361,10 @@ private fun SplashScreen(
 
             is SplashState.Error ->
                 ErrorScreen(
-                    message     = state.message,
-                    versionName = versionName,
-                    onRetry     = onRetry,
+                    message      = state.message,
+                    versionName  = versionName,
+                    onRetry      = onRetry,
+                    
                 )
 
             is SplashState.UpdateRequired ->
@@ -375,6 +378,7 @@ private fun SplashScreen(
                         onWebsite        = onWebsite,
                         onLater          = onLater,
                         isTv             = true,
+                    
                     )
                 } else {
                     UpdateScreenPortrait(
@@ -385,6 +389,7 @@ private fun SplashScreen(
                         onUpdate         = onUpdate,
                         onWebsite        = onWebsite,
                         onLater          = onLater,
+                    
                     )
                 }
         }
@@ -403,7 +408,7 @@ private fun LoadingScreen(versionName: String) {
     ) {
         Spacer(Modifier.weight(0.38f))
 
-        AppIcon(primary)
+        AppIcon()
 
         Spacer(Modifier.height(16.dp))
 
@@ -437,7 +442,6 @@ private fun LoadingScreen(versionName: String) {
 
 @Composable
 private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Unit) {
-    val primary = MaterialTheme.colorScheme.primary
     val onBg    = MaterialTheme.colorScheme.onBackground
 
     Column(
@@ -447,7 +451,7 @@ private fun ErrorScreen(message: String, versionName: String, onRetry: () -> Uni
     ) {
         Spacer(Modifier.weight(0.38f))
 
-        AppIcon(primary)
+        AppIcon()
 
         Spacer(Modifier.height(16.dp))
 
@@ -495,6 +499,7 @@ private fun UpdateScreenPortrait(
     onUpdate: () -> Unit,
     onWebsite: () -> Unit,
     onLater: () -> Unit,
+    themeManager: ThemeManager,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val onBg    = MaterialTheme.colorScheme.onBackground
@@ -508,7 +513,7 @@ private fun UpdateScreenPortrait(
     ) {
         Spacer(Modifier.height(32.dp))
 
-        AppIcon(primary)
+        AppIcon()
 
         Spacer(Modifier.height(14.dp))
 
@@ -577,6 +582,7 @@ private fun UpdateScreenLandscape(
     onWebsite: () -> Unit,
     onLater: () -> Unit,
     isTv: Boolean,
+    themeManager: ThemeManager,
 ) {
     val primary  = MaterialTheme.colorScheme.primary
     val onBg     = MaterialTheme.colorScheme.onBackground
@@ -590,7 +596,7 @@ private fun UpdateScreenLandscape(
             modifier         = Modifier.weight(0.45f).fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            AppIcon(primary)
+            AppIcon()
         }
 
         Box(
@@ -667,19 +673,27 @@ private fun UpdateScreenLandscape(
 }
 
 @Composable
-private fun AppIcon(primary: Color) {
+private fun AppIcon() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val iconRes = remember {
+        val blackAlias = android.content.ComponentName(context, "${context.packageName}.BlackIcon")
+        val isBlack = try {
+            context.packageManager.getComponentEnabledSetting(blackAlias) ==
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        } catch (e: Exception) { false }
+        if (isBlack) R.mipmap.ic_launcher_black else R.mipmap.ic_launcher
+    }
     Box(
         modifier         = Modifier
             .size(100.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(primary),
+            .clip(RoundedCornerShape(22.dp)),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            painter            = painterResource(R.drawable.ic_launcher_foreground),
+            painter            = painterResource(iconRes),
             contentDescription = "App Icon",
             tint               = Color.Unspecified,
-            modifier           = Modifier.size(72.dp),
+            modifier           = Modifier.fillMaxSize(),
         )
     }
 }

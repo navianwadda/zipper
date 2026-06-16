@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -346,11 +347,13 @@ class PlayerActivity : ComponentActivity() {
         }
 
         setContent {
-            LiveTVProTheme(
-                themeManager  = themeManager,
-                surfaceColor  = Color.Transparent,
-            ) {
-                PlayerActivityRoot()
+            CompositionLocalProvider(LocalActivity provides null) {
+                LiveTVProTheme(
+                    themeManager  = themeManager,
+                    surfaceColor  = Color.Transparent,
+                ) {
+                    PlayerActivityRoot()
+                }
             }
         }
     }
@@ -497,7 +500,10 @@ class PlayerActivity : ComponentActivity() {
             )
         }
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .consumeWindowInsets(WindowInsets.systemBars)
+        ) {
             if (!isLandscape) {
                 val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                 Box(

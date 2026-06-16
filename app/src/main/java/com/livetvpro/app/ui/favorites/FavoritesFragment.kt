@@ -77,7 +77,7 @@ class FavoritesFragment : Fragment() {
                     FavoritesScreen(
                         viewModel = viewModel,
                         spanCount = spanCount,
-                        isTvDevice = DeviceUtils.isTvDevice,
+                        isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
                         onChannelClick = { favorite, linkIndex -> handleChannelClick(favorite, linkIndex) },
                         onRemoveFavorite = { favorite -> viewModel.removeFavorite(favorite.id) },
                         onClearAll = { viewModel.clearAll() }
@@ -93,7 +93,7 @@ class FavoritesFragment : Fragment() {
             refreshFavoritesCache(favorites)
             viewModel.onFavoritesChanged(favorites ?: emptyList())
         }
-        if (DeviceUtils.isTvDevice) setupTvNumpadSearch(view)
+        if (DeviceUtils.isTvDevice || DeviceUtils.isTablet) setupTvNumpadSearch(view)
     }
 
     private fun setupTvNumpadSearch(rootView: View) {
@@ -230,7 +230,7 @@ class FavoritesFragment : Fragment() {
     }
 
     private fun launchPlayer(channel: Channel, linkIndex: Int) {
-        if (DeviceUtils.isTvDevice) {
+        if (DeviceUtils.isTvDevice || DeviceUtils.isTablet) {
             PlayerActivity.startWithChannel(
                 requireContext(), channel, linkIndex,
                 channelListCacheKey = FAVORITES_CACHE_KEY

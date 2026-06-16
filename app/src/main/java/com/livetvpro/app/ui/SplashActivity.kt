@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -129,7 +130,7 @@ class SplashActivity : AppCompatActivity() {
         }
 
         setContent {
-            LiveTVProTheme() {
+            LiveTVProTheme(themeManager = themeManager) {
                 SplashScreen(
                     state            = uiState,
                     versionName      = BuildConfig.VERSION_NAME,
@@ -348,7 +349,6 @@ private fun SplashScreen(
     onWebsite: () -> Unit,
     onLater: () -> Unit,
     isTv: Boolean,
-    themeManager: ThemeManager,
 ) {
     val background = MaterialTheme.colorScheme.background
     Box(
@@ -499,7 +499,6 @@ private fun UpdateScreenPortrait(
     onUpdate: () -> Unit,
     onWebsite: () -> Unit,
     onLater: () -> Unit,
-    themeManager: ThemeManager,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val onBg    = MaterialTheme.colorScheme.onBackground
@@ -582,7 +581,6 @@ private fun UpdateScreenLandscape(
     onWebsite: () -> Unit,
     onLater: () -> Unit,
     isTv: Boolean,
-    themeManager: ThemeManager,
 ) {
     val primary  = MaterialTheme.colorScheme.primary
     val onBg     = MaterialTheme.colorScheme.onBackground

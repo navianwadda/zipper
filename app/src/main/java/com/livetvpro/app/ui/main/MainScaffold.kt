@@ -10,6 +10,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -512,6 +513,7 @@ private fun TvTabChip(
             .background(if (selected) primary.copy(alpha = 0.15f) else Color.Transparent)
             .border(1.dp, if (focused) primary else Color.Transparent, RoundedCornerShape(6.dp))
             .padding(horizontal = 18.dp)
+            .clickable(onClick = onClick)
             .focusable()
             .onFocusChanged { focused = it.isFocused },
         contentAlignment = Alignment.Center,

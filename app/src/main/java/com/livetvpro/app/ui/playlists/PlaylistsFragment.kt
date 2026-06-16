@@ -78,7 +78,7 @@ class PlaylistsFragment : Fragment() {
                 AppThemeContent(themeManager) {
                     PlaylistsScreen(
                         viewModel = viewModel,
-                        isTvDevice = DeviceUtils.isTvDevice,
+                        isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
                         onNavigateToCategory = { id, name ->
                             findNavController().navigate(
                                 R.id.action_playlists_to_category,

@@ -497,10 +497,7 @@ class PlayerActivity : ComponentActivity() {
             )
         }
 
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .then(if (!isLandscape) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier)
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
             if (!isLandscape) {
                 val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                 Box(

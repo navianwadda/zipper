@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
@@ -672,26 +673,27 @@ private fun UpdateScreenLandscape(
 
 @Composable
 private fun AppIcon() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val iconRes = remember {
+    val context = LocalContext.current
+    val isBlack = remember {
         val blackAlias = android.content.ComponentName(context, "${context.packageName}.BlackIcon")
-        val isBlack = try {
+        try {
             context.packageManager.getComponentEnabledSetting(blackAlias) ==
                 android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         } catch (e: Exception) { false }
-        if (isBlack) R.mipmap.ic_launcher_black else R.mipmap.ic_launcher
     }
+    val bgColor = if (isBlack) Color(0xFF121212) else Color(0xFFEF4444)
     Box(
         modifier         = Modifier
             .size(100.dp)
-            .clip(RoundedCornerShape(22.dp)),
+            .clip(RoundedCornerShape(22.dp))
+            .background(bgColor),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            painter            = painterResource(iconRes),
+            painter            = painterResource(R.drawable.ic_launcher_foreground),
             contentDescription = "App Icon",
             tint               = Color.Unspecified,
-            modifier           = Modifier.fillMaxSize(),
+            modifier           = Modifier.size(72.dp),
         )
     }
 }

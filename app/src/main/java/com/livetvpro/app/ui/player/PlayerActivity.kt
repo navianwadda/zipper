@@ -30,6 +30,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -367,6 +368,9 @@ class PlayerActivity : ComponentActivity() {
         val isPlaying by produceState(initialValue = false, player) {
             while (true) { value = player?.isPlaying == true; delay(100) }
         }
+        val isBuffering by produceState(initialValue = false, player) {
+            while (true) { value = player?.playbackState == Player.STATE_BUFFERING; delay(100) }
+        }
         var currentPosition  by remember { mutableLongStateOf(0L) }
         var duration         by remember { mutableLongStateOf(0L) }
         var bufferedPosition by remember { mutableLongStateOf(0L) }
@@ -502,7 +506,7 @@ class PlayerActivity : ComponentActivity() {
 
         Column(modifier = Modifier
             .fillMaxSize()
-            .consumeWindowInsets(WindowInsets.systemBars)
+            .then(if (!isLandscape) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier)
         ) {
             if (!isLandscape) {
                 val isNetworkStream = contentType == ContentType.NETWORK_STREAM
@@ -523,6 +527,14 @@ class PlayerActivity : ComponentActivity() {
                     if (!isInPipMode) {
                         if (errorMessage.value.isNotBlank()) {
                             ErrorOverlay(errorMessage.value)
+                        }
+
+                        if (isBuffering && errorMessage.value.isBlank()) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center).size(48.dp),
+                                color    = Color.White,
+                                strokeWidth = 3.dp,
+                            )
                         }
 
                         Controls(isLandscape = false)
@@ -550,6 +562,14 @@ class PlayerActivity : ComponentActivity() {
                     if (!isInPipMode) {
                         if (errorMessage.value.isNotBlank()) {
                             ErrorOverlay(errorMessage.value)
+                        }
+
+                        if (isBuffering && errorMessage.value.isBlank()) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center).size(48.dp),
+                                color    = Color.White,
+                                strokeWidth = 3.dp,
+                            )
                         }
 
                         Controls(isLandscape = true)

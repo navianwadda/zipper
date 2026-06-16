@@ -84,7 +84,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
                     messageBannerText = listenerManager.getMessage(),
                     messageBannerUrl = listenerManager.getMessageUrl(),
                     spanCount = spanCount,
-                    isTvDevice = DeviceUtils.isTvDevice,
+                    isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
                     onEventClick = { event, linkIndex ->
                         proceedWithPlayer(event, linkIndex)
                     },
@@ -115,7 +115,7 @@ class LiveEventsFragment : Fragment(), SearchableFragment, Refreshable {
     }
 
     private fun proceedWithPlayer(event: LiveEvent, linkIndex: Int) {
-        if (DeviceUtils.isTvDevice) {
+        if (DeviceUtils.isTvDevice || DeviceUtils.isTablet) {
             PlayerActivity.startWithEvent(requireContext(), event, linkIndex)
             return
         }

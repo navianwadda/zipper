@@ -1268,7 +1268,7 @@ class PlayerActivity : ComponentActivity() {
             else                                           -> AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
         resizeMode = next
-        if (preferencesManager.isRememberAspectRatioEnabled()) {
+        if (contentType != ContentType.NETWORK_STREAM && preferencesManager.isRememberAspectRatioEnabled()) {
             if (isLandscape) { networkLandscapeResizeMode = next; preferencesManager.setSavedAspectRatio(next) }
             else             { networkPortraitResizeMode  = next; preferencesManager.setSavedAspectRatioPortrait(next) }
         }
@@ -1524,10 +1524,12 @@ class PlayerActivity : ComponentActivity() {
                         Player.STATE_READY -> {
                             errorMessage.value = ""
                             if (!resizeModesRestoredFromState) {
-                                val savedL = preferencesManager.getSavedAspectRatio()
-                                val savedP = preferencesManager.getSavedAspectRatioPortrait()
-                                if (savedL != -1) networkLandscapeResizeMode = savedL
-                                if (savedP != -1) networkPortraitResizeMode  = savedP
+                                if (contentType != ContentType.NETWORK_STREAM) {
+                                    val savedL = preferencesManager.getSavedAspectRatio()
+                                    val savedP = preferencesManager.getSavedAspectRatioPortrait()
+                                    if (savedL != -1) networkLandscapeResizeMode = savedL
+                                    if (savedP != -1) networkPortraitResizeMode  = savedP
+                                }
                                 resizeModesRestoredFromState = true
                                 val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                                 resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode

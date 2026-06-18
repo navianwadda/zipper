@@ -59,6 +59,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -627,6 +628,7 @@ class PlayerActivity : ComponentActivity() {
         ContentFrame(
             player       = player,
             modifier     = modifier,
+            surfaceType  = SURFACE_TYPE_TEXTURE_VIEW,
             contentScale = resizeModeToContentScale(resizeMode),
         )
     }

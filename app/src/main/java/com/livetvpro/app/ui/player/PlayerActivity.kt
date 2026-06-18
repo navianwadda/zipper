@@ -39,11 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -58,7 +58,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
+import androidx.media3.ui.compose.ContentFrame
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -621,18 +621,19 @@ class PlayerActivity : ComponentActivity() {
         resizeMode: Int,
         modifier: Modifier = Modifier,
     ) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    useController = false
-                }
-            },
-            update = { view ->
-                view.player     = player
-                view.resizeMode = resizeMode
-            },
-            modifier = modifier,
+        ContentFrame(
+            player       = player,
+            modifier     = modifier,
+            contentScale = resizeModeToContentScale(resizeMode),
         )
+    }
+
+    private fun resizeModeToContentScale(resizeMode: Int): ContentScale = when (resizeMode) {
+        AspectRatioFrameLayout.RESIZE_MODE_ZOOM         -> ContentScale.Crop
+        AspectRatioFrameLayout.RESIZE_MODE_FILL         -> ContentScale.FillBounds
+        AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH  -> ContentScale.FillWidth
+        AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT -> ContentScale.FillHeight
+        else                                             -> ContentScale.Fit
     }
     @Composable
     private fun ErrorOverlay(message: String) {

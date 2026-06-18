@@ -521,6 +521,7 @@ class PlayerActivity : ComponentActivity() {
                     PlayerSurface(
                         player      = player,
                         surfaceType = SURFACE_TYPE_SURFACE_VIEW,
+                        resizeMode  = if (isNetworkStream) resizeMode else AspectRatioFrameLayout.RESIZE_MODE_FIT,
                         modifier    = Modifier.fillMaxSize(),
                     )
 
@@ -556,6 +557,7 @@ class PlayerActivity : ComponentActivity() {
                     PlayerSurface(
                         player      = player,
                         surfaceType = SURFACE_TYPE_SURFACE_VIEW,
+                        resizeMode  = resizeMode,
                         modifier    = Modifier.fillMaxSize(),
                     )
 

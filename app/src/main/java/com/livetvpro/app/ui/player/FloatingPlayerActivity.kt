@@ -614,7 +614,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                     Controls(landscapeMode = true)
 
                     if (linksState.value.size > 1) {
-                        AnimatedVisibility(
+                        androidx.compose.animation.AnimatedVisibility(
                             visible  = controlsState.isVisible && !controlsState.isLocked,
                             enter    = fadeIn(),
                             exit     = fadeOut(),

@@ -43,8 +43,6 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// AndroidView is required to bridge StyledPlayerView (which supports resizeMode)
-// into the Compose tree. The newer PlayerSurface composable does not expose resizeMode.
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -60,9 +58,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
-// StyledPlayerView replaces the raw PlayerSurface composable so we can
-// apply resizeMode reactively via AndroidView's update block.
-import androidx.media3.ui.StyledPlayerView
+import androidx.media3.ui.PlayerView
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -83,15 +79,11 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PlayerActivity : ComponentActivity() {
 
-    // ==================== Injected Dependencies ====================
-
     @Inject lateinit var themeManager: ThemeManager
     @Inject lateinit var preferencesManager: PreferencesManager
     @Inject lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
 
     internal val viewModel: PlayerViewModel by viewModels()
-
-    // ==================== Compose State ====================
 
     private val relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
     private val linksState          = mutableStateOf<List<LiveEventLink>>(emptyList())
@@ -102,12 +94,9 @@ class PlayerActivity : ComponentActivity() {
     private val showFloatingDialog  = mutableStateOf(false)
     internal val errorMessage       = mutableStateOf("")
 
-    /** Drives the isLandscape branch in the Compose UI; updated on every orientation change. */
     internal val isLandscapeState   = mutableStateOf(false)
 
     private var showChannelList     = mutableStateOf(false)
-
-    // ==================== Player ====================
 
     private var player: ExoPlayer? by mutableStateOf(null)
 
@@ -123,53 +112,22 @@ class PlayerActivity : ComponentActivity() {
     private var isMuted by mutableStateOf(false)
     internal val skipMs = 10_000L
 
-    // ==================== Aspect Ratio ====================
-
-    /**
-     * Active resize mode applied to the video surface.
-     *
-     * This is a Compose mutableStateOf so that any change immediately triggers
-     * recomposition → the AndroidView update block runs → StyledPlayerView.resizeMode
-     * is set on the real View. This is the fix for the aspect ratio button doing nothing
-     * in landscape: previously resizeMode was updated here but never wired to a View.
-     *
-     * Landscape defaults to FILL (edge-to-edge); portrait defaults to FIT (letterboxed).
-     * Portrait is intentionally NOT wired to the video surface (the portrait container
-     * already constrains to a fixed 16:9 aspectRatio modifier).
-     */
     private var resizeMode by mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT)
-
-    /** Persisted landscape resize choice; survives orientation flips and instance state. */
     private var networkLandscapeResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
-
-    /** Persisted portrait resize choice (kept for state-save symmetry, not actively applied). */
     private var networkPortraitResizeMode  = AspectRatioFrameLayout.RESIZE_MODE_FIT
-
-    /**
-     * Guards against overwriting a user-chosen aspect ratio with the preference default
-     * after the player reaches STATE_READY. Set to true once preferences (or saved instance
-     * state) have been applied for the current session.
-     */
     private var resizeModesRestoredFromState = false
 
-    // ==================== Window / System UI ====================
-
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
-
-    // ==================== PiP ====================
 
     private var pipReceiver: BroadcastReceiver? = null
     private var screenOffReceiver: BroadcastReceiver? = null
     private var isScreenOff     = false
     private var wasLockedBeforePip = false
     private var isShowingSettingsDialog = false
-
     val isPipSupported by lazy {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) false
         else packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
-
-    // ==================== Content Metadata ====================
 
     internal var contentType: ContentType = ContentType.CHANNEL
     private var channelNumberInput  = ""
@@ -190,13 +148,8 @@ class PlayerActivity : ComponentActivity() {
     private var intentCategoryId:    String? = null
     private var intentSelectedGroup: String? = null
     private var intentIsSports: Boolean = false
-
     private val mainHandler = Handler(Looper.getMainLooper())
-
     enum class ContentType { CHANNEL, EVENT, NETWORK_STREAM }
-
-    // ==================== Companion / Static Helpers ====================
-
     companion object {
         private const val EXTRA_CHANNEL              = "extra_channel"
         private const val EXTRA_EVENT                = "extra_event"
@@ -206,7 +159,6 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_IS_SPORTS            = "extra_is_sports"
         private const val EXTRA_CHANNEL_LIST_KEY     = "extra_channel_list_key"
         private const val EXTRA_SELECTED_GROUP       = "extra_selected_group"
-
         private const val ACTION_MEDIA_CONTROL       = "com.livetvpro.app.MEDIA_CONTROL"
         private const val EXTRA_CONTROL_TYPE         = "control_type"
         private const val CONTROL_TYPE_PLAY          = 1
@@ -215,10 +167,7 @@ class PlayerActivity : ComponentActivity() {
         private const val CONTROL_TYPE_FORWARD       = 4
         private const val CONTROL_TYPE_PREV_CHANNEL  = 5
         private const val CONTROL_TYPE_NEXT_CHANNEL  = 6
-
-        /** Tracks whether this activity is currently in PiP so callers can set FLAG_SINGLE_TOP. */
         var isInPip: Boolean = false
-
         fun startWithChannel(
             context: Context, channel: Channel, linkIndex: Int = -1,
             relatedChannels: ArrayList<Channel>? = null, categoryId: String? = null,
@@ -247,7 +196,6 @@ class PlayerActivity : ComponentActivity() {
             context.startActivity(intent)
             if (context is android.app.Activity) context.overridePendingTransition(0, 0)
         }
-
         fun startWithEvent(context: Context, event: LiveEvent, linkIndex: Int = -1) {
             val intent = Intent(context, PlayerActivity::class.java).apply {
                 putExtra(EXTRA_EVENT, event as Parcelable)
@@ -259,15 +207,11 @@ class PlayerActivity : ComponentActivity() {
             if (context is android.app.Activity) context.overridePendingTransition(0, 0)
         }
     }
-
-    // ==================== Activity Lifecycle ====================
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handleNewIntent(intent)
     }
-
     private fun handleNewIntent(intent: Intent) {
         cancelNumberInput()
         showChannelList.value = false
@@ -279,7 +223,6 @@ class PlayerActivity : ComponentActivity() {
             newEvent   != null -> switchToEventFromLiveEvent(newEvent, linkIndex)
         }
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -288,20 +231,13 @@ class PlayerActivity : ComponentActivity() {
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
         windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-
-        // TV devices are always locked to landscape.
         if (DeviceUtils.isTvDevice) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-
         val isLandscape = DeviceUtils.isTvDevice ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         setupWindowFlags(isLandscape)
         setupSystemUI()
-
         parseIntent()
-
-        // Populate the channel list so prev/next navigation works immediately.
         if (contentType == ContentType.CHANNEL && contentId.isNotEmpty()) {
             val cacheKey   = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
             val cachedList = cacheKey?.let { ChannelListCache.get(it) }
@@ -317,28 +253,22 @@ class PlayerActivity : ComponentActivity() {
         }
 
         applyOrientationSettings(isLandscape)
-
-        // Sync gesture volume slider with actual system volume.
         val am     = getSystemService(AUDIO_SERVICE) as AudioManager
         val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val curVol = am.getStreamVolume(AudioManager.STREAM_MUSIC)
         gestureVolume = if (maxVol > 0) (curVol * 100f / maxVol).toInt() else 100
-
         setupRelatedChannels()
         setupLinksUI()
         setupMessageBanner()
         setupBackHandler()
-
         if (DeviceUtils.isTvDevice) {
             relatedContentState.value = RelatedContentState.Hidden
         } else if (!isLandscape) {
             relatedContentState.value = RelatedContentState.Loading
         }
-
         setupPlayer()
         loadRelatedContent()
 
-        // Observe fresh channel data arriving after API refresh and update link list.
         viewModel.refreshedChannel.observe(this) { freshChannel ->
             if (freshChannel?.links.isNullOrEmpty()) return@observe
             val newLinks = freshChannel!!.links!!.map { it.toLiveEventLink() }
@@ -350,8 +280,6 @@ class PlayerActivity : ComponentActivity() {
                 updateLinksForOrientation(landscape)
             }
         }
-
-        // React to channel list arriving so pending navigation (number input / D-pad) can fire.
         viewModel.channelListItems.observe(this) { items ->
             if (items.isNullOrEmpty() || contentType != ContentType.CHANNEL) return@observe
             val pendingNum = pendingChannelNumber
@@ -382,7 +310,6 @@ class PlayerActivity : ComponentActivity() {
                 channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
             }
         }
-
         viewModel.relatedItems.observe(this) { channels ->
             if (contentType != ContentType.CHANNEL) return@observe
             relatedChannels = channels
@@ -390,7 +317,6 @@ class PlayerActivity : ComponentActivity() {
                 if (channels.isEmpty()) RelatedContentState.Hidden
                 else RelatedContentState.Channels(channels)
         }
-
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
             if (contentType != ContentType.EVENT) return@observe
             relatedContentState.value =
@@ -409,17 +335,11 @@ class PlayerActivity : ComponentActivity() {
             }
         }
     }
-
-    // ==================== Compose UI ====================
-
     @Composable
     private fun PlayerActivityRoot() {
         val isLandscape    = isLandscapeState.value
         val spanCount      = resources.getInteger(R.integer.grid_column_count)
         val eventSpanCount = resources.getInteger(R.integer.event_span_count)
-
-        // Poll isPlaying / isBuffering on a short interval so the UI stays reactive
-        // without needing a full Player.Listener hooked into Compose state.
         val isPlaying by produceState(initialValue = false, player) {
             while (true) { value = player?.isPlaying == true; delay(100) }
         }
@@ -431,8 +351,6 @@ class PlayerActivity : ComponentActivity() {
         var duration         by remember { mutableLongStateOf(0L) }
         var bufferedPosition by remember { mutableLongStateOf(0L) }
 
-        // Update seek-bar position every 500 ms. Using a coroutine here avoids
-        // a Player.Listener that would need careful lifecycle management inside Compose.
         LaunchedEffect(player) {
             while (true) {
                 currentPosition  = player?.currentPosition ?: 0L
@@ -445,18 +363,13 @@ class PlayerActivity : ComponentActivity() {
         val scope            = rememberCoroutineScope()
         val channelListItems by viewModel.channelListItems.observeAsState(emptyList())
 
-        // Channel list panel is only available in landscape (or on TV) so it
-        // doesn't interfere with the portrait layout.
         val isChannelListAvailable = contentType == ContentType.CHANNEL &&
             channelListItems.isNotEmpty() &&
             (isLandscape || DeviceUtils.isTvDevice)
-
         val isPipEnabled = !DeviceUtils.isTvDevice &&
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
             else false
-
-        // ---- Action lambdas ----
 
         val onPlayPause: () -> Unit = {
             player?.let {
@@ -529,9 +442,6 @@ class PlayerActivity : ComponentActivity() {
             lp.screenBrightness = if (bri == 0) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else bri / 100f
             window.attributes = lp
         }
-
-        // ---- Controls composable (shared between portrait and landscape branches) ----
-
         @Composable
         fun Controls(isLandscape: Boolean) {
             PlayerControls(
@@ -543,8 +453,7 @@ class PlayerActivity : ComponentActivity() {
                 bufferedPosition       = bufferedPosition,
                 channelName            = contentName,
                 showPipButton          = isPipEnabled,
-                // Aspect ratio button is always shown; cycleAspectRatio only persists
-                // the landscape slot, so the button is effectively no-op in portrait.
+
                 showAspectRatioButton  = true,
                 isLandscape            = isLandscape,
                 isTvMode               = DeviceUtils.isTvDevice,
@@ -571,20 +480,11 @@ class PlayerActivity : ComponentActivity() {
                 initialBrightness      = gestureBrightness,
             )
         }
-
-        // ---- Layout: portrait vs landscape ----
-
         Column(modifier = Modifier
             .fillMaxSize()
-            // Only apply status-bar inset padding in portrait; landscape hides system bars entirely.
             .then(if (!isLandscape) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier)
         ) {
             if (!isLandscape) {
-                // ---- PORTRAIT ----
-                // The video is constrained to a 16:9 box so content below the player
-                // (related channels, links) is always visible. resizeMode is intentionally
-                // NOT applied here — the fixed aspect ratio modifier already handles sizing,
-                // and landscape cycling should not carry over to portrait.
                 val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                 Box(
                     modifier = Modifier
@@ -594,15 +494,12 @@ class PlayerActivity : ComponentActivity() {
                             else Modifier.aspectRatio(16f / 9f)
                         ),
                 ) {
-                    // Portrait video surface — plain StyledPlayerView, no resizeMode override.
                     VideoSurface(
                         player     = player,
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT,
                         modifier   = Modifier.fillMaxSize(),
                     )
-
                     if (errorMessage.value.isNotBlank()) ErrorOverlay(errorMessage.value)
-
                     if (isBuffering && errorMessage.value.isBlank()) {
                         CircularProgressIndicator(
                             modifier    = Modifier.align(Alignment.Center).size(48.dp),
@@ -610,10 +507,8 @@ class PlayerActivity : ComponentActivity() {
                             strokeWidth = 3.dp,
                         )
                     }
-
                     if (!isInPipMode) {
                         Controls(isLandscape = false)
-
                         if (isChannelListAvailable) {
                             ChannelListPanel(
                                 visible          = showChannelList.value,
@@ -627,19 +522,14 @@ class PlayerActivity : ComponentActivity() {
                     }
                 }
             } else {
-                // ---- LANDSCAPE ----
-                // Video fills the whole screen. resizeMode is wired here so that
-                // cycleAspectRatio() → resizeMode state change → AndroidView update block
-                // → StyledPlayerView.resizeMode update actually takes visual effect.
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     VideoSurface(
                         player     = player,
-                        resizeMode = resizeMode,   // <-- the fix: live-bound to mutableStateOf
+                        resizeMode = resizeMode,
                         modifier   = Modifier.fillMaxSize(),
                     )
-
                     if (errorMessage.value.isNotBlank()) ErrorOverlay(errorMessage.value)
-
                     if (isBuffering && errorMessage.value.isBlank()) {
                         CircularProgressIndicator(
                             modifier    = Modifier.align(Alignment.Center).size(48.dp),
@@ -647,12 +537,10 @@ class PlayerActivity : ComponentActivity() {
                             strokeWidth = 3.dp,
                         )
                     }
-
                     if (!isInPipMode) {
                         Controls(isLandscape = true)
-
                         if (linksState.value.size > 1) {
-                            AnimatedVisibility(
+                            androidx.compose.animation.AnimatedVisibility(
                                 visible  = controlsState.isVisible && !controlsState.isLocked,
                                 enter    = fadeIn(),
                                 exit     = fadeOut(),
@@ -676,7 +564,6 @@ class PlayerActivity : ComponentActivity() {
                                 )
                             }
                         }
-
                         if (isChannelListAvailable) {
                             ChannelListPanel(
                                 visible          = showChannelList.value,
@@ -691,7 +578,6 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
 
-            // Below-player content (related channels / event links) only in portrait.
             if (!isLandscape && !isInPipMode && contentType != ContentType.NETWORK_STREAM) {
                 PlayerScreen(
                     isLandscape          = false,
@@ -715,9 +601,6 @@ class PlayerActivity : ComponentActivity() {
                 )
             }
         }
-
-        // ---- Dialogs ----
-
         if (!isInPipMode && showSettingsDialog.value && player != null) {
             PlayerSettingsDialog(
                 player    = player!!,
@@ -732,22 +615,6 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    // ==================== Video Surface ====================
-
-    /**
-     * Renders the video using [StyledPlayerView] wrapped in [AndroidView].
-     *
-     * Why not the newer [androidx.media3.ui.compose.PlayerSurface]?
-     * PlayerSurface (the Compose API) does not expose a resizeMode parameter, so there
-     * is no way to control FIT / ZOOM / FILL / FIXED_WIDTH from Compose state.
-     * StyledPlayerView does expose resizeMode as a plain property, and AndroidView's
-     * [update] block re-runs whenever observed Compose state (like [resizeMode]) changes,
-     * making the connection reactive: state change → recomposition → update block → View.
-     *
-     * The [update] block intentionally re-assigns player even if it hasn't changed;
-     * ExoPlayer is safe with this and it ensures the surface is always attached after
-     * recomposition (e.g. after returning from PiP).
-     */
     @Composable
     private fun VideoSurface(
         player: ExoPlayer?,
@@ -756,8 +623,7 @@ class PlayerActivity : ComponentActivity() {
     ) {
         AndroidView(
             factory = { ctx ->
-                StyledPlayerView(ctx).apply {
-                    // Disable the built-in controller — we render our own Compose controls.
+                PlayerView(ctx).apply {
                     useController = false
                 }
             },
@@ -768,9 +634,6 @@ class PlayerActivity : ComponentActivity() {
             modifier = modifier,
         )
     }
-
-    // ==================== Error UI ====================
-
     @Composable
     private fun ErrorOverlay(message: String) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -785,20 +648,16 @@ class PlayerActivity : ComponentActivity() {
             )
         }
     }
-
-    // ==================== Window / System UI Helpers ====================
-
     private fun setupWindowFlags(isLandscape: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes = window.attributes.apply {
-                // Draw into display cutouts (notch/punch-hole) in both orientations.
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        // In portrait the window background shows between the player and content below it.
+
         if (!isLandscape) window.decorView.setBackgroundColor(themeManager.getBackgroundColor(this))
         val isDark = themeManager.isDarkMode(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -807,49 +666,33 @@ class PlayerActivity : ComponentActivity() {
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
-
     private fun setupSystemUI() {
         val isLandscape = DeviceUtils.isTvDevice ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         windowInsetsController.apply {
-            // Allow system bars to peek in with a swipe rather than staying permanently visible.
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             if (isLandscape) {
-                // Full immersive in landscape — no status or nav bars.
+
                 hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                // Portrait: hide nav bar but keep status bar so the clock/battery are visible.
                 hide(WindowInsetsCompat.Type.navigationBars())
                 show(WindowInsetsCompat.Type.statusBars())
             }
         }
     }
-
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-
-        // While in PiP the system manages orientation; don't interfere.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) return
-
         val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
         setupWindowFlags(isLandscape)
         setupSystemUI()
         applyOrientationSettings(isLandscape)
         updateLinksForOrientation(isLandscape)
     }
-
-    /**
-     * Applies orientation-dependent state: updates [isLandscapeState] (drives Compose branch),
-     * switches [resizeMode] between the persisted landscape/portrait slots, and manages
-     * [relatedContentState] visibility.
-     */
     private fun applyOrientationSettings(isLandscape: Boolean) {
         isLandscapeState.value = isLandscape
-        // Switch to the correct persisted resize slot. In landscape this is the value
-        // the user chose via cycleAspectRatio(); in portrait it defaults to FIT.
         resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
         if (isLandscape) {
-            // Related content panel is portrait-only; hide it on rotation to landscape.
             relatedContentState.value = RelatedContentState.Hidden
         } else if (contentType != ContentType.NETWORK_STREAM) {
             if (relatedChannels.isNotEmpty() || contentType == ContentType.EVENT) {
@@ -865,9 +708,6 @@ class PlayerActivity : ComponentActivity() {
             }
         }
     }
-
-    // ==================== Instance State ====================
-
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString("SAVE_CONTENT_TYPE",  contentType.name)
@@ -883,12 +723,10 @@ class PlayerActivity : ComponentActivity() {
         outState.putBoolean("SAVE_IS_SPORTS",   intentIsSports)
         outState.putLong("SAVE_PLAYBACK_POSITION", player?.currentPosition ?: 0L)
         if (preferencesManager.isRememberAspectRatioEnabled()) {
-            // Persist both slots so the user's choice survives rotation-induced recreation.
             outState.putInt("SAVE_RESIZE_LANDSCAPE", networkLandscapeResizeMode)
             outState.putInt("SAVE_RESIZE_PORTRAIT",  networkPortraitResizeMode)
         }
     }
-
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
         super.onRestoreInstanceState(savedInstanceState)
         val typeName = savedInstanceState.getString("SAVE_CONTENT_TYPE") ?: return
@@ -908,19 +746,15 @@ class PlayerActivity : ComponentActivity() {
             val savedP = savedInstanceState.getInt("SAVE_RESIZE_PORTRAIT",  -1)
             if (savedL != -1) networkLandscapeResizeMode = savedL
             if (savedP != -1) networkPortraitResizeMode  = savedP
-            // Mark as restored so the STATE_READY listener doesn't overwrite the user choice.
             if (savedL != -1 || savedP != -1) resizeModesRestoredFromState = true
         }
     }
-
-    // ==================== Lifecycle Callbacks ====================
-
     override fun onStart() {
         super.onStart()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isPipSupported) {
             setPictureInPictureParams(buildPipParams())
         }
-        // Track screen on/off so we can release the player when the screen turns off in PiP.
+
         screenOffReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
@@ -934,7 +768,6 @@ class PlayerActivity : ComponentActivity() {
             addAction(Intent.ACTION_SCREEN_ON)
         })
     }
-
     override fun onResume() {
         super.onResume()
         isScreenOff = false
@@ -944,7 +777,7 @@ class PlayerActivity : ComponentActivity() {
         setupSystemUI()
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        // Recreate the player if it was released (e.g. after returning from another activity).
+
         if (player == null) setupPlayer()
         if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
             val channelListKey    = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
@@ -958,28 +791,23 @@ class PlayerActivity : ComponentActivity() {
             }
         }
     }
-
     override fun onPause() {
         super.onPause()
         cancelNumberInput()
-        // Don't pause if we're entering PiP — the player should keep going.
         val isPip = isEnteringPip ||
             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode)
         if (!isPip) player?.pause()
     }
-
     override fun onStop() {
         super.onStop()
         screenOffReceiver?.let {
             try { unregisterReceiver(it) } catch (_: Exception) {}
             screenOffReceiver = null
         }
-        // When in PiP and the screen turns off, release the player to free resources.
         if (isInPipMode) {
             if (!isScreenOff) { releasePlayer(); finish() }
         }
     }
-
     override fun onDestroy() {
         super.onDestroy()
         channelNumberHandler.removeCallbacksAndMessages(null)
@@ -987,15 +815,11 @@ class PlayerActivity : ComponentActivity() {
         unregisterPipReceiver()
         releasePlayer()
     }
-
-    // ==================== PiP ====================
-
     override fun onPictureInPictureModeChanged(
         isInPictureInPictureMode: Boolean,
         newConfig: Configuration,
     ) {
         if (!isInPictureInPictureMode) {
-            // Returning from PiP — tear down the PiP broadcast receiver and restore UI.
             pipReceiver?.let { unregisterReceiver(it); pipReceiver = null }
             isInPipMode   = false
             isEnteringPip = false
@@ -1012,7 +836,6 @@ class PlayerActivity : ComponentActivity() {
             applyOrientationSettings(landscape)
             return
         }
-        // Entering PiP — hide controls and register the media button receiver.
         isInPipMode   = true
         isEnteringPip = false
         isInPip       = true
@@ -1022,10 +845,8 @@ class PlayerActivity : ComponentActivity() {
         setupPipReceiver()
         super.onPictureInPictureModeChanged(true, newConfig)
     }
-
     @SuppressLint("NewApi")
     override fun onUserLeaveHint() {
-        // Auto-enter PiP when the user presses Home while content is playing.
         val isForegrounded = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
         if (!DeviceUtils.isTvDevice && isPipSupported && player?.isPlaying == true && isForegrounded && !isFinishing) {
             isEnteringPip      = true
@@ -1038,7 +859,6 @@ class PlayerActivity : ComponentActivity() {
         }
         super.onUserLeaveHint()
     }
-
     @SuppressLint("NewApi")
     internal fun enterPipMode() {
         if (!isPipSupported) return
@@ -1050,7 +870,6 @@ class PlayerActivity : ComponentActivity() {
             @Suppress("DEPRECATION") enterPictureInPictureMode()
         }
     }
-
     @RequiresApi(Build.VERSION_CODES.O)
     fun buildPipParams(enter: Boolean = false): PictureInPictureParams {
         val builder = PictureInPictureParams.Builder()
@@ -1061,17 +880,14 @@ class PlayerActivity : ComponentActivity() {
             builder.setSeamlessResizeEnabled(isPlaying)
         }
         builder.setActions(createPipActions(this, player?.isPlaying != true))
-        // Use the video's actual pixel aspect ratio for the PiP window so it doesn't letterbox.
         player?.videoFormat?.let { format ->
             if (format.height > 0 && format.width > 0) {
                 val r = Rational(format.width, format.height).toFloat()
-                // Android enforces a min/max ratio of ~0.42–2.38 for PiP windows.
                 if (r in 0.42..2.38) builder.setAspectRatio(Rational(format.width, format.height))
             }
         }
         return builder.build()
     }
-
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createPipActions(context: Context, isPaused: Boolean): List<RemoteAction> {
         fun makePendingIntent(requestCode: Int, controlType: Int) = PendingIntent.getBroadcast(
@@ -1105,7 +921,6 @@ class PlayerActivity : ComponentActivity() {
                 "Forward", "Forward 10s", makePendingIntent(CONTROL_TYPE_FORWARD, CONTROL_TYPE_FORWARD)),
         )
     }
-
     private fun setupPipReceiver() {
         pipReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -1154,20 +969,14 @@ class PlayerActivity : ComponentActivity() {
             registerReceiver(pipReceiver, IntentFilter(ACTION_MEDIA_CONTROL))
         }
     }
-
     private fun unregisterPipReceiver() {
         try { pipReceiver?.let { unregisterReceiver(it); pipReceiver = null } } catch (_: Exception) {}
     }
-
-    // ==================== Back Handler ====================
-
     private fun setupBackHandler() {
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    // Never intercept back while in PiP — the system handles it.
                     isInPipMode -> return
-                    // Dismiss any pending number-input or channel navigation first.
                     channelNumberInput.isNotEmpty() || pendingChannelIndex != -1 ||
                         pendingChannelDirection != 0 || pendingChannelNumber != -1 -> cancelNumberInput()
                     showChannelList.value -> showChannelList.value = false
@@ -1176,9 +985,6 @@ class PlayerActivity : ComponentActivity() {
             }
         })
     }
-
-    // ==================== Key Events (TV / hardware keys) ====================
-
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         val code = event.keyCode
         if (code == android.view.KeyEvent.KEYCODE_MEDIA_NEXT ||
@@ -1193,7 +999,6 @@ class PlayerActivity : ComponentActivity() {
         }
         return super.dispatchKeyEvent(event)
     }
-
     override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
         return when (keyCode) {
             android.view.KeyEvent.KEYCODE_CHANNEL_UP,
@@ -1241,7 +1046,6 @@ class PlayerActivity : ComponentActivity() {
             else -> super.onKeyUp(keyCode, event)
         }
     }
-
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
         return when (keyCode) {
             android.view.KeyEvent.KEYCODE_MEDIA_PLAY,
@@ -1364,7 +1168,6 @@ class PlayerActivity : ComponentActivity() {
             android.view.KeyEvent.KEYCODE_7, android.view.KeyEvent.KEYCODE_8,
             android.view.KeyEvent.KEYCODE_9 -> {
                 if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
-                // Ignore key repeat; only act on the initial press.
                 if (event?.repeatCount != 0 || showChannelList.value) return true
                 pendingChannelDirection = 0
                 channelNumberInput += (keyCode - android.view.KeyEvent.KEYCODE_0).toString()
@@ -1377,13 +1180,9 @@ class PlayerActivity : ComponentActivity() {
             else -> super.onKeyDown(keyCode, event)
         }
     }
-
-    // ==================== Channel Number Navigation ====================
-
     private fun showChannelOverlay(number: String, channel: Channel?) {
         showChannelOverlayState.value = null
     }
-
     private fun navigateToChannelByNumber() {
         val number = channelNumberInput.toIntOrNull()
         channelNumberInput = ""
@@ -1407,7 +1206,6 @@ class PlayerActivity : ComponentActivity() {
             channelNumberHandler.postDelayed(overlayHideRunnable, 2000)
         }
     }
-
     private fun cancelNumberInput() {
         channelNumberInput      = ""
         pendingChannelIndex     = -1
@@ -1417,28 +1215,11 @@ class PlayerActivity : ComponentActivity() {
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
         showChannelOverlayState.value = null
     }
-
     private fun clearNumberTyping() {
         channelNumberInput = ""
         channelNumberHandler.removeCallbacks(channelNumberRunnable)
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
     }
-
-    // ==================== Aspect Ratio ====================
-
-    /**
-     * Cycles the video resize mode through FIT → ZOOM → FILL → FIXED_WIDTH → FIT.
-     *
-     * Only active in landscape. In portrait the video container already constrains the
-     * layout to 16:9 via an aspectRatio modifier, so cycling would have no visible effect
-     * and the portrait slot is intentionally not wired to the VideoSurface composable.
-     *
-     * The new mode is:
-     * 1. Written to [resizeMode] (a mutableStateOf) — triggers Compose recomposition,
-     *    which fires the AndroidView update block, which sets StyledPlayerView.resizeMode.
-     * 2. Persisted to [networkLandscapeResizeMode] so it survives orientation flips.
-     * 3. Optionally saved to preferences via [PreferencesManager] so it persists across sessions.
-     */
     internal fun cycleAspectRatio() {
         val isLandscape = DeviceUtils.isTvDevice ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -1448,24 +1229,18 @@ class PlayerActivity : ComponentActivity() {
             AspectRatioFrameLayout.RESIZE_MODE_FILL        -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
             else                                           -> AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
-        resizeMode = next   // mutableStateOf → triggers VideoSurface recomposition
+        resizeMode = next
         if (contentType != ContentType.NETWORK_STREAM && preferencesManager.isRememberAspectRatioEnabled()) {
             if (isLandscape) { networkLandscapeResizeMode = next; preferencesManager.setSavedAspectRatio(next) }
             else             { networkPortraitResizeMode  = next; preferencesManager.setSavedAspectRatioPortrait(next) }
         }
     }
-
-    // ==================== Fullscreen Toggle ====================
-
     internal fun toggleFullscreen() {
         if (DeviceUtils.isTvDevice) return
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         requestedOrientation = if (isLandscape) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     }
-
-    // ==================== Intent Parsing ====================
-
     private fun parseIntent() {
         if (intent.action == Intent.ACTION_VIEW && intent.data != null) {
             val rawUri     = intent.data!!.toString()
@@ -1490,7 +1265,6 @@ class PlayerActivity : ComponentActivity() {
             ))
             currentLinkIndex = 0; return
         }
-
         if (intent.getBooleanExtra("IS_NETWORK_STREAM", false)) {
             contentType = ContentType.NETWORK_STREAM
             contentName = intent.getStringExtra("CHANNEL_NAME") ?: "Network Stream"
@@ -1526,14 +1300,12 @@ class PlayerActivity : ComponentActivity() {
             }
             currentLinkIndex = 0; return
         }
-
         channelData = intent.parcelableExtra<Channel>(EXTRA_CHANNEL)
         eventData   = intent.parcelableExtra<LiveEvent>(EXTRA_EVENT)
         val passedLinkIndex  = intent.getIntExtra(EXTRA_SELECTED_LINK_INDEX, -1)
         intentCategoryId     = intent.getStringExtra(EXTRA_CATEGORY_ID)
         intentSelectedGroup  = intent.getStringExtra(EXTRA_SELECTED_GROUP)
         intentIsSports       = intent.getBooleanExtra(EXTRA_IS_SPORTS, false)
-
         when {
             channelData != null -> {
                 val ch = channelData!!
@@ -1566,9 +1338,6 @@ class PlayerActivity : ComponentActivity() {
             else -> { finish(); return }
         }
     }
-
-    // ==================== Related Content ====================
-
     private var relatedChannels = listOf<Channel>()
 
     private fun setupRelatedChannels() {
@@ -1579,14 +1348,11 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun setupLinksUI() { updateLinksState() }
-
     private fun updateLinksState() {
         linksState.value        = if (isInPipMode || allEventLinks.size <= 1) emptyList() else allEventLinks
         selectedLinkState.value = currentLinkIndex
     }
-
     private fun updateLinksForOrientation(isLandscape: Boolean) { updateLinksState() }
-
     private fun setupMessageBanner() {
         val message = listenerManager.getMessage()
         if (message.isNotBlank()) {
@@ -1594,7 +1360,6 @@ class PlayerActivity : ComponentActivity() {
             messageBannerUrl.value  = listenerManager.getMessageUrl()
         }
     }
-
     private fun loadRelatedContent() {
         if (DeviceUtils.isTvDevice) return
         when (contentType) {
@@ -1617,15 +1382,11 @@ class PlayerActivity : ComponentActivity() {
             else -> {}
         }
     }
-
-    // ==================== Player Setup ====================
-
     private fun setupPlayer() {
         if (streamUrl.isBlank()) { errorMessage.value = "No stream URL"; return }
         lifecycleScope.launch {
             val parsed  = PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
-            // Always provide a real User-Agent; some servers reject the default OkHttp one.
             if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
                 headers["User-Agent"] = "okhttp/4.12.0"
             }
@@ -1633,7 +1394,6 @@ class PlayerActivity : ComponentActivity() {
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     PlayerStreamHelper.resolveContentType(parsed.url, headers)
                 }
-
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
@@ -1641,8 +1401,6 @@ class PlayerActivity : ComponentActivity() {
                 .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
-
-            // Build ClearKey DRM manager only when the scheme is "clearkey".
             val clearKeyMgr = when {
                 parsed.drmScheme != "clearkey" -> null
                 parsed.drmKeyId != null && parsed.drmKey != null ->
@@ -1653,7 +1411,6 @@ class PlayerActivity : ComponentActivity() {
                     PlayerStreamHelper.buildClearKeyServerManager(parsed.drmLicenseUrl, headers)
                 else -> null
             }
-
             val mediaSourceFactory = if (clearKeyMgr != null) {
                 DefaultMediaSourceFactory(this@PlayerActivity)
                     .setDataSourceFactory(dataSourceFactory)
@@ -1665,7 +1422,6 @@ class PlayerActivity : ComponentActivity() {
             val renderersFactory = DefaultRenderersFactory(this@PlayerActivity)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
-
             val ts = DefaultTrackSelector(this@PlayerActivity).apply {
                 parameters = buildUponParameters()
                     .setAllowVideoMixedMimeTypeAdaptiveness(true)
@@ -1674,7 +1430,6 @@ class PlayerActivity : ComponentActivity() {
                     .build()
             }
             trackSelector = ts
-
             val exo = ExoPlayer.Builder(this@PlayerActivity)
                 .setRenderersFactory(renderersFactory)
                 .setTrackSelector(ts)
@@ -1689,13 +1444,9 @@ class PlayerActivity : ComponentActivity() {
                     true,
                 )
                 .build()
-
             player = exo
-
             val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
             mimeType?.let { mediaItemBuilder.setMimeType(it) }
-
-            // Attach Widevine / PlayReady DRM config when applicable.
             if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
                 val uuid = if (parsed.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
                 val licHeaders = headers.filter { (k, _) -> k.lowercase() !in setOf("referer", "origin") }
@@ -1708,16 +1459,12 @@ class PlayerActivity : ComponentActivity() {
                         .build()
                 )
             }
-
             val listener = object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
                     when (state) {
                         Player.STATE_BUFFERING -> errorMessage.value = ""
                         Player.STATE_READY -> {
                             errorMessage.value = ""
-                            // On first STATE_READY load the persisted aspect ratio preference,
-                            // but only if we haven't already loaded it from saved instance state
-                            // (which would mean the user already made a choice this session).
                             if (!resizeModesRestoredFromState) {
                                 if (contentType != ContentType.NETWORK_STREAM) {
                                     val savedL = preferencesManager.getSavedAspectRatio()
@@ -1727,8 +1474,6 @@ class PlayerActivity : ComponentActivity() {
                                 }
                                 resizeModesRestoredFromState = true
                                 val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                // Updating resizeMode here triggers the VideoSurface
-                                // AndroidView update block and applies the mode to StyledPlayerView.
                                 resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
                             }
                         }
@@ -1746,9 +1491,6 @@ class PlayerActivity : ComponentActivity() {
             exo.playWhenReady = true
         }
     }
-
-    // ==================== Player Lifecycle Helpers ====================
-
     private fun releasePlayer() {
         player?.let {
             try { playerListener?.let { l -> it.removeListener(l) }; it.stop(); it.release() }
@@ -1757,16 +1499,12 @@ class PlayerActivity : ComponentActivity() {
         player         = null
         playerListener = null
     }
-
     internal fun retryPlayback() {
         errorMessage.value = ""
         player?.release()
         player = null
         setupPlayer()
     }
-
-    // ==================== Channel / Event Switching ====================
-
     internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
         releasePlayer()
         channelData = newChannel; eventData = null
@@ -1797,7 +1535,6 @@ class PlayerActivity : ComponentActivity() {
             else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
         }
     }
-
     private fun switchToEventFromLiveEvent(newEvent: LiveEvent, linkIndex: Int = 0) {
         try {
             releasePlayer()
@@ -1815,7 +1552,6 @@ class PlayerActivity : ComponentActivity() {
             viewModel.loadRelatedEvents(newEvent.id)
         } catch (_: Exception) {}
     }
-
     internal fun switchToLink(link: LiveEventLink, position: Int) {
         currentLinkIndex        = position
         selectedLinkState.value = position
@@ -1823,19 +1559,14 @@ class PlayerActivity : ComponentActivity() {
         releasePlayer()
         setupPlayer()
     }
-
-    // ==================== Other Helpers ====================
-
     internal fun showSettingsDialog() {
         if (player == null || isFinishing || isDestroyed || isShowingSettingsDialog) return
         isShowingSettingsDialog  = true
         showSettingsDialog.value = true
     }
-
     internal fun toggleMute() {
         isMuted = PlayerStreamHelper.toggleMute(player, isMuted)
     }
-
     override fun finish() {
         try {
             releasePlayer()
@@ -1847,23 +1578,15 @@ class PlayerActivity : ComponentActivity() {
         } catch (_: Exception) { super.finish() }
     }
 }
-
-// ==================== Parcelable Extension Helpers ====================
-
 private inline fun <reified T : Parcelable> Intent.parcelableExtra(key: String): T? =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelableExtra(key, T::class.java)
     else @Suppress("DEPRECATION") getParcelableExtra(key)
-
 private inline fun <reified T : Parcelable> Bundle.parcelableCompat(key: String): T? =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelable(key, T::class.java)
     else @Suppress("DEPRECATION") getParcelable(key)
-
 private inline fun <reified T : Parcelable> Bundle.parcelableArrayListCompat(key: String): List<T>? =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelableArrayList(key, T::class.java)
     else @Suppress("DEPRECATION") getParcelableArrayList<T>(key)
-
-// ==================== ChannelLink → LiveEventLink Mapper ====================
-
 private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.livetvpro.app.data.models.LiveEventLink(
     quality       = quality,
     url           = url,

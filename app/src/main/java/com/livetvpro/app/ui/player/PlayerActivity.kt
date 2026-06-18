@@ -215,6 +215,9 @@ class PlayerActivity : ComponentActivity() {
     private fun handleNewIntent(intent: Intent) {
         cancelNumberInput()
         showChannelList.value = false
+        intentCategoryId    = intent.getStringExtra(EXTRA_CATEGORY_ID)
+        intentSelectedGroup = intent.getStringExtra(EXTRA_SELECTED_GROUP)
+        intentIsSports      = intent.getBooleanExtra(EXTRA_IS_SPORTS, false)
         val newChannel = intent.parcelableExtra<Channel>(EXTRA_CHANNEL)
         val newEvent   = intent.parcelableExtra<LiveEvent>(EXTRA_EVENT)
         val linkIndex  = intent.getIntExtra(EXTRA_SELECTED_LINK_INDEX, -1)
@@ -496,7 +499,7 @@ class PlayerActivity : ComponentActivity() {
                 ) {
                     VideoSurface(
                         player     = player,
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                        resizeMode = if (isNetworkStream) resizeMode else AspectRatioFrameLayout.RESIZE_MODE_FIT,
                         modifier   = Modifier.fillMaxSize(),
                     )
                     if (errorMessage.value.isNotBlank()) ErrorOverlay(errorMessage.value)

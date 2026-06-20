@@ -485,16 +485,21 @@ class PlayerActivity : ComponentActivity() {
         }
         Column(modifier = Modifier
             .fillMaxSize()
-            .then(if (!isLandscape) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier)
+            .then(if (!isLandscape && !isInPipMode) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier)
         ) {
             if (!isLandscape) {
                 val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .then(
-                            if (isNetworkStream) Modifier.weight(1f)
-                            else Modifier.aspectRatio(16f / 9f)
+                            when {
+                                // In PiP the window itself is the video frame; never
+                                // constrain it to a fixed aspect ratio, or the rest of
+                                // the PiP rect shows through as the theme background.
+                                isInPipMode     -> Modifier.fillMaxSize()
+                                isNetworkStream -> Modifier.fillMaxWidth().weight(1f)
+                                else            -> Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                            }
                         ),
                 ) {
                     VideoSurface(

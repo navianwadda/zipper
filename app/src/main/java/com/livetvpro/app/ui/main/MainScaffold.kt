@@ -208,6 +208,21 @@ fun MainScaffold(
                 factory = { ctx ->
                     FragmentContainerView(ctx).apply {
                         id = containerId
+                        // Nested ComposeViews hosted inside Fragments attached to
+                        // this container don't reliably receive live WindowInsets
+                        // dispatch the same way the Activity's root Compose tree
+                        // does, so screens like LiveEventsScreen end up reading a
+                        // stale/zero navigationBars inset for their bottom padding
+                        // even though sibling composables (e.g. the floating nav)
+                        // see the correct value. Explicitly request + forward
+                        // insets here so every Fragment underneath gets the same
+                        // live values.
+                        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
+                            for (i in 0 until v.childCount) {
+                                androidx.core.view.ViewCompat.dispatchApplyWindowInsets(v.getChildAt(i), insets)
+                            }
+                            insets
+                        }
                     }
                 },
                 update = {

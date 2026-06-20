@@ -857,6 +857,18 @@ class PlayerActivity : ComponentActivity() {
         setupPipReceiver()
         super.onPictureInPictureModeChanged(true, newConfig)
     }
+    /**
+     * Re-syncs the PiP play/pause RemoteAction with the player's real state.
+     * Playback can change for reasons other than the PiP button itself
+     * (buffering resolving, error retry, channel switch, etc.), so this must
+     * be called from the player listener too, not just from button taps.
+     */
+    private fun refreshPipParamsIfNeeded() {
+        if (!isInPipMode) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try { setPictureInPictureParams(buildPipParams()) } catch (_: Exception) {}
+        }
+    }
     @SuppressLint("NewApi")
     override fun onUserLeaveHint() {
         val isForegrounded = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
@@ -943,11 +955,11 @@ class PlayerActivity : ComponentActivity() {
                 when (intent.getIntExtra(EXTRA_CONTROL_TYPE, 0)) {
                     CONTROL_TYPE_PLAY  -> {
                         if (hasError || hasEnded) retryPlayback() else p.play()
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) setPictureInPictureParams(buildPipParams())
+                        refreshPipParamsIfNeeded()
                     }
                     CONTROL_TYPE_PAUSE -> {
                         if (hasError || hasEnded) retryPlayback() else p.pause()
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) setPictureInPictureParams(buildPipParams())
+                        refreshPipParamsIfNeeded()
                     }
                     CONTROL_TYPE_REWIND  -> if (!hasError && !hasEnded)
                         p.seekTo((p.currentPosition - skipMs).coerceAtLeast(0L))
@@ -1494,9 +1506,14 @@ class PlayerActivity : ComponentActivity() {
                         }
                         else -> {}
                     }
+                    refreshPipParamsIfNeeded()
+                }
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    refreshPipParamsIfNeeded()
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     errorMessage.value = error.localizedMessage ?: "Playback error"
+                    refreshPipParamsIfNeeded()
                 }
             }
             playerListener = listener
@@ -1535,6 +1552,7 @@ class PlayerActivity : ComponentActivity() {
             allEventLinks = emptyList(); streamUrl = newChannel.streamUrl
         }
         setupPlayer(); setupLinksUI()
+        refreshPipParamsIfNeeded()
         relatedContentState.value = RelatedContentState.Loading
         val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
         val isFavSrc       = channelListKey == "favorites_session"
@@ -1563,6 +1581,7 @@ class PlayerActivity : ComponentActivity() {
                 streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[currentLinkIndex])
             } else { currentLinkIndex = 0; streamUrl = "" }
             setupPlayer(); setupLinksUI()
+            refreshPipParamsIfNeeded()
             relatedContentState.value = RelatedContentState.Loading
             viewModel.loadRelatedEvents(newEvent.id)
         } catch (_: Exception) {}
@@ -1573,6 +1592,7 @@ class PlayerActivity : ComponentActivity() {
         streamUrl               = PlayerStreamHelper.buildStreamUrl(link)
         releasePlayer()
         setupPlayer()
+        refreshPipParamsIfNeeded()
     }
     internal fun showSettingsDialog() {
         if (player == null || isFinishing || isDestroyed || isShowingSettingsDialog) return

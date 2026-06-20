@@ -218,8 +218,11 @@ fun MainScaffold(
                         // insets here so every Fragment underneath gets the same
                         // live values.
                         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
-                            for (i in 0 until v.childCount) {
-                                androidx.core.view.ViewCompat.dispatchApplyWindowInsets(v.getChildAt(i), insets)
+                            val vg = v as? android.view.ViewGroup
+                            if (vg != null) {
+                                for (i in 0 until vg.childCount) {
+                                    androidx.core.view.ViewCompat.dispatchApplyWindowInsets(vg.getChildAt(i), insets)
+                                }
                             }
                             insets
                         }

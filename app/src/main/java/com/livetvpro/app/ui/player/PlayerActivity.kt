@@ -670,7 +670,8 @@ class PlayerActivity : ComponentActivity() {
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
-        if (!isLandscape) window.decorView.setBackgroundColor(themeManager.getBackgroundColor(this))
+        if (!isLandscape && !isInPipMode) window.decorView.setBackgroundColor(themeManager.getBackgroundColor(this))
+        else if (isInPipMode) window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         val isDark = themeManager.isDarkMode(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars     = !isDark
@@ -851,6 +852,7 @@ class PlayerActivity : ComponentActivity() {
         isInPipMode   = true
         isEnteringPip = false
         isInPip       = true
+        window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         updateLinksState()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) setPictureInPictureParams(buildPipParams(enter = true))
         controlsState.hide()

@@ -116,6 +116,13 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
+        // Some OEM ROMs (esp. with 3-button nav) delay or skip the first
+        // WindowInsets dispatch, leaving Compose's navigationBars insets at 0
+        // until something forces a relayout. Request one explicitly.
+        window.decorView.post {
+            window.decorView.requestApplyInsets()
+        }
+
         themeManager.registerActivityContext(this)
 
         setContent {

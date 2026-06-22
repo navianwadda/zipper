@@ -175,7 +175,7 @@ fun MainScaffold(
         navController.currentBackStackEntryFlow.collect { entry ->
             val route = entry.destination.route
             currentRoute = route
-            
+         
             if (route != Routes.CATEGORY_CHANNELS) categoryTitle = null
             toolbarTitle = resolveTitle(route, categoryTitle)
             isTopLevel   = route in topLevelSet

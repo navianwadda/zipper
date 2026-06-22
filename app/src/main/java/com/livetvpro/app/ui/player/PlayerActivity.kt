@@ -637,6 +637,15 @@ class PlayerActivity : ComponentActivity() {
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     useController = false
+                    setBackgroundColor(android.graphics.Color.BLACK)
+                    // The shutter is what PlayerView actually draws over the
+                    // surface while no frame is available yet (initial load,
+                    // between channel switches, source changes) - this is
+                    // the correct fix, more reliable than relying on the
+                    // SurfaceView's own background, since SurfaceView can
+                    // punch a transparent hole in the window for hardware
+                    // compositing and ignore a plain background color.
+                    setShutterBackgroundColor(android.graphics.Color.BLACK)
                 }
             },
             update = { view ->

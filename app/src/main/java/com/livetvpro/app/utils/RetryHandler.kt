@@ -165,52 +165,6 @@ abstract class AndroidRetryViewModel(application: Application) : AndroidViewMode
     }
 }
 object RetryHandler {
-    fun setupGlobal(
-        lifecycleOwner: LifecycleOwner,
-        viewModel: IRetryViewModel,
-        activity: androidx.appcompat.app.AppCompatActivity,
-        contentView: View,
-        swipeRefresh: SwipeRefreshLayout? = null,
-        progressBar: View? = null,
-        emptyView: View? = null
-    ) {
-        val errorOverlay = activity.findViewById<View>(com.livetvpro.app.R.id.global_error_overlay)
-        val errorText = activity.findViewById<TextView>(com.livetvpro.app.R.id.global_error_text)
-        val retryButton = activity.findViewById<View>(com.livetvpro.app.R.id.global_retry_button)
-        val isTv = DeviceUtils.isTvDevice
-        errorOverlay.visibility = View.GONE
-        contentView.visibility = View.VISIBLE
-        emptyView?.visibility = View.GONE
-        swipeRefresh?.isEnabled = !isTv
-        retryButton.setOnClickListener { viewModel.retry() }
-        swipeRefresh?.setOnRefreshListener { viewModel.refresh() }
-        viewModel.isLoading.observe(lifecycleOwner) { isLoading ->
-            progressBar?.visibility = if (isLoading) View.VISIBLE else View.GONE
-            swipeRefresh?.isRefreshing = isLoading
-        }
-        viewModel.isEmpty.observe(lifecycleOwner) { isEmpty ->
-            emptyView?.visibility = if (isEmpty) View.VISIBLE else View.GONE
-        }
-        viewModel.error.observe(lifecycleOwner) { error ->
-            if (error != null) {
-                errorOverlay.visibility = View.VISIBLE
-                errorText.text = error
-                contentView.visibility = View.GONE
-                emptyView?.visibility = View.GONE
-                if (!isTv) swipeRefresh?.isEnabled = true
-            } else {
-                errorOverlay.visibility = View.GONE
-                contentView.visibility = View.VISIBLE
-                if (!isTv) swipeRefresh?.isEnabled = true
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onDestroy(owner: LifecycleOwner) {
-                errorOverlay.visibility = View.GONE
-                contentView.visibility = View.VISIBLE
-            }
-        })
-    }
     fun setupWithRefresh(
         lifecycleOwner: LifecycleOwner,
         viewModel: IRetryViewModel,

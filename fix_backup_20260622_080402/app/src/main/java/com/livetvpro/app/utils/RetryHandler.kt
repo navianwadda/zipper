@@ -30,6 +30,9 @@ object ErrorMessageConverter {
         }
     }
 }
+interface Refreshable {
+    fun refreshData()
+}
 interface IRetryViewModel {
     val isLoading: LiveData<Boolean>
     val error: LiveData<String?>

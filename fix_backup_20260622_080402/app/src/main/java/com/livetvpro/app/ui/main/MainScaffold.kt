@@ -59,54 +59,53 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.fragment.app.FragmentContainerView
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import androidx.navigation.fragment.NavHostFragment
 import com.livetvpro.app.MainActivity
 import com.livetvpro.app.R
-import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
-import com.livetvpro.app.ui.appearance.AppearanceScreen
-import com.livetvpro.app.ui.categories.CategoryChannelsRoute
-import com.livetvpro.app.ui.components.ComposeFloatingNav
-import com.livetvpro.app.ui.deviceid.DeviceIdScreen
-import com.livetvpro.app.ui.dialogs.SupportDialogHost
-import com.livetvpro.app.ui.favorites.FavoritesRoute
-import com.livetvpro.app.ui.home.HomeRoute
-import com.livetvpro.app.ui.live.LiveEventsRoute
-import com.livetvpro.app.ui.navigation.Routes
-import com.livetvpro.app.ui.networkstream.NetworkStreamRoute
-import com.livetvpro.app.ui.playlists.PlaylistsRoute
-import com.livetvpro.app.ui.score.CricketScoreScreen
-import com.livetvpro.app.ui.score.FootballScoreScreen
 import com.livetvpro.app.ui.settings.SettingsActions
-import com.livetvpro.app.ui.settings.SettingsScreen
-import com.livetvpro.app.ui.sports.SportsRoute
+import com.livetvpro.app.ui.components.ComposeFloatingNav
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
-import com.livetvpro.app.utils.RedirectCooldownManager
-import java.net.URLDecoder
+import com.livetvpro.app.data.local.PreferencesManager
+import com.livetvpro.app.ui.dialogs.SupportDialogHost
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
-data class NavTab(val route: String, val labelRes: Int, val filledIcon: Int, val outlineIcon: Int)
+private val PHONE_TOP_LEVEL = setOf(
+    R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment, R.id.settingsFragment
+)
+private val TV_TOP_LEVEL = setOf(
+    R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment, R.id.favoritesFragment, R.id.settingsFragment
+)
+private val DRAWER_FRAGMENTS = setOf(
+    R.id.networkStreamFragment, R.id.playlistsFragment,
+    R.id.cricketScoreFragment, R.id.footballScoreFragment, R.id.deviceIdFragment
+)
+
+data class NavTab(val destId: Int, val labelRes: Int, val filledIcon: Int, val outlineIcon: Int)
 
 private val PHONE_TABS = listOf(
-    NavTab(Routes.LIVE_EVENTS, R.string.nav_live,     R.drawable.ic_live_filled,   R.drawable.ic_live_outline),
-    NavTab(Routes.HOME,        R.string.nav_home,     R.drawable.ic_tv_filled,     R.drawable.ic_tv_outline),
-    NavTab(Routes.SPORTS,      R.string.nav_sports,   R.drawable.ic_sports_filled, R.drawable.ic_sports_outline),
-    NavTab(Routes.SETTINGS,    R.string.nav_settings, R.drawable.ic_settings,      R.drawable.ic_settings),
+    NavTab(R.id.liveEventsFragment, R.string.nav_live,     R.drawable.ic_live_filled,   R.drawable.ic_live_outline),
+    NavTab(R.id.homeFragment,       R.string.nav_home,     R.drawable.ic_tv_filled,     R.drawable.ic_tv_outline),
+    NavTab(R.id.sportsFragment,     R.string.nav_sports,   R.drawable.ic_sports_filled, R.drawable.ic_sports_outline),
+    NavTab(R.id.settingsFragment,   R.string.nav_settings, R.drawable.ic_settings,      R.drawable.ic_settings),
 )
 private val TV_TABS = listOf(
-    NavTab(Routes.LIVE_EVENTS, R.string.nav_live,      R.drawable.ic_live_filled,   R.drawable.ic_live_outline),
-    NavTab(Routes.HOME,        R.string.nav_home,      R.drawable.ic_tv_filled,     R.drawable.ic_tv_outline),
-    NavTab(Routes.SPORTS,      R.string.nav_sports,    R.drawable.ic_sports_filled, R.drawable.ic_sports_outline),
-    NavTab(Routes.FAVORITES,   R.string.nav_favorites, R.drawable.ic_star_filled,   R.drawable.ic_star_outline),
-    NavTab(Routes.SETTINGS,    R.string.nav_settings,  R.drawable.ic_settings,      R.drawable.ic_settings),
+    NavTab(R.id.liveEventsFragment, R.string.nav_live,      R.drawable.ic_live_filled,   R.drawable.ic_live_outline),
+    NavTab(R.id.homeFragment,       R.string.nav_home,      R.drawable.ic_tv_filled,     R.drawable.ic_tv_outline),
+    NavTab(R.id.sportsFragment,     R.string.nav_sports,    R.drawable.ic_sports_filled, R.drawable.ic_sports_outline),
+    NavTab(R.id.favoritesFragment,  R.string.nav_favorites, R.drawable.ic_star_filled,   R.drawable.ic_star_outline),
+    NavTab(R.id.settingsFragment,   R.string.nav_settings,  R.drawable.ic_settings,      R.drawable.ic_settings),
+)
+
+private val REFRESH_DESTINATIONS = setOf(
+    R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment,
+    R.id.categoryChannelsFragment, R.id.playlistsFragment, R.id.favoritesFragment
 )
 
 @Composable
@@ -114,11 +113,11 @@ fun MainScaffold(
     activity: MainActivity,
     themeManager: ThemeManager,
     listenerManager: NativeListenerManager,
-    cooldownManager: RedirectCooldownManager,
     preferencesManager: PreferencesManager,
     settingsActions: SettingsActions,
     onNavControllerReady: (NavController) -> Unit,
-    onDestinationChanged: (route: String?, title: String, showRefresh: Boolean) -> Unit,
+    onNavHostReady: (NavHostFragment) -> Unit = {},
+    onDestinationChanged: (destId: Int, title: String, showRefresh: Boolean) -> Unit,
     onSearchVisibilityChanged: (Boolean) -> Unit,
 ) {
     val isTvOrDesktop = DeviceUtils.isTvDevice || DeviceUtils.isDesktop
@@ -127,41 +126,40 @@ fun MainScaffold(
 
     val primaryColor by themeManager.primaryColorFlow.collectAsState()
 
-    val navController  = rememberNavController()
-    var currentRoute   by remember { mutableStateOf<String?>(null) }
+    var navController  by remember { mutableStateOf<NavController?>(null) }
+    var currentDestId  by remember { mutableIntStateOf(-1) }
     var toolbarTitle   by remember { mutableStateOf("Live TV Pro") }
-    val showRefreshIcon = currentRoute in Routes.REFRESH_DESTINATIONS
+    val showRefreshIcon = currentDestId in REFRESH_DESTINATIONS
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery    by remember { mutableStateOf("") }
-    var refreshSignal  by remember { mutableIntStateOf(0) }
     var isTopLevel     by remember { mutableStateOf(true) }
-    var categoryTitle  by remember { mutableStateOf<String?>(null) }
 
-    val topLevelSet = if (isTvOrDesktop || isTablet) Routes.TV_TOP_LEVEL else Routes.PHONE_TOP_LEVEL
-    val tabs        = if (isTvOrDesktop || isTablet) TV_TABS             else PHONE_TABS
+    val topLevelSet = if (isTvOrDesktop || isTablet) TV_TOP_LEVEL else PHONE_TOP_LEVEL
+    val tabs        = if (isTvOrDesktop || isTablet) TV_TABS      else PHONE_TABS
 
-    fun resolveTitle(route: String?, resolvedCategoryName: String?): String = when (route) {
-        Routes.HOME              -> "Categories"
-        Routes.CATEGORY_CHANNELS -> resolvedCategoryName ?: "Channels"
-        Routes.LIVE_EVENTS       -> context.getString(R.string.app_name)
-        Routes.FAVORITES         -> "Favorites"
-        Routes.SPORTS            -> "Sports"
-        Routes.SETTINGS          -> "Settings"
-        Routes.NETWORK_STREAM    -> "Network Stream"
-        Routes.PLAYLISTS         -> "Playlists"
-        Routes.CRICKET_SCORE     -> "Cricket Score"
-        Routes.FOOTBALL_SCORE    -> "Football Score"
-        Routes.DEVICE_ID         -> "Device ID"
-        Routes.APPEARANCE        -> "Appearance"
-        else                     -> "Live TV Pro"
+    fun resolveTitle(destId: Int): String = when (destId) {
+        R.id.homeFragment             -> "Categories"
+        R.id.categoryChannelsFragment -> "Channels"
+        R.id.liveEventsFragment       -> context.getString(R.string.app_name)
+        R.id.favoritesFragment        -> "Favorites"
+        R.id.sportsFragment           -> "Sports"
+        R.id.settingsFragment         -> "Settings"
+        R.id.networkStreamFragment    -> "Network Stream"
+        R.id.playlistsFragment        -> "Playlists"
+        R.id.cricketScoreFragment     -> "Cricket Score"
+        R.id.footballScoreFragment    -> "Football Score"
+        R.id.deviceIdFragment         -> "Device ID"
+        R.id.appearanceFragment       -> "Appearance"
+        else                           -> "Live TV Pro"
     }
 
-    fun navigate(route: String) {
-        if (navController.currentDestination?.route == route) return
-        navController.navigate(
-            route,
+    fun navigate(destId: Int) {
+        val nav = navController ?: return
+        if (nav.currentDestination?.id == destId) return
+        nav.navigate(
+            destId, null,
             NavOptions.Builder()
-                .setPopUpTo(navController.graph.startDestinationId, false)
+                .setPopUpTo(nav.graph.startDestinationId, false, saveState = true)
                 .setLaunchSingleTop(true)
                 .setRestoreState(true)
                 .build()
@@ -169,44 +167,19 @@ fun MainScaffold(
     }
 
     LaunchedEffect(isSearchActive) { onSearchVisibilityChanged(isSearchActive) }
-    LaunchedEffect(navController) { onNavControllerReady(navController) }
-
-    LaunchedEffect(navController) {
-        navController.currentBackStackEntryFlow.collect { entry ->
-            val route = entry.destination.route
-            currentRoute = route
-            // categoryName is resolved by CategoryChannelsRoute itself (it's the
-            // real source of truth, read via the ViewModel's SavedStateHandle),
-            // so for that one destination wait for its callback rather than
-            // trusting the raw nav argument here.
-            if (route != Routes.CATEGORY_CHANNELS) categoryTitle = null
-            toolbarTitle = resolveTitle(route, categoryTitle)
-            isTopLevel   = route in topLevelSet
-            if (isSearchActive) { isSearchActive = false; searchQuery = "" }
-            onDestinationChanged(route, toolbarTitle, route in Routes.REFRESH_DESTINATIONS)
-        }
-    }
-
-    // Re-resolve the title once CategoryChannelsRoute reports its real name.
-    LaunchedEffect(categoryTitle, currentRoute) {
-        if (currentRoute == Routes.CATEGORY_CHANNELS) {
-            toolbarTitle = resolveTitle(currentRoute, categoryTitle)
-            onDestinationChanged(currentRoute, toolbarTitle, currentRoute in Routes.REFRESH_DESTINATIONS)
-        }
-    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (isTvOrDesktop || isTablet) {
             TvTopBar(
                 title          = toolbarTitle,
                 tabs           = tabs,
-                currentRoute   = currentRoute,
+                currentDestId  = currentDestId,
                 isSearchActive = isSearchActive,
                 searchQuery    = searchQuery,
                 onTabSelected  = { navigate(it) },
-                onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
-                onQueryChange  = { q -> searchQuery = q },
-                onSearchClose  = { isSearchActive = false; searchQuery = "" },
+                onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) { searchQuery = ""; activity.dispatchSearchQuery("") } },
+                onQueryChange  = { q -> searchQuery = q; activity.dispatchSearchQuery(q) },
+                onSearchClose  = { isSearchActive = false; searchQuery = ""; activity.dispatchSearchQuery("") },
             )
         } else {
             PhoneTopBar(
@@ -217,101 +190,85 @@ fun MainScaffold(
                 showRefresh    = showRefreshIcon,
                 primaryColor   = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
                 onBack         = { activity.onBackPressedDispatcher.onBackPressed() },
-                onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
-                onQueryChange  = { q -> searchQuery = q },
-                onSearchClose  = { isSearchActive = false; searchQuery = "" },
-                onFavorites    = { navigate(Routes.FAVORITES) },
-                onRefresh      = { refreshSignal++ },
+                onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) { searchQuery = ""; activity.dispatchSearchQuery("") } },
+                onQueryChange  = { q -> searchQuery = q; activity.dispatchSearchQuery(q) },
+                onSearchClose  = { isSearchActive = false; searchQuery = ""; activity.dispatchSearchQuery("") },
+                onFavorites    = { navigate(R.id.favoritesFragment) },
+                onRefresh      = { activity.refreshCurrentFragment() },
             )
         }
+
+        val containerId = remember { android.view.View.generateViewId() }
 
         Box(modifier = Modifier.weight(1f)) {
             SupportDialogHost()
 
-            NavHost(
-                navController = navController,
-                startDestination = Routes.LIVE_EVENTS,
+            AndroidView(
                 modifier = Modifier.fillMaxSize(),
-            ) {
-                composable(Routes.HOME) {
-                    HomeRoute(
-                        navController = navController,
-                        listenerManager = listenerManager,
-                        cooldownManager = cooldownManager,
-                        searchQuery = searchQuery,
-                        refreshSignal = refreshSignal,
-                    )
+                factory = { ctx ->
+                    FragmentContainerView(ctx).apply {
+                        id = containerId
+                        // Nested ComposeViews hosted inside Fragments attached to
+                        // this container don't reliably receive live WindowInsets
+                        // dispatch the same way the Activity's root Compose tree
+                        // does, so screens like LiveEventsScreen end up reading a
+                        // stale/zero navigationBars inset for their bottom padding
+                        // even though sibling composables (e.g. the floating nav)
+                        // see the correct value. Explicitly request + forward
+                        // insets here so every Fragment underneath gets the same
+                        // live values.
+                        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
+                            val vg = v as? android.view.ViewGroup
+                            if (vg != null) {
+                                for (i in 0 until vg.childCount) {
+                                    androidx.core.view.ViewCompat.dispatchApplyWindowInsets(vg.getChildAt(i), insets)
+                                }
+                            }
+                            insets
+                        }
+                    }
+                },
+                update = {
+                    val fm = activity.supportFragmentManager
+                    if (fm.findFragmentById(containerId) == null) {
+                        val navHost = NavHostFragment.create(R.navigation.nav_graph)
+                        fm.beginTransaction()
+                            .replace(containerId, navHost)
+                            .setPrimaryNavigationFragment(navHost)
+                            .commit()
+
+                        fm.executePendingTransactions()
+
+                        val nav = navHost.navController
+
+                        nav.navigate(
+                            R.id.liveEventsFragment, null,
+                            NavOptions.Builder()
+                                .setPopUpTo(nav.graph.startDestinationId, true, saveState = true)
+                                .setLaunchSingleTop(true)
+                                .setRestoreState(true)
+                                .build()
+                        )
+
+                        onNavControllerReady(nav)
+                        onNavHostReady(navHost)
+                        navController = nav
+
+                        if (activity.pendingDestinationId != -1) {
+                            nav.navigate(activity.pendingDestinationId)
+                            activity.pendingDestinationId = -1
+                        }
+
+                        nav.addOnDestinationChangedListener { _, destination, _ ->
+                            currentDestId = destination.id
+                            toolbarTitle  = resolveTitle(destination.id)
+                            isTopLevel    = destination.id in topLevelSet
+                            if (isSearchActive) { isSearchActive = false; searchQuery = "" }
+                            onDestinationChanged(destination.id, toolbarTitle, destination.id in REFRESH_DESTINATIONS)
+                        }
+                    }
                 }
-                composable(
-                    Routes.CATEGORY_CHANNELS,
-                    arguments = listOf(
-                        navArgument(Routes.Args.CATEGORY_ID) { type = NavType.StringType },
-                        navArgument(Routes.Args.CATEGORY_NAME) { type = NavType.StringType },
-                    )
-                ) { backStackEntry ->
-                    val rawId = backStackEntry.arguments?.getString(Routes.Args.CATEGORY_ID)
-                    val categoryId = rawId?.let { URLDecoder.decode(it, "UTF-8") }
-                    CategoryChannelsRoute(
-                        categoryId = categoryId,
-                        listenerManager = listenerManager,
-                        cooldownManager = cooldownManager,
-                        preferencesManager = preferencesManager,
-                        searchQuery = searchQuery,
-                        refreshSignal = refreshSignal,
-                        onTitleResolved = { name -> categoryTitle = name },
-                    )
-                }
-                composable(Routes.LIVE_EVENTS) {
-                    LiveEventsRoute(
-                        listenerManager = listenerManager,
-                        cooldownManager = cooldownManager,
-                        preferencesManager = preferencesManager,
-                        searchQuery = searchQuery,
-                        refreshSignal = refreshSignal,
-                    )
-                }
-                composable(Routes.SPORTS) {
-                    SportsRoute(
-                        listenerManager = listenerManager,
-                        cooldownManager = cooldownManager,
-                        preferencesManager = preferencesManager,
-                        searchQuery = searchQuery,
-                        refreshSignal = refreshSignal,
-                    )
-                }
-                composable(Routes.FAVORITES) {
-                    FavoritesRoute(
-                        listenerManager = listenerManager,
-                        cooldownManager = cooldownManager,
-                        preferencesManager = preferencesManager,
-                    )
-                }
-                composable(Routes.SETTINGS) {
-                    SettingsScreen(
-                        navController = navController,
-                        listenerManager = listenerManager,
-                        settingsActions = settingsActions,
-                    )
-                }
-                composable(Routes.PLAYLISTS) {
-                    PlaylistsRoute(navController = navController)
-                }
-                composable(Routes.NETWORK_STREAM) {
-                    NetworkStreamRoute(preferencesManager = preferencesManager)
-                }
-                composable(Routes.CRICKET_SCORE) {
-                    CricketScoreScreen(listenerManager = listenerManager)
-                }
-                composable(Routes.FOOTBALL_SCORE) {
-                    FootballScoreScreen(listenerManager = listenerManager)
-                }
-                composable(Routes.DEVICE_ID) {
-                    DeviceIdScreen()
-                }
-                composable(Routes.APPEARANCE) {
-                    AppearanceScreen(themeManager = themeManager)
-                }
-            }
+            )
 
             if (!isTvOrDesktop && !isTablet) {
                 Box(
@@ -320,14 +277,14 @@ fun MainScaffold(
                         .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(bottom = 16.dp),
                 ) {
-                    AnimatedVisibility(
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = isTopLevel,
                         enter   = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
                         exit    = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
                     ) {
                         ComposeFloatingNav(
                             tabs          = tabs,
-                            currentRoute  = currentRoute,
+                            currentDestId = currentDestId,
                             primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
                             onTabSelected = { navigate(it) },
                         )
@@ -460,10 +417,10 @@ private fun PhoneTopBar(
 private fun TvTopBar(
     title: String,
     tabs: List<NavTab>,
-    currentRoute: String?,
+    currentDestId: Int,
     isSearchActive: Boolean,
     searchQuery: String,
-    onTabSelected: (String) -> Unit,
+    onTabSelected: (Int) -> Unit,
     onSearchToggle: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSearchClose: () -> Unit,
@@ -497,14 +454,14 @@ private fun TvTopBar(
                     .horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val activeRouteForTab = if (currentRoute == Routes.CATEGORY_CHANNELS) Routes.HOME else currentRoute
+                val activeDestForTab = if (currentDestId == R.id.categoryChannelsFragment) R.id.homeFragment else currentDestId
                 tabs.forEach { tab ->
                     TvTabChip(
                         tab       = tab,
-                        selected  = tab.route == activeRouteForTab,
+                        selected  = tab.destId == activeDestForTab,
                         primary   = primary,
                         onSurface = onSurface,
-                        onClick   = { onTabSelected(tab.route) },
+                        onClick   = { onTabSelected(tab.destId) },
                     )
                     Spacer(Modifier.width(4.dp))
                 }

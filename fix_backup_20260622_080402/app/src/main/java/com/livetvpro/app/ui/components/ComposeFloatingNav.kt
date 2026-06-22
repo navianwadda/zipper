@@ -36,9 +36,9 @@ private val IndicatorSize      = 38.dp
 @Composable
 fun ComposeFloatingNav(
     tabs: List<NavTab>,
-    currentRoute: String?,
+    currentDestId: Int,
     primaryColor: Color,
-    onTabSelected: (String) -> Unit,
+    onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -53,10 +53,10 @@ fun ComposeFloatingNav(
         tabs.forEach { tab ->
             FloatingNavItem(
                 tab          = tab,
-                selected     = tab.route == currentRoute,
+                selected     = tab.destId == currentDestId,
                 primaryColor = primaryColor,
                 onSurface    = MaterialTheme.colorScheme.onSurface,
-                onClick      = { onTabSelected(tab.route) },
+                onClick      = { onTabSelected(tab.destId) },
             )
         }
     }

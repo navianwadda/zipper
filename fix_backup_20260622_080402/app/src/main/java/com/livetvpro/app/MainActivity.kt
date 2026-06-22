@@ -1,6 +1,7 @@
 package com.livetvpro.app
 
 import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -42,18 +43,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavOptions
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.main.MainScaffold
-import com.livetvpro.app.ui.navigation.Routes
 import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialogContent
 import com.livetvpro.app.ui.settings.SettingsActions
 import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
-import com.livetvpro.app.utils.RedirectCooldownManager
+import com.livetvpro.app.utils.Refreshable
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+
+interface SearchableFragment {
+    fun onSearchQuery(query: String)
+}
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), SettingsActions {
@@ -61,10 +66,11 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     @Inject lateinit var preferencesManager: PreferencesManager
     @Inject lateinit var themeManager: ThemeManager
     @Inject lateinit var listenerManager: NativeListenerManager
-    @Inject lateinit var cooldownManager: RedirectCooldownManager
     @Inject lateinit var dataRepository: com.livetvpro.app.data.repository.NativeDataRepository
 
     var navController: NavController? = null
+    var navHostFragment: androidx.navigation.fragment.NavHostFragment? = null
+    var pendingDestinationId: Int = -1
 
     var isSearchVisible      by mutableStateOf(false)
     var toolbarTitle         by mutableStateOf("Live TV Pro")
@@ -125,10 +131,10 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     activity           = this,
                     themeManager       = themeManager,
                     listenerManager    = listenerManager,
-                    cooldownManager    = cooldownManager,
                     preferencesManager = preferencesManager,
                     settingsActions    = this,
                     onNavControllerReady      = { navController = it },
+                    onNavHostReady            = { navHostFragment = it },
                     onDestinationChanged      = { _, title, refresh ->
                         toolbarTitle    = title
                         showRefreshIcon = refresh
@@ -393,21 +399,17 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val nav = navController ?: return
-                val currentRoute = nav.currentDestination?.route ?: return
+                val currentDestId = nav.currentDestination?.id ?: return
 
-                // Distinct from Routes.PHONE_TOP_LEVEL/TV_TOP_LEVEL (which also
-                // include Settings/Favorites for bottom-nav-bar purposes): this
-                // is specifically the set of screens where back press triggers
-                // double-tap-to-exit rather than normal back navigation.
-                val exitConfirmationRoutes = if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop || DeviceUtils.isTablet) {
-                    setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS, Routes.FAVORITES)
+                val topLevel = if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop || DeviceUtils.isTablet) {
+                    setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment, R.id.favoritesFragment)
                 } else {
-                    setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS)
+                    setOf(R.id.homeFragment, R.id.liveEventsFragment, R.id.sportsFragment)
                 }
 
                 when {
                     isSearchVisible -> isSearchVisible = false
-                    currentRoute in exitConfirmationRoutes -> {
+                    currentDestId in topLevel -> {
                         val now = System.currentTimeMillis()
                         if (now - backPressedTime < 2000) finishAffinity()
                         else {
@@ -452,6 +454,37 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         return super.dispatchTouchEvent(ev)
     }
 
+    fun navigateTo(destId: Int) {
+        val nav = navController ?: return
+        if (nav.currentDestination?.id == destId) return
+        nav.navigate(
+            destId, null,
+            NavOptions.Builder()
+                .setPopUpTo(nav.graph.startDestinationId, false, saveState = true)
+                .setLaunchSingleTop(true)
+                .setRestoreState(true)
+                .build()
+        )
+    }
+
+    fun navigateRaw(destId: Int) {
+        navController?.navigate(destId, null, null)
+    }
+
+    fun refreshCurrentFragment() {
+        currentFragment<Refreshable>()?.refreshData()
+    }
+
+    fun dispatchSearchQuery(query: String) {
+        currentFragment<SearchableFragment>()?.onSearchQuery(query)
+    }
+
+    private inline fun <reified T> currentFragment(): T? {
+        val nhf = navHostFragment ?: return null
+        return nhf.childFragmentManager.primaryNavigationFragment as? T
+            ?: nhf.childFragmentManager.fragments.filterIsInstance<T>().firstOrNull()
+    }
+
     override fun onSettingsCopyright() {
         showCopyrightDialog = true
     }
@@ -493,4 +526,9 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             showFloatingPlayerDialog = true
         }
     }
+}
+
+private class CustomTypefaceSpan(private val tf: Typeface) : android.text.style.TypefaceSpan("") {
+    override fun updateDrawState(ds: android.text.TextPaint) { ds.typeface = tf }
+    override fun updateMeasureState(p: android.text.TextPaint) { p.typeface = tf }
 }

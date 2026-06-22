@@ -80,7 +80,6 @@ fun SportsScreen(
     spanCount: Int = 3,
     isTvDevice: Boolean = false,
     onChannelClick: (Channel, Int) -> Unit,
-    onChannelInteraction: ((Channel, () -> Unit) -> Boolean)? = null,
 ) {
     val channels by viewModel.filteredChannels.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -218,16 +217,11 @@ fun SportsScreen(
                             channel = channel,
                             isFavorite = viewModel.isFavorite(channel.id),
                             onClick = {
-                                val action: () -> Unit = {
-                                    if ((channel.links?.size ?: 0) > 1) {
-                                        linkDialogChannel = channel
-                                    } else {
-                                        onChannelClick(channel, 0)
-                                    }
+                                if ((channel.links?.size ?: 0) > 1) {
+                                    linkDialogChannel = channel
+                                } else {
+                                    onChannelClick(channel, 0)
                                 }
-                                val redirected =
-                                    onChannelInteraction?.invoke(channel, action) ?: false
-                                if (!redirected) action()
                             },
                             onLongClick = { favoriteDialogChannel = channel }
                         )

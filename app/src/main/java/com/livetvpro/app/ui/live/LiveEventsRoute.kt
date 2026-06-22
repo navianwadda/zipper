@@ -4,7 +4,9 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -47,20 +49,14 @@ fun LiveEventsRoute(
         uniqueIdProvider = { lastUniqueId },
     )
 
-    // Mirror the old onSearchQuery(query) dispatch from SearchableFragment.
     LaunchedEffect(searchQuery) {
         viewModel.searchEvents(searchQuery)
     }
 
-    // Mirror the old refreshData() dispatch from Refreshable.
     LaunchedEffect(refreshSignal) {
         if (refreshSignal > 0) viewModel.refresh()
     }
 
-    // Mirror the old onResume() pending-redirect-action flush - must observe
-    // the real Activity lifecycle (ON_RESUME), since this fires every time
-    // the Activity resumes, e.g. returning from PlayerActivity after a
-    // redirect, not just once on first composition.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -149,10 +145,7 @@ fun LiveEventsRoute(
                 listenerMgr = listenerManager,
                 launcher = redirectLauncher
             )
-            // NOTE: preserved exactly as the original Fragment had it - when
-            // redirected AND in-app redirect is enabled, pendingEventAction
-            // is deliberately left untouched here (neither set nor cleared),
-            // unlike Home/CategoryChannels which null it in that branch.
+            
             if (result == RedirectHelper.RedirectResult.REDIRECTED) {
                 if (!listenerManager.isInAppRedirectEnabled()) {
                     pendingEventAction = playerAction

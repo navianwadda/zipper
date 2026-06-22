@@ -3,7 +3,9 @@ package com.livetvpro.app.ui.home
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -39,20 +41,15 @@ fun HomeRoute(
         uniqueIdProvider = { lastUniqueId },
     )
 
-    // Mirror the old onSearchQuery(query) dispatch from SearchableFragment.
     LaunchedEffect(searchQuery) {
         viewModel.searchCategories(searchQuery)
     }
 
-    // Mirror the old refreshData() dispatch from Refreshable.
     LaunchedEffect(refreshSignal) {
         if (refreshSignal > 0) viewModel.refresh()
     }
 
-    // Mirror the old onResume() pending-redirect-action flush. The Fragment's
-    // onResume() fired every time the hosting Activity resumed - e.g.
-    // returning from PlayerActivity/WebActivity after a redirect - so this
-    // must observe the real Activity lifecycle, not just first composition.
+    
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->

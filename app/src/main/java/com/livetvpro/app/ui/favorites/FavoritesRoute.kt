@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -62,16 +63,13 @@ fun FavoritesRoute(
         uniqueIdProvider = { lastUniqueId },
     )
 
-    // Mirror the old onViewCreated favorites.observe(viewLifecycleOwner)
-    // side effect: every time the favorites list changes (not just once),
-    // refresh the ChannelListCache and notify the ViewModel.
+    
     val favorites by viewModel.favorites.observeAsState()
     LaunchedEffect(favorites) {
         refreshFavoritesCache(viewModel, favorites)
         viewModel.onFavoritesChanged(favorites ?: emptyList())
     }
 
-    // Mirror the old onResume() pending-redirect-action flush.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -170,10 +168,7 @@ fun FavoritesRoute(
     }
     val isTvOrTablet = DeviceUtils.isTvDevice || DeviceUtils.isTablet
 
-    // TV remote numpad search: same debounce-and-reset behavior as the old
-    // View.setOnKeyListener. Note this is the *only* search path on this
-    // screen - the original Fragment did not implement SearchableFragment,
-    // so typed top-bar search never filtered favorites either.
+    
     var numpadBuffer by remember { mutableStateOf("") }
     val numpadHandler = remember { Handler(Looper.getMainLooper()) }
     val numpadResetRunnable = remember {

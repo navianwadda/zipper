@@ -1,6 +1,6 @@
 package com.livetvpro.app.ui.main
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibility as ComposeAnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -175,10 +175,7 @@ fun MainScaffold(
         navController.currentBackStackEntryFlow.collect { entry ->
             val route = entry.destination.route
             currentRoute = route
-            // categoryName is resolved by CategoryChannelsRoute itself (it's the
-            // real source of truth, read via the ViewModel's SavedStateHandle),
-            // so for that one destination wait for its callback rather than
-            // trusting the raw nav argument here.
+            
             if (route != Routes.CATEGORY_CHANNELS) categoryTitle = null
             toolbarTitle = resolveTitle(route, categoryTitle)
             isTopLevel   = route in topLevelSet
@@ -187,7 +184,6 @@ fun MainScaffold(
         }
     }
 
-    // Re-resolve the title once CategoryChannelsRoute reports its real name.
     LaunchedEffect(categoryTitle, currentRoute) {
         if (currentRoute == Routes.CATEGORY_CHANNELS) {
             toolbarTitle = resolveTitle(currentRoute, categoryTitle)
@@ -320,7 +316,7 @@ fun MainScaffold(
                         .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(bottom = 16.dp),
                 ) {
-                    AnimatedVisibility(
+                    ComposeAnimatedVisibility(
                         visible = isTopLevel,
                         enter   = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
                         exit    = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
@@ -392,7 +388,7 @@ private fun PhoneTopBar(
                 }
             }
 
-            AnimatedVisibility(
+            ComposeAnimatedVisibility(
                 visible  = !isSearchActive,
                 modifier = Modifier.weight(1f),
                 enter    = fadeIn(tween(120)),
@@ -409,7 +405,7 @@ private fun PhoneTopBar(
                 )
             }
 
-            AnimatedVisibility(
+            ComposeAnimatedVisibility(
                 visible  = isSearchActive,
                 modifier = Modifier.weight(1f),
                 enter    = fadeIn(tween(120)),
@@ -510,7 +506,7 @@ private fun TvTopBar(
                 }
             }
 
-            AnimatedVisibility(isSearchActive, enter = fadeIn(), exit = fadeOut()) {
+            ComposeAnimatedVisibility(isSearchActive, enter = fadeIn(), exit = fadeOut()) {
                 BasicTextField(
                     value         = searchQuery,
                     onValueChange = onQueryChange,

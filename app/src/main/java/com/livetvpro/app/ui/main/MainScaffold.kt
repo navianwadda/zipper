@@ -316,17 +316,19 @@ fun MainScaffold(
                         .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(bottom = 16.dp),
                 ) {
-                    ComposeAnimatedVisibility(
-                        visible = isTopLevel,
-                        enter   = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
-                        exit    = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
-                    ) {
-                        ComposeFloatingNav(
-                            tabs          = tabs,
-                            currentRoute  = currentRoute,
-                            primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
-                            onTabSelected = { navigate(it) },
-                        )
+                    Column {
+                        ComposeAnimatedVisibility(
+                            visible = isTopLevel,
+                            enter   = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+                            exit    = slideOutVertically(tween(180)) { it } + fadeOut(tween(180)),
+                        ) {
+                            ComposeFloatingNav(
+                                tabs          = tabs,
+                                currentRoute  = currentRoute,
+                                primaryColor  = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
+                                onTabSelected = { navigate(it) },
+                            )
+                        }
                     }
                 }
             }

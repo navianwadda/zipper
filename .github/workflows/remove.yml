@@ -1,0 +1,66 @@
+name: Remove Dead Migration Files
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  remove-dead-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Delete dead files
+        run: |
+          set -e
+          FILES=(
+            "app/src/main/java/com/livetvpro/app/ui/home/HomeFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/live/LiveEventsFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/sports/SportsFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/favorites/FavoritesFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/categories/CategoryChannelsFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/settings/SettingsFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/playlists/PlaylistsFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/networkstream/NetworkStreamFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/score/CricketScoreFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/score/FootballScoreFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/deviceid/DeviceIdFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/appearance/AppearanceFragment.kt"
+            "app/src/main/java/com/livetvpro/app/ui/appearance/ThemePreviewAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/components/FloatingNavView.kt"
+            "app/src/main/res/navigation/nav_graph.xml"
+            "app/src/main/res/layout/activity_main.xml"
+            "app/src/main/res/layout-television/activity_main.xml"
+            "app/src/main/res/layout/item_theme_preview.xml"
+          )
+
+          deleted=0
+          missing=0
+          for f in "${FILES[@]}"; do
+            if [ -f "$f" ]; then
+              git rm -q "$f"
+              echo "DELETED  $f"
+              deleted=$((deleted + 1))
+            else
+              echo "SKIP (already gone)  $f"
+              missing=$((missing + 1))
+            fi
+          done
+
+          echo
+          echo "Deleted: $deleted, already absent: $missing"
+          echo "deleted_count=$deleted" >> "$GITHUB_ENV"
+
+      - name: Commit and push
+        run: |
+          if [ "$deleted_count" -eq 0 ]; then
+            echo "Nothing to commit, all dead files were already removed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Remove dead Fragment/legacy files from Compose Navigation migration"
+          git push

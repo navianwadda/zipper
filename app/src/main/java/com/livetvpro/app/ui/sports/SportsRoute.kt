@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -60,20 +62,14 @@ fun SportsRoute(
         uniqueIdProvider = { lastUniqueId },
     )
 
-    // Mirror the old onSearchQuery(query) dispatch from SearchableFragment.
     LaunchedEffect(searchQuery) {
         viewModel.searchSports(searchQuery)
     }
 
-    // Mirror the old refreshData() dispatch from Refreshable.
     LaunchedEffect(refreshSignal) {
         if (refreshSignal > 0) viewModel.refresh()
     }
 
-    // Redirect support: SportsScreen previously had no onChannelInteraction
-    // hook at all, so this was never wired up despite the scaffolding
-    // existing in the old Fragment. Now wired the same way as the other
-    // screens, observing real ON_RESUME for the pending-action flush.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -90,7 +86,6 @@ fun SportsRoute(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Mirror the old onDestroyView() cleanup.
     DisposableEffect(Unit) {
         onDispose { viewModel.dismissError() }
     }
@@ -126,9 +121,6 @@ fun SportsRoute(
         context.resources.getInteger(R.integer.grid_column_count)
     }
     val isTvOrTablet = DeviceUtils.isTvDevice || DeviceUtils.isTablet
-
-    // TV remote numpad search: same debounce-and-reset behavior as the old
-    // View.setOnKeyListener.
     var numpadBuffer by remember { mutableStateOf("") }
     val numpadHandler = remember { Handler(Looper.getMainLooper()) }
     val numpadResetRunnable = remember {

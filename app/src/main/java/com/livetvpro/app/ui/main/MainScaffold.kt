@@ -168,6 +168,16 @@ fun MainScaffold(
         )
     }
 
+    fun navigateForward(route: String) {
+        if (navController.currentDestination?.route == route) return
+        navController.navigate(
+            route,
+            NavOptions.Builder()
+                .setLaunchSingleTop(true)
+                .build()
+        )
+    }
+
     LaunchedEffect(isSearchActive) { onSearchVisibilityChanged(isSearchActive) }
     LaunchedEffect(navController) { onNavControllerReady(navController) }
 
@@ -216,7 +226,7 @@ fun MainScaffold(
                 onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
                 onQueryChange  = { q -> searchQuery = q },
                 onSearchClose  = { isSearchActive = false; searchQuery = "" },
-                onFavorites    = { navigate(Routes.FAVORITES) },
+                onFavorites    = { navigateForward(Routes.FAVORITES) },
                 onRefresh      = { refreshSignal++ },
             )
         }

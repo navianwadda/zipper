@@ -1045,10 +1045,10 @@ class FloatingPlayerActivity : ComponentActivity() {
             ContentType.CHANNEL -> {
                 channelData?.let { channel ->
                     val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-                    val isFavoritesSource = channelListKey == "favorites_session"
+                    val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
 
                     if (isFavoritesSource) {
-                        val favList = ChannelListCache.get("favorites_session") ?: emptyList()
+                        val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
                         viewModel.setChannelList(favList)
                         viewModel.setRelatedChannels(favList.filter { it.id != channel.id })
                     } else if (intentIsSports) {
@@ -1102,10 +1102,10 @@ class FloatingPlayerActivity : ComponentActivity() {
         setupLinksUI()
 
         val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-        val isFavoritesSource = channelListKey == "favorites_session"
+        val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
 
         if (isFavoritesSource) {
-            val favList = ChannelListCache.get("favorites_session") ?: emptyList()
+            val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
             viewModel.setChannelList(favList)
             val related = favList.filter { it.id != newChannel.id }
             viewModel.setRelatedChannels(related)

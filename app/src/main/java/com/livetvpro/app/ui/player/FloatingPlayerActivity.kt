@@ -1048,10 +1048,9 @@ class FloatingPlayerActivity : ComponentActivity() {
                     val isFavoritesSource = channelListKey == "favorites_session"
 
                     if (isFavoritesSource) {
-                        val favList = ChannelListCache.get("favorites_session")
-                            ?.filter { it.id != channel.id }
-                            ?: emptyList()
-                        viewModel.setRelatedChannels(favList)
+                        val favList = ChannelListCache.get("favorites_session") ?: emptyList()
+                        viewModel.setChannelList(favList)
+                        viewModel.setRelatedChannels(favList.filter { it.id != channel.id })
                     } else if (intentIsSports) {
                         viewModel.loadRandomRelatedSports(channel.id)
                     } else {
@@ -1106,12 +1105,12 @@ class FloatingPlayerActivity : ComponentActivity() {
         val isFavoritesSource = channelListKey == "favorites_session"
 
         if (isFavoritesSource) {
-            val favList = ChannelListCache.get("favorites_session")
-                ?.filter { it.id != newChannel.id }
-                ?: emptyList()
-            viewModel.setRelatedChannels(favList)
-            relatedContentState.value = if (favList.isEmpty()) RelatedContentState.Hidden
-            else RelatedContentState.Channels(favList)
+            val favList = ChannelListCache.get("favorites_session") ?: emptyList()
+            viewModel.setChannelList(favList)
+            val related = favList.filter { it.id != newChannel.id }
+            viewModel.setRelatedChannels(related)
+            relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+            else RelatedContentState.Channels(related)
         } else {
             val isSports = newChannel.categoryId == "sports" || intentIsSports
             val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId

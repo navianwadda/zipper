@@ -481,12 +481,14 @@ class FloatingPlayerActivity : ComponentActivity() {
                         finish()
                     } else if (currentPlayer != null && (currentChannel != null || currentEvent != null)) {
                         PlayerHolder.transferPlayer(currentPlayer, currentStreamUrl, currentName)
+                        val currentChannelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
                         val serviceIntent = Intent(this@FloatingPlayerActivity, FloatingPlayerService::class.java).apply {
                             if (currentChannel != null) putExtra(FloatingPlayerService.EXTRA_CHANNEL, currentChannel)
                             if (currentEvent != null) putExtra(FloatingPlayerService.EXTRA_EVENT, currentEvent)
                             putExtra(FloatingPlayerService.EXTRA_RESTORE_POSITION, true)
                             putExtra("use_transferred_player", true)
                             if (sourceInstanceId != null) putExtra(FloatingPlayerService.EXTRA_INSTANCE_ID, sourceInstanceId)
+                            if (currentChannelListKey != null) putExtra(FloatingPlayerService.EXTRA_CHANNEL_LIST_KEY, currentChannelListKey)
                         }
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(serviceIntent)
                         else startService(serviceIntent)
@@ -1113,21 +1115,9 @@ class FloatingPlayerActivity : ComponentActivity() {
         } else {
             val isSports = newChannel.categoryId == "sports" || intentIsSports
             val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
-            val currentRelated = relatedContentState.value
-            if (currentRelated is RelatedContentState.Channels) {
-                val updated = currentRelated.items.filter { it.id != newChannel.id }
-                if (updated.isEmpty()) {
-                    relatedContentState.value = RelatedContentState.Loading
-                    if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
-                    else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
-                } else {
-                    relatedContentState.value = RelatedContentState.Channels(updated)
-                }
-            } else {
-                relatedContentState.value = RelatedContentState.Loading
-                if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
-                else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
-            }
+            relatedContentState.value = RelatedContentState.Loading
+            if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
+            else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
         }
     }
 
@@ -1387,6 +1377,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 .build()
 
             player = exo
+            if (isMuted) exo.volume = 0f
 
             val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
             mimeType?.let { mediaItemBuilder.setMimeType(it) }

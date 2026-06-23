@@ -796,9 +796,9 @@ class PlayerActivity : ComponentActivity() {
         if (player == null) setupPlayer()
         if (contentType == ContentType.CHANNEL && viewModel.channelListItems.value.isNullOrEmpty()) {
             val channelListKey    = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-            val isFavoritesSource = channelListKey == "favorites_session"
+            val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
             if (isFavoritesSource) {
-                ChannelListCache.get("favorites_session")?.let { viewModel.setChannelList(it) }
+                ChannelListCache.get(channelListKey!!)?.let { viewModel.setChannelList(it) }
             } else {
                 viewModel.loadAllChannelsForList(
                     intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: ""
@@ -1403,11 +1403,11 @@ class PlayerActivity : ComponentActivity() {
                 channelData?.let { ch ->
                     val passedRelated  = intent.getStringExtra(EXTRA_RELATED_CHANNELS_KEY)?.let { ChannelListCache.get(it) }
                     val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-                    val isFavSrc       = channelListKey == "favorites_session"
+                    val isFavSrc       = channelListKey?.startsWith("favorites_") == true
                     when {
                         !passedRelated.isNullOrEmpty() -> viewModel.setRelatedChannels(passedRelated.filter { it.id != ch.id })
                         isFavSrc -> {
-                            val favList = ChannelListCache.get("favorites_session") ?: emptyList()
+                            val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
                             viewModel.setChannelList(favList)
                             viewModel.setRelatedChannels(favList.filter { it.id != ch.id })
                         }
@@ -1557,9 +1557,9 @@ class PlayerActivity : ComponentActivity() {
         setupPlayer(); setupLinksUI()
         refreshPipParamsIfNeeded()
         val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-        val isFavSrc       = channelListKey == "favorites_session"
+        val isFavSrc       = channelListKey?.startsWith("favorites_") == true
         if (isFavSrc) {
-            val fav = ChannelListCache.get("favorites_session") ?: emptyList()
+            val fav = ChannelListCache.get(channelListKey!!) ?: emptyList()
             viewModel.setChannelList(fav)
             val updated = fav.filter { it.id != newChannel.id }.take(9)
             relatedContentState.value = if (updated.isEmpty()) RelatedContentState.Hidden

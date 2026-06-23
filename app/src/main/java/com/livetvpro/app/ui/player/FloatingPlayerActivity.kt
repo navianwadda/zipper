@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -53,8 +54,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.compose.PlayerSurface
-import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
+import androidx.media3.ui.PlayerView
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -70,17 +70,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Floating / pop-out player activity.
- *
- * This is now a fully Jetpack-Compose activity, mirroring [PlayerActivity]'s architecture:
- * video is rendered through [androidx.media3.ui.compose.PlayerSurface] directly inside the
- * Compose tree (no XML layout, no ViewBinding, no native [androidx.media3.ui.PlayerView]).
- *
- * Known trade-offs from this conversion: subtitle rendering is no longer available
- * (PlayerSurface has no built-in caption support, matching PlayerActivity's existing
- * limitation), and the lock-control remains intentionally disabled, as it already was before.
- */
 @UnstableApi
 @AndroidEntryPoint
 class FloatingPlayerActivity : ComponentActivity() {
@@ -137,6 +126,7 @@ class FloatingPlayerActivity : ComponentActivity() {
     private var resizeModesRestoredFromState = false
 
     private var savedPlaybackPosition: Long = -1L
+    private var relatedChannels = listOf<Channel>()
 
     enum class ContentType {
         CHANNEL, EVENT, NETWORK_STREAM
@@ -315,6 +305,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
         viewModel.relatedItems.observe(this) { channels ->
             if (contentType != ContentType.CHANNEL) return@observe
+            relatedChannels = channels
             relatedContentState.value = if (channels.isEmpty()) RelatedContentState.Hidden
             else RelatedContentState.Channels(channels)
         }
@@ -537,10 +528,10 @@ class FloatingPlayerActivity : ComponentActivity() {
                             else Modifier.aspectRatio(16f / 9f)
                         ),
                 ) {
-                    PlayerSurface(
-                        player      = player,
-                        surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-                        modifier    = Modifier.fillMaxSize(),
+                    VideoSurface(
+                        player     = player,
+                        resizeMode = if (isNetworkStream) resizeMode else AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                        modifier   = Modifier.fillMaxSize(),
                     )
 
                     if (errorMessage.value.isNotBlank()) {
@@ -593,10 +584,10 @@ class FloatingPlayerActivity : ComponentActivity() {
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    PlayerSurface(
-                        player      = player,
-                        surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-                        modifier    = Modifier.fillMaxSize(),
+                    VideoSurface(
+                        player     = player,
+                        resizeMode = resizeMode,
+                        modifier   = Modifier.fillMaxSize(),
                     )
 
                     if (errorMessage.value.isNotBlank()) {
@@ -656,9 +647,35 @@ class FloatingPlayerActivity : ComponentActivity() {
         if (showSettingsDialogState.value && player != null) {
             PlayerSettingsDialog(
                 player    = player!!,
-                onDismiss = { showSettingsDialogState.value = false; isShowingSettingsDialog = false },
+                onDismiss = {
+                    showSettingsDialogState.value = false
+                    isShowingSettingsDialog = false
+                    applyRememberedAspectRatioIfEnabled()
+                },
             )
         }
+    }
+
+    @Composable
+    private fun VideoSurface(
+        player: ExoPlayer?,
+        resizeMode: Int,
+        modifier: Modifier = Modifier,
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    useController = false
+                    setBackgroundColor(android.graphics.Color.BLACK)
+                    setShutterBackgroundColor(android.graphics.Color.BLACK)
+                }
+            },
+            update = { view ->
+                view.player     = player
+                view.resizeMode = resizeMode
+            },
+            modifier = modifier,
+        )
     }
 
     @Composable
@@ -720,29 +737,25 @@ class FloatingPlayerActivity : ComponentActivity() {
         setupWindowFlags(isLandscape)
         setupSystemUI()
         applyOrientationSettings(isLandscape)
+        updateLinksForOrientation(isLandscape)
     }
 
     private fun applyOrientationSettings(isLandscape: Boolean) {
         isLandscapeState.value = isLandscape
         resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
-        updateLinksForOrientation(isLandscape)
-
         if (isLandscape) {
             relatedContentState.value = RelatedContentState.Hidden
-        } else {
-            val relatedChannels = when (contentType) {
-                ContentType.CHANNEL -> (viewModel.relatedItems.value ?: emptyList())
-                else -> null
-            }
-            val relatedEvents = when (contentType) {
-                ContentType.EVENT -> (viewModel.relatedLiveEvents.value ?: emptyList())
-                else -> null
-            }
-            relatedContentState.value = when {
-                contentType == ContentType.NETWORK_STREAM || DeviceUtils.isTvDevice -> RelatedContentState.Hidden
-                relatedChannels != null -> if (relatedChannels.isEmpty()) RelatedContentState.Hidden else RelatedContentState.Channels(relatedChannels)
-                relatedEvents   != null -> if (relatedEvents.isEmpty())   RelatedContentState.Hidden else RelatedContentState.Events(relatedEvents)
-                else                    -> RelatedContentState.Hidden
+        } else if (contentType != ContentType.NETWORK_STREAM) {
+            if (relatedChannels.isNotEmpty() || contentType == ContentType.EVENT) {
+                relatedContentState.value = when (contentType) {
+                    ContentType.EVENT   -> viewModel.relatedLiveEvents.value
+                        ?.let { if (it.isNotEmpty()) RelatedContentState.Events(it) else RelatedContentState.Loading }
+                        ?: RelatedContentState.Loading
+                    ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
+                    else                -> RelatedContentState.Hidden
+                }
+            } else {
+                relatedContentState.value = RelatedContentState.Loading
             }
         }
     }
@@ -1086,7 +1099,6 @@ class FloatingPlayerActivity : ComponentActivity() {
 
         setupPlayer()
         setupLinksUI()
-        setupRelatedChannels()
 
         val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
         val isFavoritesSource = channelListKey == "favorites_session"
@@ -1096,11 +1108,26 @@ class FloatingPlayerActivity : ComponentActivity() {
                 ?.filter { it.id != newChannel.id }
                 ?: emptyList()
             viewModel.setRelatedChannels(favList)
-        } else if (intentIsSports) {
-            viewModel.loadRandomRelatedSports(newChannel.id)
+            relatedContentState.value = if (favList.isEmpty()) RelatedContentState.Hidden
+            else RelatedContentState.Channels(favList)
         } else {
+            val isSports = newChannel.categoryId == "sports" || intentIsSports
             val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
-            viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
+            val currentRelated = relatedContentState.value
+            if (currentRelated is RelatedContentState.Channels) {
+                val updated = currentRelated.items.filter { it.id != newChannel.id }
+                if (updated.isEmpty()) {
+                    relatedContentState.value = RelatedContentState.Loading
+                    if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
+                    else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
+                } else {
+                    relatedContentState.value = RelatedContentState.Channels(updated)
+                }
+            } else {
+                relatedContentState.value = RelatedContentState.Loading
+                if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
+                else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
+            }
         }
     }
 
@@ -1130,8 +1157,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
             setupPlayer()
             setupLinksUI()
-            setupRelatedChannels()
-
+            relatedContentState.value = RelatedContentState.Loading
             viewModel.loadRelatedEvents(newEvent.id)
 
         } catch (e: Exception) {
@@ -1244,6 +1270,20 @@ class FloatingPlayerActivity : ComponentActivity() {
         playerListener = null
     }
 
+    private fun applyRememberedAspectRatioIfEnabled() {
+        if (!resizeModesRestoredFromState) {
+            if (contentType != ContentType.NETWORK_STREAM && preferencesManager.isRememberAspectRatioEnabled()) {
+                val savedLandscape = preferencesManager.getSavedAspectRatio()
+                val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
+                if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
+                if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
+                resizeModesRestoredFromState = true
+            }
+        }
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
+    }
+
     private fun setupPlayer() {
         if (streamUrl.isBlank()) {
             errorMessage.value = "No stream URL"
@@ -1264,15 +1304,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                         }
                         Player.STATE_READY -> {
                             errorMessage.value = ""
-                            if (!resizeModesRestoredFromState) {
-                                val savedLandscape = preferencesManager.getSavedAspectRatio()
-                                val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
-                                if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
-                                if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
-                                resizeModesRestoredFromState = true
-                                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
-                            }
+                            applyRememberedAspectRatioIfEnabled()
                         }
                         Player.STATE_ENDED -> {}
                         else -> {}
@@ -1380,15 +1412,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                         }
                         Player.STATE_READY -> {
                             errorMessage.value = ""
-                            if (!resizeModesRestoredFromState) {
-                                val savedLandscape = preferencesManager.getSavedAspectRatio()
-                                val savedPortrait = preferencesManager.getSavedAspectRatioPortrait()
-                                if (savedLandscape != -1) networkLandscapeResizeMode = savedLandscape
-                                if (savedPortrait != -1) networkPortraitResizeMode = savedPortrait
-                                resizeModesRestoredFromState = true
-                                val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
-                            }
+                            applyRememberedAspectRatioIfEnabled()
                         }
                         Player.STATE_ENDED -> {}
                         else -> {}
@@ -1425,7 +1449,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             else                                     -> AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
         resizeMode = next
-        if (preferencesManager.isRememberAspectRatioEnabled()) {
+        if (contentType != ContentType.NETWORK_STREAM && preferencesManager.isRememberAspectRatioEnabled()) {
             if (isLandscape) { networkLandscapeResizeMode = next; preferencesManager.setSavedAspectRatio(next) }
             else             { networkPortraitResizeMode  = next; preferencesManager.setSavedAspectRatioPortrait(next) }
         }
@@ -1456,6 +1480,7 @@ class FloatingPlayerActivity : ComponentActivity() {
     }
 
     private fun toggleFullscreen() {
+        if (DeviceUtils.isTvDevice) return
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         requestedOrientation = if (isLandscape) {
             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT

@@ -493,9 +493,7 @@ class PlayerActivity : ComponentActivity() {
                     modifier = Modifier
                         .then(
                             when {
-                                // In PiP the window itself is the video frame; never
-                                // constrain it to a fixed aspect ratio, or the rest of
-                                // the PiP rect shows through as the theme background.
+
                                 isInPipMode     -> Modifier.fillMaxSize()
                                 isNetworkStream -> Modifier.fillMaxWidth().weight(1f)
                                 else            -> Modifier.fillMaxWidth().aspectRatio(16f / 9f)
@@ -639,13 +637,7 @@ class PlayerActivity : ComponentActivity() {
                 PlayerView(ctx).apply {
                     useController = false
                     setBackgroundColor(android.graphics.Color.BLACK)
-                    // The shutter is what PlayerView actually draws over the
-                    // surface while no frame is available yet (initial load,
-                    // between channel switches, source changes) - this is
-                    // the correct fix, more reliable than relying on the
-                    // SurfaceView's own background, since SurfaceView can
-                    // punch a transparent hole in the window for hardware
-                    // compositing and ignore a plain background color.
+
                     setShutterBackgroundColor(android.graphics.Color.BLACK)
                 }
             },
@@ -869,12 +861,7 @@ class PlayerActivity : ComponentActivity() {
         setupPipReceiver()
         super.onPictureInPictureModeChanged(true, newConfig)
     }
-    /**
-     * Re-syncs the PiP play/pause RemoteAction with the player's real state.
-     * Playback can change for reasons other than the PiP button itself
-     * (buffering resolving, error retry, channel switch, etc.), so this must
-     * be called from the player listener too, not just from button taps.
-     */
+    
     private fun refreshPipParamsIfNeeded() {
         if (!isInPipMode) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1419,8 +1406,11 @@ class PlayerActivity : ComponentActivity() {
                     val isFavSrc       = channelListKey == "favorites_session"
                     when {
                         !passedRelated.isNullOrEmpty() -> viewModel.setRelatedChannels(passedRelated.filter { it.id != ch.id })
-                        isFavSrc -> viewModel.setRelatedChannels(
-                            ChannelListCache.get("favorites_session")?.filter { it.id != ch.id } ?: emptyList())
+                        isFavSrc -> {
+                            val favList = ChannelListCache.get("favorites_session") ?: emptyList()
+                            viewModel.setChannelList(favList)
+                            viewModel.setRelatedChannels(favList.filter { it.id != ch.id })
+                        }
                         intentIsSports -> viewModel.loadRandomRelatedSports(ch.id)
                         else -> viewModel.loadRandomRelatedChannels(
                             intentCategoryId?.takeIf { it.isNotEmpty() } ?: ch.categoryId, ch.id, intentSelectedGroup)

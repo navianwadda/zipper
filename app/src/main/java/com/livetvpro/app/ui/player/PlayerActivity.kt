@@ -1571,26 +1571,16 @@ class PlayerActivity : ComponentActivity() {
         if (isFavSrc) {
             val fav = ChannelListCache.get("favorites_session") ?: emptyList()
             viewModel.setChannelList(fav)
-            val currentRelated = relatedContentState.value
-            if (currentRelated is RelatedContentState.Channels) {
-                val updated = fav.filter { it.id != newChannel.id }.take(9)
-                relatedContentState.value = if (updated.isEmpty()) RelatedContentState.Hidden
-                                            else RelatedContentState.Channels(updated)
-            }
+            val updated = fav.filter { it.id != newChannel.id }.take(9)
+            relatedContentState.value = if (updated.isEmpty()) RelatedContentState.Hidden
+                                        else RelatedContentState.Channels(updated)
         } else {
             val isSports   = newChannel.categoryId == "sports" || intentIsSports
             val categoryId = newChannel.categoryId.takeIf { it.isNotEmpty() } ?: intentCategoryId ?: ""
             viewModel.loadAllChannelsForList(categoryId, newChannel.id)
-            val currentRelated = relatedContentState.value
-            if (currentRelated is RelatedContentState.Channels) {
-                val updated = currentRelated.items.filter { it.id != newChannel.id }
-                relatedContentState.value = if (updated.isEmpty()) RelatedContentState.Loading
-                                            else RelatedContentState.Channels(updated)
-            } else {
-                relatedContentState.value = RelatedContentState.Loading
-                if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
-                else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
-            }
+            relatedContentState.value = RelatedContentState.Loading
+            if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
+            else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
         }
     }
     private fun switchToEventFromLiveEvent(newEvent: LiveEvent, linkIndex: Int = 0) {

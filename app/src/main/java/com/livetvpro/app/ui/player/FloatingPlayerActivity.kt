@@ -127,6 +127,11 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     private var savedPlaybackPosition: Long = -1L
     private var relatedChannels = listOf<Channel>()
+    // Guards against a stale, still-in-flight category/sports related-channels load (kicked off
+    // before switching) landing *after* we've already synchronously set the correct favourites
+    // related list for the channel now playing. Holds the contentId the favourites list was
+    // pinned for; the relatedItems observer ignores async emissions while this matches.
+    private var relatedChannelsLockedForContentId: String? = null
 
     enum class ContentType {
         CHANNEL, EVENT, NETWORK_STREAM
@@ -305,6 +310,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
         viewModel.relatedItems.observe(this) { channels ->
             if (contentType != ContentType.CHANNEL) return@observe
+            if (relatedChannelsLockedForContentId == contentId) return@observe
             relatedChannels = channels
             relatedContentState.value = if (channels.isEmpty()) RelatedContentState.Hidden
             else RelatedContentState.Channels(channels)
@@ -768,6 +774,31 @@ class FloatingPlayerActivity : ComponentActivity() {
         releasePlayer()
         parseIntent()
         setupPlayer()
+        setupLinksUI()
+        setupRelatedChannels()
+        refreshChannelListForCurrentIntent()
+        loadRelatedContent()
+    }
+
+    /**
+     * Refreshes the channel-list panel for whatever category the *current* intent points to.
+     * Without this, the panel kept showing whatever category was loaded the first time the
+     * floating window was created, since onNewIntent previously never touched
+     * viewModel.channelListItems. The favourites case is handled by loadRelatedContent(), which
+     * also populates the channel-list panel from the favourites cache.
+     */
+    private fun refreshChannelListForCurrentIntent() {
+        if (contentType != ContentType.CHANNEL || contentId.isEmpty()) return
+        val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+        if (channelListKey?.startsWith("favorites_") == true) return
+        val cachedList = channelListKey?.let { ChannelListCache.get(it) }
+        if (!cachedList.isNullOrEmpty()) {
+            viewModel.setChannelList(cachedList)
+        } else {
+            viewModel.loadAllChannelsForList(
+                intentCategoryId?.takeIf { it.isNotEmpty() } ?: channelData?.categoryId ?: ""
+            )
+        }
     }
 
     override fun onResume() {
@@ -1050,10 +1081,16 @@ class FloatingPlayerActivity : ComponentActivity() {
                     if (isFavoritesSource) {
                         val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
                         viewModel.setChannelList(favList)
-                        viewModel.setRelatedChannels(favList.filter { it.id != channel.id })
+                        val related = favList.filter { it.id != channel.id }.take(9)
+                        relatedChannelsLockedForContentId = contentId
+                        relatedChannels = related
+                        relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+                        else RelatedContentState.Channels(related)
                     } else if (intentIsSports) {
+                        relatedChannelsLockedForContentId = null
                         viewModel.loadRandomRelatedSports(channel.id)
                     } else {
+                        relatedChannelsLockedForContentId = null
                         val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
                         viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
                     }
@@ -1107,11 +1144,13 @@ class FloatingPlayerActivity : ComponentActivity() {
         if (isFavoritesSource) {
             val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
             viewModel.setChannelList(favList)
-            val related = favList.filter { it.id != newChannel.id }
-            viewModel.setRelatedChannels(related)
+            val related = favList.filter { it.id != newChannel.id }.take(9)
+            relatedChannelsLockedForContentId = contentId
+            relatedChannels = related
             relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
             else RelatedContentState.Channels(related)
         } else {
+            relatedChannelsLockedForContentId = null
             val isSports = newChannel.categoryId == "sports" || intentIsSports
             val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
             relatedContentState.value = RelatedContentState.Loading

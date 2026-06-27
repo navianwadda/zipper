@@ -57,7 +57,20 @@ class PlayerViewModel @Inject constructor(
     private val _pendingRefreshChannelId = MutableLiveData<String?>(null)
     val pendingRefreshChannelId: LiveData<String?> = _pendingRefreshChannelId
 
+    // Monotonically increasing token identifying the most recently *requested* related-channels
+    // load. Any in-flight coroutine whose token no longer matches when it completes is stale
+    // (superseded by a newer switch, e.g. jumping to Favourites while the previous category's
+    // load was still running) and must not be allowed to post its result.
+    private var relatedRequestGeneration: Int = 0
+    private fun nextRelatedGeneration(): Int = ++relatedRequestGeneration
+
+    // Same idea for the channel-list panel, since switching channels/categories can also race
+    // with an in-flight loadAllChannelsForList call.
+    private var channelListRequestGeneration: Int = 0
+    private fun nextChannelListGeneration(): Int = ++channelListRequestGeneration
+
     fun loadAllChannelsForList(categoryId: String, refreshChannelId: String? = null) {
+        val myGeneration = nextChannelListGeneration()
 
         val existing = cachedChannelList
         if (existing != null && cachedChannelListCategoryId == categoryId) {
@@ -82,6 +95,7 @@ class PlayerViewModel @Inject constructor(
                     }
                     else -> withContext(Dispatchers.IO) { nativeDataRepository.getChannels() }
                 }
+                if (myGeneration != channelListRequestGeneration) return@launch
                 cachedChannelListCategoryId = categoryId
                 cachedChannelList = channels
                 _channelListItems.postValue(channels)
@@ -90,15 +104,17 @@ class PlayerViewModel @Inject constructor(
                 refreshChannelId?.let { refreshChannelData(it) }
             } catch (e: OutOfMemoryError) {
                 System.gc()
-                _channelListItems.postValue(emptyList())
+                if (myGeneration == channelListRequestGeneration) _channelListItems.postValue(emptyList())
             } catch (e: Exception) {
-                _channelListItems.postValue(emptyList())
+                if (myGeneration == channelListRequestGeneration) _channelListItems.postValue(emptyList())
             }
         }
     }
 
     fun setChannelList(channels: List<Channel>) {
-
+        // Explicit/synchronous selection always wins: invalidate any in-flight load so it can't
+        // clobber this value when it eventually completes.
+        nextChannelListGeneration()
         cachedChannelList = channels
         _channelListItems.postValue(channels)
     }
@@ -170,6 +186,7 @@ class PlayerViewModel @Inject constructor(
             loadRandomRelatedSports(currentChannelId)
             return
         }
+        val myGeneration = nextRelatedGeneration()
         viewModelScope.launch {
             try {
 
@@ -196,6 +213,8 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
 
+                if (myGeneration != relatedRequestGeneration) return@launch
+
                 if (availableChannels.isEmpty()) {
                     _relatedItems.postValue(emptyList())
                     return@launch
@@ -209,18 +228,20 @@ class PlayerViewModel @Inject constructor(
             } catch (e: OutOfMemoryError) {
                 System.gc()
                 Log.e("PlayerViewModel", "OOM loading related channels")
-                _relatedItems.postValue(emptyList())
+                if (myGeneration == relatedRequestGeneration) _relatedItems.postValue(emptyList())
             } catch (e: Exception) {
                 Log.e("PlayerViewModel", "Error loading random channels", e)
-                _relatedItems.postValue(emptyList())
+                if (myGeneration == relatedRequestGeneration) _relatedItems.postValue(emptyList())
             }
         }
     }
     fun loadRandomRelatedSports(currentChannelId: String) {
+        val myGeneration = nextRelatedGeneration()
         viewModelScope.launch {
             try {
                 val allSports = nativeDataRepository.getSports()
                 val available = allSports.filter { it.id != currentChannelId }
+                if (myGeneration != relatedRequestGeneration) return@launch
                 if (available.isEmpty()) {
                     _relatedItems.postValue(emptyList())
                     return@launch
@@ -229,17 +250,20 @@ class PlayerViewModel @Inject constructor(
                 _relatedItems.postValue(available.shuffled().take(targetCount))
             } catch (e: OutOfMemoryError) {
                 System.gc()
-                _relatedItems.postValue(emptyList())
+                if (myGeneration == relatedRequestGeneration) _relatedItems.postValue(emptyList())
             } catch (e: Exception) {
-                _relatedItems.postValue(emptyList())
+                if (myGeneration == relatedRequestGeneration) _relatedItems.postValue(emptyList())
             }
         }
     }
     fun loadRelatedChannels(categoryId: String, currentChannelId: String) {
+        val myGeneration = nextRelatedGeneration()
         viewModelScope.launch {
             try {
                 val allChannels = channelRepository.getChannelsByCategory(categoryId)
                 val availableChannels = allChannels.filter { it.id != currentChannelId }
+
+                if (myGeneration != relatedRequestGeneration) return@launch
 
                 if (availableChannels.isEmpty()) {
                     _relatedItems.postValue(emptyList())
@@ -279,14 +303,17 @@ class PlayerViewModel @Inject constructor(
                 _relatedItems.postValue(related)
             } catch (e: OutOfMemoryError) {
                 System.gc()
-                _relatedItems.postValue(emptyList())
+                if (myGeneration == relatedRequestGeneration) _relatedItems.postValue(emptyList())
             } catch (e: Exception) {
-                _relatedItems.postValue(emptyList())
+                if (myGeneration == relatedRequestGeneration) _relatedItems.postValue(emptyList())
             }
         }
     }
 
     fun setRelatedChannels(channels: List<Channel>) {
+        // Explicit/synchronous selection (e.g. favourites source) always wins: invalidate any
+        // in-flight related-channels load so a late result can't overwrite this afterward.
+        nextRelatedGeneration()
         _relatedItems.postValue(channels.take(9))
     }
 

@@ -934,14 +934,20 @@ class PlayerActivity : ComponentActivity() {
             context.getString(R.string.pause), context.getString(R.string.pause),
             makePendingIntent(CONTROL_TYPE_PAUSE, CONTROL_TYPE_PAUSE),
         )
-        val showNav = contentType == ContentType.CHANNEL &&
-            preferencesManager.getCenterControlsMode() == PreferencesManager.CENTER_MODE_NAV_ONLY
+        val centerControlsModeIsNav = preferencesManager.getCenterControlsMode() == PreferencesManager.CENTER_MODE_NAV_ONLY
+        val showNav = when (contentType) {
+            ContentType.CHANNEL -> centerControlsModeIsNav
+            ContentType.EVENT   -> centerControlsModeIsNav && allEventLinks.size > 1
+            else -> false
+        }
+        val prevDesc = if (contentType == ContentType.EVENT) "Previous link" else "Previous channel"
+        val nextDesc = if (contentType == ContentType.EVENT) "Next link" else "Next channel"
         return if (showNav) listOf(
             RemoteAction(Icon.createWithResource(context, R.drawable.ic_skip_prev_channel),
-                "Previous", "Previous channel", makePendingIntent(CONTROL_TYPE_PREV_CHANNEL, CONTROL_TYPE_PREV_CHANNEL)),
+                "Previous", prevDesc, makePendingIntent(CONTROL_TYPE_PREV_CHANNEL, CONTROL_TYPE_PREV_CHANNEL)),
             playPauseAction,
             RemoteAction(Icon.createWithResource(context, R.drawable.ic_skip_next_channel),
-                "Next", "Next channel", makePendingIntent(CONTROL_TYPE_NEXT_CHANNEL, CONTROL_TYPE_NEXT_CHANNEL)),
+                "Next", nextDesc, makePendingIntent(CONTROL_TYPE_NEXT_CHANNEL, CONTROL_TYPE_NEXT_CHANNEL)),
         ) else listOf(
             RemoteAction(Icon.createWithResource(context, R.drawable.ic_skip_backward),
                 "Rewind", "Rewind 10s", makePendingIntent(CONTROL_TYPE_REWIND, CONTROL_TYPE_REWIND)),
@@ -974,19 +980,37 @@ class PlayerActivity : ComponentActivity() {
                         else p.seekTo(newPos)
                     }
                     CONTROL_TYPE_PREV_CHANNEL -> {
-                        if (contentType == ContentType.CHANNEL) {
-                            val items = viewModel.channelListItems.value ?: return
-                            val idx  = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
-                            val prev = (idx - 1).coerceAtLeast(0)
-                            if (prev != idx) switchToChannel(items[prev])
+                        when (contentType) {
+                            ContentType.CHANNEL -> {
+                                val items = viewModel.channelListItems.value ?: return
+                                val idx  = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                                val prev = (idx - 1).coerceAtLeast(0)
+                                if (prev != idx) switchToChannel(items[prev])
+                            }
+                            ContentType.EVENT -> {
+                                if (allEventLinks.size > 1) {
+                                    val prev = (currentLinkIndex - 1).coerceAtLeast(0)
+                                    if (prev != currentLinkIndex) switchToLink(allEventLinks[prev], prev)
+                                }
+                            }
+                            else -> {}
                         }
                     }
                     CONTROL_TYPE_NEXT_CHANNEL -> {
-                        if (contentType == ContentType.CHANNEL) {
-                            val items = viewModel.channelListItems.value ?: return
-                            val idx  = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
-                            val next = (idx + 1).coerceAtMost(items.size - 1)
-                            if (next != idx) switchToChannel(items[next])
+                        when (contentType) {
+                            ContentType.CHANNEL -> {
+                                val items = viewModel.channelListItems.value ?: return
+                                val idx  = items.indexOfFirst { it.id == contentId }.takeIf { it != -1 } ?: 0
+                                val next = (idx + 1).coerceAtMost(items.size - 1)
+                                if (next != idx) switchToChannel(items[next])
+                            }
+                            ContentType.EVENT -> {
+                                if (allEventLinks.size > 1) {
+                                    val next = (currentLinkIndex + 1).coerceAtMost(allEventLinks.size - 1)
+                                    if (next != currentLinkIndex) switchToLink(allEventLinks[next], next)
+                                }
+                            }
+                            else -> {}
                         }
                     }
                 }

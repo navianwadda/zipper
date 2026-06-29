@@ -163,14 +163,6 @@ object PlayerStreamHelper {
         }
     }
 
-    /**
-     * Many lightweight stream-redirector endpoints (.php, .aspx, query-string
-     * URLs with no extension) either reject HEAD outright or omit/misreport
-     * Content-Type even though a normal GET works fine and returns a real
-     * HLS/DASH/MP4 payload. This does a real GET, reads only the first few
-     * KB, and sniffs the actual bytes for known format signatures instead of
-     * trusting headers alone.
-     */
     private fun trySniffByGet(url: String, headers: Map<String, String>): String? {
         return try {
             val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
@@ -226,15 +218,11 @@ object PlayerStreamHelper {
             text.startsWith("#EXTM3U") -> MimeTypes.APPLICATION_M3U8
             text.contains("<MPD") -> MimeTypes.APPLICATION_MPD
             text.contains("<smil") || text.contains("SmoothStreamingMedia") -> MimeTypes.APPLICATION_SS
-            // MP4/MOV ISO base media file: 'ftyp' box appears at offset 4.
             bytes.size >= 8 && bytes[4] == 'f'.code.toByte() && bytes[5] == 't'.code.toByte() &&
                 bytes[6] == 'y'.code.toByte() && bytes[7] == 'p'.code.toByte() -> "video/mp4"
-            // MPEG-TS: sync byte 0x47 repeating every 188 bytes.
             bytes.size >= 188 && bytes[0] == 0x47.toByte() && bytes[188] == 0x47.toByte() -> "video/mp2t"
-            // Matroska/WebM EBML header.
             bytes.size >= 4 && bytes[0] == 0x1A.toByte() && bytes[1] == 0x45.toByte() &&
                 bytes[2] == 0xDF.toByte() && bytes[3] == 0xA3.toByte() -> "video/webm"
-            // FLV signature.
             text.startsWith("FLV") -> "video/x-flv"
             else -> null
         }

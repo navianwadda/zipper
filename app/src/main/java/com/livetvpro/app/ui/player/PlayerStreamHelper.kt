@@ -8,7 +8,6 @@ import androidx.media3.exoplayer.drm.FrameworkMediaDrm
 import androidx.media3.exoplayer.drm.HttpMediaDrmCallback
 import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
 import com.livetvpro.app.data.models.LiveEventLink
-import java.util.UUID
 
 data class StreamInfo(
     val url: String,
@@ -248,11 +247,12 @@ object PlayerStreamHelper {
             if (keyIdBytes.isEmpty() || keyBytes.isEmpty()) return null
             val keyBase64 = android.util.Base64.encodeToString(keyBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
             val kidBase64 = android.util.Base64.encodeToString(keyIdBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+            val jwk = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$kidBase64"}],"type":"temporary"}"""
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
-                .build(buildAdaptiveClearKeyCallback(keyBase64, kidBase64))
+                .setPlayClearSamplesWithoutKeys(true)
+                .build(LocalMediaDrmCallback(jwk.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
     }
 
@@ -261,7 +261,7 @@ object PlayerStreamHelper {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
     }
@@ -280,46 +280,9 @@ object PlayerStreamHelper {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
                 .setMultiSession(false)
-                .setPlayClearSamplesWithoutKeys(false)
+                .setPlayClearSamplesWithoutKeys(true)
                 .build(cb)
         } catch (e: Exception) { null }
-    }
-
-    fun buildAdaptiveClearKeyCallback(
-        keyBase64: String,
-        fallbackKidBase64: String,
-    ): androidx.media3.exoplayer.drm.MediaDrmCallback {
-        return object : androidx.media3.exoplayer.drm.MediaDrmCallback {
-            override fun executeProvisionRequest(
-                uuid: UUID,
-                request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest,
-            ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response =
-                androidx.media3.exoplayer.drm.MediaDrmCallback.Response(ByteArray(0))
-
-            override fun executeKeyRequest(
-                uuid: UUID,
-                request: androidx.media3.exoplayer.drm.ExoMediaDrm.KeyRequest,
-            ): androidx.media3.exoplayer.drm.MediaDrmCallback.Response {
-                return try {
-                    val body = String(request.data, Charsets.UTF_8)
-                    val kids = mutableListOf<String>()
-                    Regex(""""kids"\s*:\s*\[([^\]]+)]""").find(body)?.let { m ->
-                        Regex(""""([A-Za-z0-9+/=_-]+)"""").findAll(m.groupValues[1])
-                            .forEach { kids.add(it.groupValues[1]) }
-                    }
-                    val entries = if (kids.isNotEmpty()) {
-                        kids.joinToString(",") { kid -> """{"kty":"oct","k":"$keyBase64","kid":"$kid"}""" }
-                    } else {
-                        """{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}"""
-                    }
-                    val jwk = """{"keys":[$entries],"type":"temporary"}"""
-                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(jwk.toByteArray(Charsets.UTF_8))
-                } catch (e: Exception) {
-                    val fallback = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$fallbackKidBase64"}],"type":"temporary"}"""
-                    androidx.media3.exoplayer.drm.MediaDrmCallback.Response(fallback.toByteArray(Charsets.UTF_8))
-                }
-            }
-        }
     }
 
     fun hexToBytes(hex: String): ByteArray {

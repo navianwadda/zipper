@@ -119,14 +119,35 @@ object PlayerStreamHelper {
 
         val resolvedDrmScheme = link.drmScheme?.takeIf { it.isNotEmpty() }
             ?.let { normalizeDrmScheme(it) } ?: base.drmScheme
-        val resolvedDrmLicenseUrl = link.drmLicenseUrl?.takeIf { it.isNotEmpty() } ?: base.drmLicenseUrl
+
+        var resolvedDrmLicenseUrl = base.drmLicenseUrl
+        var resolvedDrmKeyId = base.drmKeyId
+        var resolvedDrmKey = base.drmKey
+
+        link.drmLicenseUrl?.takeIf { it.isNotEmpty() }?.let { value ->
+            when {
+                value.startsWith("http://", ignoreCase = true) ||
+                value.startsWith("https://", ignoreCase = true) -> resolvedDrmLicenseUrl = value
+                value.trimStart().startsWith("{") -> resolvedDrmLicenseUrl = value
+                else -> {
+                    val colonIndex = value.indexOf(':')
+                    if (colonIndex != -1) {
+                        resolvedDrmKeyId = value.substring(0, colonIndex).trim()
+                        resolvedDrmKey = value.substring(colonIndex + 1).trim()
+                        resolvedDrmLicenseUrl = null
+                    } else {
+                        resolvedDrmLicenseUrl = value
+                    }
+                }
+            }
+        }
 
         return StreamInfo(
             url = base.url,
             headers = headers,
             drmScheme = resolvedDrmScheme,
-            drmKeyId = base.drmKeyId,
-            drmKey = base.drmKey,
+            drmKeyId = resolvedDrmKeyId,
+            drmKey = resolvedDrmKey,
             drmLicenseUrl = resolvedDrmLicenseUrl,
             customHeaders = customHeaders
         )

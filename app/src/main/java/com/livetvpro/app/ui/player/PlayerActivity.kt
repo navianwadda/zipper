@@ -1470,7 +1470,9 @@ class PlayerActivity : ComponentActivity() {
     private fun setupPlayer() {
         if (streamUrl.isBlank()) { errorMessage.value = "No stream URL"; return }
         lifecycleScope.launch {
-            val parsed  = PlayerStreamHelper.parseStreamUrl(streamUrl)
+            val parsed = allEventLinks.getOrNull(currentLinkIndex)
+                ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
+                ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
             if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
                 headers["User-Agent"] = "okhttp/4.12.0"

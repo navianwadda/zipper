@@ -521,22 +521,21 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 y = initialY
             }
 
-            val resolvedPipeUrl2: String = when {
+            val parsedStream: StreamInfo = when {
                 channel != null -> {
                     val links = channel.links
                     val sel = if (links != null && linkIndex in links.indices) links[linkIndex] else links?.firstOrNull()
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
-                    else streamUrl
+                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
+                    else parseStreamUrl(streamUrl)
                 }
                 event != null -> {
                     val links = event.links
                     val sel = if (linkIndex in links.indices) links[linkIndex] else links.firstOrNull()
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
-                    else streamUrl
+                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
+                    else parseStreamUrl(streamUrl)
                 }
-                else -> streamUrl
+                else -> parseStreamUrl(streamUrl)
             }
-            val parsedStream = parseStreamUrl(resolvedPipeUrl2)
             val actualUrl = parsedStream.url
             val headers = parsedStream.headers.toMutableMap()
             val ua = headers["User-Agent"]
@@ -1013,27 +1012,28 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         val instance = activeInstances[instanceId] ?: return
 
         try {
-            val resolvedPipeUrl: String = when {
+            val parsedStream: StreamInfo = when {
                 channel != null -> {
                     val sel = if (!channel.links.isNullOrEmpty()) {
                         if (linkIndex in channel.links!!.indices) channel.links!![linkIndex]
                         else channel.links!!.firstOrNull()
                     } else null
-                    if (sel != null) buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
-                    else channel.streamUrl.takeIf { it.isNotBlank() } ?: return
+                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
+                    else {
+                        val fallbackUrl = channel.streamUrl.takeIf { it.isNotBlank() } ?: return
+                        parseStreamUrl(fallbackUrl)
+                    }
                 }
                 event != null -> {
                     val links = event.links
                     if (links.isEmpty()) return
                     val sel = if (linkIndex in links.indices) links[linkIndex] else links.firstOrNull() ?: return
-                    buildLinkPipeUrl(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
+                    buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
                 }
                 else -> return
             }
 
-            if (resolvedPipeUrl.isBlank()) return
-
-            val parsedStream = parseStreamUrl(resolvedPipeUrl)
+            if (parsedStream.url.isBlank()) return
             val headers = parsedStream.headers.toMutableMap()
             val ua = headers["User-Agent"]
             if (ua.isNullOrBlank() || ua == "Default") {
@@ -1901,7 +1901,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         val customHeaders: Map<String, String> = emptyMap()
     )
 
-    private fun buildLinkPipeUrl(
+    private fun buildStreamInfoFromLink(
         url: String,
         cookie: String?,
         referer: String?,
@@ -1911,17 +1911,37 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         drmLicenseUrl: String?,
         xForwardedFor: String? = null,
         customHeaders: Map<String, String> = emptyMap()
-    ): String {
-        val params = mutableListOf<String>()
-        referer?.takeIf { it.isNotEmpty() }?.let { params.add("referer=$it") }
-        cookie?.takeIf { it.isNotEmpty() }?.let { params.add("cookie=$it") }
-        origin?.takeIf { it.isNotEmpty() }?.let { params.add("origin=$it") }
-        userAgent?.takeIf { it.isNotEmpty() }?.let { params.add("user-agent=$it") }
-        xForwardedFor?.takeIf { it.isNotEmpty() }?.let { params.add("x-forwarded-for=$it") }
-        drmScheme?.takeIf { it.isNotEmpty() }?.let { params.add("drmScheme=$it") }
-        drmLicenseUrl?.takeIf { it.isNotEmpty() }?.let { params.add("drmLicense=$it") }
-        customHeaders.forEach { (k, v) -> if (v.isNotEmpty()) params.add("$k=$v") }
-        return if (params.isNotEmpty()) "$url|${params.joinToString("|")}" else url
+    ): StreamInfo {
+        val base = parseStreamUrl(url)
+
+        val headers = base.headers.toMutableMap()
+        val custom = base.customHeaders.toMutableMap()
+
+        referer?.takeIf { it.isNotEmpty() }?.let { headers["Referer"] = it }
+        cookie?.takeIf { it.isNotEmpty() }?.let { headers["Cookie"] = it }
+        origin?.takeIf { it.isNotEmpty() }?.let { headers["Origin"] = it }
+        userAgent?.takeIf { it.isNotEmpty() }?.let { headers["User-Agent"] = it }
+        xForwardedFor?.takeIf { it.isNotEmpty() }?.let { headers["X-Forwarded-For"] = it }
+        customHeaders.forEach { (k, v) ->
+            if (v.isNotEmpty()) {
+                headers[k] = v
+                custom[k] = v
+            }
+        }
+
+        val resolvedDrmScheme = drmScheme?.takeIf { it.isNotEmpty() }
+            ?.let { normalizeDrmScheme(it) } ?: base.drmScheme
+        val resolvedDrmLicenseUrl = drmLicenseUrl?.takeIf { it.isNotEmpty() } ?: base.drmLicenseUrl
+
+        return StreamInfo(
+            url = base.url,
+            headers = headers,
+            drmScheme = resolvedDrmScheme,
+            drmKeyId = base.drmKeyId,
+            drmKey = base.drmKey,
+            drmLicenseUrl = resolvedDrmLicenseUrl,
+            customHeaders = custom
+        )
     }
 
     private fun parseStreamUrl(streamUrl: String): StreamInfo {

@@ -99,6 +99,39 @@ object PlayerStreamHelper {
         }
     }
 
+    fun buildStreamInfoFromLink(link: LiveEventLink): StreamInfo {
+        val base = parseStreamUrl(link.url)
+
+        val headers = base.headers.toMutableMap()
+        val customHeaders = base.customHeaders.toMutableMap()
+
+        link.referer?.takeIf { it.isNotEmpty() }?.let { headers["Referer"] = it }
+        link.cookie?.takeIf { it.isNotEmpty() }?.let { headers["Cookie"] = it }
+        link.origin?.takeIf { it.isNotEmpty() }?.let { headers["Origin"] = it }
+        link.userAgent?.takeIf { it.isNotEmpty() }?.let { headers["User-Agent"] = it }
+        link.xForwardedFor?.takeIf { it.isNotEmpty() }?.let { headers["X-Forwarded-For"] = it }
+        link.customHeaders.forEach { (k, v) ->
+            if (v.isNotEmpty()) {
+                headers[k] = v
+                customHeaders[k] = v
+            }
+        }
+
+        val resolvedDrmScheme = link.drmScheme?.takeIf { it.isNotEmpty() }
+            ?.let { normalizeDrmScheme(it) } ?: base.drmScheme
+        val resolvedDrmLicenseUrl = link.drmLicenseUrl?.takeIf { it.isNotEmpty() } ?: base.drmLicenseUrl
+
+        return StreamInfo(
+            url = base.url,
+            headers = headers,
+            drmScheme = resolvedDrmScheme,
+            drmKeyId = base.drmKeyId,
+            drmKey = base.drmKey,
+            drmLicenseUrl = resolvedDrmLicenseUrl,
+            customHeaders = customHeaders
+        )
+    }
+
     fun buildStreamUrl(link: LiveEventLink): String {
         var url = link.url
         val params = mutableListOf<String>()

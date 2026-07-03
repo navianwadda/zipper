@@ -70,7 +70,6 @@ import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog
 import com.livetvpro.app.ui.player.settings.PlayerSettingsDialog
 import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
-import com.livetvpro.app.utils.FileLogger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1468,52 +1467,11 @@ class PlayerActivity : ComponentActivity() {
             else -> {}
         }
     }
-    /**
-     * Dumps the full PlaybackException cause chain to Logcat (tag "PlayerDebug").
-     * Uses reflection to pull out well-known field names (responseCode, errorCode,
-     * mimeType, dataSpec, uri, etc.) so this doesn't depend on which exact media3
-     * exception subclasses are on the classpath in this build - it'll surface
-     * whatever's there without risking a compile break on a wrong import path.
-     */
-    private fun logPlaybackErrorVerbose(tag: String, error: androidx.media3.common.PlaybackException) {
-        FileLogger.e(tag, "===== PLAYBACK ERROR =====")
-        FileLogger.e(tag, "errorCode=${error.errorCode} errorCodeName=${error.errorCodeName}")
-        FileLogger.e(tag, "message=${error.message}")
-
-        var cause: Throwable? = error.cause
-        var depth = 0
-        val interestingFields = listOf(
-            "responseCode", "responseMessage", "headerFields", "responseBody",
-            "errorCode", "type", "mimeType", "dataSpec", "uri", "secureDecoderRequired"
-        )
-        while (cause != null && depth < 8) {
-            val klass = cause.javaClass
-            FileLogger.e(tag, "cause[$depth] = ${klass.name}: ${cause.message}")
-
-            for (fieldName in interestingFields) {
-                try {
-                    val field = klass.fields.firstOrNull { it.name == fieldName } ?: continue
-                    val value = field.get(cause)
-                    val printable = when (value) {
-                        is ByteArray -> try { String(value).take(500) } catch (_: Exception) { "<${value.size} bytes>" }
-                        else -> value?.toString()?.take(500)
-                    }
-                    FileLogger.e(tag, "  -> $fieldName = $printable")
-                } catch (_: Throwable) {
-                    // field not present on this class / not accessible - skip silently
-                }
-            }
-            cause = cause.cause
-            depth++
-        }
-        FileLogger.e(tag, "===========================")
-        FileLogger.e(tag, "Full log saved to Downloads/${FileLogger.currentFileName()}")
-    }
-
+    private var playerSetupInProgress = false
     private fun setupPlayer() {
         if (streamUrl.isBlank()) { errorMessage.value = "No stream URL"; return }
-        val debugTag = "PlayerDebug"
-        FileLogger.startSession(this, prefix = "LiveTVPro_playback")
+        if (player != null || playerSetupInProgress) return
+        playerSetupInProgress = true
         lifecycleScope.launch {
             val parsed = allEventLinks.getOrNull(currentLinkIndex)
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
@@ -1526,28 +1484,6 @@ class PlayerActivity : ComponentActivity() {
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     PlayerStreamHelper.resolveContentType(parsed.url, headers)
                 }
-            FileLogger.d(debugTag, "===== setupPlayer =====")
-            FileLogger.d(debugTag, "url=${parsed.url}")
-            FileLogger.d(debugTag, "mimeType=$mimeType")
-            FileLogger.d(debugTag, "headers=$headers")
-            FileLogger.d(debugTag, "drmScheme=${parsed.drmScheme} drmKeyId=${parsed.drmKeyId} drmKeyPresent=${parsed.drmKey != null} drmLicenseUrl=${parsed.drmLicenseUrl}")
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                    val conn = (java.net.URL(parsed.url).openConnection() as java.net.HttpURLConnection)
-                    conn.connectTimeout = 8000
-                    conn.readTimeout = 8000
-                    headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
-                    val code = conn.responseCode
-                    val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
-                        ?.bufferedReader()?.use { it.readText() } ?: ""
-                    FileLogger.d(debugTag, "manifestFetch status=$code contentLength=${conn.contentLength} bytesRead=${body.length}")
-                    FileLogger.d(debugTag, "manifestFetch responseHeaders=${conn.headerFields}")
-                    FileLogger.d(debugTag, "manifestFetch body:\n${body.take(4000)}")
-                    conn.disconnect()
-                } catch (t: Throwable) {
-                    FileLogger.e(debugTag, "manifestFetch failed: ${t.javaClass.name}: ${t.message}")
-                }
-            }
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
@@ -1565,20 +1501,15 @@ class PlayerActivity : ComponentActivity() {
                     PlayerStreamHelper.buildClearKeyServerManager(parsed.drmLicenseUrl, headers)
                 else -> null
             }
-            FileLogger.d(debugTag, "clearKeyMgr built=${clearKeyMgr != null} (scheme==clearkey:${parsed.drmScheme == "clearkey"}, haveKidKey:${parsed.drmKeyId != null && parsed.drmKey != null})")
-            val effectiveDataSourceFactory = if (clearKeyMgr != null && parsed.drmKeyId != null) {
-                val keyId = parsed.drmKeyId
-                FileLogger.d(debugTag, "wrapping dataSourceFactory with ClearKeyManifestRewritingDataSource (kid=$keyId)")
-                androidx.media3.datasource.DataSource.Factory {
-                    ClearKeyManifestRewritingDataSource(dataSourceFactory.createDataSource(), keyId) { original, patched ->
-                        FileLogger.d(debugTag, "manifest patched: originalLen=${original.length} patchedLen=${patched.length}")
-                        FileLogger.d(debugTag, "patchedManifest:\n${patched.take(4000)}")
-                    }
-                }
-            } else {
-                dataSourceFactory
-            }
             val mediaSourceFactory = if (clearKeyMgr != null) {
+                val effectiveDataSourceFactory = if (parsed.drmKeyId != null) {
+                    val keyId = parsed.drmKeyId
+                    androidx.media3.datasource.DataSource.Factory {
+                        ClearKeyManifestRewritingDataSource(dataSourceFactory.createDataSource(), keyId)
+                    }
+                } else {
+                    dataSourceFactory
+                }
                 DefaultMediaSourceFactory(this@PlayerActivity)
                     .setDataSourceFactory(effectiveDataSourceFactory)
                     .setDrmSessionManagerProvider { clearKeyMgr }
@@ -1612,6 +1543,7 @@ class PlayerActivity : ComponentActivity() {
                 )
                 .build()
             player = exo
+            playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
             val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
             mimeType?.let { mediaItemBuilder.setMimeType(it) }
@@ -1629,14 +1561,6 @@ class PlayerActivity : ComponentActivity() {
             }
             val listener = object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
-                    val stateName = when (state) {
-                        Player.STATE_IDLE -> "IDLE"
-                        Player.STATE_BUFFERING -> "BUFFERING"
-                        Player.STATE_READY -> "READY"
-                        Player.STATE_ENDED -> "ENDED"
-                        else -> "UNKNOWN($state)"
-                    }
-                    FileLogger.d(debugTag, "playbackState -> $stateName")
                     when (state) {
                         Player.STATE_BUFFERING -> errorMessage.value = ""
                         Player.STATE_READY -> {
@@ -1652,72 +1576,11 @@ class PlayerActivity : ComponentActivity() {
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     errorMessage.value = error.localizedMessage ?: "Playback error"
-                    logPlaybackErrorVerbose(debugTag, error)
                     refreshPipParamsIfNeeded()
                 }
             }
             playerListener = listener
             exo.addListener(listener)
-
-            val analyticsListener = object : androidx.media3.exoplayer.analytics.AnalyticsListener {
-                override fun onLoadStarted(
-                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
-                    loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
-                    mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData
-                ) {
-                    FileLogger.d(debugTag, "loadStarted dataType=${mediaLoadData.dataType} uri=${loadEventInfo.uri}")
-                }
-                override fun onLoadCompleted(
-                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
-                    loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
-                    mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData
-                ) {
-                    FileLogger.d(debugTag, "loadCompleted dataType=${mediaLoadData.dataType} uri=${loadEventInfo.uri} bytes=${loadEventInfo.bytesLoaded} tookMs=${loadEventInfo.loadDurationMs}")
-                }
-                override fun onLoadError(
-                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
-                    loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
-                    mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData,
-                    error: java.io.IOException,
-                    wasCanceled: Boolean
-                ) {
-                    FileLogger.e(debugTag, "loadError dataType=${mediaLoadData.dataType} uri=${loadEventInfo.uri} wasCanceled=$wasCanceled error=${error.javaClass.name}: ${error.message}")
-                    var c: Throwable? = error.cause
-                    var d = 0
-                    while (c != null && d < 5) {
-                        FileLogger.e(debugTag, "  loadError.cause[$d] = ${c.javaClass.name}: ${c.message}")
-                        c = c.cause; d++
-                    }
-                }
-                override fun onLoadCanceled(
-                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
-                    loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
-                    mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData
-                ) {
-                    FileLogger.d(debugTag, "loadCanceled dataType=${mediaLoadData.dataType} uri=${loadEventInfo.uri}")
-                }
-                override fun onIsLoadingChanged(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, isLoading: Boolean) {
-                    FileLogger.d(debugTag, "isLoading -> $isLoading")
-                }
-                override fun onDrmSessionAcquired(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, state: Int) {
-                    FileLogger.d(debugTag, "drmSessionAcquired state=$state")
-                }
-                override fun onDrmKeysLoaded(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime) {
-                    FileLogger.d(debugTag, "drmKeysLoaded (CDM accepted the ClearKey keys)")
-                }
-                override fun onDrmSessionManagerError(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, error: Exception) {
-                    FileLogger.e(debugTag, "drmSessionManagerError = ${error.javaClass.name}: ${error.message}")
-                }
-                override fun onRenderedFirstFrame(
-                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
-                    output: Any,
-                    renderTimeMs: Long
-                ) {
-                    FileLogger.d(debugTag, "renderedFirstFrame (video is actually decoding/displaying now)")
-                }
-            }
-            exo.addAnalyticsListener(analyticsListener)
-
             exo.setMediaItem(mediaItemBuilder.build())
             exo.prepare()
             exo.playWhenReady = true
@@ -1730,12 +1593,13 @@ class PlayerActivity : ComponentActivity() {
         }
         player         = null
         playerListener = null
-        FileLogger.close()
+        playerSetupInProgress = false
     }
     internal fun retryPlayback() {
         errorMessage.value = ""
         player?.release()
         player = null
+        playerSetupInProgress = false
         setupPlayer()
     }
     internal fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {

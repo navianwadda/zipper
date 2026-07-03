@@ -1531,6 +1531,23 @@ class PlayerActivity : ComponentActivity() {
             FileLogger.d(debugTag, "mimeType=$mimeType")
             FileLogger.d(debugTag, "headers=$headers")
             FileLogger.d(debugTag, "drmScheme=${parsed.drmScheme} drmKeyId=${parsed.drmKeyId} drmKeyPresent=${parsed.drmKey != null} drmLicenseUrl=${parsed.drmLicenseUrl}")
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val conn = (java.net.URL(parsed.url).openConnection() as java.net.HttpURLConnection)
+                    conn.connectTimeout = 8000
+                    conn.readTimeout = 8000
+                    headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+                    val code = conn.responseCode
+                    val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                        ?.bufferedReader()?.use { it.readText() } ?: ""
+                    FileLogger.d(debugTag, "manifestFetch status=$code contentLength=${conn.contentLength} bytesRead=${body.length}")
+                    FileLogger.d(debugTag, "manifestFetch responseHeaders=${conn.headerFields}")
+                    FileLogger.d(debugTag, "manifestFetch body:\n${body.take(4000)}")
+                    conn.disconnect()
+                } catch (t: Throwable) {
+                    FileLogger.e(debugTag, "manifestFetch failed: ${t.javaClass.name}: ${t.message}")
+                }
+            }
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)

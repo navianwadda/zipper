@@ -1600,6 +1600,14 @@ class PlayerActivity : ComponentActivity() {
             }
             val listener = object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
+                    val stateName = when (state) {
+                        Player.STATE_IDLE -> "IDLE"
+                        Player.STATE_BUFFERING -> "BUFFERING"
+                        Player.STATE_READY -> "READY"
+                        Player.STATE_ENDED -> "ENDED"
+                        else -> "UNKNOWN($state)"
+                    }
+                    FileLogger.d(debugTag, "playbackState -> $stateName")
                     when (state) {
                         Player.STATE_BUFFERING -> errorMessage.value = ""
                         Player.STATE_READY -> {
@@ -1621,6 +1629,66 @@ class PlayerActivity : ComponentActivity() {
             }
             playerListener = listener
             exo.addListener(listener)
+
+            val analyticsListener = object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+                override fun onLoadStarted(
+                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                    loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
+                    mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData
+                ) {
+                    FileLogger.d(debugTag, "loadStarted dataType=${mediaLoadData.dataType} uri=${loadEventInfo.uri}")
+                }
+                override fun onLoadCompleted(
+                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                    loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
+                    mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData
+                ) {
+                    FileLogger.d(debugTag, "loadCompleted dataType=${mediaLoadData.dataType} uri=${loadEventInfo.uri} bytes=${loadEventInfo.bytesLoaded} tookMs=${loadEventInfo.loadDurationMs}")
+                }
+                override fun onLoadError(
+                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                    loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
+                    mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData,
+                    error: java.io.IOException,
+                    wasCanceled: Boolean
+                ) {
+                    FileLogger.e(debugTag, "loadError dataType=${mediaLoadData.dataType} uri=${loadEventInfo.uri} wasCanceled=$wasCanceled error=${error.javaClass.name}: ${error.message}")
+                    var c: Throwable? = error.cause
+                    var d = 0
+                    while (c != null && d < 5) {
+                        FileLogger.e(debugTag, "  loadError.cause[$d] = ${c.javaClass.name}: ${c.message}")
+                        c = c.cause; d++
+                    }
+                }
+                override fun onLoadCanceled(
+                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                    loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
+                    mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData
+                ) {
+                    FileLogger.d(debugTag, "loadCanceled dataType=${mediaLoadData.dataType} uri=${loadEventInfo.uri}")
+                }
+                override fun onIsLoadingChanged(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, isLoading: Boolean) {
+                    FileLogger.d(debugTag, "isLoading -> $isLoading")
+                }
+                override fun onDrmSessionAcquired(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, state: Int) {
+                    FileLogger.d(debugTag, "drmSessionAcquired state=$state")
+                }
+                override fun onDrmKeysLoaded(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime) {
+                    FileLogger.d(debugTag, "drmKeysLoaded (CDM accepted the ClearKey keys)")
+                }
+                override fun onDrmSessionManagerError(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, error: Exception) {
+                    FileLogger.e(debugTag, "drmSessionManagerError = ${error.javaClass.name}: ${error.message}")
+                }
+                override fun onRenderedFirstFrame(
+                    eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                    output: Any,
+                    renderTimeMs: Long
+                ) {
+                    FileLogger.d(debugTag, "renderedFirstFrame (video is actually decoding/displaying now)")
+                }
+            }
+            exo.addAnalyticsListener(analyticsListener)
+
             exo.setMediaItem(mediaItemBuilder.build())
             exo.prepare()
             exo.playWhenReady = true

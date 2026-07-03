@@ -70,6 +70,7 @@ import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialog
 import com.livetvpro.app.ui.player.settings.PlayerSettingsDialog
 import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
+import com.livetvpro.app.utils.FileLogger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1467,8 +1468,52 @@ class PlayerActivity : ComponentActivity() {
             else -> {}
         }
     }
+    /**
+     * Dumps the full PlaybackException cause chain to Logcat (tag "PlayerDebug").
+     * Uses reflection to pull out well-known field names (responseCode, errorCode,
+     * mimeType, dataSpec, uri, etc.) so this doesn't depend on which exact media3
+     * exception subclasses are on the classpath in this build - it'll surface
+     * whatever's there without risking a compile break on a wrong import path.
+     */
+    private fun logPlaybackErrorVerbose(tag: String, error: androidx.media3.common.PlaybackException) {
+        FileLogger.e(tag, "===== PLAYBACK ERROR =====")
+        FileLogger.e(tag, "errorCode=${error.errorCode} errorCodeName=${error.errorCodeName}")
+        FileLogger.e(tag, "message=${error.message}")
+
+        var cause: Throwable? = error.cause
+        var depth = 0
+        val interestingFields = listOf(
+            "responseCode", "responseMessage", "headerFields", "responseBody",
+            "errorCode", "type", "mimeType", "dataSpec", "uri", "secureDecoderRequired"
+        )
+        while (cause != null && depth < 8) {
+            val klass = cause.javaClass
+            FileLogger.e(tag, "cause[$depth] = ${klass.name}: ${cause.message}")
+
+            for (fieldName in interestingFields) {
+                try {
+                    val field = klass.fields.firstOrNull { it.name == fieldName } ?: continue
+                    val value = field.get(cause)
+                    val printable = when (value) {
+                        is ByteArray -> try { String(value).take(500) } catch (_: Exception) { "<${value.size} bytes>" }
+                        else -> value?.toString()?.take(500)
+                    }
+                    FileLogger.e(tag, "  -> $fieldName = $printable")
+                } catch (_: Throwable) {
+                    // field not present on this class / not accessible - skip silently
+                }
+            }
+            cause = cause.cause
+            depth++
+        }
+        FileLogger.e(tag, "===========================")
+        FileLogger.e(tag, "Full log saved to Downloads/${FileLogger.currentFileName()}")
+    }
+
     private fun setupPlayer() {
         if (streamUrl.isBlank()) { errorMessage.value = "No stream URL"; return }
+        val debugTag = "PlayerDebug"
+        FileLogger.startSession(this, prefix = "LiveTVPro_playback")
         lifecycleScope.launch {
             val parsed = allEventLinks.getOrNull(currentLinkIndex)
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
@@ -1481,6 +1526,11 @@ class PlayerActivity : ComponentActivity() {
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     PlayerStreamHelper.resolveContentType(parsed.url, headers)
                 }
+            FileLogger.d(debugTag, "===== setupPlayer =====")
+            FileLogger.d(debugTag, "url=${parsed.url}")
+            FileLogger.d(debugTag, "mimeType=$mimeType")
+            FileLogger.d(debugTag, "headers=$headers")
+            FileLogger.d(debugTag, "drmScheme=${parsed.drmScheme} drmKeyId=${parsed.drmKeyId} drmKeyPresent=${parsed.drmKey != null} drmLicenseUrl=${parsed.drmLicenseUrl}")
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
@@ -1498,6 +1548,7 @@ class PlayerActivity : ComponentActivity() {
                     PlayerStreamHelper.buildClearKeyServerManager(parsed.drmLicenseUrl, headers)
                 else -> null
             }
+            FileLogger.d(debugTag, "clearKeyMgr built=${clearKeyMgr != null} (scheme==clearkey:${parsed.drmScheme == "clearkey"}, haveKidKey:${parsed.drmKeyId != null && parsed.drmKey != null})")
             val mediaSourceFactory = if (clearKeyMgr != null) {
                 DefaultMediaSourceFactory(this@PlayerActivity)
                     .setDataSourceFactory(dataSourceFactory)
@@ -1564,6 +1615,7 @@ class PlayerActivity : ComponentActivity() {
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     errorMessage.value = error.localizedMessage ?: "Playback error"
+                    logPlaybackErrorVerbose(debugTag, error)
                     refreshPipParamsIfNeeded()
                 }
             }
@@ -1581,6 +1633,7 @@ class PlayerActivity : ComponentActivity() {
         }
         player         = null
         playerListener = null
+        FileLogger.close()
     }
     internal fun retryPlayback() {
         errorMessage.value = ""

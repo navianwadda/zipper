@@ -1566,9 +1566,21 @@ class PlayerActivity : ComponentActivity() {
                 else -> null
             }
             FileLogger.d(debugTag, "clearKeyMgr built=${clearKeyMgr != null} (scheme==clearkey:${parsed.drmScheme == "clearkey"}, haveKidKey:${parsed.drmKeyId != null && parsed.drmKey != null})")
+            val effectiveDataSourceFactory = if (clearKeyMgr != null && parsed.drmKeyId != null) {
+                val keyId = parsed.drmKeyId
+                FileLogger.d(debugTag, "wrapping dataSourceFactory with ClearKeyManifestRewritingDataSource (kid=$keyId)")
+                androidx.media3.datasource.DataSource.Factory {
+                    ClearKeyManifestRewritingDataSource(dataSourceFactory.createDataSource(), keyId) { original, patched ->
+                        FileLogger.d(debugTag, "manifest patched: originalLen=${original.length} patchedLen=${patched.length}")
+                        FileLogger.d(debugTag, "patchedManifest:\n${patched.take(4000)}")
+                    }
+                }
+            } else {
+                dataSourceFactory
+            }
             val mediaSourceFactory = if (clearKeyMgr != null) {
                 DefaultMediaSourceFactory(this@PlayerActivity)
-                    .setDataSourceFactory(dataSourceFactory)
+                    .setDataSourceFactory(effectiveDataSourceFactory)
                     .setDrmSessionManagerProvider { clearKeyMgr }
             } else {
                 DefaultMediaSourceFactory(this@PlayerActivity).setDataSourceFactory(dataSourceFactory)

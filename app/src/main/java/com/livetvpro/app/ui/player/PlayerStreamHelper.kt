@@ -292,7 +292,7 @@ object PlayerStreamHelper {
             val jwk = """{"keys":[{"kty":"oct","k":"$keyBase64","kid":"$kidBase64"}],"type":"temporary"}"""
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .setPlayClearSamplesWithoutKeys(true)
                 .build(LocalMediaDrmCallback(jwk.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
@@ -302,7 +302,7 @@ object PlayerStreamHelper {
         return try {
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .setPlayClearSamplesWithoutKeys(true)
                 .build(LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
@@ -321,7 +321,7 @@ object PlayerStreamHelper {
             headers.forEach { (k, v) -> cb.setKeyRequestProperty(k, v) }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(true)
                 .setPlayClearSamplesWithoutKeys(true)
                 .build(cb)
         } catch (e: Exception) { null }

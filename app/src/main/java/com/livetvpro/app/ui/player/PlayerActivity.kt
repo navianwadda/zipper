@@ -140,10 +140,7 @@ class PlayerActivity : ComponentActivity() {
     private var pendingChannelNumber    = -1
     private var channelData: Channel?    = null
     private var eventData: LiveEvent?    = null
-    // Guards against a stale, still-in-flight category/sports related-channels load (kicked off
-    // before switching) landing *after* we've already synchronously set the correct favourites
-    // related list for the channel now playing. Holds the contentId the favourites list was
-    // pinned for; the relatedItems observer ignores async emissions while this matches.
+    
     private var relatedChannelsLockedForContentId: String? = null
     internal var allEventLinks    = listOf<LiveEventLink>()
     internal var currentLinkIndex = 0

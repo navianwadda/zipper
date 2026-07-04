@@ -2175,8 +2175,16 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
             else -> null
         }
         return if (drmMgr != null) {
+            val effectiveDataSourceFactory = if (streamInfo.drmScheme == "clearkey" && streamInfo.drmKeyId != null) {
+                val keyId = streamInfo.drmKeyId
+                androidx.media3.datasource.DataSource.Factory {
+                    ClearKeyManifestRewritingDataSource(dataSourceFactory.createDataSource(), keyId)
+                }
+            } else {
+                dataSourceFactory
+            }
             DefaultMediaSourceFactory(this)
-                .setDataSourceFactory(dataSourceFactory)
+                .setDataSourceFactory(effectiveDataSourceFactory)
                 .setDrmSessionManagerProvider { drmMgr }
         } else {
             DefaultMediaSourceFactory(this).setDataSourceFactory(dataSourceFactory)

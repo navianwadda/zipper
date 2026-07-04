@@ -127,10 +127,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     private var savedPlaybackPosition: Long = -1L
     private var relatedChannels = listOf<Channel>()
-    // Guards against a stale, still-in-flight category/sports related-channels load (kicked off
-    // before switching) landing *after* we've already synchronously set the correct favourites
-    // related list for the channel now playing. Holds the contentId the favourites list was
-    // pinned for; the relatedItems observer ignores async emissions while this matches.
+    
     private var relatedChannelsLockedForContentId: String? = null
 
     enum class ContentType {
@@ -780,13 +777,6 @@ class FloatingPlayerActivity : ComponentActivity() {
         loadRelatedContent()
     }
 
-    /**
-     * Refreshes the channel-list panel for whatever category the *current* intent points to.
-     * Without this, the panel kept showing whatever category was loaded the first time the
-     * floating window was created, since onNewIntent previously never touched
-     * viewModel.channelListItems. The favourites case is handled by loadRelatedContent(), which
-     * also populates the channel-list panel from the favourites cache.
-     */
     private fun refreshChannelListForCurrentIntent() {
         if (contentType != ContentType.CHANNEL || contentId.isEmpty()) return
         val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
@@ -1296,6 +1286,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         }
         player = null
         playerListener = null
+        playerSetupInProgress = false
     }
 
     private fun applyRememberedAspectRatioIfEnabled() {
@@ -1312,11 +1303,13 @@ class FloatingPlayerActivity : ComponentActivity() {
         resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
     }
 
+    private var playerSetupInProgress = false
     private fun setupPlayer() {
         if (streamUrl.isBlank()) {
             errorMessage.value = "No stream URL"
             return
         }
+        if (player != null || playerSetupInProgress) return
 
         val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
         if (isTransferredFromFloating && PlayerHolder.player != null) {
@@ -1347,6 +1340,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             return
         }
 
+        playerSetupInProgress = true
         lifecycleScope.launch {
             val parsed = allEventLinks.getOrNull(currentLinkIndex)
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
@@ -1381,8 +1375,16 @@ class FloatingPlayerActivity : ComponentActivity() {
             }
 
             val mediaSourceFactory = if (clearKeyMgr != null) {
+                val effectiveDataSourceFactory = if (parsed.drmKeyId != null) {
+                    val keyId = parsed.drmKeyId
+                    androidx.media3.datasource.DataSource.Factory {
+                        ClearKeyManifestRewritingDataSource(dataSourceFactory.createDataSource(), keyId)
+                    }
+                } else {
+                    dataSourceFactory
+                }
                 DefaultMediaSourceFactory(this@FloatingPlayerActivity)
-                    .setDataSourceFactory(dataSourceFactory)
+                    .setDataSourceFactory(effectiveDataSourceFactory)
                     .setDrmSessionManagerProvider { clearKeyMgr }
             } else {
                 DefaultMediaSourceFactory(this@FloatingPlayerActivity).setDataSourceFactory(dataSourceFactory)
@@ -1417,6 +1419,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 .build()
 
             player = exo
+            playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
 
             val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
@@ -1714,6 +1717,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         errorMessage.value = ""
         player?.release()
         player = null
+        playerSetupInProgress = false
         setupPlayer()
     }
 

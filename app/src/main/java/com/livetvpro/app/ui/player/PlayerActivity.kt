@@ -227,6 +227,7 @@ class PlayerActivity : ComponentActivity() {
             newChannel != null -> switchToChannel(newChannel, linkIndex)
             newEvent   != null -> switchToEventFromLiveEvent(newEvent, linkIndex)
         }
+        setupWindowFlags(isLandscapeState.value)
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -240,9 +241,9 @@ class PlayerActivity : ComponentActivity() {
         if (DeviceUtils.isTvDevice) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         val isLandscape = DeviceUtils.isTvDevice ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        parseIntent()
         setupWindowFlags(isLandscape)
         setupSystemUI()
-        parseIntent()
         if (contentType == ContentType.CHANNEL && contentId.isNotEmpty()) {
             val cacheKey   = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
             val cachedList = cacheKey?.let { ChannelListCache.get(it) }
@@ -678,7 +679,10 @@ class PlayerActivity : ComponentActivity() {
 
         if (!isLandscape && !isInPipMode) window.decorView.setBackgroundColor(themeManager.getBackgroundColor(this))
         else if (isInPipMode) window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        val isDark = themeManager.isDarkMode(this)
+        // Network Stream has no themed background behind it (it's just the raw video),
+        // so its status bar icons must always read as "on dark", no matter what
+        // light/dark mode the user has selected elsewhere in the app.
+        val isDark = contentType == ContentType.NETWORK_STREAM || themeManager.isDarkMode(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars     = !isDark
             isAppearanceLightNavigationBars = !isDark

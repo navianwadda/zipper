@@ -46,10 +46,6 @@ import com.livetvpro.app.data.models.LiveEventLink
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val CardLogoBg  = Color(0x80000000)
 
-// ---------------------------------------------------------------------------
-// Sealed state types
-// ---------------------------------------------------------------------------
-
 sealed class RelatedContentState {
     object Hidden  : RelatedContentState()
     object Loading : RelatedContentState()
@@ -57,15 +53,6 @@ sealed class RelatedContentState {
     data class Events(val items: List<LiveEvent>)   : RelatedContentState()
 }
 
-// ---------------------------------------------------------------------------
-// PlayerScreen — the full below-the-fold UI (links row + related content)
-// ---------------------------------------------------------------------------
-
-/**
- * The scrollable content area below the player surface.
- *
- * Manages the link chips, message banner, and related content grids.
- */
 @Composable
 fun PlayerScreen(
     isLandscape: Boolean,
@@ -124,10 +111,6 @@ fun PlayerScreen(
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// LinksRow / LandscapeLinksRow
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun LinksRow(
@@ -230,10 +213,6 @@ private fun LinkChip(
     }
 }
 
-// ---------------------------------------------------------------------------
-// MessageBanner
-// ---------------------------------------------------------------------------
-
 @Composable
 private fun MessageBanner(
     message: String,
@@ -263,10 +242,6 @@ private fun MessageBanner(
         )
     }
 }
-
-// ---------------------------------------------------------------------------
-// Related content rows
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun RelatedLoadingRow(modifier: Modifier = Modifier) {
@@ -326,9 +301,9 @@ private fun RelatedChannelCard(
     )
     Card(
         onClick    = onClick,
-        colors     = CardDefaults.cardColors(),
+        colors     = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape      = RoundedCornerShape(12.dp),
-        elevation  = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation  = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier   = Modifier
             .padding(4.dp)
             .fillMaxWidth()
@@ -405,3 +380,4 @@ private fun RelatedEventsGrid(
         }
     }
 }
+

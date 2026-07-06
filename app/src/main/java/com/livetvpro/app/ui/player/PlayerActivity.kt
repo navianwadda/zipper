@@ -677,12 +677,16 @@ class PlayerActivity : ComponentActivity() {
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
-        if (!isLandscape && !isInPipMode) window.decorView.setBackgroundColor(themeManager.getBackgroundColor(this))
-        else if (isInPipMode) window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        val isNetworkStream = contentType == ContentType.NETWORK_STREAM
+        if (!isLandscape && !isInPipMode) {
+            window.decorView.setBackgroundColor(
+                if (isNetworkStream) android.graphics.Color.BLACK else themeManager.getBackgroundColor(this)
+            )
+        } else if (isInPipMode) window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         // Network Stream has no themed background behind it (it's just the raw video),
         // so its status bar icons must always read as "on dark", no matter what
         // light/dark mode the user has selected elsewhere in the app.
-        val isDark = contentType == ContentType.NETWORK_STREAM || themeManager.isDarkMode(this)
+        val isDark = isNetworkStream || themeManager.isDarkMode(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars     = !isDark
             isAppearanceLightNavigationBars = !isDark

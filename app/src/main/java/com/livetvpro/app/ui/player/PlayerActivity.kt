@@ -140,10 +140,7 @@ class PlayerActivity : ComponentActivity() {
     private var pendingChannelNumber    = -1
     private var channelData: Channel?    = null
     private var eventData: LiveEvent?    = null
-    // Guards against a stale, still-in-flight category/sports related-channels load (kicked off
-    // before switching) landing *after* we've already synchronously set the correct favourites
-    // related list for the channel now playing. Holds the contentId the favourites list was
-    // pinned for; the relatedItems observer ignores async emissions while this matches.
+    
     private var relatedChannelsLockedForContentId: String? = null
     internal var allEventLinks    = listOf<LiveEventLink>()
     internal var currentLinkIndex = 0
@@ -240,9 +237,6 @@ class PlayerActivity : ComponentActivity() {
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        window.decorView.post {
-            window.decorView.requestApplyInsets()
-        }
         if (DeviceUtils.isTvDevice) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         val isLandscape = DeviceUtils.isTvDevice ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -505,6 +499,7 @@ class PlayerActivity : ComponentActivity() {
 
                                 isInPipMode     -> Modifier.fillMaxSize()
                                 isNetworkStream -> Modifier.fillMaxWidth().weight(1f)
+                                    .windowInsetsPadding(WindowInsets.navigationBars)
                                 else            -> Modifier.fillMaxWidth().aspectRatio(16f / 9f)
                             }
                         ),
@@ -699,7 +694,11 @@ class PlayerActivity : ComponentActivity() {
 
                 hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                hide(WindowInsetsCompat.Type.navigationBars())
+                // Keep the navigation bar visible in portrait (same as MainScaffold) instead
+                // of hiding it. The Compose content below pads itself with
+                // WindowInsets.navigationBars, so it naturally shifts up when 3-button nav
+                // is present and barely moves when gesture nav is active.
+                show(WindowInsetsCompat.Type.navigationBars())
                 show(WindowInsetsCompat.Type.statusBars())
             }
         }

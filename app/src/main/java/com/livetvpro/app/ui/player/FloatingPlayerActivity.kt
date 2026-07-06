@@ -127,7 +127,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     private var savedPlaybackPosition: Long = -1L
     private var relatedChannels = listOf<Channel>()
-    
+
     private var relatedChannelsLockedForContentId: String? = null
 
     enum class ContentType {
@@ -712,9 +712,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 if (isNetworkStream) android.graphics.Color.BLACK else themeManager.getBackgroundColor(this)
             )
         } else if (isInPipMode) window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        // Network Stream has no themed background behind it (it's just the raw video),
-        // so its status bar icons must always read as "on dark", no matter what
-        // light/dark mode the user has selected elsewhere in the app.
+
         val isDark = isNetworkStream || themeManager.isDarkMode(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars     = !isDark
@@ -731,9 +729,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             if (isLandscape) {
                 hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                // Keep the navigation bar visible in portrait (same as MainScaffold/PlayerActivity)
-                // instead of hiding it; Compose content pads itself with
-                // WindowInsets.navigationBars so it shifts up when 3-button nav is present.
+
                 show(WindowInsetsCompat.Type.navigationBars())
                 show(WindowInsetsCompat.Type.statusBars())
             }
@@ -1746,3 +1742,4 @@ class FloatingPlayerActivity : ComponentActivity() {
         }
     }
 }
+

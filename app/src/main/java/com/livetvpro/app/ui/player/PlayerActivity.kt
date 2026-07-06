@@ -140,7 +140,7 @@ class PlayerActivity : ComponentActivity() {
     private var pendingChannelNumber    = -1
     private var channelData: Channel?    = null
     private var eventData: LiveEvent?    = null
-    
+
     private var relatedChannelsLockedForContentId: String? = null
     internal var allEventLinks    = listOf<LiveEventLink>()
     internal var currentLinkIndex = 0
@@ -683,9 +683,7 @@ class PlayerActivity : ComponentActivity() {
                 if (isNetworkStream) android.graphics.Color.BLACK else themeManager.getBackgroundColor(this)
             )
         } else if (isInPipMode) window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        // Network Stream has no themed background behind it (it's just the raw video),
-        // so its status bar icons must always read as "on dark", no matter what
-        // light/dark mode the user has selected elsewhere in the app.
+
         val isDark = isNetworkStream || themeManager.isDarkMode(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars     = !isDark
@@ -702,10 +700,7 @@ class PlayerActivity : ComponentActivity() {
 
                 hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                // Keep the navigation bar visible in portrait (same as MainScaffold) instead
-                // of hiding it. The Compose content below pads itself with
-                // WindowInsets.navigationBars, so it naturally shifts up when 3-button nav
-                // is present and barely moves when gesture nav is active.
+
                 show(WindowInsetsCompat.Type.navigationBars())
                 show(WindowInsetsCompat.Type.statusBars())
             }
@@ -877,7 +872,7 @@ class PlayerActivity : ComponentActivity() {
         setupPipReceiver()
         super.onPictureInPictureModeChanged(true, newConfig)
     }
-    
+
     private fun refreshPipParamsIfNeeded() {
         if (!isInPipMode) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1714,3 +1709,4 @@ private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.li
     drmLicenseUrl = drmLicenseUrl,
     customHeaders = customHeaders,
 )
+

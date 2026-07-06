@@ -239,14 +239,12 @@ class FloatingPlayerActivity : ComponentActivity() {
 
         val isLandscape = DeviceUtils.isTvDevice ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        setupWindowFlags(isLandscape)
-        setupSystemUI()
-
         parseIntent()
-
         if (savedInstanceState != null && contentId.isEmpty()) {
             restoreFromBundle(savedInstanceState)
         }
+        setupWindowFlags(isLandscape)
+        setupSystemUI()
 
         if (contentType == ContentType.CHANNEL && contentId.isNotEmpty()) {
             viewModel.refreshChannelData(contentId)
@@ -529,7 +527,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(
-                            if (isNetworkStream) Modifier.weight(1f)
+                            if (isNetworkStream) Modifier.weight(1f).windowInsetsPadding(WindowInsets.navigationBars)
                             else Modifier.aspectRatio(16f / 9f)
                         ),
                 ) {
@@ -585,6 +583,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                         },
                         spanCount      = resources.getInteger(R.integer.grid_column_count),
                         eventSpanCount = resources.getInteger(R.integer.event_span_count),
+                        modifier       = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
                     )
                 }
             } else {
@@ -707,8 +706,16 @@ class FloatingPlayerActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        if (!isLandscape) window.decorView.setBackgroundColor(themeManager.getBackgroundColor(this))
-        val isDark = themeManager.isDarkMode(this)
+        val isNetworkStream = contentType == ContentType.NETWORK_STREAM
+        if (!isLandscape && !isInPipMode) {
+            window.decorView.setBackgroundColor(
+                if (isNetworkStream) android.graphics.Color.BLACK else themeManager.getBackgroundColor(this)
+            )
+        } else if (isInPipMode) window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        // Network Stream has no themed background behind it (it's just the raw video),
+        // so its status bar icons must always read as "on dark", no matter what
+        // light/dark mode the user has selected elsewhere in the app.
+        val isDark = isNetworkStream || themeManager.isDarkMode(this)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars     = !isDark
             isAppearanceLightNavigationBars = !isDark
@@ -724,7 +731,10 @@ class FloatingPlayerActivity : ComponentActivity() {
             if (isLandscape) {
                 hide(WindowInsetsCompat.Type.systemBars())
             } else {
-                hide(WindowInsetsCompat.Type.navigationBars())
+                // Keep the navigation bar visible in portrait (same as MainScaffold/PlayerActivity)
+                // instead of hiding it; Compose content pads itself with
+                // WindowInsets.navigationBars so it shifts up when 3-button nav is present.
+                show(WindowInsetsCompat.Type.navigationBars())
                 show(WindowInsetsCompat.Type.statusBars())
             }
         }
@@ -770,6 +780,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         setIntent(intent)
         releasePlayer()
         parseIntent()
+        setupWindowFlags(resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
         setupPlayer()
         setupLinksUI()
         setupRelatedChannels()

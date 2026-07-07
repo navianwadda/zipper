@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import com.livetvpro.app.data.local.ThemeManager
 
@@ -53,10 +54,10 @@ fun LiveTVProTheme(
         }
     }
 
-    LaunchedEffect(isDark) {
+    LaunchedEffect(colorScheme, isDark) {
         activity?.enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
-                lightScrim = android.graphics.Color.WHITE,
+                lightScrim = colorScheme.background.toArgb(),
                 darkScrim  = android.graphics.Color.TRANSPARENT,
             ) { isDark },
         )

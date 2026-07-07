@@ -110,9 +110,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
-        // Some OEM ROMs (esp. with 3-button nav) delay or skip the first
-        // WindowInsets dispatch, leaving Compose's navigationBars insets at 0
-        // until something forces a relayout. Request one explicitly.
         window.decorView.post {
             window.decorView.requestApplyInsets()
         }
@@ -395,10 +392,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 val nav = navController ?: return
                 val currentRoute = nav.currentDestination?.route ?: return
 
-                // Distinct from Routes.PHONE_TOP_LEVEL/TV_TOP_LEVEL (which also
-                // include Settings/Favorites for bottom-nav-bar purposes): this
-                // is specifically the set of screens where back press triggers
-                // double-tap-to-exit rather than normal back navigation.
                 val exitConfirmationRoutes = if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop || DeviceUtils.isTablet) {
                     setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS, Routes.FAVORITES)
                 } else {
@@ -428,6 +421,12 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         val isDark = newConfig.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
         themeManager.notifySystemDarkChanged(isDark)
+        themeManager.refreshDynamicColors(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        themeManager.refreshDynamicColors(this)
     }
 
     override fun onNewIntent(intent: Intent) {

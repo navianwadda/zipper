@@ -28,11 +28,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
@@ -69,6 +71,15 @@ fun PlayerScreen(
     eventSpanCount: Int = 2,
     modifier: Modifier = Modifier,
 ) {
+    val configuration = LocalConfiguration.current
+    val screenHeightDp = configuration.screenHeightDp.dp
+    val screenWidthDp  = configuration.screenWidthDp.dp
+    val availableHeight = if (isLandscape) 0.dp else {
+        val videoHeight  = screenWidthDp * 9f / 16f
+        val chromeHeight = (if (links.size > 1) 56.dp else 0.dp) +
+            (if (messageBanner.isNotBlank()) 44.dp else 0.dp)
+        (screenHeightDp - videoHeight - chromeHeight).coerceAtLeast(0.dp)
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -102,11 +113,13 @@ fun PlayerScreen(
                 onChannelClick = onChannelClick,
                 background  = if (isLandscape) Color.Transparent
                               else MaterialTheme.colorScheme.surface,
+                availableHeight = availableHeight,
             )
             is RelatedContentState.Events   -> RelatedEventsGrid(
                 events      = relatedContentState.items,
                 spanCount   = eventSpanCount,
                 onEventClick = onEventClick,
+                availableHeight = availableHeight,
             )
         }
     }
@@ -266,8 +279,15 @@ private fun RelatedChannelsGrid(
     onChannelClick: (Channel) -> Unit,
     modifier: Modifier = Modifier,
     background: Color = MaterialTheme.colorScheme.surface,
+    availableHeight: Dp = 0.dp,
 ) {
     if (channels.isEmpty()) return
+    val naturalCellHeight = 128.dp
+    val rows = (channels.size + spanCount - 1) / spanCount
+    val stretchedCellHeight = if (availableHeight > 0.dp && rows > 0) {
+        val computed = availableHeight / rows
+        if (computed > naturalCellHeight) computed else null
+    } else null
     LazyVerticalGrid(
         columns               = GridCells.Fixed(spanCount),
         contentPadding        = PaddingValues(4.dp),
@@ -280,8 +300,9 @@ private fun RelatedChannelsGrid(
     ) {
         items(channels, key = { it.id }) { channel ->
             RelatedChannelCard(
-                channel = channel,
-                onClick = { onChannelClick(channel) },
+                channel    = channel,
+                onClick    = { onChannelClick(channel) },
+                cellHeight = stretchedCellHeight,
             )
         }
     }
@@ -292,6 +313,7 @@ private fun RelatedChannelsGrid(
 private fun RelatedChannelCard(
     channel: Channel,
     onClick: () -> Unit,
+    cellHeight: Dp? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(
@@ -307,24 +329,26 @@ private fun RelatedChannelCard(
         modifier   = Modifier
             .padding(4.dp)
             .fillMaxWidth()
-            .wrapContentHeight()
+            .then(if (cellHeight != null) Modifier.height(cellHeight) else Modifier.wrapContentHeight())
             .scale(scale)
             .onFocusChanged { focused = it.isFocused }
             .focusable(),
     ) {
         Column(
-            modifier            = Modifier.fillMaxWidth().padding(4.dp),
+            modifier            = Modifier.fillMaxWidth().fillMaxHeight().padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
+                    .then(if (cellHeight != null) Modifier.weight(1f) else Modifier.aspectRatio(1f))
                     .padding(2.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
                         .clip(CircleShape)
                         .background(CardLogoBg),
                 ) {
@@ -365,8 +389,15 @@ private fun RelatedEventsGrid(
     spanCount: Int,
     onEventClick: (LiveEvent, Int) -> Unit,
     modifier: Modifier = Modifier,
+    availableHeight: Dp = 0.dp,
 ) {
     if (events.isEmpty()) return
+    val naturalCardHeight = 145.dp
+    val rows = (events.size + spanCount - 1) / spanCount
+    val stretchedCardHeight = if (availableHeight > 0.dp && rows > 0) {
+        val computed = availableHeight / rows
+        if (computed > naturalCardHeight) computed else null
+    } else null
     LazyVerticalGrid(
         columns        = GridCells.Fixed(spanCount),
         contentPadding = PaddingValues(top = 4.dp, bottom = 4.dp),
@@ -374,8 +405,9 @@ private fun RelatedEventsGrid(
     ) {
         items(events, key = { it.id }) { event ->
             com.livetvpro.app.ui.live.LiveEventCard(
-                event   = event,
-                onClick = { onEventClick(event, 0) },
+                event         = event,
+                onClick       = { onEventClick(event, 0) },
+                heightOverride = stretchedCardHeight,
             )
         }
     }

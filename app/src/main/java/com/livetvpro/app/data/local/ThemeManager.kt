@@ -35,6 +35,8 @@ class ThemeManager @Inject constructor(
         private const val KEY_AMOLED_MODE = "amoled_mode"
     }
 
+    private val fallbackAccent = Color.parseColor("#FFB300")
+
     private val _themeModeFlow = MutableStateFlow(
         prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
     )
@@ -61,6 +63,9 @@ class ThemeManager @Inject constructor(
     private val _primaryColorFlow = MutableStateFlow(computePrimaryColor(context))
     val primaryColorFlow: StateFlow<Int> = _primaryColorFlow
 
+    private val _dynamicColorVersionFlow = MutableStateFlow(0)
+    val dynamicColorVersionFlow: StateFlow<Int> = _dynamicColorVersionFlow
+
     private fun resolveIsDark(ctx: Context): Boolean {
         return when (prefs.getInt(KEY_THEME_MODE, THEME_AUTO)) {
             THEME_DARK  -> true
@@ -82,6 +87,11 @@ class ThemeManager @Inject constructor(
             _resolvedIsDarkFlow.value = isDark
             _primaryColorFlow.value = computePrimaryColor()
         }
+    }
+
+    fun refreshDynamicColors(activityContext: Context? = null) {
+        _dynamicColorVersionFlow.value++
+        _primaryColorFlow.value = computePrimaryColor(activityContext)
     }
 
     fun getThemeMode(): Int = _themeModeFlow.value
@@ -118,12 +128,22 @@ class ThemeManager @Inject constructor(
         return resolveIsDark(activityContext ?: activityContextRef?.get() ?: context)
     }
 
+    private fun dynamicContextFor(ctx: Context, isDark: Boolean): Context {
+        val nightBit = if (isDark) android.content.res.Configuration.UI_MODE_NIGHT_YES
+                       else android.content.res.Configuration.UI_MODE_NIGHT_NO
+        val overrideConfig = android.content.res.Configuration(ctx.resources.configuration).apply {
+            uiMode = (uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK.inv()) or nightBit
+        }
+        val configuredContext = ctx.createConfigurationContext(overrideConfig)
+        return DynamicColors.wrapContextIfAvailable(configuredContext)
+    }
+
     fun getBackgroundColor(activityContext: Context? = null): Int {
         val theme  = _colorThemeFlow.value
         val isDark = isDarkMode(activityContext)
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val ctx = activityContext ?: activityContextRef?.get() ?: context
-            val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
+            val dynamicContext = dynamicContextFor(ctx, isDark)
             return MaterialColors.getColor(dynamicContext, android.R.attr.colorBackground, Color.WHITE)
         }
         val resolved = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
@@ -142,7 +162,7 @@ class ThemeManager @Inject constructor(
         val isDark = isDarkMode(activityContext)
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val ctx = activityContext ?: activityContextRef?.get() ?: context
-            val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
+            val dynamicContext = dynamicContextFor(ctx, isDark)
             return MaterialColors.getColor(dynamicContext, com.google.android.material.R.attr.colorSurfaceContainer, Color.LTGRAY)
         }
         val resolved = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
@@ -176,8 +196,8 @@ class ThemeManager @Inject constructor(
         val isDark = isDarkMode(activityContext)
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val ctx = activityContext ?: activityContextRef?.get() ?: context
-            val dynamicContext = DynamicColors.wrapContextIfAvailable(ctx)
-            return MaterialColors.getColor(dynamicContext, androidx.appcompat.R.attr.colorPrimary, Color.BLUE)
+            val dynamicContext = dynamicContextFor(ctx, isDark)
+            return MaterialColors.getColor(dynamicContext, androidx.appcompat.R.attr.colorPrimary, fallbackAccent)
         }
         val resolved = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
         val color = if (isDark) resolved.primaryDark else resolved.primaryLight

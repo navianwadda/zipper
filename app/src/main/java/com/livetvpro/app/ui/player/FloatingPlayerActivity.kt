@@ -738,6 +738,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        themeManager.refreshDynamicColors(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
             return
@@ -800,6 +801,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        themeManager.refreshDynamicColors(this)
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         applyOrientationSettings(isLandscape)
 
@@ -1742,3 +1744,4 @@ class FloatingPlayerActivity : ComponentActivity() {
         }
     }
 }
+

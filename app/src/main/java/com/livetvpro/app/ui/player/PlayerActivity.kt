@@ -708,6 +708,7 @@ class PlayerActivity : ComponentActivity() {
     }
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        themeManager.refreshDynamicColors(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) return
         val isLandscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
         setupWindowFlags(isLandscape)
@@ -797,6 +798,7 @@ class PlayerActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         isScreenOff = false
+        themeManager.refreshDynamicColors(this)
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         applyOrientationSettings(isLandscape)
         setupWindowFlags(isLandscape)
@@ -1709,3 +1711,4 @@ private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.li
     drmLicenseUrl = drmLicenseUrl,
     customHeaders = customHeaders,
 )
+

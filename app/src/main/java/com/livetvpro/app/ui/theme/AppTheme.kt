@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -31,22 +32,25 @@ fun LiveTVProTheme(
     val colorTheme by themeManager.colorThemeFlow.collectAsState()
     val amoled     by themeManager.amoledFlow.collectAsState()
     val isDark     by themeManager.resolvedIsDarkFlow.collectAsState()
+    val dynamicColorVersion by themeManager.dynamicColorVersionFlow.collectAsState()
 
-    val colorScheme = when {
-        colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
-            isDark && amoled -> dynamicDarkColorScheme(context).copy(
-                background             = Color.Black,
-                surface                = Color.Black,
-                surfaceContainerLowest = Color.Black,
-                surfaceContainerLow    = Color(0xFF050505),
-                surfaceContainer       = Color(0xFF0D0D0D),
-            )
-            isDark -> dynamicDarkColorScheme(context)
-            else   -> dynamicLightColorScheme(context)
+    val colorScheme = remember(colorTheme, amoled, isDark, dynamicColorVersion) {
+        when {
+            colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
+                isDark && amoled -> dynamicDarkColorScheme(context).copy(
+                    background             = Color.Black,
+                    surface                = Color.Black,
+                    surfaceContainerLowest = Color.Black,
+                    surfaceContainerLow    = Color(0xFF050505),
+                    surfaceContainer       = Color(0xFF0D0D0D),
+                )
+                isDark -> dynamicDarkColorScheme(context)
+                else   -> dynamicLightColorScheme(context)
+            }
+            isDark && amoled -> colorTheme.getAmoledColorScheme()
+            isDark           -> colorTheme.getDarkColorScheme()
+            else             -> colorTheme.getLightColorScheme()
         }
-        isDark && amoled -> colorTheme.getAmoledColorScheme()
-        isDark           -> colorTheme.getDarkColorScheme()
-        else             -> colorTheme.getLightColorScheme()
     }
 
     LaunchedEffect(isDark) {
@@ -79,22 +83,25 @@ fun AppThemeContent(
     val colorTheme by themeManager.colorThemeFlow.collectAsState()
     val amoled     by themeManager.amoledFlow.collectAsState()
     val isDark     by themeManager.resolvedIsDarkFlow.collectAsState()
+    val dynamicColorVersion by themeManager.dynamicColorVersionFlow.collectAsState()
 
-    val colorScheme = when {
-        colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
-            isDark && amoled -> dynamicDarkColorScheme(context).copy(
-                background             = Color.Black,
-                surface                = Color.Black,
-                surfaceContainerLowest = Color.Black,
-                surfaceContainerLow    = Color(0xFF050505),
-                surfaceContainer       = Color(0xFF0D0D0D),
-            )
-            isDark -> dynamicDarkColorScheme(context)
-            else   -> dynamicLightColorScheme(context)
+    val colorScheme = remember(colorTheme, amoled, isDark, dynamicColorVersion) {
+        when {
+            colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
+                isDark && amoled -> dynamicDarkColorScheme(context).copy(
+                    background             = Color.Black,
+                    surface                = Color.Black,
+                    surfaceContainerLowest = Color.Black,
+                    surfaceContainerLow    = Color(0xFF050505),
+                    surfaceContainer       = Color(0xFF0D0D0D),
+                )
+                isDark -> dynamicDarkColorScheme(context)
+                else   -> dynamicLightColorScheme(context)
+            }
+            isDark && amoled -> colorTheme.getAmoledColorScheme()
+            isDark           -> colorTheme.getDarkColorScheme()
+            else             -> colorTheme.getLightColorScheme()
         }
-        isDark && amoled -> colorTheme.getAmoledColorScheme()
-        isDark           -> colorTheme.getDarkColorScheme()
-        else             -> colorTheme.getLightColorScheme()
     }
 
     MaterialTheme(

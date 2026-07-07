@@ -55,8 +55,6 @@ class ThemeManager @Inject constructor(
     )
     val amoledFlow: StateFlow<Boolean> = _amoledFlow
 
-    // Single resolved StateFlow<Boolean> — always correct, no combine, no race conditions.
-    // Initialized from application context (best effort), corrected on registerActivityContext.
     private val _resolvedIsDarkFlow = MutableStateFlow(resolveIsDark(context))
     val resolvedIsDarkFlow: StateFlow<Boolean> = _resolvedIsDarkFlow
 

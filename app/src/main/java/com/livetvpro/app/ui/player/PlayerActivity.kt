@@ -29,9 +29,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -489,16 +487,12 @@ class PlayerActivity : ComponentActivity() {
                 initialBrightness      = gestureBrightness,
             )
         }
-        val isNetworkStream = contentType == ContentType.NETWORK_STREAM
         Column(modifier = Modifier
             .fillMaxSize()
             .then(if (!isLandscape && !isInPipMode) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier)
-            .then(
-                if (!isLandscape && !isInPipMode && !isNetworkStream) Modifier.verticalScroll(rememberScrollState())
-                else Modifier
-            )
         ) {
             if (!isLandscape) {
+                val isNetworkStream = contentType == ContentType.NETWORK_STREAM
                 Box(
                     modifier = Modifier
                         .then(
@@ -615,7 +609,7 @@ class PlayerActivity : ComponentActivity() {
                     },
                     spanCount      = spanCount,
                     eventSpanCount = eventSpanCount,
-                    modifier       = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                    modifier       = Modifier.weight(1f).windowInsetsPadding(WindowInsets.navigationBars),
                 )
             }
         }
@@ -1715,4 +1709,3 @@ private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.li
     drmLicenseUrl = drmLicenseUrl,
     customHeaders = customHeaders,
 )
-

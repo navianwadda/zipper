@@ -28,13 +28,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
@@ -71,19 +69,10 @@ fun PlayerScreen(
     eventSpanCount: Int = 2,
     modifier: Modifier = Modifier,
 ) {
-    val configuration = LocalConfiguration.current
-    val screenHeightDp = configuration.screenHeightDp.dp
-    val screenWidthDp  = configuration.screenWidthDp.dp
-    val availableHeight = if (isLandscape) 0.dp else {
-        val videoHeight  = screenWidthDp * 9f / 16f
-        val chromeHeight = (if (links.size > 1) 56.dp else 0.dp) +
-            (if (messageBanner.isNotBlank()) 44.dp else 0.dp)
-        (screenHeightDp - videoHeight - chromeHeight).coerceAtLeast(0.dp)
-    }
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight()
+            .fillMaxHeight()
             .background(
                 if (isLandscape) Color.Transparent
                 else MaterialTheme.colorScheme.surface
@@ -104,23 +93,31 @@ fun PlayerScreen(
                 onClick = onMessageBannerClick,
             )
         }
-        when (relatedContentState) {
-            is RelatedContentState.Hidden   -> Unit
-            is RelatedContentState.Loading  -> RelatedLoadingRow()
-            is RelatedContentState.Channels -> RelatedChannelsGrid(
-                channels    = relatedContentState.items,
-                spanCount   = spanCount,
-                onChannelClick = onChannelClick,
-                background  = if (isLandscape) Color.Transparent
-                              else MaterialTheme.colorScheme.surface,
-                availableHeight = availableHeight,
-            )
-            is RelatedContentState.Events   -> RelatedEventsGrid(
-                events      = relatedContentState.items,
-                spanCount   = eventSpanCount,
-                onEventClick = onEventClick,
-                availableHeight = availableHeight,
-            )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(
+                    if (isLandscape) Color.Transparent
+                    else MaterialTheme.colorScheme.surface
+                )
+        ) {
+            when (relatedContentState) {
+                is RelatedContentState.Hidden   -> Unit
+                is RelatedContentState.Loading  -> RelatedLoadingRow(modifier = Modifier.fillMaxSize())
+                is RelatedContentState.Channels -> RelatedChannelsGrid(
+                    channels       = relatedContentState.items,
+                    spanCount      = spanCount,
+                    onChannelClick = onChannelClick,
+                    modifier       = Modifier.fillMaxSize(),
+                )
+                is RelatedContentState.Events   -> RelatedEventsGrid(
+                    events       = relatedContentState.items,
+                    spanCount    = eventSpanCount,
+                    onEventClick = onEventClick,
+                    modifier     = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
@@ -262,7 +259,7 @@ private fun RelatedLoadingRow(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .heightIn(min = 48.dp),
     ) {
         CircularProgressIndicator(
             modifier    = Modifier.size(20.dp),
@@ -278,31 +275,19 @@ private fun RelatedChannelsGrid(
     spanCount: Int,
     onChannelClick: (Channel) -> Unit,
     modifier: Modifier = Modifier,
-    background: Color = MaterialTheme.colorScheme.surface,
-    availableHeight: Dp = 0.dp,
 ) {
     if (channels.isEmpty()) return
-    val naturalCellHeight = 128.dp
-    val rows = (channels.size + spanCount - 1) / spanCount
-    val stretchedCellHeight = if (availableHeight > 0.dp && rows > 0) {
-        val computed = availableHeight / rows
-        if (computed > naturalCellHeight) computed else null
-    } else null
     LazyVerticalGrid(
         columns               = GridCells.Fixed(spanCount),
         contentPadding        = PaddingValues(4.dp),
         horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalArrangement   = Arrangement.spacedBy(0.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .background(background),
+        modifier = modifier.fillMaxSize(),
     ) {
         items(channels, key = { it.id }) { channel ->
             RelatedChannelCard(
-                channel    = channel,
-                onClick    = { onChannelClick(channel) },
-                cellHeight = stretchedCellHeight,
+                channel = channel,
+                onClick = { onChannelClick(channel) },
             )
         }
     }
@@ -313,7 +298,6 @@ private fun RelatedChannelsGrid(
 private fun RelatedChannelCard(
     channel: Channel,
     onClick: () -> Unit,
-    cellHeight: Dp? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(
@@ -329,26 +313,24 @@ private fun RelatedChannelCard(
         modifier   = Modifier
             .padding(4.dp)
             .fillMaxWidth()
-            .then(if (cellHeight != null) Modifier.height(cellHeight) else Modifier.wrapContentHeight())
+            .wrapContentHeight()
             .scale(scale)
             .onFocusChanged { focused = it.isFocused }
             .focusable(),
     ) {
         Column(
-            modifier            = Modifier.fillMaxWidth().fillMaxHeight().padding(4.dp),
+            modifier            = Modifier.fillMaxWidth().padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (cellHeight != null) Modifier.weight(1f) else Modifier.aspectRatio(1f))
+                    .aspectRatio(1f)
                     .padding(2.dp),
-                contentAlignment = Alignment.Center,
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
+                        .fillMaxSize()
                         .clip(CircleShape)
                         .background(CardLogoBg),
                 ) {
@@ -389,27 +371,18 @@ private fun RelatedEventsGrid(
     spanCount: Int,
     onEventClick: (LiveEvent, Int) -> Unit,
     modifier: Modifier = Modifier,
-    availableHeight: Dp = 0.dp,
 ) {
     if (events.isEmpty()) return
-    val naturalCardHeight = 145.dp
-    val rows = (events.size + spanCount - 1) / spanCount
-    val stretchedCardHeight = if (availableHeight > 0.dp && rows > 0) {
-        val computed = availableHeight / rows
-        if (computed > naturalCardHeight) computed else null
-    } else null
     LazyVerticalGrid(
         columns        = GridCells.Fixed(spanCount),
         contentPadding = PaddingValues(top = 4.dp, bottom = 4.dp),
-        modifier       = modifier.fillMaxWidth().wrapContentHeight(),
+        modifier       = modifier.fillMaxSize(),
     ) {
         items(events, key = { it.id }) { event ->
             com.livetvpro.app.ui.live.LiveEventCard(
-                event         = event,
-                onClick       = { onEventClick(event, 0) },
-                heightOverride = stretchedCardHeight,
+                event   = event,
+                onClick = { onEventClick(event, 0) },
             )
         }
     }
 }
-

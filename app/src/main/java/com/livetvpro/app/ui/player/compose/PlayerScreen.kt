@@ -301,9 +301,9 @@ private fun RelatedChannelCard(
     )
     Card(
         onClick    = onClick,
-        colors     = CardDefaults.cardColors(containerColor = Color.Transparent),
+        colors     = CardDefaults.cardColors(),
         shape      = RoundedCornerShape(12.dp),
-        elevation  = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation  = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier   = Modifier
             .padding(4.dp)
             .fillMaxWidth()

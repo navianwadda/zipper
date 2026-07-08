@@ -903,6 +903,7 @@ private fun CustomTimeBar(
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (!change.pressed) {
                             isDragging = false
+                            isHovering = false
                             onSeek((dragPosition * duration).toLong())
                             break
                         }

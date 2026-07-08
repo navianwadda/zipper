@@ -150,15 +150,32 @@ class ThemeManager @Inject constructor(
             uiMode = (uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK.inv()) or nightBit
         }
         val configuredContext = ctx.createConfigurationContext(overrideConfig)
-        val wrapped = DynamicColors.wrapContextIfAvailable(configuredContext)
-        val wrapSucceeded = wrapped !== configuredContext
+
+        val themeResId = try {
+            if (ctx is android.app.Activity) {
+                ctx.packageManager.getActivityInfo(ctx.componentName, 0).themeResource
+                    .takeIf { it != 0 } ?: ctx.applicationInfo.theme
+            } else {
+                ctx.applicationInfo.theme
+            }
+        } catch (e: Exception) {
+            0
+        }
+        val themedContext = if (themeResId != 0) {
+            android.view.ContextThemeWrapper(configuredContext, themeResId)
+        } else {
+            configuredContext
+        }
+
+        val wrapped = DynamicColors.wrapContextIfAvailable(themedContext)
+        val wrapSucceeded = wrapped !== themedContext
         val originalNightBit = ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         val forcedNightBit = wrapped.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         ThemeDebugLog.log(
             "dynamicContextFor",
             "isDark=$isDark isDynamicColorAvailable=${DynamicColors.isDynamicColorAvailable()} " +
-                "wrapSucceeded=$wrapSucceeded originalNightBit=$originalNightBit forcedNightBitOnWrapped=$forcedNightBit " +
-                "sdk=${Build.VERSION.SDK_INT}",
+                "themeResId=$themeResId wrapSucceeded=$wrapSucceeded originalNightBit=$originalNightBit " +
+                "forcedNightBitOnWrapped=$forcedNightBit sdk=${Build.VERSION.SDK_INT}",
         )
         return wrapped
     }

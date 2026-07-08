@@ -10,36 +10,15 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.livetvpro.app.data.local.PreferencesManager
@@ -73,12 +52,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private var showCopyrightDialog      by mutableStateOf(false)
     private var showNoticeDialog         by mutableStateOf(false)
     private var showOverlayPermDialog    by mutableStateOf(false)
-    private var showSaveStatesDialog     by mutableStateOf(false)
     private var showFloatingPlayerDialog by mutableStateOf(false)
-
-    private var saveStatesRememberAR     by mutableStateOf(false)
-    private var saveStatesForceLowestQ   by mutableStateOf(false)
-    private var saveStatesCenterMode     by mutableIntStateOf(PreferencesManager.CENTER_MODE_SEEKS_ONLY)
 
     private var backPressedTime = 0L
 
@@ -245,139 +219,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                     )
                 }
 
-                if (showSaveStatesDialog) {
-                    val bergenSans = FontFamily(Font(R.font.bergen_sans))
-                    val centerModeOptions = listOf(
-                        PreferencesManager.CENTER_MODE_SEEKS_ONLY    to "Seeks Only",
-                        PreferencesManager.CENTER_MODE_SEEKS_AND_NAV to "Seeks & Navigation",
-                        PreferencesManager.CENTER_MODE_NAV_ONLY      to "Navigation Only",
-                    )
-                    AlertDialog(
-                        onDismissRequest = { showSaveStatesDialog = false },
-                        title = {
-                            Text(
-                                text = "Save States",
-                                fontFamily = bergenSans,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                            )
-                        },
-                        text  = {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .verticalScroll(rememberScrollState()),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .selectable(
-                                            selected = saveStatesRememberAR,
-                                            onClick  = { saveStatesRememberAR = !saveStatesRememberAR },
-                                            role     = Role.Switch,
-                                        )
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = "Remember Aspect Ratio",
-                                        fontFamily = bergenSans,
-                                        fontSize = 15.sp,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    Switch(
-                                        checked         = saveStatesRememberAR,
-                                        onCheckedChange = { saveStatesRememberAR = it },
-                                    )
-                                }
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .selectable(
-                                            selected = saveStatesForceLowestQ,
-                                            onClick  = { saveStatesForceLowestQ = !saveStatesForceLowestQ },
-                                            role     = Role.Switch,
-                                        )
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = "Force Lowest Quality",
-                                        fontFamily = bergenSans,
-                                        fontSize = 15.sp,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    Switch(
-                                        checked         = saveStatesForceLowestQ,
-                                        onCheckedChange = { saveStatesForceLowestQ = it },
-                                    )
-                                }
-
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                                Text(
-                                    text = "Center Controls",
-                                    fontFamily = bergenSans,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Column(modifier = Modifier.selectableGroup()) {
-                                    centerModeOptions.forEach { (mode, label) ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .selectable(
-                                                    selected = saveStatesCenterMode == mode,
-                                                    onClick  = { saveStatesCenterMode = mode },
-                                                    role     = Role.RadioButton,
-                                                )
-                                                .padding(vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            RadioButton(
-                                                selected = saveStatesCenterMode == mode,
-                                                onClick  = null,
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = label,
-                                                fontFamily = bergenSans,
-                                                fontSize = 14.sp,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                preferencesManager.setRememberAspectRatioEnabled(saveStatesRememberAR)
-                                preferencesManager.setForceLowestQualityEnabled(saveStatesForceLowestQ)
-                                preferencesManager.setCenterControlsMode(saveStatesCenterMode)
-                                showSaveStatesDialog = false
-                            }) {
-                                Text(
-                                    text = "Apply",
-                                    fontFamily = bergenSans,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showSaveStatesDialog = false }) {
-                                Text(
-                                    text = "Cancel",
-                                    fontFamily = bergenSans,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                            }
-                        },
-                    )
-                }
-
                 if (showFloatingPlayerDialog) {
                     FloatingPlayerDialogContent(
                         preferencesManager = preferencesManager,
@@ -475,13 +316,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 }, "Share ${getString(R.string.app_name)}"
             ))
         } catch (_: Exception) { Toast.makeText(this, "Unable to share APK", Toast.LENGTH_SHORT).show() }
-    }
-
-    override fun onSettingsSaveStates() {
-        saveStatesRememberAR   = preferencesManager.isRememberAspectRatioEnabled()
-        saveStatesForceLowestQ = preferencesManager.isForceLowestQualityEnabled()
-        saveStatesCenterMode   = preferencesManager.getCenterControlsMode()
-        showSaveStatesDialog   = true
     }
 
     override fun onSettingsFloatingPlayer() {

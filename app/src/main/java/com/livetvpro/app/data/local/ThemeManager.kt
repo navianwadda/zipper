@@ -143,7 +143,8 @@ class ThemeManager @Inject constructor(
             uiMode = (uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK.inv()) or nightBit
         }
         val configuredContext = ctx.createConfigurationContext(overrideConfig)
-        return DynamicColors.wrapContextIfAvailable(configuredContext)
+        val themedContext = android.view.ContextThemeWrapper(configuredContext, ctx.theme)
+        return DynamicColors.wrapContextIfAvailable(themedContext)
     }
 
     fun getBackgroundColor(activityContext: Context? = null): Int {

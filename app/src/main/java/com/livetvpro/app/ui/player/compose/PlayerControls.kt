@@ -366,7 +366,7 @@ private val BergenSans = androidx.compose.ui.text.font.FontFamily(
 )
 
 @Composable
-private fun PlayerControlsContent(
+internal fun PlayerControlsContent(
     isPlaying: Boolean,
     isMuted: Boolean,
     currentPosition: Long,

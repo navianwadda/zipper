@@ -106,8 +106,8 @@ fun SettingsScreen(
         item {
             SettingsCard(
                 icon         = R.drawable.ic_save_states,
-                label        = "Player Settings",
-                sublabel     = "Aspect ratio, quality, center controls",
+                label        = "Player Layouts",
+                sublabel     = "Aspect ratio, Quality",
                 showChevron  = true,
                 bottomMargin = 16.dp,
             ) {

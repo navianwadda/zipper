@@ -18,8 +18,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -30,78 +28,38 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.ui.appearance.MultiChoiceSegmentedButton
 import com.livetvpro.app.ui.appearance.PreferenceCard
 import com.livetvpro.app.ui.appearance.PreferenceDivider
 import com.livetvpro.app.ui.appearance.PreferenceSectionHeader
 import com.livetvpro.app.ui.appearance.SwitchPreferenceRow
-import com.livetvpro.app.ui.player.compose.PlayerControls
-import kotlinx.coroutines.delay
+import com.livetvpro.app.ui.player.compose.PlayerControlsContent
 
-private const val PREVIEW_STREAM_URL =
-    "https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4"
+/** Sentinel meaning "no forced default — behave as the app always has (remember/last-used or built-in fallback)." */
+private const val ASPECT_RATIO_DEFAULT = -1
 
 /**
  * Dedicated page for player playback layout settings (formerly the "Save States" dialog).
- * Includes a live preview that plays real content through the app's actual [PlayerControls],
- * so every change below is reflected instantly in a real player above.
+ * The preview above renders the app's real control layout directly (no video, no auto-hide) so
+ * changes to Center Controls are visible immediately.
  */
 @Composable
 fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
-    val context = LocalContext.current
 
     var rememberAspectRatio by remember { mutableStateOf(preferencesManager.isRememberAspectRatioEnabled()) }
     var forceLowestQuality  by remember { mutableStateOf(preferencesManager.isForceLowestQualityEnabled()) }
     var centerControlsMode  by remember { mutableIntStateOf(preferencesManager.getCenterControlsMode()) }
-    var resizeMode by remember {
-        mutableIntStateOf(
-            preferencesManager.getSavedAspectRatio().takeIf { it >= 0 }
-                ?: AspectRatioFrameLayout.RESIZE_MODE_FIT
-        )
-    }
+    var resizeMode by remember { mutableIntStateOf(preferencesManager.getSavedAspectRatio()) }
 
-    val player = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(PREVIEW_STREAM_URL))
-            repeatMode = Player.REPEAT_MODE_ALL
-            volume = 0f
-            playWhenReady = true
-            prepare()
-        }
-    }
-    DisposableEffect(Unit) {
-        onDispose { player.release() }
-    }
-
-    LaunchedEffect(forceLowestQuality) {
-        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-            .setMaxVideoBitrate(if (forceLowestQuality) 1 else Int.MAX_VALUE)
-            .build()
-    }
-
-    var isPlaying by remember { mutableStateOf(true) }
-    var currentPosition by remember { mutableLongStateOf(0L) }
-    var duration by remember { mutableLongStateOf(0L) }
-    var bufferedPosition by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(player) {
-        while (true) {
-            isPlaying = player.isPlaying
-            currentPosition = player.currentPosition.coerceAtLeast(0L)
-            duration = player.duration.coerceAtLeast(0L)
-            bufferedPosition = player.bufferedPosition.coerceAtLeast(0L)
-            delay(250)
-        }
-    }
+    // Purely local demo state for the static preview — no ExoPlayer, no real media.
+    var previewIsPlaying by remember { mutableStateOf(true) }
+    var previewPosition by remember { mutableLongStateOf(64_000L) }
+    val previewDuration = 596_000L
+    val previewBuffered = 240_000L
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
 
@@ -115,33 +73,19 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                         .padding(horizontal = 16.dp)
                         .aspectRatio(16f / 9f)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.Black),
+                        .background(Color(0xFF1A1A1A)),
                 ) {
-                    AndroidView(
-                        factory = { ctx ->
-                            PlayerView(ctx).apply {
-                                useController = false
-                                setBackgroundColor(android.graphics.Color.BLACK)
-                                setShutterBackgroundColor(android.graphics.Color.BLACK)
-                            }
-                        },
-                        update = { view ->
-                            view.player = player
-                            view.resizeMode = resizeMode
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-
-                    PlayerControls(
-                        isPlaying             = isPlaying,
-                        isMuted               = true,
-                        currentPosition       = currentPosition,
-                        duration              = duration,
-                        bufferedPosition      = bufferedPosition,
+                    PlayerControlsContent(
+                        isPlaying             = previewIsPlaying,
+                        isMuted               = false,
+                        currentPosition       = previewPosition,
+                        duration              = previewDuration,
+                        bufferedPosition      = previewBuffered,
                         channelName           = "Preview",
                         showPipButton         = false,
                         showAspectRatioButton = false,
                         isLandscape           = false,
+                        isTvMode              = false,
                         centerControlsMode    = centerControlsMode,
                         isNetworkStream       = false,
                         onBackClick           = {},
@@ -149,16 +93,19 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                         onSettingsClick       = {},
                         onMuteClick           = {},
                         onLockClick           = {},
-                        onPlayPauseClick      = { if (player.isPlaying) player.pause() else player.play() },
-                        onSeek                = { player.seekTo(it) },
-                        onRewindClick         = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) },
-                        onForwardClick        = { player.seekTo(player.currentPosition + 10_000) },
+                        onPlayPauseClick      = { previewIsPlaying = !previewIsPlaying },
+                        onSeek                = { previewPosition = it.coerceIn(0, previewDuration) },
+                        onRewindClick         = { previewPosition = (previewPosition - 10_000).coerceAtLeast(0) },
+                        onForwardClick        = { previewPosition = (previewPosition + 10_000).coerceAtMost(previewDuration) },
                         onAspectRatioClick    = {},
                         onFullscreenClick     = {},
+                        onChannelListClick    = {},
+                        isChannelListAvailable = false,
+                        onInteraction         = {},
                     )
                 }
                 Text(
-                    text     = "This preview uses the real player controls. Any change below applies to it instantly.",
+                    text     = "This is the app's real control layout, always visible here — no video needed. Changes below apply instantly.",
                     style    = MaterialTheme.typography.bodySmall,
                     color    = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
@@ -190,6 +137,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp),
                     )
                     val resizeOptions = listOf(
+                        ASPECT_RATIO_DEFAULT                           to "Default",
                         AspectRatioFrameLayout.RESIZE_MODE_FIT         to "Fit",
                         AspectRatioFrameLayout.RESIZE_MODE_ZOOM        to "Zoom",
                         AspectRatioFrameLayout.RESIZE_MODE_FILL        to "Fill",
@@ -197,13 +145,22 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                     )
                     MultiChoiceSegmentedButton(
                         choices = resizeOptions.map { it.second },
-                        selectedIndices = listOf(resizeOptions.indexOfFirst { it.first == resizeMode }.coerceAtLeast(0)),
+                        selectedIndices = listOf(
+                            resizeOptions.indexOfFirst { it.first == resizeMode }.coerceAtLeast(0)
+                        ),
                         onClick = { index ->
                             val mode = resizeOptions[index].first
                             resizeMode = mode
                             preferencesManager.setSavedAspectRatio(mode)
                             preferencesManager.setSavedAspectRatioPortrait(mode)
                         },
+                    )
+                    Text(
+                        text     = "\"Default\" leaves this exactly as before \u2014 no fixed ratio is forced; " +
+                            "it just uses the app's normal behavior.",
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                     )
                 }
             }

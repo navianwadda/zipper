@@ -324,9 +324,8 @@ class FloatingPlayerActivity : ComponentActivity() {
         setContent {
             CompositionLocalProvider(LocalActivity provides null) {
                 LiveTVProTheme(
-                    themeManager    = themeManager,
-                    surfaceColor    = Color.Transparent,
-                    manageStatusBar = false,
+                    themeManager = themeManager,
+                    surfaceColor = Color.Transparent,
                 ) {
                     FloatingPlayerActivityRoot()
                 }
@@ -708,10 +707,11 @@ class FloatingPlayerActivity : ComponentActivity() {
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         val isNetworkStream = contentType == ContentType.NETWORK_STREAM
+        var appliedBackgroundHex = "n/a (landscape, not PiP)"
         if (!isLandscape && !isInPipMode) {
-            window.decorView.setBackgroundColor(
-                if (isNetworkStream) android.graphics.Color.BLACK else themeManager.getBackgroundColor(this)
-            )
+            val bg = if (isNetworkStream) android.graphics.Color.BLACK else themeManager.getBackgroundColor(this)
+            appliedBackgroundHex = Integer.toHexString(bg)
+            window.decorView.setBackgroundColor(bg)
         } else if (isInPipMode) window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
 
         val isDark = isNetworkStream || themeManager.isDarkMode(this)
@@ -720,6 +720,13 @@ class FloatingPlayerActivity : ComponentActivity() {
             isAppearanceLightNavigationBars = !isDark
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        com.livetvpro.app.data.local.ThemeDebugLog.log(
+            "FloatingPlayerActivity.setupWindowFlags",
+            "isLandscape=$isLandscape isInPipMode=$isInPipMode isNetworkStream=$isNetworkStream " +
+                "isDark=$isDark appliedBackgroundHex=$appliedBackgroundHex isAppearanceLightStatusBars=${!isDark}",
+        )
+        com.livetvpro.app.data.local.ThemeDebugLog.flush(this)
     }
 
     private fun setupSystemUI() {

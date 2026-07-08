@@ -121,7 +121,7 @@ fun SettingsScreen(
             SettingsCard(
                 icon        = R.drawable.ic_theme_auto,
                 label       = "Appearance",
-                sublabel    = "Theme, dark mode, AMOLED",
+                sublabel    = "Theme, Light/Dark mode, AMOLED",
                 iconTint    = MaterialTheme.colorScheme.primary,
                 showChevron = true,
                 bottomMargin = 16.dp,

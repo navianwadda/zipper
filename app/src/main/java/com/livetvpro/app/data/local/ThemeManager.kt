@@ -151,16 +151,19 @@ class ThemeManager @Inject constructor(
         }
         val configuredContext = ctx.createConfigurationContext(overrideConfig)
 
-        val themeResId = try {
-            if (ctx is android.app.Activity) {
-                ctx.packageManager.getActivityInfo(ctx.componentName, 0).themeResource
-                    .takeIf { it != 0 } ?: ctx.applicationInfo.theme
-            } else {
-                ctx.applicationInfo.theme
+        val activityThemeResId = try {
+            (ctx as? android.app.Activity)?.let {
+                it.packageManager.getActivityInfo(it.componentName, 0).themeResource.takeIf { r -> r != 0 }
             }
+        } catch (e: Exception) {
+            null
+        }
+        val appThemeResId = try {
+            ctx.applicationInfo.theme
         } catch (e: Exception) {
             0
         }
+        val themeResId = activityThemeResId ?: appThemeResId
         val themedContext = if (themeResId != 0) {
             android.view.ContextThemeWrapper(configuredContext, themeResId)
         } else {

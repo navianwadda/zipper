@@ -107,7 +107,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
             }
         }
 
-        item { PreferenceSectionHeader(title = "Center Controls") }
+        item { PreferenceSectionHeader(title = "Player Layouts") }
 
         item {
             val centerModeOptions = listOf(

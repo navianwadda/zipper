@@ -65,20 +65,13 @@ class ThemeManager @Inject constructor(
     val dynamicColorVersionFlow: StateFlow<Int> = _dynamicColorVersionFlow
 
     private fun resolveIsDark(ctx: Context): Boolean {
-        val mode = prefs.getInt(KEY_THEME_MODE, THEME_AUTO)
-        val result = when (mode) {
+        return when (prefs.getInt(KEY_THEME_MODE, THEME_AUTO)) {
             THEME_DARK  -> true
             THEME_LIGHT -> false
             else -> (ctx.resources.configuration.uiMode and
                 android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
-        ThemeDebugLog.log(
-            "resolveIsDark",
-            "storedMode=$mode (0=auto,1=light,2=dark) colorTheme=${_colorThemeFlow.value} " +
-                "ambientUiMode=${ctx.resources.configuration.uiMode} result=$result",
-        )
-        return result
     }
 
     fun resolveIsDarkForResources(resources: android.content.res.Resources): Boolean {
@@ -171,15 +164,6 @@ class ThemeManager @Inject constructor(
         }
 
         val wrapped = DynamicColors.wrapContextIfAvailable(themedContext)
-        val wrapSucceeded = wrapped !== themedContext
-        val originalNightBit = ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        val forcedNightBit = wrapped.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        ThemeDebugLog.log(
-            "dynamicContextFor",
-            "isDark=$isDark isDynamicColorAvailable=${DynamicColors.isDynamicColorAvailable()} " +
-                "themeResId=$themeResId wrapSucceeded=$wrapSucceeded originalNightBit=$originalNightBit " +
-                "forcedNightBitOnWrapped=$forcedNightBit sdk=${Build.VERSION.SDK_INT}",
-        )
         return wrapped
     }
 
@@ -189,31 +173,17 @@ class ThemeManager @Inject constructor(
         if (theme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val ctx = activityContext ?: activityContextRef?.get() ?: context
             val dynamicContext = dynamicContextFor(ctx, isDark)
-            val resolved = MaterialColors.getColor(dynamicContext, android.R.attr.colorBackground, Color.WHITE)
-            ThemeDebugLog.log(
-                "getBackgroundColor",
-                "theme=Dynamic isDark=$isDark resolvedHex=${Integer.toHexString(resolved)} " +
-                    "usedFallback=${resolved == Color.WHITE}",
-            )
-            return resolved
+            return MaterialColors.getColor(dynamicContext, android.R.attr.colorBackground, Color.WHITE)
         }
         val resolved = if (theme == AppColorTheme.Dynamic) AppColorTheme.Default else theme
-        if (isDark && _amoledFlow.value) {
-            ThemeDebugLog.log("getBackgroundColor", "theme=$theme isDark=$isDark amoled=true -> BLACK")
-            return Color.BLACK
-        }
+        if (isDark && _amoledFlow.value) return Color.BLACK
         val color = if (isDark) resolved.backgroundDark else resolved.backgroundLight
-        val result = Color.argb(
+        return Color.argb(
             (color.alpha * 255).toInt(),
             (color.red   * 255).toInt(),
             (color.green * 255).toInt(),
             (color.blue  * 255).toInt(),
         )
-        ThemeDebugLog.log(
-            "getBackgroundColor",
-            "theme=$theme isDark=$isDark resolvedHex=${Integer.toHexString(result)}",
-        )
-        return result
     }
 
     fun getSurfaceContainerColor(activityContext: Context? = null): Int {

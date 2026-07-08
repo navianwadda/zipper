@@ -334,8 +334,9 @@ class PlayerActivity : ComponentActivity() {
         setContent {
             CompositionLocalProvider(LocalActivity provides null) {
                 LiveTVProTheme(
-                    themeManager  = themeManager,
-                    surfaceColor  = Color.Transparent,
+                    themeManager    = themeManager,
+                    surfaceColor    = Color.Transparent,
+                    manageStatusBar = false,
                 ) {
                     PlayerActivityRoot()
                 }

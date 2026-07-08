@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
@@ -106,75 +107,6 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
             }
         }
 
-        item { PreferenceSectionHeader(title = "Aspect Ratio") }
-
-        item {
-            PreferenceCard {
-                SwitchPreferenceRow(
-                    title   = "Remember Aspect Ratio",
-                    summary = "Keep the aspect ratio you pick during playback for next time",
-                    checked = rememberAspectRatio,
-                    onCheckedChange = {
-                        rememberAspectRatio = it
-                        preferencesManager.setRememberAspectRatioEnabled(it)
-                    },
-                )
-
-                PreferenceDivider()
-
-                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    Text(
-                        text     = "Default Aspect Ratio",
-                        style    = MaterialTheme.typography.labelMedium,
-                        color    = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp),
-                    )
-                    val resizeOptions = listOf(
-                        ASPECT_RATIO_DEFAULT                           to "Default",
-                        AspectRatioFrameLayout.RESIZE_MODE_FIT         to "Fit",
-                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM        to "Zoom",
-                        AspectRatioFrameLayout.RESIZE_MODE_FILL        to "Fill",
-                        AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH to "Fixed Width",
-                    )
-                    MultiChoiceSegmentedButton(
-                        choices = resizeOptions.map { it.second },
-                        selectedIndices = listOf(
-                            resizeOptions.indexOfFirst { it.first == resizeMode }.coerceAtLeast(0)
-                        ),
-                        onClick = { index ->
-                            val mode = resizeOptions[index].first
-                            resizeMode = mode
-                            preferencesManager.setSavedAspectRatio(mode)
-                            preferencesManager.setSavedAspectRatioPortrait(mode)
-                        },
-                    )
-                    Text(
-                        text     = "\"Default\" leaves this exactly as before \u2014 no fixed ratio is forced; " +
-                            "it just uses the app's normal behavior.",
-                        style    = MaterialTheme.typography.bodySmall,
-                        color    = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                    )
-                }
-            }
-        }
-
-        item { PreferenceSectionHeader(title = "Quality") }
-
-        item {
-            PreferenceCard {
-                SwitchPreferenceRow(
-                    title   = "Force Lowest Quality",
-                    summary = "Always play the lowest available quality to save data",
-                    checked = forceLowestQuality,
-                    onCheckedChange = {
-                        forceLowestQuality = it
-                        preferencesManager.setForceLowestQualityEnabled(it)
-                    },
-                )
-            }
-        }
-
         item { PreferenceSectionHeader(title = "Center Controls") }
 
         item {
@@ -221,6 +153,81 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                         }
                     }
                 }
+            }
+        }
+
+        item { PreferenceSectionHeader(title = "Aspect Ratio") }
+
+        item {
+            PreferenceCard {
+                SwitchPreferenceRow(
+                    title   = "Remember Aspect Ratio",
+                    summary = "Keep the aspect ratio you pick during playback for next time",
+                    checked = rememberAspectRatio,
+                    onCheckedChange = {
+                        rememberAspectRatio = it
+                        preferencesManager.setRememberAspectRatioEnabled(it)
+                    },
+                )
+
+                PreferenceDivider()
+
+                Column(
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .alpha(if (rememberAspectRatio) 1f else 0.4f),
+                ) {
+                    Text(
+                        text     = "Default Aspect Ratio",
+                        style    = MaterialTheme.typography.labelMedium,
+                        color    = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp),
+                    )
+                    val resizeOptions = listOf(
+                        ASPECT_RATIO_DEFAULT                           to "Default",
+                        AspectRatioFrameLayout.RESIZE_MODE_FIT         to "Fit",
+                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM        to "Zoom",
+                        AspectRatioFrameLayout.RESIZE_MODE_FILL        to "Fill",
+                        AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH to "Fixed Width",
+                    )
+                    MultiChoiceSegmentedButton(
+                        choices = resizeOptions.map { it.second },
+                        selectedIndices = listOf(
+                            resizeOptions.indexOfFirst { it.first == resizeMode }.coerceAtLeast(0)
+                        ),
+                        onClick = { index ->
+                            if (rememberAspectRatio) {
+                                val mode = resizeOptions[index].first
+                                resizeMode = mode
+                                preferencesManager.setSavedAspectRatio(mode)
+                                preferencesManager.setSavedAspectRatioPortrait(mode)
+                            }
+                        },
+                    )
+                    Text(
+                        text     = "\"Default\" leaves this exactly as before \u2014 no fixed ratio is forced; " +
+                            "it just uses the app's normal behavior.",
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                    )
+                }
+            }
+        }
+
+        item { PreferenceSectionHeader(title = "Quality") }
+
+        item {
+            PreferenceCard {
+                SwitchPreferenceRow(
+                    title   = "Force Lowest Quality",
+                    summary = "Always play the lowest available quality to save data",
+                    checked = forceLowestQuality,
+                    onCheckedChange = {
+                        forceLowestQuality = it
+                        preferencesManager.setForceLowestQualityEnabled(it)
+                    },
+                )
             }
         }
 

@@ -150,9 +150,8 @@ class ThemeManager @Inject constructor(
             uiMode = (uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK.inv()) or nightBit
         }
         val configuredContext = ctx.createConfigurationContext(overrideConfig)
-        val themedContext = android.view.ContextThemeWrapper(configuredContext, ctx.theme)
-        val wrapped = DynamicColors.wrapContextIfAvailable(themedContext)
-        val wrapSucceeded = wrapped !== themedContext
+        val wrapped = DynamicColors.wrapContextIfAvailable(configuredContext)
+        val wrapSucceeded = wrapped !== configuredContext
         val originalNightBit = ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         val forcedNightBit = wrapped.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         ThemeDebugLog.log(

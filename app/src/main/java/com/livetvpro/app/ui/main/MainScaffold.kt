@@ -154,7 +154,7 @@ fun MainScaffold(
         Routes.FOOTBALL_SCORE    -> "Football Score"
         Routes.DEVICE_ID         -> "Device ID"
         Routes.APPEARANCE        -> "Appearance"
-        Routes.PLAYER_LAYOUTS    -> "Player Layouts"
+        Routes.PLAYER_LAYOUTS    -> "Player Settings"
         else                     -> "Live TV Pro"
     }
 

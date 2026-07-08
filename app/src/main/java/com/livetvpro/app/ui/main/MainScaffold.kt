@@ -83,6 +83,7 @@ import com.livetvpro.app.ui.networkstream.NetworkStreamRoute
 import com.livetvpro.app.ui.playlists.PlaylistsRoute
 import com.livetvpro.app.ui.score.CricketScoreScreen
 import com.livetvpro.app.ui.score.FootballScoreScreen
+import com.livetvpro.app.ui.settings.PlayerLayoutsScreen
 import com.livetvpro.app.ui.settings.SettingsActions
 import com.livetvpro.app.ui.settings.SettingsScreen
 import com.livetvpro.app.ui.sports.SportsRoute
@@ -153,6 +154,7 @@ fun MainScaffold(
         Routes.FOOTBALL_SCORE    -> "Football Score"
         Routes.DEVICE_ID         -> "Device ID"
         Routes.APPEARANCE        -> "Appearance"
+        Routes.PLAYER_LAYOUTS    -> "Player Layouts"
         else                     -> "Live TV Pro"
     }
 
@@ -316,6 +318,9 @@ fun MainScaffold(
                 }
                 composable(Routes.APPEARANCE) {
                     AppearanceScreen(themeManager = themeManager)
+                }
+                composable(Routes.PLAYER_LAYOUTS) {
+                    PlayerLayoutsScreen(preferencesManager = preferencesManager)
                 }
             }
 

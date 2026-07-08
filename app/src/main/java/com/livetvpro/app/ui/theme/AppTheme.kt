@@ -55,12 +55,13 @@ fun LiveTVProTheme(
     }
 
     LaunchedEffect(colorScheme, isDark) {
-        activity?.enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(
-                lightScrim = colorScheme.background.toArgb(),
-                darkScrim  = android.graphics.Color.TRANSPARENT,
-            ) { isDark },
-        )
+        val bg = colorScheme.background.toArgb()
+        val statusBarStyle = if (isDark) {
+            SystemBarStyle.dark(bg)
+        } else {
+            SystemBarStyle.light(bg, bg)
+        }
+        activity?.enableEdgeToEdge(statusBarStyle = statusBarStyle)
     }
 
     MaterialTheme(

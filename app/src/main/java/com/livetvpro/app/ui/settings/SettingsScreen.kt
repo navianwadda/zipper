@@ -38,7 +38,6 @@ import com.livetvpro.app.ui.navigation.Routes
 import com.livetvpro.app.utils.NativeListenerManager
 
 interface SettingsActions {
-    fun onSettingsSaveStates()
     fun onSettingsCopyright()
     fun onSettingsNotice()
     fun onSettingsShareApp()
@@ -102,6 +101,20 @@ fun SettingsScreen(
             }
         }
 
+        item { SectionHeader("Player Settings") }
+
+        item {
+            SettingsCard(
+                icon         = R.drawable.ic_save_states,
+                label        = "Player Layouts",
+                sublabel     = "Aspect ratio, quality, center controls",
+                showChevron  = true,
+                bottomMargin = 16.dp,
+            ) {
+                navController.navigate(Routes.PLAYER_LAYOUTS)
+            }
+        }
+
         item { SectionHeader("Appearance") }
 
         item {
@@ -122,11 +135,6 @@ fun SettingsScreen(
         item {
             SettingsCard(icon = R.drawable.ic_pip, label = "Floating Player") {
                 settingsActions.onSettingsFloatingPlayer()
-            }
-        }
-        item {
-            SettingsCard(icon = R.drawable.ic_save_states, label = "Save States") {
-                settingsActions.onSettingsSaveStates()
             }
         }
         item {

@@ -74,6 +74,16 @@ class ThemeManager @Inject constructor(
         }
     }
 
+    fun resolveIsDarkForResources(resources: android.content.res.Resources): Boolean {
+        return when (prefs.getInt(KEY_THEME_MODE, THEME_AUTO)) {
+            THEME_DARK  -> true
+            THEME_LIGHT -> false
+            else -> (resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+    }
+
     fun registerActivityContext(activityContext: Context) {
         activityContextRef = WeakReference(activityContext)
         _resolvedIsDarkFlow.value = resolveIsDark(activityContext)

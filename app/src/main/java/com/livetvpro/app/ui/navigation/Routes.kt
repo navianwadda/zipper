@@ -13,6 +13,7 @@ object Routes {
     const val FOOTBALL_SCORE = "football_score"
     const val DEVICE_ID = "device_id"
     const val APPEARANCE = "appearance"
+    const val PLAYER_LAYOUTS = "player_layouts"
 
     object Args {
         const val CATEGORY_ID = "categoryId"

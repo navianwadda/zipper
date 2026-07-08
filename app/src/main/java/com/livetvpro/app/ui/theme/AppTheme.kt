@@ -26,6 +26,7 @@ import com.livetvpro.app.data.local.ThemeManager
 fun LiveTVProTheme(
     themeManager: ThemeManager,
     surfaceColor: Color? = null,
+    manageStatusBar: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val context    = LocalContext.current
@@ -54,13 +55,15 @@ fun LiveTVProTheme(
         }
     }
 
-    LaunchedEffect(colorScheme, isDark) {
-        val bg = colorScheme.background.toArgb()
-        activity?.enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(bg, bg) { resources ->
-                themeManager.resolveIsDarkForResources(resources)
-            },
-        )
+    if (manageStatusBar) {
+        LaunchedEffect(colorScheme, isDark) {
+            val bg = colorScheme.background.toArgb()
+            activity?.enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.auto(bg, bg) { resources ->
+                    themeManager.resolveIsDarkForResources(resources)
+                },
+            )
+        }
     }
 
     MaterialTheme(

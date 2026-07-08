@@ -39,14 +39,8 @@ import com.livetvpro.app.ui.appearance.PreferenceSectionHeader
 import com.livetvpro.app.ui.appearance.SwitchPreferenceRow
 import com.livetvpro.app.ui.player.compose.PlayerControlsContent
 
-/** Sentinel meaning "no forced default — behave as the app always has (remember/last-used or built-in fallback)." */
 private const val ASPECT_RATIO_DEFAULT = -1
 
-/**
- * Dedicated page for player playback layout settings (formerly the "Save States" dialog).
- * The preview above renders the app's real control layout directly (no video, no auto-hide) so
- * changes to Center Controls are visible immediately.
- */
 @Composable
 fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
 
@@ -55,7 +49,6 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
     var centerControlsMode  by remember { mutableIntStateOf(preferencesManager.getCenterControlsMode()) }
     var resizeMode by remember { mutableIntStateOf(preferencesManager.getSavedAspectRatio()) }
 
-    // Purely local demo state for the static preview — no ExoPlayer, no real media.
     var previewIsPlaying by remember { mutableStateOf(true) }
     var previewPosition by remember { mutableLongStateOf(64_000L) }
     val previewDuration = 596_000L
@@ -105,7 +98,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                     )
                 }
                 Text(
-                    text     = "This is the app's real control layout, always visible here — no video needed. Changes below apply instantly.",
+                    text     = "This is the app's real control layout, always visible here. Changes below apply instantly.",
                     style    = MaterialTheme.typography.bodySmall,
                     color    = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),

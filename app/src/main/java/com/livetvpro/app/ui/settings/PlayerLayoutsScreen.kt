@@ -47,7 +47,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
 
     var rememberAspectRatio by remember { mutableStateOf(preferencesManager.isRememberAspectRatioEnabled()) }
     var forceLowestQuality  by remember { mutableStateOf(preferencesManager.isForceLowestQualityEnabled()) }
-    var centerControlsMode  by remember { mutableIntStateOf(preferencesManager.getLayoutMode()) }
+    var layoutMode  by remember { mutableIntStateOf(preferencesManager.getLayoutMode()) }
     var resizeMode by remember { mutableIntStateOf(preferencesManager.getSavedAspectRatio()) }
 
     var previewIsPlaying by remember { mutableStateOf(true) }
@@ -80,7 +80,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                         showAspectRatioButton = true,
                         isLandscape           = false,
                         isTvMode              = false,
-                        centerControlsMode    = centerControlsMode,
+                        layoutMode    = layoutMode,
                         isNetworkStream       = false,
                         onBackClick           = {},
                         onPipClick            = {},
@@ -129,9 +129,9 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .selectable(
-                                    selected = centerControlsMode == mode,
+                                    selected = layoutMode == mode,
                                     onClick  = {
-                                        centerControlsMode = mode
+                                        layoutMode = mode
                                         preferencesManager.setLayoutMode(mode)
                                     },
                                     role = Role.RadioButton,
@@ -141,7 +141,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                RadioButton(selected = centerControlsMode == mode, onClick = null)
+                                RadioButton(selected = layoutMode == mode, onClick = null)
                                 Column(modifier = Modifier.padding(start = 8.dp)) {
                                     Text(text = label, style = MaterialTheme.typography.bodyLarge)
                                     Text(

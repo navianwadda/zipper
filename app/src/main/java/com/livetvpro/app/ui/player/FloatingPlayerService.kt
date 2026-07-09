@@ -1230,13 +1230,13 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         val btnNextChannel = playerView.findViewById<ImageButton>(R.id.btn_next_channel)
         val btnResize = floatingView.findViewById<ImageButton>(R.id.btn_resize)
 
-        val centerMode = preferencesManager.getLayoutMode()
+        val layoutMode = preferencesManager.getLayoutMode()
         val isNetworkStream = (channel == null && event == null)
-        val showSeeks = centerMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_ONLY ||
-                        centerMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_AND_NAV
+        val showSeeks = layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_ONLY ||
+                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_AND_NAV
         val showNav   = !isNetworkStream && (
-                        centerMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_AND_NAV ||
-                        centerMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_NAV_ONLY)
+                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_AND_NAV ||
+                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_NAV_ONLY)
         btnSeekBack?.visibility    = if (showSeeks) View.VISIBLE else View.GONE
         btnSeekForward?.visibility = if (showSeeks) View.VISIBLE else View.GONE
         btnPrevChannel?.visibility = if (showNav) View.VISIBLE else View.GONE

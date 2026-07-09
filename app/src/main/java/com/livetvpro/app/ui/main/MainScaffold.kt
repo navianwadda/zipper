@@ -32,10 +32,15 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,6 +66,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.NavType
@@ -82,6 +88,7 @@ import com.livetvpro.app.ui.home.HomeRoute
 import com.livetvpro.app.ui.live.LiveEventsRoute
 import com.livetvpro.app.ui.navigation.Routes
 import com.livetvpro.app.ui.networkstream.NetworkStreamHistoryScreen
+import com.livetvpro.app.ui.networkstream.NetworkStreamHistoryViewModel
 import com.livetvpro.app.ui.networkstream.NetworkStreamRoute
 import com.livetvpro.app.ui.playlists.PlaylistsRoute
 import com.livetvpro.app.ui.score.CricketScoreScreen
@@ -207,8 +214,13 @@ fun MainScaffold(
         }
     }
 
+    val historyViewModel: NetworkStreamHistoryViewModel? =
+        if (currentRoute == Routes.NETWORK_STREAM_HISTORY) {
+            hiltViewModel(navController.getBackStackEntry(Routes.NETWORK_STREAM_HISTORY))
+        } else null
+    var showHistoryClearDialog by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        if (currentRoute != Routes.NETWORK_STREAM_HISTORY) {
         if (isTvOrDesktop || isTablet) {
             TvTopBar(
                 title          = toolbarTitle,
@@ -222,6 +234,10 @@ fun MainScaffold(
                 onSearchClose  = { isSearchActive = false; searchQuery = "" },
                 showHistory    = currentRoute == Routes.NETWORK_STREAM,
                 onHistory      = { navigateForward(Routes.NETWORK_STREAM_HISTORY) },
+                isHistoryRoute       = currentRoute == Routes.NETWORK_STREAM_HISTORY,
+                historyNewestFirst   = historyViewModel?.newestFirst ?: true,
+                onHistorySortSelect  = { historyViewModel?.updateSortOrder(it) },
+                onHistoryClearAll    = { showHistoryClearDialog = true },
             )
         } else {
             PhoneTopBar(
@@ -239,8 +255,11 @@ fun MainScaffold(
                 onRefresh      = { refreshSignal++ },
                 showHistory    = currentRoute == Routes.NETWORK_STREAM,
                 onHistory      = { navigateForward(Routes.NETWORK_STREAM_HISTORY) },
+                isHistoryRoute       = currentRoute == Routes.NETWORK_STREAM_HISTORY,
+                historyNewestFirst   = historyViewModel?.newestFirst ?: true,
+                onHistorySortSelect  = { historyViewModel?.updateSortOrder(it) },
+                onHistoryClearAll    = { showHistoryClearDialog = true },
             )
-        }
         }
 
         Box(modifier = Modifier.weight(1f)) {
@@ -330,7 +349,10 @@ fun MainScaffold(
                     NetworkStreamRoute(preferencesManager = preferencesManager)
                 }
                 composable(Routes.NETWORK_STREAM_HISTORY) {
-                    NetworkStreamHistoryScreen(navController = navController)
+                    NetworkStreamHistoryScreen(
+                        navController = navController,
+                        viewModel     = hiltViewModel(navController.getBackStackEntry(Routes.NETWORK_STREAM_HISTORY)),
+                    )
                 }
                 composable(Routes.CRICKET_SCORE) {
                     CricketScoreScreen(listenerManager = listenerManager)
@@ -374,6 +396,33 @@ fun MainScaffold(
             }
         }
     }
+
+    if (showHistoryClearDialog && historyViewModel != null) {
+        AlertDialog(
+            onDismissRequest = { showHistoryClearDialog = false },
+            icon             = {
+                Icon(
+                    painter            = painterResource(R.drawable.ic_delete_sweep),
+                    contentDescription = null,
+                )
+            },
+            title            = { Text("Clear History") },
+            text             = { Text("Are you sure, all your watch history will be deleted.") },
+            confirmButton    = {
+                TextButton(onClick = {
+                    historyViewModel.clearAll()
+                    showHistoryClearDialog = false
+                }) {
+                    Text("Clear All")
+                }
+            },
+            dismissButton    = {
+                TextButton(onClick = { showHistoryClearDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -392,6 +441,10 @@ private fun PhoneTopBar(
     onRefresh: () -> Unit,
     showHistory: Boolean = false,
     onHistory: () -> Unit = {},
+    isHistoryRoute: Boolean = false,
+    historyNewestFirst: Boolean = true,
+    onHistorySortSelect: (Boolean) -> Unit = {},
+    onHistoryClearAll: () -> Unit = {},
 ) {
     val surface        = MaterialTheme.colorScheme.surface
     val onSurface      = MaterialTheme.colorScheme.onSurface
@@ -479,6 +532,44 @@ private fun PhoneTopBar(
                         Icon(painterResource(R.drawable.ic_close), contentDescription = "Clear", tint = onSurface)
                     }
                 }
+            } else if (isHistoryRoute) {
+                var showSortMenu by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { showSortMenu = true }) {
+                        Icon(painterResource(R.drawable.ic_sort), contentDescription = "Sort", tint = onSurface)
+                    }
+                    DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier              = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment     = Alignment.CenterVertically,
+                                ) {
+                                    Text("Newest First")
+                                    RadioButton(selected = historyNewestFirst, onClick = null)
+                                }
+                            },
+                            onClick = { onHistorySortSelect(true); showSortMenu = false },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier              = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment     = Alignment.CenterVertically,
+                                ) {
+                                    Text("Oldest First")
+                                    RadioButton(selected = !historyNewestFirst, onClick = null)
+                                }
+                            },
+                            onClick = { onHistorySortSelect(false); showSortMenu = false },
+                        )
+                    }
+                }
+                IconButton(onClick = onHistoryClearAll) {
+                    Icon(painterResource(R.drawable.ic_delete_sweep), contentDescription = "Clear history", tint = onSurface)
+                }
             } else {
                 if (showRefresh) {
                     IconButton(onClick = onRefresh) {
@@ -514,6 +605,10 @@ private fun TvTopBar(
     onSearchClose: () -> Unit,
     showHistory: Boolean = false,
     onHistory: () -> Unit = {},
+    isHistoryRoute: Boolean = false,
+    historyNewestFirst: Boolean = true,
+    onHistorySortSelect: (Boolean) -> Unit = {},
+    onHistoryClearAll: () -> Unit = {},
 ) {
     val surface        = MaterialTheme.colorScheme.surface
     val onSurface      = MaterialTheme.colorScheme.onSurface
@@ -593,6 +688,46 @@ private fun TvTopBar(
             if (showHistory) {
                 IconButton(onClick = onHistory) {
                     Icon(painterResource(R.drawable.ic_history), contentDescription = "History", tint = onSurface)
+                }
+            }
+
+            if (isHistoryRoute) {
+                var showSortMenu by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { showSortMenu = true }) {
+                        Icon(painterResource(R.drawable.ic_sort), contentDescription = "Sort", tint = onSurface)
+                    }
+                    DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier              = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment     = Alignment.CenterVertically,
+                                ) {
+                                    Text("Newest First")
+                                    RadioButton(selected = historyNewestFirst, onClick = null)
+                                }
+                            },
+                            onClick = { onHistorySortSelect(true); showSortMenu = false },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier              = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment     = Alignment.CenterVertically,
+                                ) {
+                                    Text("Oldest First")
+                                    RadioButton(selected = !historyNewestFirst, onClick = null)
+                                }
+                            },
+                            onClick = { onHistorySortSelect(false); showSortMenu = false },
+                        )
+                    }
+                }
+                IconButton(onClick = onHistoryClearAll) {
+                    Icon(painterResource(R.drawable.ic_delete_sweep), contentDescription = "Clear history", tint = onSurface)
                 }
             }
 

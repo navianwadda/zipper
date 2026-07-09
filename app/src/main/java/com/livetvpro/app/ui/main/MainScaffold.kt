@@ -354,10 +354,10 @@ fun MainScaffold(
                 composable(Routes.NETWORK_STREAM) {
                     NetworkStreamRoute(preferencesManager = preferencesManager)
                 }
-                composable(Routes.NETWORK_STREAM_HISTORY) {
+                composable(Routes.NETWORK_STREAM_HISTORY) { backStackEntry ->
                     NetworkStreamHistoryScreen(
                         navController = navController,
-                        viewModel     = hiltViewModel(navController.getBackStackEntry(Routes.NETWORK_STREAM_HISTORY)),
+                        viewModel     = hiltViewModel(backStackEntry),
                     )
                 }
                 composable(Routes.CRICKET_SCORE) {

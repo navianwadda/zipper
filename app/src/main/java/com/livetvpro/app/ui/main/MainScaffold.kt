@@ -217,7 +217,12 @@ fun MainScaffold(
 
     val historyViewModel: NetworkStreamHistoryViewModel? =
         if (currentRoute == Routes.NETWORK_STREAM_HISTORY) {
-            hiltViewModel(navController.getBackStackEntry(Routes.NETWORK_STREAM_HISTORY))
+            val entry = try {
+                navController.getBackStackEntry(Routes.NETWORK_STREAM_HISTORY)
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+            entry?.let { hiltViewModel(it) }
         } else null
     var showHistoryClearDialog by remember { mutableStateOf(false) }
 

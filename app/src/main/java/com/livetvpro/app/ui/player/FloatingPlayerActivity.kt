@@ -446,7 +446,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 showAspectRatioButton  = true,
                 isLandscape            = landscapeMode,
                 isTvMode               = DeviceUtils.isTvDevice,
-                centerControlsMode     = preferencesManager.getCenterControlsMode(),
+                centerControlsMode     = preferencesManager.getLayoutMode(),
                 isNetworkStream        = contentType == ContentType.NETWORK_STREAM,
                 isChannelListAvailable = isChannelListAvailable,
                 onBackClick            = { finish() },

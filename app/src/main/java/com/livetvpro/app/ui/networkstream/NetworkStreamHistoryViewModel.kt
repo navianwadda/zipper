@@ -24,9 +24,9 @@ class NetworkStreamHistoryViewModel @Inject constructor(
         refresh()
     }
 
-    fun setNewestFirst(value: Boolean) {
-        newestFirst = value
-        historyManager.setNewestFirst(value)
+    fun updateSortOrder(newestFirst: Boolean) {
+        this.newestFirst = newestFirst
+        historyManager.setNewestFirst(newestFirst)
         refresh()
     }
 

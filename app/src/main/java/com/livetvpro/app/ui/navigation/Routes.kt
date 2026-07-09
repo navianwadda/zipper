@@ -9,6 +9,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val PLAYLISTS = "playlists"
     const val NETWORK_STREAM = "network_stream"
+    const val NETWORK_STREAM_HISTORY = "network_stream_history"
     const val CRICKET_SCORE = "cricket_score"
     const val FOOTBALL_SCORE = "football_score"
     const val DEVICE_ID = "device_id"

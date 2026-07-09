@@ -47,7 +47,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
 
     var rememberAspectRatio by remember { mutableStateOf(preferencesManager.isRememberAspectRatioEnabled()) }
     var forceLowestQuality  by remember { mutableStateOf(preferencesManager.isForceLowestQualityEnabled()) }
-    var centerControlsMode  by remember { mutableIntStateOf(preferencesManager.getCenterControlsMode()) }
+    var centerControlsMode  by remember { mutableIntStateOf(preferencesManager.getLayoutMode()) }
     var resizeMode by remember { mutableIntStateOf(preferencesManager.getSavedAspectRatio()) }
 
     var previewIsPlaying by remember { mutableStateOf(true) }
@@ -131,7 +131,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                                     selected = centerControlsMode == mode,
                                     onClick  = {
                                         centerControlsMode = mode
-                                        preferencesManager.setCenterControlsMode(mode)
+                                        preferencesManager.setLayoutMode(mode)
                                     },
                                     role = Role.RadioButton,
                                 )

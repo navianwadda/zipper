@@ -33,6 +33,7 @@ class PreferencesManager @Inject constructor(
         const val LAYOUT_MODE_SEEKS_ONLY       = 0
         const val LAYOUT_MODE_SEEKS_AND_NAV    = 1
         const val LAYOUT_MODE_NAV_ONLY         = 2
+        const val LAYOUT_MODE_SEEKS_EDGE_NAV   = 3
     }
 
     fun isFirstLaunch(): Boolean = prefs.getBoolean(KEY_FIRST_LAUNCH, true)

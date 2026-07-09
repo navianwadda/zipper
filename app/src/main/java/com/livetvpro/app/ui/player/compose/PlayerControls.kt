@@ -456,6 +456,29 @@ internal fun PlayerControlsContent(
                 )
         )
 
+        if (!isNetworkStream && centerControlsMode == 3) {
+            PlayerIconButton(
+                onClick            = { onPrevClick(); onInteraction() },
+                iconRes            = R.drawable.ic_skip_prev_channel,
+                contentDescription = "Previous channel",
+                size               = if (isTvMode || isLandscape) 48 else 40,
+                modifier           = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 8.dp),
+                isTvMode           = isTvMode,
+            )
+            PlayerIconButton(
+                onClick            = { onNextClick(); onInteraction() },
+                iconRes            = R.drawable.ic_skip_next_channel,
+                contentDescription = "Next channel",
+                size               = if (isTvMode || isLandscape) 48 else 40,
+                modifier           = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 8.dp),
+                isTvMode           = isTvMode,
+            )
+        }
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween,
@@ -561,7 +584,6 @@ internal fun PlayerControlsContent(
 
                 val showSeeks   = centerControlsMode == 0 || centerControlsMode == 1 || centerControlsMode == 3
                 val showNavInline = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
-                val showNavEdge   = !isNetworkStream && centerControlsMode == 3
 
                 BoxWithConstraints(
                     modifier = Modifier
@@ -593,25 +615,11 @@ internal fun PlayerControlsContent(
                         else        -> 6.dp
                     }
 
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        if (showNavEdge) {
-                            PlayerIconButton(
-                                onClick            = { onPrevClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_prev_channel,
-                                contentDescription = "Previous channel",
-                                size               = seekSize,
-                                modifier           = Modifier.align(Alignment.CenterStart),
-                                isTvMode           = isTvMode,
-                            )
-                        }
-
-                        Row(
-                            modifier              = Modifier
-                                .fillMaxWidth()
-                                .align(Alignment.Center),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment     = Alignment.CenterVertically,
-                        ) {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment     = Alignment.CenterVertically,
+                    ) {
                         if (showAspectRatioButton) {
                             PlayerIconButton(
                                 onClick            = { onAspectRatioClick(); onInteraction() },
@@ -696,18 +704,6 @@ internal fun PlayerControlsContent(
                                                      else R.drawable.ic_fullscreen,
                                 contentDescription = "Toggle fullscreen",
                                 size               = slotSize,
-                                isTvMode           = isTvMode,
-                            )
-                        }
-                        }
-
-                        if (showNavEdge) {
-                            PlayerIconButton(
-                                onClick            = { onNextClick(); onInteraction() },
-                                iconRes            = R.drawable.ic_skip_next_channel,
-                                contentDescription = "Next channel",
-                                size               = seekSize,
-                                modifier           = Modifier.align(Alignment.CenterEnd),
                                 isTvMode           = isTvMode,
                             )
                         }

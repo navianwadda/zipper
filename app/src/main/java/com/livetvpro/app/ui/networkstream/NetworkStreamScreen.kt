@@ -180,6 +180,7 @@ fun NetworkStreamScreen(
                 onClick = {
                     if (streamUrl.isBlank()) return@FloatingActionButton
                     val ua = if (selectedUserAgent == "Custom") customUserAgent else selectedUserAgent
+                    viewModel.recordPlayed(streamUrl)
                     onPlay(streamUrl, cookie, referer, origin, drmLicense, ua, selectedDrmScheme)
                 },
                 modifier = Modifier

@@ -129,7 +129,7 @@ fun PlayerControls(
     showAspectRatioButton: Boolean,
     isLandscape: Boolean,
     isTvMode: Boolean = false,
-    centerControlsMode: Int = 0,
+    layoutMode: Int = 0,
     isNetworkStream: Boolean = false,
     onBackClick: () -> Unit,
     onPipClick: () -> Unit,
@@ -264,7 +264,7 @@ fun PlayerControls(
                 showAspectRatioButton  = showAspectRatioButton,
                 isLandscape            = isLandscape,
                 isTvMode               = isTvMode,
-                centerControlsMode     = centerControlsMode,
+                layoutMode     = layoutMode,
                 isNetworkStream        = isNetworkStream,
                 onBackClick            = onBackClick,
                 onPipClick             = onPipClick,
@@ -377,7 +377,7 @@ internal fun PlayerControlsContent(
     showAspectRatioButton: Boolean,
     isLandscape: Boolean,
     isTvMode: Boolean,
-    centerControlsMode: Int = 0,
+    layoutMode: Int = 0,
     isNetworkStream: Boolean = false,
     onBackClick: () -> Unit,
     onPipClick: () -> Unit,
@@ -456,7 +456,7 @@ internal fun PlayerControlsContent(
                 )
         )
 
-        if (!isNetworkStream && centerControlsMode == 3) {
+        if (!isNetworkStream && layoutMode == 3) {
             PlayerIconButton(
                 onClick            = { onPrevClick(); onInteraction() },
                 iconRes            = R.drawable.ic_skip_prev_channel,
@@ -582,8 +582,8 @@ internal fun PlayerControlsContent(
                         .padding(bottom = 4.dp),
                 )
 
-                val showSeeks   = centerControlsMode == 0 || centerControlsMode == 1 || centerControlsMode == 3
-                val showNavInline = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
+                val showSeeks   = layoutMode == 0 || layoutMode == 1 || layoutMode == 3
+                val showNavInline = !isNetworkStream && (layoutMode == 1 || layoutMode == 2)
 
                 BoxWithConstraints(
                     modifier = Modifier

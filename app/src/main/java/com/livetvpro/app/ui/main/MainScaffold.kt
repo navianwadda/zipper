@@ -79,6 +79,7 @@ import com.livetvpro.app.ui.favorites.FavoritesRoute
 import com.livetvpro.app.ui.home.HomeRoute
 import com.livetvpro.app.ui.live.LiveEventsRoute
 import com.livetvpro.app.ui.navigation.Routes
+import com.livetvpro.app.ui.networkstream.NetworkStreamHistoryScreen
 import com.livetvpro.app.ui.networkstream.NetworkStreamRoute
 import com.livetvpro.app.ui.playlists.PlaylistsRoute
 import com.livetvpro.app.ui.score.CricketScoreScreen
@@ -149,6 +150,7 @@ fun MainScaffold(
         Routes.SPORTS            -> "Sports"
         Routes.SETTINGS          -> "Settings"
         Routes.NETWORK_STREAM    -> "Network Stream"
+        Routes.NETWORK_STREAM_HISTORY -> "History"
         Routes.PLAYLISTS         -> "Playlists"
         Routes.CRICKET_SCORE     -> "Cricket Score"
         Routes.FOOTBALL_SCORE    -> "Football Score"
@@ -204,6 +206,7 @@ fun MainScaffold(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        if (currentRoute != Routes.NETWORK_STREAM_HISTORY) {
         if (isTvOrDesktop || isTablet) {
             TvTopBar(
                 title          = toolbarTitle,
@@ -215,6 +218,8 @@ fun MainScaffold(
                 onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
                 onQueryChange  = { q -> searchQuery = q },
                 onSearchClose  = { isSearchActive = false; searchQuery = "" },
+                showHistory    = currentRoute == Routes.NETWORK_STREAM,
+                onHistory      = { navigateForward(Routes.NETWORK_STREAM_HISTORY) },
             )
         } else {
             PhoneTopBar(
@@ -230,7 +235,10 @@ fun MainScaffold(
                 onSearchClose  = { isSearchActive = false; searchQuery = "" },
                 onFavorites    = { navigateForward(Routes.FAVORITES) },
                 onRefresh      = { refreshSignal++ },
+                showHistory    = currentRoute == Routes.NETWORK_STREAM,
+                onHistory      = { navigateForward(Routes.NETWORK_STREAM_HISTORY) },
             )
+        }
         }
 
         Box(modifier = Modifier.weight(1f)) {
@@ -307,6 +315,9 @@ fun MainScaffold(
                 composable(Routes.NETWORK_STREAM) {
                     NetworkStreamRoute(preferencesManager = preferencesManager)
                 }
+                composable(Routes.NETWORK_STREAM_HISTORY) {
+                    NetworkStreamHistoryScreen(navController = navController)
+                }
                 composable(Routes.CRICKET_SCORE) {
                     CricketScoreScreen(listenerManager = listenerManager)
                 }
@@ -365,6 +376,8 @@ private fun PhoneTopBar(
     onSearchClose: () -> Unit,
     onFavorites: () -> Unit,
     onRefresh: () -> Unit,
+    showHistory: Boolean = false,
+    onHistory: () -> Unit = {},
 ) {
     val surface        = MaterialTheme.colorScheme.surface
     val onSurface      = MaterialTheme.colorScheme.onSurface
@@ -458,6 +471,11 @@ private fun PhoneTopBar(
                         Icon(painterResource(R.drawable.ic_refresh), contentDescription = "Refresh", tint = onSurface)
                     }
                 }
+                if (showHistory) {
+                    IconButton(onClick = onHistory) {
+                        Icon(painterResource(R.drawable.ic_history), contentDescription = "History", tint = onSurface)
+                    }
+                }
                 IconButton(onClick = onSearchToggle) {
                     Icon(painterResource(R.drawable.ic_search), contentDescription = "Search", tint = onSurface)
                 }
@@ -480,6 +498,8 @@ private fun TvTopBar(
     onSearchToggle: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSearchClose: () -> Unit,
+    showHistory: Boolean = false,
+    onHistory: () -> Unit = {},
 ) {
     val surface        = MaterialTheme.colorScheme.surface
     val onSurface      = MaterialTheme.colorScheme.onSurface
@@ -554,6 +574,12 @@ private fun TvTopBar(
                     contentDescription = "Search",
                     tint = onSurface,
                 )
+            }
+
+            if (showHistory) {
+                IconButton(onClick = onHistory) {
+                    Icon(painterResource(R.drawable.ic_history), contentDescription = "History", tint = onSurface)
+                }
             }
 
             Text(

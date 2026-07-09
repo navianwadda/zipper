@@ -30,9 +30,9 @@ class PreferencesManager @Inject constructor(
         private const val KEY_FORCE_LOWEST_QUALITY = "force_lowest_quality"
         private const val KEY_CENTER_CONTROLS_MODE = "center_controls_mode"
 
-        const val CENTER_MODE_SEEKS_ONLY       = 0
-        const val CENTER_MODE_SEEKS_AND_NAV    = 1
-        const val CENTER_MODE_NAV_ONLY         = 2
+        const val LAYOUT_MODE_SEEKS_ONLY       = 0
+        const val LAYOUT_MODE_SEEKS_AND_NAV    = 1
+        const val LAYOUT_MODE_NAV_ONLY         = 2
     }
 
     fun isFirstLaunch(): Boolean = prefs.getBoolean(KEY_FIRST_LAUNCH, true)
@@ -82,6 +82,6 @@ class PreferencesManager @Inject constructor(
     fun isForceLowestQualityEnabled(): Boolean = prefs.getBoolean(KEY_FORCE_LOWEST_QUALITY, false)
     fun setForceLowestQualityEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_FORCE_LOWEST_QUALITY, enabled).apply()
 
-    fun getCenterControlsMode(): Int = prefs.getInt(KEY_CENTER_CONTROLS_MODE, CENTER_MODE_SEEKS_ONLY)
+    fun getCenterControlsMode(): Int = prefs.getInt(KEY_CENTER_CONTROLS_MODE, LAYOUT_MODE_SEEKS_ONLY)
     fun setCenterControlsMode(mode: Int) = prefs.edit().putInt(KEY_CENTER_CONTROLS_MODE, mode).apply()
 }

@@ -715,8 +715,8 @@ internal fun PlayerControlsContent(
                 }
 
                 if (isTvMode) TvRemoteHintBar(isCompact = isCompactBottom)
-                } // Column
-            } // BoxWithConstraints
+                }
+            }
         }
     }
 }
@@ -755,7 +755,6 @@ private fun TvRemoteHintBar(isCompact: Boolean = false) {
         verticalArrangement   = Arrangement.spacedBy(2.dp),
     ) {
         if (isCompact) {
-            // Two rows: first 3 hints, last 2 hints
             HintRow(hints.take(3))
             HintRow(hints.drop(3))
         } else {

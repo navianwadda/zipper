@@ -559,8 +559,9 @@ internal fun PlayerControlsContent(
                         .padding(bottom = 4.dp),
                 )
 
-                val showSeeks = centerControlsMode == 0 || centerControlsMode == 1
-                val showNav   = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
+                val showSeeks   = centerControlsMode == 0 || centerControlsMode == 1 || centerControlsMode == 3
+                val showNavInline = !isNetworkStream && (centerControlsMode == 1 || centerControlsMode == 2)
+                val showNavEdge   = !isNetworkStream && centerControlsMode == 3
 
                 BoxWithConstraints(
                     modifier = Modifier
@@ -592,11 +593,25 @@ internal fun PlayerControlsContent(
                         else        -> 6.dp
                     }
 
-                    Row(
-                        modifier              = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment     = Alignment.CenterVertically,
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        if (showNavEdge) {
+                            PlayerIconButton(
+                                onClick            = { onPrevClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_prev_channel,
+                                contentDescription = "Previous channel",
+                                size               = seekSize,
+                                modifier           = Modifier.align(Alignment.CenterStart),
+                                isTvMode           = isTvMode,
+                            )
+                        }
+
+                        Row(
+                            modifier              = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.Center),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment     = Alignment.CenterVertically,
+                        ) {
                         if (showAspectRatioButton) {
                             PlayerIconButton(
                                 onClick            = { onAspectRatioClick(); onInteraction() },
@@ -608,7 +623,7 @@ internal fun PlayerControlsContent(
                             )
                         }
 
-                        if (showNav) {
+                        if (showNavInline) {
                             PlayerIconButton(
                                 onClick            = { onPrevClick(); onInteraction() },
                                 iconRes            = R.drawable.ic_skip_prev_channel,
@@ -652,7 +667,7 @@ internal fun PlayerControlsContent(
                             )
                         }
 
-                        if (showNav) {
+                        if (showNavInline) {
                             PlayerIconButton(
                                 onClick            = { onNextClick(); onInteraction() },
                                 iconRes            = R.drawable.ic_skip_next_channel,
@@ -681,6 +696,18 @@ internal fun PlayerControlsContent(
                                                      else R.drawable.ic_fullscreen,
                                 contentDescription = "Toggle fullscreen",
                                 size               = slotSize,
+                                isTvMode           = isTvMode,
+                            )
+                        }
+                        }
+
+                        if (showNavEdge) {
+                            PlayerIconButton(
+                                onClick            = { onNextClick(); onInteraction() },
+                                iconRes            = R.drawable.ic_skip_next_channel,
+                                contentDescription = "Next channel",
+                                size               = seekSize,
+                                modifier           = Modifier.align(Alignment.CenterEnd),
                                 isTvMode           = isTvMode,
                             )
                         }

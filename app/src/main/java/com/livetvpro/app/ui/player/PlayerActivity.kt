@@ -464,7 +464,7 @@ class PlayerActivity : ComponentActivity() {
                 showAspectRatioButton  = true,
                 isLandscape            = isLandscape,
                 isTvMode               = DeviceUtils.isTvDevice,
-                centerControlsMode     = if (contentType == ContentType.NETWORK_STREAM) 0 else preferencesManager.getCenterControlsMode(),
+                centerControlsMode     = if (contentType == ContentType.NETWORK_STREAM) 0 else preferencesManager.getLayoutMode(),
                 isNetworkStream        = contentType == ContentType.NETWORK_STREAM,
                 isChannelListAvailable = isChannelListAvailable,
                 onBackClick            = { finish() },
@@ -941,7 +941,7 @@ class PlayerActivity : ComponentActivity() {
             context.getString(R.string.pause), context.getString(R.string.pause),
             makePendingIntent(CONTROL_TYPE_PAUSE, CONTROL_TYPE_PAUSE),
         )
-        val centerControlsModeIsNav = preferencesManager.getCenterControlsMode() == PreferencesManager.CENTER_MODE_NAV_ONLY
+        val centerControlsModeIsNav = preferencesManager.getLayoutMode() == PreferencesManager.LAYOUT_MODE_NAV_ONLY
         val showNav = when (contentType) {
             ContentType.CHANNEL -> centerControlsModeIsNav
             ContentType.EVENT   -> centerControlsModeIsNav && allEventLinks.size > 1

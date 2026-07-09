@@ -1,46 +1,26 @@
 package com.livetvpro.app.ui.networkstream
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.livetvpro.app.data.local.NetworkStreamHistoryEntry
 import com.livetvpro.app.data.local.NetworkStreamHistoryManager
+import com.livetvpro.app.data.local.ThemeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 
 @HiltViewModel
-class NetworkStreamHistoryViewModel @Inject constructor(
+class NetworkStreamViewModel @Inject constructor(
+    private val themeManager: ThemeManager,
     private val historyManager: NetworkStreamHistoryManager,
 ) : ViewModel() {
+    val primaryColorFlow: StateFlow<Int> = themeManager.primaryColorFlow
+    var streamUrl: String = ""
+    var cookie: String = ""
+    var referer: String = ""
+    var origin: String = ""
+    var drmLicense: String = ""
+    var customUserAgent: String = ""
+    var selectedUserAgent: String = "Default"
+    var selectedDrmScheme: String = "clearkey"
 
-    var newestFirst by mutableStateOf(historyManager.isNewestFirst())
-        private set
-
-    var entries by mutableStateOf<List<NetworkStreamHistoryEntry>>(emptyList())
-        private set
-
-    init {
-        refresh()
-    }
-
-    fun updateSortOrder(newestFirst: Boolean) {
-        this.newestFirst = newestFirst
-        historyManager.setNewestFirst(newestFirst)
-        refresh()
-    }
-
-    fun removeEntry(id: Long) {
-        historyManager.removeEntry(id)
-        refresh()
-    }
-
-    fun clearAll() {
-        historyManager.clearAll()
-        refresh()
-    }
-
-    private fun refresh() {
-        entries = historyManager.getEntries(newestFirst)
-    }
+    fun recordPlayed(url: String) = historyManager.addEntry(url)
 }

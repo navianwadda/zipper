@@ -114,7 +114,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                 PreferencesManager.LAYOUT_MODE_SEEKS_ONLY     to ("Seeks Only" to "Show rewind and forward buttons"),
                 PreferencesManager.LAYOUT_MODE_SEEKS_AND_NAV  to ("Seeks & Navigation" to "Show seek and channel navigation buttons together"),
                 PreferencesManager.LAYOUT_MODE_NAV_ONLY       to ("Navigation Only" to "Show previous/next channel buttons only"),
-                PreferencesManager.LAYOUT_MODE_SEEKS_EDGE_NAV to ("Seeks & Edge Navigation" to "Keep seeks centered; move previous/next channel buttons to the far edges"),
+                PreferencesManager.LAYOUT_MODE_SEEKS_EDGE_NAV to ("Seeks & Edge Navigation" to "Keep seeks centered at the bottom; place previous/next channel buttons at the middle-left and middle-right edges"),
             )
             PreferenceCard {
                 Column(

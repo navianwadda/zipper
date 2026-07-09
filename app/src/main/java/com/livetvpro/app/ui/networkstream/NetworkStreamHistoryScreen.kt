@@ -115,7 +115,7 @@ fun NetworkStreamHistoryScreen(
                             }
                         },
                         onClick = {
-                            historyViewModel.setNewestFirst(true)
+                            historyViewModel.updateSortOrder(true)
                             showSortMenu = false
                         },
                     )
@@ -135,7 +135,7 @@ fun NetworkStreamHistoryScreen(
                             }
                         },
                         onClick = {
-                            historyViewModel.setNewestFirst(false)
+                            historyViewModel.updateSortOrder(false)
                             showSortMenu = false
                         },
                     )

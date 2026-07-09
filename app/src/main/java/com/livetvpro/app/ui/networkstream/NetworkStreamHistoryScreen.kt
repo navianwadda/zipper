@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,10 +85,12 @@ private fun HistoryRow(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text     = entry.url,
-            fontSize = 14.sp,
-            color    = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f).padding(end = 8.dp),
+            text      = entry.url,
+            fontSize  = 14.sp,
+            color     = MaterialTheme.colorScheme.onSurface,
+            maxLines  = 1,
+            overflow  = TextOverflow.Ellipsis,
+            modifier  = Modifier.weight(1f).padding(end = 8.dp),
         )
         IconButton(onClick = onDelete) {
             Icon(

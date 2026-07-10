@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,7 +35,6 @@ import java.security.MessageDigest
 fun DeviceIdScreen() {
     val context = LocalContext.current
     val deviceId = remember { getDeviceFingerprint() }
-    val bergenSans = FontFamily(Font(R.font.bergen_sans))
 
     Column(
         modifier = Modifier
@@ -47,7 +45,6 @@ fun DeviceIdScreen() {
     ) {
         Text(
             text = "YOUR DEVICE ID",
-            fontFamily = bergenSans,
             fontSize = 12.sp,
             letterSpacing = 0.15.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
@@ -92,7 +89,6 @@ fun DeviceIdScreen() {
             )
             Text(
                 text = "COPY TO CLIPBOARD",
-                fontFamily = bergenSans,
                 fontSize = 13.sp,
                 letterSpacing = 0.15.sp,
             )

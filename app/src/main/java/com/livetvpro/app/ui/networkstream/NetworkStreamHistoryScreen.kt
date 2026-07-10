@@ -1,8 +1,7 @@
 package com.livetvpro.app.ui.networkstream
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,12 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,34 +72,35 @@ private fun HistoryRow(
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(14.dp),
-            )
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment     = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+    Surface(
+        onClick  = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape    = RoundedCornerShape(14.dp),
+        color    = Color.Transparent,
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
     ) {
-        Text(
-            text      = entry.url,
-            fontSize  = 14.sp,
-            color     = MaterialTheme.colorScheme.onSurface,
-            maxLines  = 1,
-            overflow  = TextOverflow.Ellipsis,
-            modifier  = Modifier.weight(1f).padding(end = 8.dp),
-        )
-        IconButton(onClick = onDelete) {
-            Icon(
-                painter            = painterResource(R.drawable.ic_delete),
-                contentDescription = "Delete entry",
-                tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+        Row(
+            modifier              = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text     = entry.url,
+                fontSize = 14.sp,
+                color    = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(end = 8.dp),
             )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    painter            = painterResource(R.drawable.ic_delete),
+                    contentDescription = "Delete entry",
+                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

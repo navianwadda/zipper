@@ -14,7 +14,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,11 +26,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,22 +60,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -86,15 +78,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Playlist
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
@@ -135,13 +126,11 @@ fun PlaylistsScreen(
     var fabExpanded by remember { mutableStateOf(false) }
     var activeDialog by remember { mutableStateOf<PlaylistDialog>(PlaylistDialog.None) }
 
-    var draggedId by remember { mutableStateOf<String?>(null) }
-    var dragOffsetY by remember { mutableFloatStateOf(0f) }
-    var dragStartY by remember { mutableStateOf<Float?>(null) }
-    var draggedPlaylist by remember { mutableStateOf<Playlist?>(null) }
-    var itemSlotHeightPx by remember { mutableFloatStateOf(0f) }
-    var dragBaseList by remember { mutableStateOf<List<Playlist>>(emptyList()) }
-    var dragStartIndex by remember { mutableStateOf(-1) }
+    val reorderableLazyListState = rememberReorderableLazyListState(listState) { from, to ->
+        localPlaylists = localPlaylists.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
+    }
 
     val selectionColors = TextSelectionColors(
         handleColor = primaryColor,
@@ -205,101 +194,27 @@ fun PlaylistsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        itemsIndexed(localPlaylists, key = { _, p -> p.id }) { index, playlist ->
-                            val isDragging = playlist.id == draggedId
-
-                            Box(
-                                modifier = Modifier
-                                    .animateItem()
-                                    .onGloballyPositioned { coords ->
-                                        if (itemSlotHeightPx == 0f && coords.size.height > 0) {
-                                            itemSlotHeightPx = coords.size.height.toFloat()
-                                        }
-                                        if (isDragging && dragStartY == null) {
-                                            dragStartY = coords.positionInRoot().y
-                                        }
-                                    }
-                            ) {
+                        items(localPlaylists, key = { it.id }) { playlist ->
+                            ReorderableItem(reorderableLazyListState, key = playlist.id) { isDragging ->
                                 PlaylistCard(
                                     playlist = playlist,
                                     primaryColor = primaryColor,
-                                    isDragging = false,
-                                    isHovered = false,
-                                    dragOffsetY = 0f,
+                                    isDragging = isDragging,
                                     onClick = {
-                                        if (draggedId == null) onNavigateToCategory(playlist.id, playlist.title)
+                                        if (!isDragging) onNavigateToCategory(playlist.id, playlist.title)
                                     },
                                     onEditClick = { activeDialog = PlaylistDialog.Edit(playlist) },
                                     onDeleteClick = { activeDialog = PlaylistDialog.Delete(playlist) },
-                                    onDragStart = {
-                                        isDraggingActive = true
-                                        draggedId = playlist.id
-                                        draggedPlaylist = playlist
-                                        dragOffsetY = 0f
-                                        dragStartY = null
-                                        // Freeze the list and the dragged item's index once, at the
-                                        // moment the drag begins. Every subsequent move is computed
-                                        // fresh from this fixed baseline plus the raw, uncorrected
-                                        // finger offset -- never by mutating dragOffsetY itself.
-                                        // That's what keeps the ghost card glued to the finger no
-                                        // matter how many rows it crosses.
-                                        dragBaseList = localPlaylists
-                                        dragStartIndex = localPlaylists.indexOfFirst { it.id == playlist.id }
-                                    },
-                                    onDrag = { dy ->
-                                        dragOffsetY += dy
-                                        if (dragStartIndex == -1) return@PlaylistCard
-                                        val slotHeight = if (itemSlotHeightPx > 0f) itemSlotHeightPx else 160f
-                                        val targetIndex = (dragStartIndex + (dragOffsetY / slotHeight).roundToInt())
-                                            .coerceIn(0, dragBaseList.lastIndex)
-                                        val currentPosition = localPlaylists.indexOfFirst { it.id == draggedId }
-                                        if (targetIndex != currentPosition) {
-                                            val reordered = dragBaseList.toMutableList()
-                                            val moved = reordered.removeAt(dragStartIndex)
-                                            reordered.add(targetIndex, moved)
-                                            localPlaylists = reordered
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        val finalIndex = localPlaylists.indexOfFirst { it.id == draggedId }
-                                        if (finalIndex != -1) {
+                                    modifier = Modifier.longPressDraggableHandle(
+                                        onDragStarted = { isDraggingActive = true },
+                                        onDragStopped = {
+                                            isDraggingActive = false
                                             viewModel.persistOrder(localPlaylists)
                                         }
-                                        draggedId = null
-                                        draggedPlaylist = null
-                                        dragOffsetY = 0f
-                                        dragStartY = null
-                                        dragBaseList = emptyList()
-                                        dragStartIndex = -1
-                                        isDraggingActive = false
-                                    },
-                                    modifier = if (isDragging) Modifier.alpha(0f) else Modifier
+                                    )
                                 )
                             }
                         }
-                    }
-
-                    val dragging = draggedPlaylist
-                    val startY = dragStartY
-                    if (dragging != null && startY != null) {
-                        PlaylistCard(
-                            playlist = dragging,
-                            primaryColor = primaryColor,
-                            isDragging = true,
-                            isHovered = false,
-                            dragOffsetY = 0f,
-                            onClick = {},
-                            onEditClick = {},
-                            onDeleteClick = {},
-                            onDragStart = {},
-                            onDrag = {},
-                            onDragEnd = {},
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp)
-                                .offset { IntOffset(0, (startY + dragOffsetY).roundToInt()) }
-                                .zIndex(1f)
-                        )
                     }
                 }
             }
@@ -475,14 +390,9 @@ private fun PlaylistCard(
     playlist: Playlist,
     primaryColor: Color,
     isDragging: Boolean,
-    isHovered: Boolean,
-    dragOffsetY: Float,
     onClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    onDragStart: () -> Unit,
-    onDrag: (Float) -> Unit,
-    onDragEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val cardScale by animateFloatAsState(
@@ -490,39 +400,26 @@ private fun PlaylistCard(
         animationSpec = tween(120),
         label = "cardScale"
     )
-    val cardAlpha by animateFloatAsState(
-        targetValue = if (isDragging) 0.92f else 1f,
-        animationSpec = tween(120),
-        label = "cardAlpha"
-    )
-
-    val currentOnDragStart by rememberUpdatedState(onDragStart)
-    val currentOnDrag by rememberUpdatedState(onDrag)
-    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
 
     Card(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .scale(cardScale)
-            .then(if (isDragging) Modifier.offset { IntOffset(0, dragOffsetY.roundToInt()) } else Modifier)
-            .pointerInput(playlist.id) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { currentOnDragStart() },
-                    onDrag = { _, dragAmount -> currentOnDrag(dragAmount.y) },
-                    onDragEnd = { currentOnDragEnd() },
-                    onDragCancel = { currentOnDragEnd() }
-                )
-            },
+            .scale(cardScale),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isHovered)
+            containerColor = if (isDragging)
                 MaterialTheme.colorScheme.surfaceContainerHigh
             else
                 MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp, focusedElevation = 0.dp, hoveredElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isDragging) 6.dp else 0.dp,
+            pressedElevation = 0.dp,
+            focusedElevation = 0.dp,
+            hoveredElevation = 0.dp
+        ),
         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(

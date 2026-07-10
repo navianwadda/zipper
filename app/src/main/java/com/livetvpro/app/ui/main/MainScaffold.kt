@@ -234,6 +234,7 @@ fun MainScaffold(
                 currentRoute   = currentRoute,
                 isSearchActive = isSearchActive,
                 searchQuery    = searchQuery,
+                showSearch     = currentRoute != Routes.NETWORK_STREAM,
                 onTabSelected  = { navigate(it) },
                 onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
                 onQueryChange  = { q -> searchQuery = q },
@@ -252,6 +253,7 @@ fun MainScaffold(
                 isSearchActive = isSearchActive,
                 searchQuery    = searchQuery,
                 showRefresh    = showRefreshIcon,
+                showSearch     = currentRoute != Routes.NETWORK_STREAM,
                 primaryColor   = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
                 onBack         = { activity.onBackPressedDispatcher.onBackPressed() },
                 onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
@@ -446,6 +448,7 @@ private fun PhoneTopBar(
     isSearchActive: Boolean,
     searchQuery: String,
     showRefresh: Boolean,
+    showSearch: Boolean = true,
     primaryColor: Color,
     onBack: () -> Unit,
     onSearchToggle: () -> Unit,
@@ -595,8 +598,10 @@ private fun PhoneTopBar(
                         Icon(painterResource(R.drawable.ic_history), contentDescription = "History", tint = onSurface)
                     }
                 }
-                IconButton(onClick = onSearchToggle) {
-                    Icon(painterResource(R.drawable.ic_search), contentDescription = "Search", tint = onSurface)
+                if (showSearch) {
+                    IconButton(onClick = onSearchToggle) {
+                        Icon(painterResource(R.drawable.ic_search), contentDescription = "Search", tint = onSurface)
+                    }
                 }
                 IconButton(onClick = onFavorites) {
                     Icon(painterResource(R.drawable.ic_star_outline), contentDescription = "Favorites", tint = onSurface)
@@ -617,6 +622,7 @@ private fun TvTopBar(
     onSearchToggle: () -> Unit,
     onQueryChange: (String) -> Unit,
     onSearchClose: () -> Unit,
+    showSearch: Boolean = true,
     showHistory: Boolean = false,
     onHistory: () -> Unit = {},
     isHistoryRoute: Boolean = false,
@@ -666,37 +672,39 @@ private fun TvTopBar(
                 }
             }
 
-            ComposeAnimatedVisibility(isSearchActive, enter = fadeIn(), exit = fadeOut()) {
-                BasicTextField(
-                    value         = searchQuery,
-                    onValueChange = onQueryChange,
-                    singleLine    = true,
-                    cursorBrush   = SolidColor(primary),
-                    textStyle     = TextStyle(color = onSurface, fontSize = 15.sp, fontFamily = BergenSans),
-                    decorationBox = { inner ->
-                        Box(
-                            modifier = Modifier
-                                .width(200.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(surfaceVar)
-                                .border(1.dp, outline.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            contentAlignment = Alignment.CenterStart,
-                        ) {
-                            if (searchQuery.isEmpty()) Text("Search…", color = onSurface.copy(alpha = 0.45f), fontSize = 15.sp, fontFamily = BergenSans)
-                            inner()
-                        }
-                    },
-                    modifier = Modifier.focusRequester(focusRequester),
-                )
-            }
+            if (showSearch) {
+                ComposeAnimatedVisibility(isSearchActive, enter = fadeIn(), exit = fadeOut()) {
+                    BasicTextField(
+                        value         = searchQuery,
+                        onValueChange = onQueryChange,
+                        singleLine    = true,
+                        cursorBrush   = SolidColor(primary),
+                        textStyle     = TextStyle(color = onSurface, fontSize = 15.sp, fontFamily = BergenSans),
+                        decorationBox = { inner ->
+                            Box(
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(surfaceVar)
+                                    .border(1.dp, outline.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                contentAlignment = Alignment.CenterStart,
+                            ) {
+                                if (searchQuery.isEmpty()) Text("Search…", color = onSurface.copy(alpha = 0.45f), fontSize = 15.sp, fontFamily = BergenSans)
+                                inner()
+                            }
+                        },
+                        modifier = Modifier.focusRequester(focusRequester),
+                    )
+                }
 
-            IconButton(onClick = { if (isSearchActive) onSearchClose() else onSearchToggle() }) {
-                Icon(
-                    painterResource(if (isSearchActive) R.drawable.ic_close else R.drawable.ic_search),
-                    contentDescription = "Search",
-                    tint = onSurface,
-                )
+                IconButton(onClick = { if (isSearchActive) onSearchClose() else onSearchToggle() }) {
+                    Icon(
+                        painterResource(if (isSearchActive) R.drawable.ic_close else R.drawable.ic_search),
+                        contentDescription = "Search",
+                        tint = onSurface,
+                    )
+                }
             }
 
             if (showHistory) {

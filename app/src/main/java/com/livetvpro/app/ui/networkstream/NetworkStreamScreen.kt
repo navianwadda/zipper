@@ -258,8 +258,9 @@ private fun StreamTextField(
             focusedTextColor = MaterialTheme.colorScheme.onSurface,
             unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
         ),
-        shape = RoundedCornerShape(12.dp),
-        singleLine = true,
+        shape = RoundedCornerShape(8.dp),
+        singleLine = false,
+        maxLines = 3,
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
             imeAction = ImeAction.Next
@@ -315,7 +316,7 @@ private fun StreamDropdown(
                 focusedTrailingIconColor = primaryColor,
                 unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
             ),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor()

@@ -61,12 +61,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.livetvpro.app.R
+
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 @Composable
 fun NetworkStreamScreen(
@@ -214,6 +218,7 @@ private fun StreamTextField(
         label = {
             Text(
                 text = label,
+                fontFamily = BergenSans,
                 fontSize = 13.sp
             )
         },
@@ -240,6 +245,7 @@ private fun StreamTextField(
             }
         },
         textStyle = TextStyle(
+            fontFamily = BergenSans,
             fontSize = 14.sp
         ),
         colors = OutlinedTextFieldDefaults.colors(
@@ -287,6 +293,7 @@ private fun StreamDropdown(
             label = {
                 Text(
                     text = label,
+                    fontFamily = BergenSans,
                     fontSize = 13.sp
                 )
             },
@@ -294,6 +301,7 @@ private fun StreamDropdown(
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
             textStyle = TextStyle(
+                fontFamily = BergenSans,
                 fontSize = 14.sp
             ),
             colors = OutlinedTextFieldDefaults.colors(
@@ -334,6 +342,7 @@ private fun StreamDropdown(
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = option,
+                                fontFamily = BergenSans,
                                 fontSize = 14.sp,
                                 color = if (option == selected) primaryColor else MaterialTheme.colorScheme.onSurface
                             )

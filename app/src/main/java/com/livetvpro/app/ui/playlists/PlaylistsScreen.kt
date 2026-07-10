@@ -72,8 +72,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -87,7 +85,6 @@ import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 private sealed class PlaylistDialog {
     object None : PlaylistDialog()
@@ -177,7 +174,6 @@ fun PlaylistsScreen(
                     Text(
                         text = "No Playlists Found",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -378,7 +374,6 @@ private fun FabOptionPill(
             )
             Text(
                 text       = label,
-                fontFamily = BergenSans,
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color      = MaterialTheme.colorScheme.onPrimary
@@ -433,7 +428,6 @@ private fun PlaylistCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text       = playlist.title,
-                    fontFamily = BergenSans,
                     fontWeight = FontWeight.Bold,
                     fontSize   = 15.sp,
                     color      = MaterialTheme.colorScheme.onSurface,
@@ -443,7 +437,6 @@ private fun PlaylistCard(
                 Spacer(Modifier.height(3.dp))
                 Text(
                     text       = playlist.getSource(),
-                    fontFamily = BergenSans,
                     fontSize   = 12.sp,
                     color      = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines   = 1,
@@ -489,7 +482,6 @@ private fun DialogButton(
     ) {
         Text(
             text = text,
-            fontFamily = BergenSans,
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
             maxLines = 1,
@@ -516,7 +508,6 @@ private fun AddPlaylistDialog(
         title = {
             Text(
                 text       = "Add Playlist",
-                fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold
             )
         },
@@ -593,7 +584,6 @@ private fun EditPlaylistDialog(
         title = {
             Text(
                 text       = "Update Playlist Details",
-                fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold
             )
         },
@@ -675,14 +665,12 @@ private fun DeletePlaylistDialog(
         title = {
             Text(
                 text       = "Delete Playlist",
-                fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Text(
                 text       = "Are you sure you want to delete \"${playlist.title}\"?",
-                fontFamily = BergenSans
             )
         },
         confirmButton = {
@@ -730,7 +718,7 @@ private fun PlaylistTextField(
         modifier      = Modifier.fillMaxWidth(),
         enabled       = enabled,
         isError       = isError,
-        label         = { Text(text = label, fontFamily = BergenSans, fontSize = 13.sp) },
+        label         = { Text(text = label, fontSize = 13.sp) },
         trailingIcon  = {
             if (value.isNotEmpty() && enabled) {
                 IconButton(onClick = { onValueChange("") }) {
@@ -743,7 +731,6 @@ private fun PlaylistTextField(
             }
         },
         textStyle = TextStyle(
-            fontFamily = BergenSans,
             fontSize   = 14.sp,
             color      = MaterialTheme.colorScheme.onSurface
         ),

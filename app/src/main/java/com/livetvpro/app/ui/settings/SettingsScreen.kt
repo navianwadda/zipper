@@ -30,11 +30,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.livetvpro.app.R
 import com.livetvpro.app.ui.navigation.Routes
 import com.livetvpro.app.utils.NativeListenerManager
+
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 interface SettingsActions {
     fun onSettingsCopyright()
@@ -200,7 +205,7 @@ fun SettingsScreen(
                     )
                     Text(
                         text     = "Exit",
-                        style    = MaterialTheme.typography.bodyLarge,
+                        fontFamily = BergenSans,
                         color    = Color.White,
                         modifier = Modifier.padding(start = 16.dp),
                     )
@@ -215,7 +220,8 @@ fun SettingsScreen(
 private fun SectionHeader(title: String) {
     Text(
         text     = title,
-        style    = MaterialTheme.typography.headlineSmall,
+        fontFamily = BergenSans,
+        fontSize = 14.sp,
         color    = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(bottom = 8.dp, top = 8.dp),
     )
@@ -262,12 +268,14 @@ private fun SettingsCard(
                 Text(
                     text  = label,
                     style = MaterialTheme.typography.bodyLarge,
+                    fontFamily = BergenSans,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (sublabel != null) {
                     Text(
                         text  = sublabel,
                         style = MaterialTheme.typography.bodySmall,
+                        fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                         modifier = Modifier.padding(top = 2.dp),
                     )

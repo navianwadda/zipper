@@ -406,13 +406,21 @@ fun MainScaffold(
     if (showHistoryClearDialog && historyViewModel != null) {
         AlertDialog(
             onDismissRequest = { showHistoryClearDialog = false },
-            icon             = {
-                Icon(
-                    painter            = painterResource(R.drawable.ic_delete_sweep),
-                    contentDescription = null,
-                )
+            title            = {
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter            = painterResource(R.drawable.ic_delete_sweep),
+                        contentDescription = null,
+                        modifier           = Modifier.size(24.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Clear History")
+                }
             },
-            title            = { Text("Clear History") },
             text             = { Text("Are you sure, all your watch history will be deleted.") },
             confirmButton    = {
                 TextButton(onClick = {

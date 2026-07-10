@@ -185,6 +185,9 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
+    // Reorderable - drag-and-drop list reordering for Compose (PlaylistsScreen)
+    implementation("sh.calvin.reorderable:reorderable:2.4.0")
+
     // Media3 (ExoPlayer)
     val media3Version = "1.9.0"
     implementation("androidx.media3:media3-exoplayer:$media3Version")

@@ -54,6 +54,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -66,7 +67,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
@@ -357,11 +357,13 @@ private fun FabOptionPill(
     primaryColor: Color,
     onClick: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClick = onClick)
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.inverseSurface,
+        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+        shadowElevation = 8.dp,
+        tonalElevation = 8.dp,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -379,7 +381,7 @@ private fun FabOptionPill(
                 fontFamily = BergenSans,
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color      = MaterialTheme.colorScheme.onSurface
+                color      = MaterialTheme.colorScheme.inverseOnSurface
             )
         }
     }

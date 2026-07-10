@@ -47,6 +47,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +61,9 @@ import androidx.compose.ui.platform.LocalContext
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.theme.AppColorTheme
+
+
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -133,6 +138,7 @@ fun AppearanceScreen(themeManager: ThemeManager) {
                     Text(
                         text     = "Choose App Icon",
                         style    = MaterialTheme.typography.labelMedium,
+                        fontFamily = BergenSans,
                         color    = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, bottom = 12.dp, top = 4.dp),
                     )
@@ -167,6 +173,7 @@ fun AppearanceScreen(themeManager: ThemeManager) {
                     Text(
                         text     = "Restart the app after changing the icon",
                         style    = MaterialTheme.typography.bodySmall,
+                        fontFamily = BergenSans,
                         color    = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 4.dp),
                     )
@@ -198,6 +205,7 @@ fun ThemePicker(
         Text(
             text     = "App Theme",
             style    = MaterialTheme.typography.labelMedium,
+            fontFamily = BergenSans,
             color    = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
         )
@@ -268,6 +276,7 @@ fun AppIconOption(
         Text(
             text       = label,
             style      = MaterialTheme.typography.bodySmall,
+            fontFamily = BergenSans,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color      = if (isSelected) MaterialTheme.colorScheme.primary
                          else MaterialTheme.colorScheme.onSurface,
@@ -402,6 +411,7 @@ fun ThemePreviewCard(
         Text(
             text       = theme.displayName,
             style      = MaterialTheme.typography.bodySmall,
+            fontFamily = BergenSans,
             fontSize   = 11.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color      = if (isSelected) MaterialTheme.colorScheme.primary
@@ -450,6 +460,7 @@ fun PreferenceSectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(
         text     = title,
         style    = MaterialTheme.typography.labelLarge,
+        fontFamily = BergenSans,
         color    = MaterialTheme.colorScheme.primary,
         modifier = modifier.padding(horizontal = 32.dp, vertical = 16.dp),
     )
@@ -472,7 +483,7 @@ fun MultiChoiceSegmentedButton(
                 onClick  = { onClick(index) },
                 shape    = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
             ) {
-                Text(text = choice)
+                Text(text = choice, fontFamily = BergenSans)
             }
         }
     }
@@ -499,12 +510,14 @@ fun SwitchPreferenceRow(
             Text(
                 text  = title,
                 style = MaterialTheme.typography.bodyLarge,
+                fontFamily = BergenSans,
                 color = if (enabled) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             )
             Text(
                 text  = summary,
                 style = MaterialTheme.typography.bodyMedium,
+                fontFamily = BergenSans,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 1f else 0.38f),
             )
         }

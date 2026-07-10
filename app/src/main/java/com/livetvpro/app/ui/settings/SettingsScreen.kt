@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.livetvpro.app.R
 import com.livetvpro.app.ui.navigation.Routes
@@ -201,6 +200,7 @@ fun SettingsScreen(
                     )
                     Text(
                         text     = "Exit",
+                        style    = MaterialTheme.typography.bodyLarge,
                         color    = Color.White,
                         modifier = Modifier.padding(start = 16.dp),
                     )
@@ -215,7 +215,7 @@ fun SettingsScreen(
 private fun SectionHeader(title: String) {
     Text(
         text     = title,
-        fontSize = 14.sp,
+        style    = MaterialTheme.typography.headlineSmall,
         color    = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(bottom = 8.dp, top = 8.dp),
     )

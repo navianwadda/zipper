@@ -100,12 +100,11 @@ fun NetworkStreamScreen(
     )
 
     CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(modifier = Modifier.fillMaxSize().imePadding().background(MaterialTheme.colorScheme.background)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .imePadding()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
                     .padding(bottom = navBarPadding + 88.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)

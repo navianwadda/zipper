@@ -13,7 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,7 +56,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -774,7 +774,8 @@ private fun TvTabChip(
     onSurface: Color,
     onClick: () -> Unit,
 ) {
-    var focused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(if (focused) 1.07f else 1f, tween(120), label = "tab")
 
     Box(
@@ -784,9 +785,11 @@ private fun TvTabChip(
             .background(if (selected) primary.copy(alpha = 0.15f) else Color.Transparent)
             .border(1.dp, if (focused) primary else Color.Transparent, RoundedCornerShape(6.dp))
             .padding(horizontal = 18.dp)
-            .clickable(onClick = onClick)
-            .focusable()
-            .onFocusChanged { focused = it.isFocused },
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Text(

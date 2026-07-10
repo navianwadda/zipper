@@ -360,10 +360,10 @@ private fun FabOptionPill(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.inverseSurface,
-        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-        shadowElevation = 8.dp,
-        tonalElevation = 8.dp,
+        color = primaryColor,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        shadowElevation = 6.dp,
+        border = BorderStroke(2.dp, MaterialTheme.colorScheme.background),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -373,7 +373,7 @@ private fun FabOptionPill(
             Icon(
                 painter            = painterResource(iconRes),
                 contentDescription = label,
-                tint               = primaryColor,
+                tint               = MaterialTheme.colorScheme.onPrimary,
                 modifier           = Modifier.size(18.dp)
             )
             Text(
@@ -381,7 +381,7 @@ private fun FabOptionPill(
                 fontFamily = BergenSans,
                 fontSize   = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color      = MaterialTheme.colorScheme.inverseOnSurface
+                color      = MaterialTheme.colorScheme.onPrimary
             )
         }
     }

@@ -30,8 +30,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.media3.ui.AspectRatioFrameLayout
+import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.ui.appearance.MultiChoiceSegmentedButton
 import com.livetvpro.app.ui.appearance.PreferenceCard
@@ -39,6 +42,8 @@ import com.livetvpro.app.ui.appearance.PreferenceDivider
 import com.livetvpro.app.ui.appearance.PreferenceSectionHeader
 import com.livetvpro.app.ui.appearance.SwitchPreferenceRow
 import com.livetvpro.app.ui.player.compose.PlayerControlsContent
+
+private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 private const val ASPECT_RATIO_DEFAULT = -1
 
@@ -101,6 +106,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                 Text(
                     text     = "This is the app's real control layout, always visible here. Changes below apply instantly.",
                     style    = MaterialTheme.typography.bodySmall,
+                    fontFamily = BergenSans,
                     color    = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
                 )
@@ -143,10 +149,11 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                             ) {
                                 RadioButton(selected = layoutMode == mode, onClick = null)
                                 Column(modifier = Modifier.padding(start = 8.dp)) {
-                                    Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                                    Text(text = label, style = MaterialTheme.typography.bodyLarge, fontFamily = BergenSans)
                                     Text(
                                         text  = summary,
                                         style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = BergenSans,
                                         color = MaterialTheme.colorScheme.outline,
                                     )
                                 }
@@ -181,6 +188,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                     Text(
                         text     = "Default Aspect Ratio",
                         style    = MaterialTheme.typography.labelMedium,
+                        fontFamily = BergenSans,
                         color    = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp),
                     )
@@ -209,6 +217,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                         text     = "\"Default\" leaves this exactly as before \u2014 no fixed ratio is forced; " +
                             "it just uses the app's normal behavior.",
                         style    = MaterialTheme.typography.bodySmall,
+                        fontFamily = BergenSans,
                         color    = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                     )

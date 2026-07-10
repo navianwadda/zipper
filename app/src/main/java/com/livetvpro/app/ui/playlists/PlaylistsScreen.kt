@@ -13,6 +13,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -139,6 +140,8 @@ fun PlaylistsScreen(
     var dragStartY by remember { mutableStateOf<Float?>(null) }
     var draggedPlaylist by remember { mutableStateOf<Playlist?>(null) }
     var itemSlotHeightPx by remember { mutableFloatStateOf(0f) }
+    var dragBaseList by remember { mutableStateOf<List<Playlist>>(emptyList()) }
+    var dragStartIndex by remember { mutableStateOf(-1) }
 
     val selectionColors = TextSelectionColors(
         handleColor = primaryColor,
@@ -166,7 +169,11 @@ fun PlaylistsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clickable(onClick = { fabExpanded = false })
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { fabExpanded = false }
+                        )
                 )
             }
 
@@ -230,20 +237,27 @@ fun PlaylistsScreen(
                                         draggedPlaylist = playlist
                                         dragOffsetY = 0f
                                         dragStartY = null
+                                        // Freeze the list and the dragged item's index once, at the
+                                        // moment the drag begins. Every subsequent move is computed
+                                        // fresh from this fixed baseline plus the raw, uncorrected
+                                        // finger offset -- never by mutating dragOffsetY itself.
+                                        // That's what keeps the ghost card glued to the finger no
+                                        // matter how many rows it crosses.
+                                        dragBaseList = localPlaylists
+                                        dragStartIndex = localPlaylists.indexOfFirst { it.id == playlist.id }
                                     },
                                     onDrag = { dy ->
                                         dragOffsetY += dy
+                                        if (dragStartIndex == -1) return@PlaylistCard
                                         val slotHeight = if (itemSlotHeightPx > 0f) itemSlotHeightPx else 160f
-                                        val currentIndex = localPlaylists.indexOfFirst { it.id == draggedId }
-                                        if (currentIndex == -1) return@PlaylistCard
-                                        val targetIndex = (currentIndex + (dragOffsetY / slotHeight).roundToInt())
-                                            .coerceIn(0, localPlaylists.lastIndex)
-                                        if (targetIndex != currentIndex) {
-                                            val reordered = localPlaylists.toMutableList()
-                                            val moved = reordered.removeAt(currentIndex)
+                                        val targetIndex = (dragStartIndex + (dragOffsetY / slotHeight).roundToInt())
+                                            .coerceIn(0, dragBaseList.lastIndex)
+                                        val currentPosition = localPlaylists.indexOfFirst { it.id == draggedId }
+                                        if (targetIndex != currentPosition) {
+                                            val reordered = dragBaseList.toMutableList()
+                                            val moved = reordered.removeAt(dragStartIndex)
                                             reordered.add(targetIndex, moved)
                                             localPlaylists = reordered
-                                            dragOffsetY -= (targetIndex - currentIndex) * slotHeight
                                         }
                                     },
                                     onDragEnd = {
@@ -255,6 +269,8 @@ fun PlaylistsScreen(
                                         draggedPlaylist = null
                                         dragOffsetY = 0f
                                         dragStartY = null
+                                        dragBaseList = emptyList()
+                                        dragStartIndex = -1
                                         isDraggingActive = false
                                     },
                                     modifier = if (isDragging) Modifier.alpha(0f) else Modifier
@@ -847,7 +863,7 @@ private fun PlaylistTextField(
         ),
         shape           = RoundedCornerShape(10.dp),
         singleLine      = false,
-        maxLines        = 1,
+        maxLines        = 3,
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
             imeAction    = ImeAction.Next

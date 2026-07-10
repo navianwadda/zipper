@@ -100,8 +100,13 @@ fun SettingsScreen(
             }
         }
         item {
-            SettingsCard(icon = R.drawable.ic_device_id, label = "Device ID", bottomMargin = 16.dp) {
+            SettingsCard(icon = R.drawable.ic_device_id, label = "Device ID") {
                 navController.navigate(Routes.DEVICE_ID)
+            }
+        }
+        item {
+            SettingsCard(icon = R.drawable.ic_pip, label = "Floating Player", bottomMargin = 16.dp) {
+                settingsActions.onSettingsFloatingPlayer()
             }
         }
 
@@ -136,11 +141,6 @@ fun SettingsScreen(
 
         item { SectionHeader("Settings") }
 
-        item {
-            SettingsCard(icon = R.drawable.ic_pip, label = "Floating Player") {
-                settingsActions.onSettingsFloatingPlayer()
-            }
-        }
         item {
             SettingsCard(icon = R.drawable.ic_share, label = "Share App") {
                 settingsActions.onSettingsShareApp()

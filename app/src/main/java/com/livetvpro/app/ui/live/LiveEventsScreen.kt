@@ -281,17 +281,17 @@ private fun MarqueeBanner(
     url: String,
     context: Context,
 ) {
-    val bannerShape = RoundedCornerShape(6.dp)
+    val bannerShape = RoundedCornerShape(18.dp)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 8.dp, end = 8.dp, top = 6.dp)
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.16f), bannerShape)
-            .border(1.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.55f), bannerShape)
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 2.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f), bannerShape)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), bannerShape)
             .clickable(enabled = url.isNotBlank()) {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
             }
-            .padding(horizontal = 12.dp, vertical = 5.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Text(
             text = text,

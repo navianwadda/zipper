@@ -85,20 +85,15 @@ object DeviceUtils {
         return pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)
     }
 
-    /**
-     * True when the app is running inside a desktop-hosted Android runtime rather than on
-     * real handheld/TV hardware — Windows Subsystem for Android; a macOS-hosted runtime such
-     * as BlueStacks for Mac or Genymotion for Mac; or a Linux-hosted runtime such as Waydroid
-     * or Anbox. These environments are typically driven with a mouse/keyboard rather than
-     * touch or a D-pad, so they're grouped with TV for navigation purposes (see [isTvDevice]
-     * usages alongside [isDesktop] at call sites).
-     */
     private fun isDesktopRuntime(): Boolean {
         return isWindowsSubsystemForAndroid() ||
             isBlueStacksHardware() ||
             isGenymotionHardware() ||
             isWaydroidHardware() ||
-            isAnboxHardware()
+            isAnboxHardware() ||
+            isNoxHardware() ||
+            isLdPlayerHardware() ||
+            isMemuHardware()
     }
 
     private fun isWindowsSubsystemForAndroid(): Boolean {
@@ -106,7 +101,6 @@ object DeviceUtils {
             && Build.MODEL.contains("Subsystem for Android", ignoreCase = true)
     }
 
-    /** Covers BlueStacks for Mac as well as BlueStacks for Windows. */
     private fun isBlueStacksHardware(): Boolean {
         val manufacturer = Build.MANUFACTURER
         val brand = Build.BRAND
@@ -125,23 +119,15 @@ object DeviceUtils {
 
         if (matchesBuildProps) return true
 
-        // Best-effort fallback: BlueStacks exposes its own host-version system property.
         return !getSystemProperty("ro.bluestacks.host_ver").isNullOrBlank()
     }
 
-    /** Genymotion ships a first-class macOS/Windows/Linux desktop build. */
     private fun isGenymotionHardware(): Boolean {
         return Build.MANUFACTURER.contains("Genymotion", ignoreCase = true) ||
             Build.PRODUCT.contains("vbox86p", ignoreCase = true) ||
             !getSystemProperty("ro.genymotion.version").isNullOrBlank()
     }
 
-    /**
-     * Waydroid (Linux container-based runtime, LXC). Best-effort: recent Waydroid images
-     * commonly report "waydroid" somewhere in HARDWARE/PRODUCT/DEVICE, and expose their own
-     * version property, but this isn't as long-established/documented as the BlueStacks or
-     * Genymotion signatures above — treat as a reasonable guess rather than a guarantee.
-     */
     private fun isWaydroidHardware(): Boolean {
         val hardware = Build.HARDWARE
         val product = Build.PRODUCT
@@ -157,12 +143,6 @@ object DeviceUtils {
             !getSystemProperty("persist.waydroid.version").isNullOrBlank()
     }
 
-    /**
-     * Anbox (Linux container-based runtime, older/less actively maintained). Anbox images
-     * typically don't carry a unique, well-documented build fingerprint the way the runtimes
-     * above do — this check is weaker and more speculative, based on the property namespace
-     * Anbox is known to use for its own state. It may under-detect on some Anbox builds.
-     */
     private fun isAnboxHardware(): Boolean {
         return !getSystemProperty("anbox.status").isNullOrBlank() ||
             !getSystemProperty("ro.anbox.version").isNullOrBlank() ||
@@ -170,11 +150,31 @@ object DeviceUtils {
             Build.DEVICE.contains("anbox", ignoreCase = true)
     }
 
-    /**
-     * Reads a raw Android system property via reflection. Wrapped defensively since
-     * [android.os.SystemProperties] is a non-public API that some OEM/runtime builds may
-     * restrict — any failure here should just mean "no extra signal," not a crash.
-     */
+    private fun isMemuHardware(): Boolean {
+        return Build.MANUFACTURER.contains("microvirt", ignoreCase = true) ||
+            Build.BRAND.contains("microvirt", ignoreCase = true) ||
+            Build.PRODUCT.contains("memu", ignoreCase = true) ||
+            Build.MODEL.contains("memu", ignoreCase = true)
+    }
+
+    private fun isNoxHardware(): Boolean {
+        return Build.MANUFACTURER.contains("nox", ignoreCase = true) ||
+            Build.BRAND.contains("nox", ignoreCase = true) ||
+            Build.MODEL.contains("nox", ignoreCase = true) ||
+            Build.BOARD.contains("nox", ignoreCase = true) ||
+            Build.HARDWARE.contains("nox", ignoreCase = true) ||
+            !getSystemProperty("ro.nox.version").isNullOrBlank()
+    }
+
+    private fun isLdPlayerHardware(): Boolean {
+        return Build.MANUFACTURER.contains("ldplayer", ignoreCase = true) ||
+            Build.BRAND.contains("ldplayer", ignoreCase = true) ||
+            Build.MODEL.contains("ldplayer", ignoreCase = true) ||
+            Build.PRODUCT.contains("ldplayer", ignoreCase = true) ||
+            Build.HARDWARE.contains("ldplayer", ignoreCase = true) ||
+            !getSystemProperty("ro.ldplayer.version").isNullOrBlank()
+    }
+
     private fun getSystemProperty(key: String): String? {
         return try {
             val clazz = Class.forName("android.os.SystemProperties")

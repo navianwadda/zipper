@@ -145,21 +145,19 @@ fun AppearanceScreen(themeManager: ThemeManager) {
                         modifier              = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         AppIconOption(
                             label      = "Red (Default)",
                             iconColor  = Color(0xFFEF4444),
                             isSelected = !blackActive,
                             onClick    = { themeManager.setAppIconBlack(false) },
-                            modifier   = Modifier.weight(1f),
                         )
                         AppIconOption(
                             label      = "Black",
                             iconColor  = Color(0xFF121212),
                             isSelected = blackActive,
                             onClick    = { themeManager.setAppIconBlack(true) },
-                            modifier   = Modifier.weight(1f),
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -232,28 +230,28 @@ fun AppIconOption(
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 92.dp,
 ) {
     val selectionColor = MaterialTheme.colorScheme.primary
     Column(
-        modifier            = modifier,
+        modifier            = modifier.width(size),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
+                .size(size)
                 .shadow(
                     elevation    = if (isSelected) 8.dp else 2.dp,
-                    shape        = RoundedCornerShape(16.dp),
+                    shape        = RoundedCornerShape(20.dp),
                     spotColor    = if (isSelected) selectionColor.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.2f),
                     ambientColor = if (isSelected) selectionColor.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.1f),
                 )
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(iconColor)
                 .border(
                     width = if (isSelected) 3.dp else 1.dp,
                     color = if (isSelected) selectionColor else Color.White.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                 )
                 .clickable { onClick() },
             contentAlignment = Alignment.Center,
@@ -262,7 +260,7 @@ fun AppIconOption(
                 painter            = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = null,
                 tint               = Color.Unspecified,
-                modifier           = Modifier.size(64.dp),
+                modifier           = Modifier.size(size * 0.55f),
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
@@ -274,6 +272,7 @@ fun AppIconOption(
             color      = if (isSelected) MaterialTheme.colorScheme.primary
                          else MaterialTheme.colorScheme.onSurface,
             textAlign  = TextAlign.Center,
+            maxLines   = 1,
         )
     }
 }

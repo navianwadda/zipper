@@ -130,7 +130,7 @@ fun VolumeOsd(visible: Boolean, volume: Int, modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                text       = if (isBoosted) "$volume% Boost" else "$volume%",
+                text       = "$volume%",
                 color      = if (isBoosted) Color(0xFFFF9800) else Color.White,
                 fontSize   = 22.sp,
                 fontWeight = FontWeight.SemiBold,

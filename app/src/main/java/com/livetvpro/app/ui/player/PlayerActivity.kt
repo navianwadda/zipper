@@ -438,10 +438,13 @@ class PlayerActivity : ComponentActivity() {
         val onVolumeSwipe: (Int) -> Unit = { vol ->
             gestureVolume = vol
             val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            val deviceVol = vol.coerceAtMost(100)
             am.setStreamVolume(
                 AudioManager.STREAM_MUSIC,
-                (vol / 100f * am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)).toInt(), 0,
+                (deviceVol / 100f * am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)).toInt(), 0,
             )
+            val boostPercent = (vol - 100).coerceIn(0, 100)
+            player?.let { com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(it, boostPercent) }
         }
         val onBrightnessSwipe: (Int) -> Unit = { bri ->
             gestureBrightness = bri
@@ -485,6 +488,7 @@ class PlayerActivity : ComponentActivity() {
                 onBrightnessSwipe      = onBrightnessSwipe,
                 initialVolume          = gestureVolume,
                 initialBrightness      = gestureBrightness,
+                volumeBoostEnabled     = preferencesManager.isVolumeBoostingEnabled(),
             )
         }
         Column(modifier = Modifier
@@ -1550,6 +1554,7 @@ class PlayerActivity : ComponentActivity() {
                 )
                 .build()
             player = exo
+            com.livetvpro.app.utils.VolumeBoostHelper.attach(exo, preferencesManager)
             playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
             val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
@@ -1595,7 +1600,7 @@ class PlayerActivity : ComponentActivity() {
     }
     private fun releasePlayer() {
         player?.let {
-            try { playerListener?.let { l -> it.removeListener(l) }; it.stop(); it.release() }
+            try { playerListener?.let { l -> it.removeListener(l) }; com.livetvpro.app.utils.VolumeBoostHelper.release(it); it.stop(); it.release() }
             catch (_: Throwable) {}
         }
         player         = null
@@ -1604,6 +1609,7 @@ class PlayerActivity : ComponentActivity() {
     }
     internal fun retryPlayback() {
         errorMessage.value = ""
+        player?.let { com.livetvpro.app.utils.VolumeBoostHelper.release(it) }
         player?.release()
         player = null
         playerSetupInProgress = false

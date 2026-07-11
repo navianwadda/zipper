@@ -33,6 +33,7 @@ fun GestureOverlay(
     gestureState: GestureState = remember { GestureState() },
     pixelsPerPercent: Float = 8f,
     isLocked: Boolean = false,
+    maxVolumePercent: Int = 100,
     onVolumeChange: (Int) -> Unit = {},
     onBrightnessChange: (Int) -> Unit = {},
     onTap: () -> Unit = {},
@@ -87,7 +88,7 @@ fun GestureOverlay(
                                         val steps = (volumeAccum / pixelsPerPercent).toInt()
                                         if (steps != 0) {
                                             volumeAccum   -= steps * pixelsPerPercent
-                                            currentVolume  = (currentVolume + steps).coerceIn(0, 100)
+                                            currentVolume  = (currentVolume + steps).coerceIn(0, maxVolumePercent)
                                             onVolumeChange(currentVolume)
                                             onShowVolumeOsd(true)
                                         }
@@ -113,6 +114,7 @@ fun GestureOverlay(
 
 @Composable
 fun VolumeOsd(visible: Boolean, volume: Int, modifier: Modifier = Modifier) {
+    val isBoosted = volume > 100
     AnimatedVisibility(
         visible  = visible,
         enter    = fadeIn(tween(150)) + scaleIn(tween(150), initialScale = 0.85f),
@@ -123,11 +125,16 @@ fun VolumeOsd(visible: Boolean, volume: Int, modifier: Modifier = Modifier) {
             Icon(
                 painter            = painterResource(if (volume == 0) R.drawable.ic_volume_off else R.drawable.ic_volume_up),
                 contentDescription = "Volume",
-                tint               = Color.White,
+                tint               = if (isBoosted) Color(0xFFFF9800) else Color.White,
                 modifier           = Modifier.size(36.dp),
             )
             Spacer(Modifier.width(12.dp))
-            Text("$volume%", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                text       = if (isBoosted) "$volume% Boost" else "$volume%",
+                color      = if (isBoosted) Color(0xFFFF9800) else Color.White,
+                fontSize   = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }

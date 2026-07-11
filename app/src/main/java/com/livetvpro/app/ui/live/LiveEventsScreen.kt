@@ -136,8 +136,12 @@ fun LiveEventsScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(selectedStatusFilter, selectedCategoryId, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            // Fires immediately on becoming RESUMED (covers returning from background),
-            // then keeps refreshing every 10s while the screen stays visible.
+            // Instant, synchronous re-apply from whatever data is already cached in the
+            // ViewModel — this makes the screen (chips, counts, list) reflect the current
+            // filter selection immediately on resume, with no wait on a network fetch.
+            viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
+            // Then refresh from the network in the background every 10s. This can take a
+            // moment, but it no longer blocks the visible UI from updating first.
             while (true) {
                 viewModel.filterEventsSilent(selectedStatusFilter, selectedCategoryId)
                 delay(10_000)

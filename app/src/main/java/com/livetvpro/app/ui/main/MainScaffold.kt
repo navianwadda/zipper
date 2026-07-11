@@ -363,6 +363,7 @@ fun MainScaffold(
                     NetworkStreamHistoryScreen(
                         navController = navController,
                         viewModel     = hiltViewModel(backStackEntry),
+                        isTvDevice    = isTvOrDesktop || isTablet,
                     )
                 }
                 composable(Routes.CRICKET_SCORE) {

@@ -5,8 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
@@ -51,7 +49,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,17 +57,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -110,9 +98,6 @@ fun NetworkStreamScreen(
         handleColor = primaryColor,
         backgroundColor = primaryColor.copy(alpha = 0.3f)
     )
-
-    val playInteractionSource = remember { MutableInteractionSource() }
-    val isPlayFocused by playInteractionSource.collectIsFocusedAsState()
 
     CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
         Box(modifier = Modifier.fillMaxSize().imePadding().background(MaterialTheme.colorScheme.background)) {
@@ -199,16 +184,10 @@ fun NetworkStreamScreen(
                     viewModel.recordPlayed(streamUrl)
                     onPlay(streamUrl, cookie, referer, origin, drmLicense, ua, selectedDrmScheme)
                 },
-                interactionSource = playInteractionSource,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 24.dp, bottom = 24.dp + navBarPadding)
-                    .border(
-                        width = if (isPlayFocused) 3.dp else 0.dp,
-                        color = if (isPlayFocused) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                        shape = CircleShape
-                    ),
-                containerColor = if (isPlayFocused) primaryColor.copy(alpha = 0.85f) else primaryColor,
+                    .padding(end = 24.dp, bottom = 24.dp + navBarPadding),
+                containerColor = primaryColor,
                 contentColor = Color.White,
                 shape = CircleShape
             ) {
@@ -231,25 +210,11 @@ private fun StreamTextField(
     keyboardType: KeyboardType = KeyboardType.Text
 ) {
     val clipboard = LocalClipboardManager.current
-    val focusManager = LocalFocusManager.current
-
-    val fieldInteractionSource = remember { MutableInteractionSource() }
-    val isFieldFocused by fieldInteractionSource.collectIsFocusedAsState()
-
-    val trailingInteractionSource = remember { MutableInteractionSource() }
-    val isTrailingFocused by trailingInteractionSource.collectIsFocusedAsState()
 
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        interactionSource = fieldInteractionSource,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = if (isFieldFocused) 2.dp else 0.dp,
-                color = if (isFieldFocused) primaryColor else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            ),
+        modifier = Modifier.fillMaxWidth(),
         label = {
             Text(
                 text = label,
@@ -259,28 +224,22 @@ private fun StreamTextField(
         },
         trailingIcon = {
             if (value.isNotEmpty()) {
-                IconButton(
-                    onClick = { onValueChange("") },
-                    interactionSource = trailingInteractionSource
-                ) {
+                IconButton(onClick = { onValueChange("") }) {
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Clear",
-                        tint = if (isTrailingFocused) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
-                IconButton(
-                    onClick = {
-                        val text = clipboard.getText()?.text
-                        if (!text.isNullOrEmpty()) onValueChange(text)
-                    },
-                    interactionSource = trailingInteractionSource
-                ) {
+                IconButton(onClick = {
+                    val text = clipboard.getText()?.text
+                    if (!text.isNullOrEmpty()) onValueChange(text)
+                }) {
                     Icon(
                         imageVector = Icons.Default.ContentPaste,
                         contentDescription = "Paste",
-                        tint = if (isTrailingFocused) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -306,9 +265,6 @@ private fun StreamTextField(
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
             imeAction = ImeAction.Next
-        ),
-        keyboardActions = KeyboardActions(
-            onNext = { focusManager.moveFocus(FocusDirection.Down) }
         )
     )
 }
@@ -325,18 +281,6 @@ private fun StreamDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val fieldInteractionSource = remember { MutableInteractionSource() }
-    val isFieldFocused by fieldInteractionSource.collectIsFocusedAsState()
-
-    val fieldFocusRequester = remember { FocusRequester() }
-    val firstItemFocusRequester = remember { FocusRequester() }
-
-    if (expanded) {
-        LaunchedEffect(expanded) {
-            firstItemFocusRequester.requestFocus()
-        }
-    }
-
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = it },
@@ -346,7 +290,6 @@ private fun StreamDropdown(
             value = selected,
             onValueChange = {},
             readOnly = true,
-            interactionSource = fieldInteractionSource,
             label = {
                 Text(
                     text = label,
@@ -378,42 +321,14 @@ private fun StreamDropdown(
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor()
-                .focusRequester(fieldFocusRequester)
-                .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown &&
-                        (event.key == Key.Enter || event.key == Key.NumPadEnter || event.key == Key.DirectionCenter)
-                    ) {
-                        expanded = true
-                        true
-                    } else {
-                        false
-                    }
-                }
-                .border(
-                    width = if (isFieldFocused) 2.dp else 0.dp,
-                    color = if (isFieldFocused) primaryColor else Color.Transparent,
-                    shape = RoundedCornerShape(8.dp)
-                )
         )
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = {
-                expanded = false
-                fieldFocusRequester.requestFocus()
-            },
+            onDismissRequest = { expanded = false },
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
         ) {
-            options.forEachIndexed { index, option ->
-                val itemInteractionSource = remember { MutableInteractionSource() }
-                val isItemFocused by itemInteractionSource.collectIsFocusedAsState()
-
+            options.forEach { option ->
                 DropdownMenuItem(
-                    interactionSource = itemInteractionSource,
-                    modifier = Modifier
-                        .let { if (index == 0) it.focusRequester(firstItemFocusRequester) else it }
-                        .background(
-                            if (isItemFocused) primaryColor.copy(alpha = 0.15f) else Color.Transparent
-                        ),
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
@@ -429,14 +344,13 @@ private fun StreamDropdown(
                                 text = option,
                                 fontFamily = BergenSans,
                                 fontSize = 14.sp,
-                                color = if (option == selected || isItemFocused) primaryColor else MaterialTheme.colorScheme.onSurface
+                                color = if (option == selected) primaryColor else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     },
                     onClick = {
                         onSelect(option)
                         expanded = false
-                        fieldFocusRequester.requestFocus()
                     }
                 )
             }

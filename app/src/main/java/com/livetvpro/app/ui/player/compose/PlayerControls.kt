@@ -820,6 +820,9 @@ private fun ExoPlayerTimeBar(
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    // Live position while the user is dragging the scrubber, in millis. Null when not dragging.
+    var scrubPositionMs by remember { mutableStateOf<Long?>(null) }
+    val displayedPosition = scrubPositionMs ?: currentPosition
 
     val timeFontSize = when {
         isTvMode   -> 16.sp
@@ -858,7 +861,7 @@ private fun ExoPlayerTimeBar(
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            text      = formatTime(currentPosition),
+            text      = formatTime(displayedPosition),
             color     = Color.White,
             fontSize  = timeFontSize,
             fontFamily= BergenSans,
@@ -871,6 +874,7 @@ private fun ExoPlayerTimeBar(
             duration         = duration,
             bufferedPosition = bufferedPosition,
             onSeek           = onSeek,
+            onScrub          = { scrubPositionMs = it },
             isFocused        = isFocused,
             modifier         = Modifier
                 .weight(1f)
@@ -895,6 +899,7 @@ private fun CustomTimeBar(
     duration: Long,
     bufferedPosition: Long,
     onSeek: (Long) -> Unit,
+    onScrub: (Long?) -> Unit = {},
     isFocused: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -919,6 +924,7 @@ private fun CustomTimeBar(
                     val down = awaitFirstDown(requireUnconsumed = false)
                     isDragging   = true
                     dragPosition = (down.position.x / size.width).coerceIn(0f, 1f)
+                    onScrub((dragPosition * duration).toLong())
                     down.consume()
                     while (true) {
                         val event  = awaitPointerEvent()
@@ -927,11 +933,13 @@ private fun CustomTimeBar(
                             isDragging = false
                             isHovering = false
                             onSeek((dragPosition * duration).toLong())
+                            onScrub(null)
                             break
                         }
                         val newX = (change.position.x / size.width).coerceIn(0f, 1f)
                         if (newX != dragPosition) {
                             dragPosition = newX
+                            onScrub((dragPosition * duration).toLong())
                             change.consume()
                         }
                     }

@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -114,7 +115,7 @@ fun SettingsScreen(
 
         item {
             SettingsCard(
-                icon         = R.drawable.ic_save_states,
+                icon         = R.drawable.ic_settings,
                 label        = "Player Settings",
                 sublabel     = "Player Layouts, Aspect ratio, Quality",
                 showChevron  = true,
@@ -126,7 +127,7 @@ fun SettingsScreen(
 
         item {
             SettingsCard(
-                icon         = R.drawable.ic_volume_up,
+                icon         = PlaybackIcon,
                 label        = "Playback",
                 sublabel     = "Volume boosting",
                 showChevron  = true,
@@ -249,6 +250,59 @@ private fun SettingsCard(
     bottomMargin: androidx.compose.ui.unit.Dp = 8.dp,
     onClick: () -> Unit,
 ) {
+    SettingsCard(
+        icon = {
+            Icon(
+                painter            = painterResource(icon),
+                contentDescription = null,
+                tint               = iconTint,
+                modifier           = Modifier.size(24.dp),
+            )
+        },
+        label        = label,
+        sublabel     = sublabel,
+        showChevron  = showChevron,
+        bottomMargin = bottomMargin,
+        onClick      = onClick,
+    )
+}
+
+@Composable
+private fun SettingsCard(
+    icon: ImageVector,
+    label: String,
+    sublabel: String? = null,
+    iconTint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    showChevron: Boolean = false,
+    bottomMargin: androidx.compose.ui.unit.Dp = 8.dp,
+    onClick: () -> Unit,
+) {
+    SettingsCard(
+        icon = {
+            Icon(
+                imageVector        = icon,
+                contentDescription = null,
+                tint               = iconTint,
+                modifier           = Modifier.size(24.dp),
+            )
+        },
+        label        = label,
+        sublabel     = sublabel,
+        showChevron  = showChevron,
+        bottomMargin = bottomMargin,
+        onClick      = onClick,
+    )
+}
+
+@Composable
+private fun SettingsCard(
+    icon: @Composable () -> Unit,
+    label: String,
+    sublabel: String? = null,
+    showChevron: Boolean = false,
+    bottomMargin: androidx.compose.ui.unit.Dp = 8.dp,
+    onClick: () -> Unit,
+) {
     Card(
         modifier  = Modifier
             .fillMaxWidth()
@@ -265,12 +319,7 @@ private fun SettingsCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                painter            = painterResource(icon),
-                contentDescription = null,
-                tint               = iconTint,
-                modifier           = Modifier.size(24.dp),
-            )
+            icon()
             Column(
                 modifier = Modifier
                     .weight(1f)

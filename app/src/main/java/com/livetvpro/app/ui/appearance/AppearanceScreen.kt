@@ -131,8 +131,7 @@ fun AppearanceScreen(themeManager: ThemeManager) {
         item { PreferenceSectionHeader(title = "App Icon") }
 
         item {
-            val context = LocalContext.current
-            val blackActive = remember { mutableStateOf(isBlackIconActive(context)) }
+            val blackActive by themeManager.appIconBlackFlow.collectAsState()
             PreferenceCard {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     Text(
@@ -151,21 +150,15 @@ fun AppearanceScreen(themeManager: ThemeManager) {
                         AppIconOption(
                             label      = "Red (Default)",
                             iconColor  = Color(0xFFEF4444),
-                            isSelected = !blackActive.value,
-                            onClick    = {
-                                setAppIcon(context, useBlack = false)
-                                blackActive.value = false
-                            },
+                            isSelected = !blackActive,
+                            onClick    = { themeManager.setAppIconBlack(false) },
                             modifier   = Modifier.weight(1f),
                         )
                         AppIconOption(
                             label      = "Black",
                             iconColor  = Color(0xFF121212),
-                            isSelected = blackActive.value,
-                            onClick    = {
-                                setAppIcon(context, useBlack = true)
-                                blackActive.value = true
-                            },
+                            isSelected = blackActive,
+                            onClick    = { themeManager.setAppIconBlack(true) },
                             modifier   = Modifier.weight(1f),
                         )
                     }
@@ -283,27 +276,6 @@ fun AppIconOption(
             textAlign  = TextAlign.Center,
         )
     }
-}
-
-private fun isBlackIconActive(context: android.content.Context): Boolean {
-    val pm         = context.packageManager
-    val blackAlias = android.content.ComponentName(context, "${context.packageName}.BlackIcon")
-    return try {
-        pm.getComponentEnabledSetting(blackAlias) ==
-            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-    } catch (e: Exception) { false }
-}
-
-private fun setAppIcon(context: android.content.Context, useBlack: Boolean) {
-    val pm         = context.packageManager
-    val pkg        = context.packageName
-    val redAlias   = android.content.ComponentName(context, "$pkg.RedIcon")
-    val blackAlias = android.content.ComponentName(context, "$pkg.BlackIcon")
-    val enable     = android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-    val disable    = android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-    val noKill     = android.content.pm.PackageManager.DONT_KILL_APP
-    pm.setComponentEnabledSetting(if (useBlack) blackAlias else redAlias,  enable,  noKill)
-    pm.setComponentEnabledSetting(if (useBlack) redAlias   else blackAlias, disable, noKill)
 }
 
 

@@ -33,6 +33,7 @@ class ThemeManager @Inject constructor(
         private const val KEY_THEME_MODE  = "theme_mode"
         private const val KEY_COLOR_THEME = "color_theme"
         private const val KEY_AMOLED_MODE = "amoled_mode"
+        private const val KEY_APP_ICON_BLACK = "app_icon_black"
     }
 
     private val fallbackAccent = Color.parseColor("#FFB300")
@@ -54,6 +55,11 @@ class ThemeManager @Inject constructor(
         prefs.getBoolean(KEY_AMOLED_MODE, false)
     )
     val amoledFlow: StateFlow<Boolean> = _amoledFlow
+
+    private val _appIconBlackFlow = MutableStateFlow(
+        prefs.getBoolean(KEY_APP_ICON_BLACK, false)
+    )
+    val appIconBlackFlow: StateFlow<Boolean> = _appIconBlackFlow
 
     private val _resolvedIsDarkFlow = MutableStateFlow(resolveIsDark(context))
     val resolvedIsDarkFlow: StateFlow<Boolean> = _resolvedIsDarkFlow
@@ -130,6 +136,26 @@ class ThemeManager @Inject constructor(
         prefs.edit().putBoolean(KEY_AMOLED_MODE, enabled).apply()
         _amoledFlow.value = enabled
         _primaryColorFlow.value = computePrimaryColor()
+    }
+
+    fun isAppIconBlack(): Boolean = _appIconBlackFlow.value
+
+    fun setAppIconBlack(useBlack: Boolean) {
+        prefs.edit().putBoolean(KEY_APP_ICON_BLACK, useBlack).apply()
+        _appIconBlackFlow.value = useBlack
+
+        val pkg         = context.packageName
+        val redAlias    = android.content.ComponentName(context, "$pkg.RedIcon")
+        val blackAlias  = android.content.ComponentName(context, "$pkg.BlackIcon")
+        val enabledState  = android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        val disabledState = android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        val noKill      = android.content.pm.PackageManager.DONT_KILL_APP
+        context.packageManager.setComponentEnabledSetting(
+            if (useBlack) blackAlias else redAlias, enabledState, noKill
+        )
+        context.packageManager.setComponentEnabledSetting(
+            if (useBlack) redAlias else blackAlias, disabledState, noKill
+        )
     }
 
     fun isDarkMode(activityContext: Context? = null): Boolean {

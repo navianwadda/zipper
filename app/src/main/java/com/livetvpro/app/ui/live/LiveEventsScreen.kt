@@ -136,12 +136,7 @@ fun LiveEventsScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(selectedStatusFilter, selectedCategoryId, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            // Instant, synchronous re-apply from whatever data is already cached in the
-            // ViewModel — this makes the screen (chips, counts, list) reflect the current
-            // filter selection immediately on resume, with no wait on a network fetch.
             viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
-            // Then refresh from the network in the background every 10s. This can take a
-            // moment, but it no longer blocks the visible UI from updating first.
             while (true) {
                 viewModel.filterEventsSilent(selectedStatusFilter, selectedCategoryId)
                 delay(10_000)
@@ -369,6 +364,9 @@ private fun CategoryChip(
                     shape = CircleShape
                 )
         ) {
+            val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
+                androidx.compose.ui.platform.LocalContext.current
+            )
             @OptIn(ExperimentalGlideComposeApi::class)
             GlideImage(
                 model = category.logoUrl.takeIf { it.isNotBlank() },
@@ -377,9 +375,9 @@ private fun CategoryChip(
                 modifier = Modifier.fillMaxSize()
             ) {
                 it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .placeholder(R.mipmap.ic_launcher_round)
-                    .error(R.mipmap.ic_launcher_round)
-                    .fallback(R.mipmap.ic_launcher_round)
+                    .placeholder(appIconRes)
+                    .error(appIconRes)
+                    .fallback(appIconRes)
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -518,6 +516,9 @@ fun LiveEventCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
+                        androidx.compose.ui.platform.LocalContext.current
+                    )
                     @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
                         model = event.leagueLogo?.takeIf { it.isNotBlank() },
@@ -526,9 +527,9 @@ fun LiveEventCard(
                         modifier = Modifier.size(28.dp)
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .placeholder(R.mipmap.ic_launcher_round)
-                            .error(R.mipmap.ic_launcher_round)
-                            .fallback(R.mipmap.ic_launcher_round)
+                            .placeholder(appIconRes)
+                            .error(appIconRes)
+                            .fallback(appIconRes)
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
@@ -609,6 +610,9 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
+            androidx.compose.ui.platform.LocalContext.current
+        )
         @OptIn(ExperimentalGlideComposeApi::class)
         GlideImage(
             model = logoUrl?.takeIf { it.isNotBlank() },
@@ -619,9 +623,9 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
                 .clip(CircleShape)
         ) {
             it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                .placeholder(R.mipmap.ic_launcher_round)
-                .error(R.mipmap.ic_launcher_round)
-                .fallback(R.mipmap.ic_launcher_round)
+                .placeholder(appIconRes)
+                .error(appIconRes)
+                .fallback(appIconRes)
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(

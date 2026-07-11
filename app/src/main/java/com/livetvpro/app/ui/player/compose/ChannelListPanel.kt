@@ -351,7 +351,8 @@ private fun ChannelItemRow(
         AndroidView(
             factory = { ctx -> ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP } },
             update = { iv ->
-                GlideExtensions.loadImage(iv, channel.logoUrl.takeIf { it.isNotBlank() }, R.mipmap.ic_launcher_round, R.mipmap.ic_launcher_round, isCircular = true)
+                val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(iv.context)
+                GlideExtensions.loadImage(iv, channel.logoUrl.takeIf { it.isNotBlank() }, appIconRes, appIconRes, isCircular = true)
             },
             modifier = Modifier.size(32.dp).clip(CircleShape)
         )

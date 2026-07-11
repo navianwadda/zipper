@@ -230,6 +230,9 @@ private fun CategoryCard(
                         .clip(CircleShape)
                         .background(CardLogoBg)
                 ) {
+                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
+                        androidx.compose.ui.platform.LocalContext.current
+                    )
                     @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
                         model = category.iconUrl?.takeIf { it.isNotBlank() },
@@ -238,9 +241,9 @@ private fun CategoryCard(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .placeholder(R.mipmap.ic_launcher_round)
-                            .error(R.mipmap.ic_launcher_round)
-                            .fallback(R.mipmap.ic_launcher_round)
+                            .placeholder(appIconRes)
+                            .error(appIconRes)
+                            .fallback(appIconRes)
                     }
                 }
             }

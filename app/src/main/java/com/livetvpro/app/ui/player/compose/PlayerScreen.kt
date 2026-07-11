@@ -338,6 +338,9 @@ private fun RelatedChannelCard(
                         .clip(CircleShape)
                         .background(CardLogoBg),
                 ) {
+                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
+                        androidx.compose.ui.platform.LocalContext.current
+                    )
                     GlideImage(
                         model              = channel.logoUrl.takeIf { it.isNotBlank() },
                         contentDescription = channel.name,
@@ -345,9 +348,9 @@ private fun RelatedChannelCard(
                         modifier           = Modifier.fillMaxSize(),
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .placeholder(R.mipmap.ic_launcher_round)
-                            .error(R.mipmap.ic_launcher_round)
-                            .fallback(R.mipmap.ic_launcher_round)
+                            .placeholder(appIconRes)
+                            .error(appIconRes)
+                            .fallback(appIconRes)
                     }
                 }
             }

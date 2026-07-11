@@ -333,10 +333,6 @@ class SplashActivity : AppCompatActivity() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Composables
-// ─────────────────────────────────────────────────────────────
-
 @Composable
 private fun SplashScreen(
     state: SplashState,
@@ -674,13 +670,7 @@ private fun UpdateScreenLandscape(
 @Composable
 private fun AppIcon() {
     val context = LocalContext.current
-    val isBlack = remember {
-        val blackAlias = android.content.ComponentName(context, "${context.packageName}.BlackIcon")
-        try {
-            context.packageManager.getComponentEnabledSetting(blackAlias) ==
-                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        } catch (e: Exception) { false }
-    }
+    val isBlack = remember { com.livetvpro.app.utils.AppIconUtils.isBlackIconActive(context) }
     val bgColor = if (isBlack) Color(0xFF121212) else Color(0xFFEF4444)
     Box(
         modifier         = Modifier

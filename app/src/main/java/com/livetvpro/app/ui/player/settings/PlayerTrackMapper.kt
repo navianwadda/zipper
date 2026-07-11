@@ -75,14 +75,21 @@ object PlayerTrackMapper {
                         || mimeType == MimeTypes.APPLICATION_MP4CEA608
                 val isForced = (format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0
 
-                if (isCea || isForced) continue
+                val baseLanguage = languageDisplayName(format.language)
+                val language = when {
+                    isCea    -> "$baseLanguage (CC)"
+                    isForced -> "$baseLanguage (Forced)"
+                    else     -> baseLanguage
+                }
 
                 result.add(TrackUiModel.Text(
-                    groupIndex = groupIndex,
-                    trackIndex = i,
-                    language   = languageDisplayName(format.language),
-                    isSelected = group.isTrackSelected(i),
-                    isRadio    = true
+                    groupIndex      = groupIndex,
+                    trackIndex      = i,
+                    language        = language,
+                    isSelected      = group.isTrackSelected(i),
+                    isRadio         = true,
+                    isClosedCaption = isCea,
+                    isForced        = isForced,
                 ))
             }
         }

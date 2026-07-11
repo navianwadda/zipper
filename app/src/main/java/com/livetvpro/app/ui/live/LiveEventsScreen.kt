@@ -110,6 +110,7 @@ fun LiveEventsScreen(
     val context = LocalContext.current
     val filteredEvents by viewModel.filteredEvents.observeAsState(emptyList())
     val eventCategories by viewModel.eventCategories.observeAsState(emptyList())
+    val statusCounts by viewModel.statusCounts.observeAsState(StatusCounts())
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isEmpty by viewModel.isEmpty.observeAsState(false)
     val primaryColor by viewModel.primaryColorFlow.collectAsState()
@@ -196,6 +197,7 @@ fun LiveEventsScreen(
         StatusFilterChips(
             selected = selectedStatusFilter,
             isTvDevice = isTvDevice,
+            counts = statusCounts,
             onFilterSelected = { status ->
                 selectedStatusFilter = status
                 viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
@@ -395,14 +397,15 @@ private fun CategoryChip(
 private fun StatusFilterChips(
     selected: EventStatus?,
     isTvDevice: Boolean,
+    counts: StatusCounts,
     onFilterSelected: (EventStatus?) -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
     val filters = listOf(
-        null to "All",
-        EventStatus.LIVE to "Live",
-        EventStatus.UPCOMING to "Upcoming",
-        EventStatus.RECENT to "Recent"
+        null to ("All" to counts.all),
+        EventStatus.LIVE to ("Live" to counts.live),
+        EventStatus.UPCOMING to ("Upcoming" to counts.upcoming),
+        EventStatus.RECENT to ("Recent" to counts.recent),
     )
 
     Row(
@@ -411,7 +414,8 @@ private fun StatusFilterChips(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        filters.forEach { (status, label) ->
+        filters.forEach { (status, labelAndCount) ->
+            val (label, count) = labelAndCount
             val isSelected = selected == status
             var hasFocus by remember { mutableStateOf(false) }
             val scale by animateFloatAsState(
@@ -424,7 +428,7 @@ private fun StatusFilterChips(
                 onClick = { if (!isSelected) onFilterSelected(status) },
                 label = {
                     Text(
-                        text = label,
+                        text = "$label ($count)",
                         fontFamily = BergenSans,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         color = if (isSelected) liveRed else MaterialTheme.colorScheme.onSurfaceVariant

@@ -29,6 +29,7 @@ class PreferencesManager @Inject constructor(
         private const val KEY_SAVED_ASPECT_RATIO_PORTRAIT = "saved_aspect_ratio_portrait"
         private const val KEY_FORCE_LOWEST_QUALITY = "force_lowest_quality"
         private const val KEY_LAYOUT_MODE = "layout_mode"
+        private const val KEY_VOLUME_BOOSTING_ENABLED = "volume_boosting_enabled"
 
         const val LAYOUT_MODE_SEEKS_ONLY       = 0
         const val LAYOUT_MODE_SEEKS_AND_NAV    = 1
@@ -82,6 +83,9 @@ class PreferencesManager @Inject constructor(
 
     fun isForceLowestQualityEnabled(): Boolean = prefs.getBoolean(KEY_FORCE_LOWEST_QUALITY, false)
     fun setForceLowestQualityEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_FORCE_LOWEST_QUALITY, enabled).apply()
+
+    fun isVolumeBoostingEnabled(): Boolean = prefs.getBoolean(KEY_VOLUME_BOOSTING_ENABLED, false)
+    fun setVolumeBoostingEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_VOLUME_BOOSTING_ENABLED, enabled).apply()
 
     fun getLayoutMode(): Int = prefs.getInt(KEY_LAYOUT_MODE, LAYOUT_MODE_SEEKS_ONLY)
     fun setLayoutMode(mode: Int) = prefs.edit().putInt(KEY_LAYOUT_MODE, mode).apply()

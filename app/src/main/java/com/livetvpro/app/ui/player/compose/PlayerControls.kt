@@ -317,7 +317,6 @@ fun PlayerControls(
                         .size(40.dp)
                         .hoverable(interactionSource = lockInteractionSource)
                         .focusRequester(unlockFocusRequester)
-                        .focusable(interactionSource = lockInteractionSource)
                         .onFocusChanged { isUnlockFocused = it.isFocused }
                         .onKeyEvent { event ->
                             if (event.type == KeyEventType.KeyUp &&
@@ -779,7 +778,6 @@ internal fun PlayerIconButton(
         modifier = modifier
             .size(size.dp)
             .hoverable(interactionSource = interactionSource)
-            .focusable(interactionSource = interactionSource)
             .onFocusChanged { isFocused = it.isFocused }
             .then(
                 if (isTvMode) Modifier.onKeyEvent { event ->

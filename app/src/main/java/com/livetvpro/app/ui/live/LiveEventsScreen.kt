@@ -8,8 +8,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -322,7 +324,8 @@ private fun CategoryChip(
 ) {
     val liveRed = MaterialTheme.colorScheme.error
     val outlineColor = MaterialTheme.colorScheme.outline
-    var hasFocus by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val hasFocus by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
         targetValue = if (hasFocus) 1.08f else 1f,
         animationSpec = tween(120),
@@ -333,10 +336,11 @@ private fun CategoryChip(
         modifier = Modifier
             .scale(scale)
             .padding(horizontal = 6.dp, vertical = 4.dp)
-            .onFocusChanged { hasFocus = it.hasFocus }
-            .focusable()
             .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() },
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+            ) { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -457,7 +461,8 @@ fun LiveEventCard(
     onClick: () -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
-    var hasFocus by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val hasFocus by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
         targetValue = if (hasFocus) 1.03f else 1f,
         animationSpec = tween(120),
@@ -466,13 +471,12 @@ fun LiveEventCard(
 
     Card(
         onClick = onClick,
+        interactionSource = interactionSource,
         modifier = Modifier
             .padding(horizontal = 6.dp, vertical = 5.dp)
             .scale(scale)
             .fillMaxWidth()
-            .height(145.dp)
-            .onFocusChanged { hasFocus = it.hasFocus }
-            .focusable(),
+            .height(145.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(),
         elevation = CardDefaults.cardElevation(

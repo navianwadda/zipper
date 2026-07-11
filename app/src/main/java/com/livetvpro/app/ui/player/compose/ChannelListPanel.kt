@@ -4,7 +4,6 @@ import android.widget.ImageView
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -137,7 +136,6 @@ fun ChannelListPanel(
                                     RoundedCornerShape(50)
                                 )
                                 .focusRequester(closeFocusRequester)
-                                .focusable()
                                 .onFocusChanged { closeButtonFocused = it.isFocused }
                                 .onKeyEvent { event ->
                                     if (event.type == KeyEventType.KeyUp &&
@@ -246,8 +244,13 @@ private fun GroupSidebarItem(
                 else -> Color.Transparent
             }
         )
+        .then(
+            if (firstItemFocusRequester != null)
+                Modifier.focusRequester(firstItemFocusRequester)
+            else
+                Modifier
+        )
         .onFocusChanged { isFocused = it.isFocused }
-        .focusable(interactionSource = interactionSource)
         .onKeyEvent { event ->
             when {
                 event.type == KeyEventType.KeyUp &&
@@ -268,11 +271,7 @@ private fun GroupSidebarItem(
         .padding(vertical = 10.dp, horizontal = 8.dp)
 
     Column(
-        modifier = if (firstItemFocusRequester != null) {
-            baseModifier.focusRequester(firstItemFocusRequester)
-        } else {
-            baseModifier
-        },
+        modifier = baseModifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -319,7 +318,6 @@ private fun ChannelItemRow(
                 }
             )
             .onFocusChanged { isFocused = it.isFocused }
-            .focusable(interactionSource = interactionSource)
             .onKeyEvent { event ->
                 when {
                     event.type == KeyEventType.KeyUp &&

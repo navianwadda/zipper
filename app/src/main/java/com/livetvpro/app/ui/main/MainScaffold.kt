@@ -168,6 +168,7 @@ fun MainScaffold(
         Routes.DEVICE_ID         -> "Device ID"
         Routes.APPEARANCE        -> "Appearance"
         Routes.PLAYER_LAYOUTS    -> "Player Settings"
+        Routes.PLAYBACK          -> "Playback"
         else                     -> "Live TV Pro"
     }
 
@@ -377,6 +378,9 @@ fun MainScaffold(
                 }
                 composable(Routes.PLAYER_LAYOUTS) {
                     PlayerLayoutsScreen(preferencesManager = preferencesManager)
+                }
+                composable(Routes.PLAYBACK) {
+                    PlaybackScreen(preferencesManager = preferencesManager)
                 }
             }
 

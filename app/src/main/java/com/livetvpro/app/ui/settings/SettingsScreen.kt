@@ -124,6 +124,18 @@ fun SettingsScreen(
             }
         }
 
+        item {
+            SettingsCard(
+                icon         = R.drawable.ic_volume_up,
+                label        = "Playback",
+                sublabel     = "Volume boosting",
+                showChevron  = true,
+                bottomMargin = 16.dp,
+            ) {
+                navController.navigate(Routes.PLAYBACK)
+            }
+        }
+
         item { SectionHeader("Appearance") }
 
         item {

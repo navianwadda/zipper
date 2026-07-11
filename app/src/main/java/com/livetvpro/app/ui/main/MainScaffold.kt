@@ -95,6 +95,7 @@ import com.livetvpro.app.ui.networkstream.NetworkStreamRoute
 import com.livetvpro.app.ui.playlists.PlaylistsRoute
 import com.livetvpro.app.ui.score.CricketScoreScreen
 import com.livetvpro.app.ui.score.FootballScoreScreen
+import com.livetvpro.app.ui.settings.PlaybackScreen
 import com.livetvpro.app.ui.settings.PlayerLayoutsScreen
 import com.livetvpro.app.ui.settings.SettingsActions
 import com.livetvpro.app.ui.settings.SettingsScreen

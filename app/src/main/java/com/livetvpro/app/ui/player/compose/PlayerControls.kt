@@ -150,6 +150,7 @@ fun PlayerControls(
     onBrightnessSwipe: (Int) -> Unit = {},
     initialVolume: Int = 100,
     initialBrightness: Int = 0,
+    volumeBoostEnabled: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -197,6 +198,7 @@ fun PlayerControls(
                     brightnessPercent = gestureBrightness,
                 ),
                 isLocked            = state.isLocked,
+                maxVolumePercent    = if (volumeBoostEnabled) 200 else 100,
                 onVolumeChange      = { v -> gestureVolume = v; onVolumeSwipe(v) },
                 onBrightnessChange  = { b -> gestureBrightness = b; onBrightnessSwipe(b) },
                 onTap               = { state.show(scope) },

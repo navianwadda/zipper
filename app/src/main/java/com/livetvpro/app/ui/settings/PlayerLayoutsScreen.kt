@@ -52,7 +52,6 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
 
     var rememberAspectRatio by remember { mutableStateOf(preferencesManager.isRememberAspectRatioEnabled()) }
     var forceLowestQuality  by remember { mutableStateOf(preferencesManager.isForceLowestQualityEnabled()) }
-    var volumeBoosting  by remember { mutableStateOf(preferencesManager.isVolumeBoostingEnabled()) }
     var layoutMode  by remember { mutableIntStateOf(preferencesManager.getLayoutMode()) }
     var resizeMode by remember { mutableIntStateOf(preferencesManager.getSavedAspectRatio()) }
 
@@ -237,22 +236,6 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                     onCheckedChange = {
                         forceLowestQuality = it
                         preferencesManager.setForceLowestQualityEnabled(it)
-                    },
-                )
-            }
-        }
-
-        item { PreferenceSectionHeader(title = "Volume") }
-
-        item {
-            PreferenceCard {
-                SwitchPreferenceRow(
-                    title   = "Allow volume boosting",
-                    summary = "Boost playback volume beyond the device's normal maximum",
-                    checked = volumeBoosting,
-                    onCheckedChange = {
-                        volumeBoosting = it
-                        preferencesManager.setVolumeBoostingEnabled(it)
                     },
                 )
             }

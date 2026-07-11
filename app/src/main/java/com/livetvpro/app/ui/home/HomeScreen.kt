@@ -4,7 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.dimensionResource
@@ -191,7 +191,8 @@ private fun CategoryCard(
     primaryColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
-    var hasFocus by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val hasFocus by interactionSource.collectIsFocusedAsState()
 
     val scale by animateFloatAsState(
         targetValue = if (hasFocus) 1.05f else 1f,
@@ -201,13 +202,12 @@ private fun CategoryCard(
 
     Card(
         onClick = onClick,
+        interactionSource = interactionSource,
         modifier = Modifier
             .padding(4.dp)
             .fillMaxWidth()
             .wrapContentHeight()
-            .scale(scale)
-            .onFocusChanged { hasFocus = it.hasFocus }
-            .focusable(),
+            .scale(scale),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

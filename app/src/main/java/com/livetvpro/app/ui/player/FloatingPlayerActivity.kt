@@ -423,7 +423,10 @@ class FloatingPlayerActivity : ComponentActivity() {
             gestureVolume = vol
             val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
             val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (vol / 100f * max).toInt(), 0)
+            val deviceVol = vol.coerceAtMost(100)
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (deviceVol / 100f * max).toInt(), 0)
+            val boostPercent = (vol - 100).coerceIn(0, 100)
+            player?.let { com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(it, boostPercent) }
         }
         val onBrightnessSwipe: (Int) -> Unit = { bri ->
             gestureBrightness = bri
@@ -513,6 +516,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 onBrightnessSwipe      = onBrightnessSwipe,
                 initialVolume          = gestureVolume,
                 initialBrightness      = gestureBrightness,
+                volumeBoostEnabled     = preferencesManager.isVolumeBoostingEnabled(),
             )
         }
 
@@ -1288,6 +1292,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         player?.let {
             try {
                 playerListener?.let { listener -> it.removeListener(listener) }
+                com.livetvpro.app.utils.VolumeBoostHelper.release(it)
                 it.stop()
                 it.release()
             } catch (t: Throwable) {
@@ -1428,6 +1433,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 .build()
 
             player = exo
+            com.livetvpro.app.utils.VolumeBoostHelper.attach(exo, preferencesManager)
             playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
 
@@ -1724,6 +1730,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     private fun retryPlayback() {
         errorMessage.value = ""
+        player?.let { com.livetvpro.app.utils.VolumeBoostHelper.release(it) }
         player?.release()
         player = null
         playerSetupInProgress = false

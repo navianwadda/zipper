@@ -50,6 +50,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -127,10 +130,15 @@ fun LiveEventsScreen(
         }
     }
 
-    LaunchedEffect(selectedStatusFilter, selectedCategoryId) {
-        while (true) {
-            delay(10_000)
-            viewModel.filterEventsSilent(selectedStatusFilter, selectedCategoryId)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(selectedStatusFilter, selectedCategoryId, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            // Fires immediately on becoming RESUMED (covers returning from background),
+            // then keeps refreshing every 10s while the screen stays visible.
+            while (true) {
+                viewModel.filterEventsSilent(selectedStatusFilter, selectedCategoryId)
+                delay(10_000)
+            }
         }
     }
 
@@ -636,10 +644,13 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
     val dateFormat = remember { SimpleDateFormat("EEE, dd MMM yyyy", Locale.US) }
 
     var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1000)
-            currentTime = System.currentTimeMillis()
+    val cardLifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(cardLifecycleOwner) {
+        cardLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                currentTime = System.currentTimeMillis()
+                delay(1000)
+            }
         }
     }
 

@@ -7,8 +7,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -25,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.Font
@@ -183,7 +184,8 @@ private fun LinkChip(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    var focused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
     val bg = when {
         isSelected -> MaterialTheme.colorScheme.primary
         focused    -> MaterialTheme.colorScheme.primaryContainer
@@ -199,9 +201,11 @@ private fun LinkChip(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(bg)
-            .clickable(onClick = onClick)
-            .onFocusChanged { focused = it.isFocused }
-            .focusable()
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = onClick,
+            )
             .padding(horizontal = 14.dp, vertical = 8.dp),
     ) {
         if (isSelected) {
@@ -299,7 +303,8 @@ private fun RelatedChannelCard(
     channel: Channel,
     onClick: () -> Unit,
 ) {
-    var focused by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue  = if (focused) 1.05f else 1f,
         animationSpec = tween(150),
@@ -307,6 +312,7 @@ private fun RelatedChannelCard(
     )
     Card(
         onClick    = onClick,
+        interactionSource = interactionSource,
         colors     = CardDefaults.cardColors(),
         shape      = RoundedCornerShape(12.dp),
         elevation  = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -314,9 +320,7 @@ private fun RelatedChannelCard(
             .padding(4.dp)
             .fillMaxWidth()
             .wrapContentHeight()
-            .scale(scale)
-            .onFocusChanged { focused = it.isFocused }
-            .focusable(),
+            .scale(scale),
     ) {
         Column(
             modifier            = Modifier.fillMaxWidth().padding(4.dp),

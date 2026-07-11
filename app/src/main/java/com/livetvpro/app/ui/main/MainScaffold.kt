@@ -178,7 +178,7 @@ fun MainScaffold(
         navController.navigate(
             route,
             NavOptions.Builder()
-                .setPopUpTo(navController.graph.startDestinationId, false)
+                .setPopUpTo(navController.graph.startDestinationId, false, true)
                 .setLaunchSingleTop(true)
                 .setRestoreState(true)
                 .build()

@@ -15,6 +15,13 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
+data class StatusCounts(
+    val all: Int = 0,
+    val live: Int = 0,
+    val upcoming: Int = 0,
+    val recent: Int = 0,
+)
+
 @HiltViewModel
 class LiveEventsViewModel @Inject constructor(
     private val liveEventRepository: LiveEventRepository,
@@ -29,6 +36,9 @@ class LiveEventsViewModel @Inject constructor(
 
     private val _filteredEvents = MutableLiveData<List<LiveEvent>>()
     val filteredEvents: LiveData<List<LiveEvent>> = _filteredEvents
+
+    private val _statusCounts = MutableLiveData(StatusCounts())
+    val statusCounts: LiveData<StatusCounts> = _statusCounts
 
     val primaryColorFlow: StateFlow<Int> = themeManager.primaryColorFlow
 
@@ -113,11 +123,42 @@ class LiveEventsViewModel @Inject constructor(
         }
     }
 
+    private fun matchesLive(event: LiveEvent, currentTime: Long): Boolean =
+        event.isLive || isEventLiveByTime(event, currentTime)
+
+    private fun matchesUpcoming(event: LiveEvent, currentTime: Long): Boolean =
+        !event.isLive && !isEventLiveByTime(event, currentTime) && isEventUpcoming(event, currentTime)
+
+    private fun matchesRecent(event: LiveEvent, currentTime: Long): Boolean =
+        !event.isLive && isEventEnded(event, currentTime)
+
+    private fun applySearch(events: List<LiveEvent>): List<LiveEvent> {
+        if (pendingSearchQuery.isEmpty()) return events
+        val q = pendingSearchQuery.lowercase()
+        return events.filter { event ->
+            event.title.lowercase().contains(q) ||
+            event.team1Name.lowercase().contains(q) ||
+            event.team2Name.lowercase().contains(q)
+        }
+    }
+
     private fun applyFilter() {
         val allEvents = _events.value ?: return
         val currentTime = System.currentTimeMillis()
+        val searched = applySearch(allEvents)
 
-        var filtered = allEvents
+        // Status counts (All/Live/Upcoming/Recent) scoped to the currently selected category.
+        val categoryScoped = if (pendingCategoryId != "evt_cat_all") {
+            searched.filter { it.eventCategoryId == pendingCategoryId }
+        } else searched
+        _statusCounts.value = StatusCounts(
+            all = categoryScoped.size,
+            live = categoryScoped.count { matchesLive(it, currentTime) },
+            upcoming = categoryScoped.count { matchesUpcoming(it, currentTime) },
+            recent = categoryScoped.count { matchesRecent(it, currentTime) },
+        )
+
+        var filtered = searched
 
         if (pendingCategoryId != "evt_cat_all") {
             filtered = filtered.filter { event ->
@@ -125,42 +166,28 @@ class LiveEventsViewModel @Inject constructor(
             }
         }
 
-        if (pendingSearchQuery.isNotEmpty()) {
-            val q = pendingSearchQuery.lowercase()
-            filtered = filtered.filter { event ->
-                event.title.lowercase().contains(q) ||
-                event.team1Name.lowercase().contains(q) ||
-                event.team2Name.lowercase().contains(q)
-            }
-        }
-
         filtered = when (pendingStatusFilter) {
             EventStatus.LIVE -> {
-                filtered.filter { event ->
-                    event.isLive || isEventLiveByTime(event, currentTime)
-                }.sortedWith(
+                filtered.filter { event -> matchesLive(event, currentTime) }.sortedWith(
                     compareByDescending<LiveEvent> { it.wrapper.isNotEmpty() }
                         .thenBy { it.startTime }
                 )
             }
             EventStatus.UPCOMING -> {
-                filtered.filter { event ->
-                    !event.isLive && !isEventLiveByTime(event, currentTime) && isEventUpcoming(event, currentTime)
-                }.sortedWith(
+                filtered.filter { event -> matchesUpcoming(event, currentTime) }.sortedWith(
                     compareByDescending<LiveEvent> { it.wrapper.isNotEmpty() }
                         .thenBy { it.startTime }
                 )
             }
             EventStatus.RECENT -> {
-                filtered.filter { event ->
-                    !event.isLive && isEventEnded(event, currentTime)
-                }.sortedByDescending { it.startTime }
+                filtered.filter { event -> matchesRecent(event, currentTime) }
+                    .sortedByDescending { it.startTime }
             }
             null -> {
                 filtered.sortedWith(
                     compareBy<LiveEvent> { event ->
                         when {
-                            event.isLive || isEventLiveByTime(event, currentTime) -> 0
+                            matchesLive(event, currentTime) -> 0
                             isEventUpcoming(event, currentTime) -> 1
                             else -> 2
                         }

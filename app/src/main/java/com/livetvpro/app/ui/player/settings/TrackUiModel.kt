@@ -31,7 +31,9 @@ sealed class TrackUiModel {
         val trackIndex: Int?,
         val language: String,
         override val isSelected: Boolean,
-        override val isRadio: Boolean = true
+        override val isRadio: Boolean = true,
+        val isClosedCaption: Boolean = false,
+        val isForced: Boolean = false,
     ) : TrackUiModel()
 
     data class Speed(

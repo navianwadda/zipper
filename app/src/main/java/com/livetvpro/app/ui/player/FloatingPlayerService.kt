@@ -77,7 +77,8 @@ class FloatingPlayerService : Service() {
         var currentLinkIndex: Int = 0,
         var channelList: List<Channel>? = null,
 var channelListCacheKey: String? = null,
-var isSports: Boolean = false
+var isSports: Boolean = false,
+var isBoosted: Boolean = false
     )
 
     private var windowManager: WindowManager? = null
@@ -573,6 +574,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     false
                 )
                 .build()
+            com.livetvpro.app.utils.VolumeBoostHelper.attach(player, preferencesManager)
             val playerView = floatingView.findViewById<PlayerView>(R.id.player_view)
             playerView.player = player
 
@@ -944,6 +946,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     false
                 )
                 .build()
+            com.livetvpro.app.utils.VolumeBoostHelper.attach(player, preferencesManager)
 
             val nsMediaItem = buildDrmMediaItem(nsStreamInfo, headers)
             player.setMediaItem(nsMediaItem)
@@ -1066,6 +1069,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
 
             val wasMuted = instance.isMuted
             instance.player.stop()
+            com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
             instance.player.release()
 
             val renderersFactory2 = DefaultRenderersFactory(this)
@@ -1092,6 +1096,8 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     false
                 )
                 .build()
+            com.livetvpro.app.utils.VolumeBoostHelper.attach(newPlayer, preferencesManager)
+            com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(newPlayer, if (instance.isBoosted) 100 else 0)
             newPlayer.volume = if (wasMuted) 0f else 1f
             instance.playerView.player = newPlayer
 
@@ -1150,6 +1156,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
 
             val wasMuted = instance.isMuted
             instance.player.stop()
+            com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
             instance.player.release()
 
             val renderersFactory = DefaultRenderersFactory(this)
@@ -1176,6 +1183,8 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     false
                 )
                 .build()
+            com.livetvpro.app.utils.VolumeBoostHelper.attach(newPlayer, preferencesManager)
+            com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(newPlayer, if (instance.isBoosted) 100 else 0)
             newPlayer.volume = if (wasMuted) 0f else 1f
             instance.playerView.player = newPlayer
 
@@ -1326,6 +1335,18 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
             instance.isMuted = !instance.isMuted
             instance.player.volume = if (instance.isMuted) 0f else 1f
             btnMute.setImageResource(if (instance.isMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_up)
+        }
+
+        btnMute?.setOnLongClickListener {
+            val instance = activeInstances[instanceId] ?: return@setOnLongClickListener true
+            if (!preferencesManager.isVolumeBoostingEnabled()) {
+                android.widget.Toast.makeText(this, "Turn on \"Allow volume boosting\" in Player Settings first", android.widget.Toast.LENGTH_SHORT).show()
+                return@setOnLongClickListener true
+            }
+            instance.isBoosted = !instance.isBoosted
+            com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(instance.player, if (instance.isBoosted) 100 else 0)
+            android.widget.Toast.makeText(this, if (instance.isBoosted) "Volume boost on" else "Volume boost off", android.widget.Toast.LENGTH_SHORT).show()
+            true
         }
 
         btnLock?.setOnClickListener {
@@ -1713,6 +1734,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 val mediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, dataSourceFactory, headers)
 
                 instance.player.stop()
+                com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
                 instance.player.release()
 
                 val renderersFactory3 = DefaultRenderersFactory(this)
@@ -1739,6 +1761,8 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                         false
                     )
                     .build()
+                com.livetvpro.app.utils.VolumeBoostHelper.attach(newPlayer, preferencesManager)
+                com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(newPlayer, if (instance.isBoosted) 100 else 0)
 
                 instance.playerView.player = newPlayer
                 newPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
@@ -1762,6 +1786,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         hideControlsHandlers[instanceId]?.removeCallbacksAndMessages(null)
         hideControlsHandlers.remove(instanceId)
 
+        com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
         instance.player.release()
 
         try {

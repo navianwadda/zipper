@@ -88,6 +88,7 @@ class PlayerActivity : ComponentActivity() {
     private val relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
     private val linksState          = mutableStateOf<List<LiveEventLink>>(emptyList())
     private val selectedLinkState   = mutableStateOf(0)
+    private val linksRowState       = androidx.compose.foundation.lazy.LazyListState()
     private val messageBannerText   = mutableStateOf("")
     private val messageBannerUrl    = mutableStateOf("")
     private val showSettingsDialog  = mutableStateOf(false)
@@ -555,6 +556,11 @@ class PlayerActivity : ComponentActivity() {
                     if (!isInPipMode) {
                         Controls(isLandscape = true)
                         if (linksState.value.size > 1) {
+                            LaunchedEffect(linksRowState.isScrollInProgress) {
+                                if (linksRowState.isScrollInProgress) {
+                                    controlsState.show(lifecycleScope)
+                                }
+                            }
                             androidx.compose.animation.AnimatedVisibility(
                                 visible  = controlsState.isVisible && !controlsState.isLocked,
                                 enter    = fadeIn(),
@@ -571,11 +577,12 @@ class PlayerActivity : ComponentActivity() {
                                     messageBanner        = "",
                                     messageBannerUrl     = "",
                                     onLinkClick          = { link, idx -> switchToLink(link, idx) },
-                                    onChannelClick       = { switchToChannel(it) },
+                                    onChannelClick       = { channel, idx -> switchToChannel(channel, idx) },
                                     onEventClick         = { event, linkIdx -> switchToEventFromLiveEvent(event, linkIdx) },
                                     onMessageBannerClick = {},
                                     spanCount            = spanCount,
                                     eventSpanCount       = eventSpanCount,
+                                    linksRowState        = linksRowState,
                                 )
                             }
                         }
@@ -602,7 +609,7 @@ class PlayerActivity : ComponentActivity() {
                     messageBanner        = messageBannerText.value,
                     messageBannerUrl     = messageBannerUrl.value,
                     onLinkClick          = { link, idx -> switchToLink(link, idx) },
-                    onChannelClick       = { switchToChannel(it) },
+                    onChannelClick       = { channel, idx -> switchToChannel(channel, idx) },
                     onEventClick         = { event, linkIdx -> switchToEventFromLiveEvent(event, linkIdx) },
                     onMessageBannerClick = {
                         val url = messageBannerUrl.value
@@ -613,6 +620,7 @@ class PlayerActivity : ComponentActivity() {
                     },
                     spanCount      = spanCount,
                     eventSpanCount = eventSpanCount,
+                    linksRowState  = linksRowState,
                     modifier       = Modifier.weight(1f).windowInsetsPadding(WindowInsets.navigationBars),
                 )
             }

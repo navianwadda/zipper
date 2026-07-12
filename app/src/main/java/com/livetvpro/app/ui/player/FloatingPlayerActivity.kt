@@ -1378,7 +1378,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                     }
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
+                    if (preferencesManager.isAutoSwitchStreamEnabled() && contentType == ContentType.EVENT && allEventLinks.size > 1) {
                         val nextIndex = currentLinkIndex + 1
                         if (nextIndex in allEventLinks.indices) {
                             switchToLink(allEventLinks[nextIndex], nextIndex)
@@ -1508,7 +1508,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
+                    if (preferencesManager.isAutoSwitchStreamEnabled() && contentType == ContentType.EVENT && allEventLinks.size > 1) {
                         val nextIndex = currentLinkIndex + 1
                         if (nextIndex in allEventLinks.indices) {
                             switchToLink(allEventLinks[nextIndex], nextIndex)

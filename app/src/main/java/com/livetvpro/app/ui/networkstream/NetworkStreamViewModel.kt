@@ -22,5 +22,14 @@ class NetworkStreamViewModel @Inject constructor(
     var selectedUserAgent: String = "Default"
     var selectedDrmScheme: String = "clearkey"
 
-    fun recordPlayed(url: String) = historyManager.addEntry(url)
+    fun recordPlayed(url: String) = historyManager.addEntry(
+        url = url,
+        cookie = cookie,
+        referer = referer,
+        origin = origin,
+        drmLicense = drmLicense,
+        selectedUserAgent = selectedUserAgent,
+        customUserAgent = customUserAgent,
+        drmScheme = selectedDrmScheme,
+    )
 }

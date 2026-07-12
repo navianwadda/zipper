@@ -305,7 +305,7 @@ private fun MarqueeBanner(
             text = text,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+                .padding(6.dp)
                 .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = BergenSans,

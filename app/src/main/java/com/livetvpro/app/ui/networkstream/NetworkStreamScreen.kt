@@ -6,6 +6,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +60,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
@@ -98,6 +104,8 @@ fun NetworkStreamScreen(
         handleColor = primaryColor,
         backgroundColor = primaryColor.copy(alpha = 0.3f)
     )
+
+    val fabFocusRequester = remember { FocusRequester() }
 
     CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
         Box(modifier = Modifier.fillMaxSize().imePadding().background(MaterialTheme.colorScheme.background)) {
@@ -144,7 +152,13 @@ fun NetworkStreamScreen(
                     keyboardType = KeyboardType.Uri
                 )
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (selectedUserAgent != "Custom")
+                                Modifier.focusProperties { down = fabFocusRequester }
+                            else Modifier
+                        ),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     StreamDropdown(
@@ -173,7 +187,8 @@ fun NetworkStreamScreen(
                         value = customUserAgent,
                         onValueChange = { customUserAgent = it; viewModel.customUserAgent = it },
                         label = stringResource(R.string.custom_user_agent),
-                        primaryColor = primaryColor
+                        primaryColor = primaryColor,
+                        modifier = Modifier.focusProperties { down = fabFocusRequester }
                     )
                 }
             }
@@ -186,7 +201,8 @@ fun NetworkStreamScreen(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 24.dp, bottom = 24.dp + navBarPadding),
+                    .padding(end = 24.dp, bottom = 24.dp + navBarPadding)
+                    .focusRequester(fabFocusRequester),
                 containerColor = primaryColor,
                 contentColor = Color.White,
                 shape = CircleShape
@@ -207,14 +223,15 @@ private fun StreamTextField(
     onValueChange: (String) -> Unit,
     label: String,
     primaryColor: Color,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    modifier: Modifier = Modifier
 ) {
     val clipboard = LocalClipboardManager.current
 
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         label = {
             Text(
                 text = label,
@@ -327,10 +344,25 @@ private fun StreamDropdown(
             onDismissRequest = { expanded = false },
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
         ) {
-            options.forEach { option ->
+            val firstOptionFocusRequester = remember { FocusRequester() }
+            LaunchedEffect(expanded) {
+                if (expanded) firstOptionFocusRequester.requestFocus()
+            }
+            options.forEachIndexed { index, option ->
+                val interactionSource = remember { MutableInteractionSource() }
+                val isFocused by interactionSource.collectIsFocusedAsState()
                 DropdownMenuItem(
                     text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (isFocused) primaryColor.copy(alpha = 0.15f) else Color.Transparent,
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             RadioButton(
                                 selected = option == selected,
                                 onClick = null,
@@ -351,7 +383,9 @@ private fun StreamDropdown(
                     onClick = {
                         onSelect(option)
                         expanded = false
-                    }
+                    },
+                    interactionSource = interactionSource,
+                    modifier = if (index == 0) Modifier.focusRequester(firstOptionFocusRequester) else Modifier,
                 )
             }
         }

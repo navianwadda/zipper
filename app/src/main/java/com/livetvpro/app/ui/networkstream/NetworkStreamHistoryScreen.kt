@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -82,6 +83,13 @@ fun NetworkStreamHistoryScreen(
                 focusRequester   = if (index == 0) firstRowFocusRequester else null,
                 onClick          = {
                     networkStreamViewModel.streamUrl = entry.url
+                    networkStreamViewModel.cookie = entry.cookie
+                    networkStreamViewModel.referer = entry.referer
+                    networkStreamViewModel.origin = entry.origin
+                    networkStreamViewModel.drmLicense = entry.drmLicense
+                    networkStreamViewModel.selectedUserAgent = entry.selectedUserAgent
+                    networkStreamViewModel.customUserAgent = entry.customUserAgent
+                    networkStreamViewModel.selectedDrmScheme = entry.drmScheme
                     navController.popBackStack()
                 },
                 onDelete         = { viewModel.removeEntry(entry.id) },
@@ -126,14 +134,31 @@ private fun HistoryRow(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                text     = entry.url,
-                fontSize = 14.sp,
-                color    = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(end = 8.dp),
-            )
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(
+                    text     = entry.url,
+                    fontSize = 14.sp,
+                    color    = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val extras = buildList {
+                    if (entry.cookie.isNotBlank()) add("Cookie")
+                    if (entry.referer.isNotBlank()) add("Referer")
+                    if (entry.origin.isNotBlank()) add("Origin")
+                    if (entry.drmLicense.isNotBlank()) add("DRM: ${entry.drmScheme}")
+                    if (entry.selectedUserAgent != "Default") add("UA: ${entry.selectedUserAgent}")
+                }
+                if (extras.isNotEmpty()) {
+                    Text(
+                        text     = extras.joinToString(" • "),
+                        fontSize = 11.sp,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             IconButton(
                 onClick           = onDelete,
                 interactionSource = deleteInteractionSource,

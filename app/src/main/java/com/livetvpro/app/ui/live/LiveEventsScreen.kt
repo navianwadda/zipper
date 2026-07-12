@@ -66,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
@@ -284,6 +285,7 @@ private fun MarqueeBanner(
 ) {
     val bannerShape = RoundedCornerShape(20.dp)
     val bannerHeight = 30.dp
+    val gapWidth = 4.dp
     val bannerColor = MaterialTheme.colorScheme.surfaceVariant
         .copy(alpha = 0.55f)
         .compositeOver(MaterialTheme.colorScheme.background)
@@ -305,13 +307,28 @@ private fun MarqueeBanner(
             text = text,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(6.dp)
+                .padding(horizontal = gapWidth)
                 .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = BergenSans,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Clip
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .fillMaxHeight()
+                .width(gapWidth)
+                .background(Brush.horizontalGradient(listOf(bannerColor, bannerColor.copy(alpha = 0f))))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .width(gapWidth)
+                .background(Brush.horizontalGradient(listOf(bannerColor.copy(alpha = 0f), bannerColor)))
         )
     }
 }

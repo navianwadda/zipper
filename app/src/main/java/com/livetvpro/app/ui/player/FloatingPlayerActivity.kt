@@ -1378,6 +1378,13 @@ class FloatingPlayerActivity : ComponentActivity() {
                     }
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
+                        val nextIndex = currentLinkIndex + 1
+                        if (nextIndex in allEventLinks.indices) {
+                            switchToLink(allEventLinks[nextIndex], nextIndex)
+                            return
+                        }
+                    }
                     errorMessage.value = error.localizedMessage ?: "Playback error"
                 }
             }
@@ -1501,6 +1508,13 @@ class FloatingPlayerActivity : ComponentActivity() {
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
+                        val nextIndex = currentLinkIndex + 1
+                        if (nextIndex in allEventLinks.indices) {
+                            switchToLink(allEventLinks[nextIndex], nextIndex)
+                            return
+                        }
+                    }
                     errorMessage.value = error.localizedMessage ?: "Playback error"
                 }
             }

@@ -83,6 +83,7 @@ class FloatingPlayerActivity : ComponentActivity() {
     private val relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
     private val linksState          = mutableStateOf<List<LiveEventLink>>(emptyList())
     private val selectedLinkState   = mutableStateOf(0)
+    private val linksRowState       = androidx.compose.foundation.lazy.LazyListState()
     private val messageBannerText   = mutableStateOf("")
     private val messageBannerUrl    = mutableStateOf("")
     private val isLandscapeState    = mutableStateOf(false)
@@ -576,7 +577,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                         messageBanner        = messageBannerText.value,
                         messageBannerUrl     = messageBannerUrl.value,
                         onLinkClick          = { link, idx -> switchToLink(link, idx) },
-                        onChannelClick       = { switchToChannel(it) },
+                        onChannelClick       = { channel, idx -> switchToChannel(channel, idx) },
                         onEventClick         = { event, linkIdx -> switchToEventFromLiveEvent(event, linkIdx) },
                         onMessageBannerClick = {
                             val url = messageBannerUrl.value
@@ -588,6 +589,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                         spanCount      = resources.getInteger(R.integer.grid_column_count),
                         eventSpanCount = resources.getInteger(R.integer.event_span_count),
                         modifier       = Modifier.weight(1f).windowInsetsPadding(WindowInsets.navigationBars),
+                        linksRowState  = linksRowState,
                     )
                 }
             } else {
@@ -613,6 +615,11 @@ class FloatingPlayerActivity : ComponentActivity() {
                     Controls(landscapeMode = true)
 
                     if (linksState.value.size > 1) {
+                        LaunchedEffect(linksRowState.isScrollInProgress) {
+                            if (linksRowState.isScrollInProgress) {
+                                controlsState.show(lifecycleScope)
+                            }
+                        }
                         androidx.compose.animation.AnimatedVisibility(
                             visible  = controlsState.isVisible && !controlsState.isLocked,
                             enter    = fadeIn(),
@@ -629,11 +636,12 @@ class FloatingPlayerActivity : ComponentActivity() {
                                 messageBanner        = "",
                                 messageBannerUrl     = "",
                                 onLinkClick          = { link, idx -> switchToLink(link, idx) },
-                                onChannelClick       = { switchToChannel(it) },
+                                onChannelClick       = { channel, idx -> switchToChannel(channel, idx) },
                                 onEventClick         = { event, idx -> switchToEventFromLiveEvent(event, idx) },
                                 onMessageBannerClick = {},
                                 spanCount      = resources.getInteger(R.integer.grid_column_count),
                                 eventSpanCount = resources.getInteger(R.integer.event_span_count),
+                                linksRowState  = linksRowState,
                             )
                         }
                     }
@@ -874,6 +882,30 @@ class FloatingPlayerActivity : ComponentActivity() {
             isInPipMode -> return
             else -> finish()
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        when (keyCode) {
+            android.view.KeyEvent.KEYCODE_CHANNEL_UP,
+            android.view.KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
+                    val next = (currentLinkIndex + 1).coerceAtMost(allEventLinks.size - 1)
+                    if (next != currentLinkIndex) switchToLink(allEventLinks[next], next)
+                    controlsState.show(lifecycleScope)
+                    return true
+                }
+            }
+            android.view.KeyEvent.KEYCODE_CHANNEL_DOWN,
+            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
+                    val prev = (currentLinkIndex - 1).coerceAtLeast(0)
+                    if (prev != currentLinkIndex) switchToLink(allEventLinks[prev], prev)
+                    controlsState.show(lifecycleScope)
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     private fun parseIntent() {

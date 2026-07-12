@@ -282,8 +282,8 @@ private fun MarqueeBanner(
     url: String,
     context: Context,
 ) {
-    val bannerShape = RoundedCornerShape(14.dp)
-    val bannerHeight = 38.dp
+    val bannerShape = RoundedCornerShape(20.dp)
+    val bannerHeight = 30.dp
     val bannerColor = MaterialTheme.colorScheme.surfaceVariant
         .copy(alpha = 0.55f)
         .compositeOver(MaterialTheme.colorScheme.background)
@@ -305,7 +305,7 @@ private fun MarqueeBanner(
             text = text,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp)
+                .padding(horizontal = 8.dp)
                 .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = BergenSans,

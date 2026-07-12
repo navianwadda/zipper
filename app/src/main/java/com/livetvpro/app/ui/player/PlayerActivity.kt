@@ -1365,7 +1365,9 @@ class PlayerActivity : ComponentActivity() {
                     userAgent     = parsed.headers["User-Agent"] ?: intent.getStringExtra("USER_AGENT") ?: "Default",
                     xForwardedFor = parsed.headers["X-Forwarded-For"],
                     drmScheme     = parsed.drmScheme ?: intent.getStringExtra("DRM_SCHEME"),
-                    drmLicenseUrl = parsed.drmLicenseUrl,
+                    drmLicenseUrl = parsed.drmLicenseUrl ?: parsed.drmKeyId?.let { id ->
+                        parsed.drmKey?.let { k -> "$id:$k" }
+                    },
                     customHeaders = parsed.customHeaders,
                 )
                 allEventLinks = listOf(mergedLink)

@@ -30,6 +30,7 @@ class PreferencesManager @Inject constructor(
         private const val KEY_FORCE_LOWEST_QUALITY = "force_lowest_quality"
         private const val KEY_LAYOUT_MODE = "layout_mode"
         private const val KEY_VOLUME_BOOSTING_ENABLED = "volume_boosting_enabled"
+        private const val KEY_AUTO_SWITCH_STREAM_ENABLED = "auto_switch_stream_enabled"
 
         const val LAYOUT_MODE_SEEKS_ONLY       = 0
         const val LAYOUT_MODE_SEEKS_AND_NAV    = 1
@@ -86,6 +87,9 @@ class PreferencesManager @Inject constructor(
 
     fun isVolumeBoostingEnabled(): Boolean = prefs.getBoolean(KEY_VOLUME_BOOSTING_ENABLED, false)
     fun setVolumeBoostingEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_VOLUME_BOOSTING_ENABLED, enabled).apply()
+
+    fun isAutoSwitchStreamEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_SWITCH_STREAM_ENABLED, true)
+    fun setAutoSwitchStreamEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_AUTO_SWITCH_STREAM_ENABLED, enabled).apply()
 
     fun getLayoutMode(): Int = prefs.getInt(KEY_LAYOUT_MODE, LAYOUT_MODE_SEEKS_ONLY)
     fun setLayoutMode(mode: Int) = prefs.edit().putInt(KEY_LAYOUT_MODE, mode).apply()

@@ -1479,7 +1479,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 if (instance.player !== player) return
 
                 val event = instance.currentEvent
-                if (event != null && event.links.size > 1) {
+                if (preferencesManager.isAutoSwitchStreamEnabled() && event != null && event.links.size > 1) {
                     val nextIndex = instance.currentLinkIndex + 1
                     if (nextIndex in event.links.indices) {
                         serviceScope.launch {

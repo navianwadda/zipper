@@ -20,6 +20,7 @@ import com.livetvpro.app.ui.appearance.SwitchPreferenceRow
 fun PlaybackScreen(preferencesManager: PreferencesManager) {
 
     var volumeBoosting by remember { mutableStateOf(preferencesManager.isVolumeBoostingEnabled()) }
+    var autoSwitchStream by remember { mutableStateOf(preferencesManager.isAutoSwitchStreamEnabled()) }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
 
@@ -34,6 +35,24 @@ fun PlaybackScreen(preferencesManager: PreferencesManager) {
                     onCheckedChange = {
                         volumeBoosting = it
                         preferencesManager.setVolumeBoostingEnabled(it)
+                    },
+                )
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(24.dp)) }
+
+        item { PreferenceSectionHeader(title = "Streaming") }
+
+        item {
+            PreferenceCard {
+                SwitchPreferenceRow(
+                    title   = "Enable auto switching to next stream when any stream fails",
+                    summary = "Automatically try the next available link if the current one fails to play",
+                    checked = autoSwitchStream,
+                    onCheckedChange = {
+                        autoSwitchStream = it
+                        preferencesManager.setAutoSwitchStreamEnabled(it)
                     },
                 )
             }

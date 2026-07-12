@@ -22,11 +22,33 @@ class NetworkStreamHistoryManager @Inject constructor(
         private const val MAX_ENTRIES = 200
     }
 
-    fun addEntry(url: String) {
+    fun addEntry(
+        url: String,
+        cookie: String = "",
+        referer: String = "",
+        origin: String = "",
+        drmLicense: String = "",
+        selectedUserAgent: String = "Default",
+        customUserAgent: String = "",
+        drmScheme: String = "clearkey",
+    ) {
         if (url.isBlank()) return
         val current = readEntries().toMutableList()
         current.removeAll { it.url == url }
-        current.add(0, NetworkStreamHistoryEntry(id = System.currentTimeMillis(), url = url))
+        current.add(
+            0,
+            NetworkStreamHistoryEntry(
+                id = System.currentTimeMillis(),
+                url = url,
+                cookie = cookie,
+                referer = referer,
+                origin = origin,
+                drmLicense = drmLicense,
+                selectedUserAgent = selectedUserAgent,
+                customUserAgent = customUserAgent,
+                drmScheme = drmScheme,
+            )
+        )
         writeEntries(current.take(MAX_ENTRIES))
     }
 
@@ -54,7 +76,17 @@ class NetworkStreamHistoryManager @Inject constructor(
             val array = JSONArray(raw)
             (0 until array.length()).map { i ->
                 val obj = array.getJSONObject(i)
-                NetworkStreamHistoryEntry(id = obj.getLong("id"), url = obj.getString("url"))
+                NetworkStreamHistoryEntry(
+                    id = obj.getLong("id"),
+                    url = obj.getString("url"),
+                    cookie = obj.optString("cookie", ""),
+                    referer = obj.optString("referer", ""),
+                    origin = obj.optString("origin", ""),
+                    drmLicense = obj.optString("drmLicense", ""),
+                    selectedUserAgent = obj.optString("selectedUserAgent", "Default"),
+                    customUserAgent = obj.optString("customUserAgent", ""),
+                    drmScheme = obj.optString("drmScheme", "clearkey"),
+                )
             }
         } catch (e: Exception) {
             emptyList()
@@ -67,6 +99,13 @@ class NetworkStreamHistoryManager @Inject constructor(
             val obj = JSONObject()
             obj.put("id", entry.id)
             obj.put("url", entry.url)
+            obj.put("cookie", entry.cookie)
+            obj.put("referer", entry.referer)
+            obj.put("origin", entry.origin)
+            obj.put("drmLicense", entry.drmLicense)
+            obj.put("selectedUserAgent", entry.selectedUserAgent)
+            obj.put("customUserAgent", entry.customUserAgent)
+            obj.put("drmScheme", entry.drmScheme)
             array.put(obj)
         }
         prefs.edit().putString(KEY_ENTRIES, array.toString()).apply()

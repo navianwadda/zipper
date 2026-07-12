@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -89,8 +88,8 @@ fun PlayerScreen(
             )
         }
         if (!isLandscape && messageBanner.isNotBlank()) {
-            MessageBanner(
-                message = messageBanner,
+            com.livetvpro.app.ui.components.MarqueeMessageBanner(
+                text = messageBanner,
                 onClick = onMessageBannerClick,
             )
         }
@@ -223,36 +222,6 @@ private fun LinkChip(
             fontSize   = 13.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             maxLines   = 1,
-        )
-    }
-}
-
-@Composable
-private fun MessageBanner(
-    message: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val bannerShape = RoundedCornerShape(6.dp)
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 8.dp, end = 8.dp, top = 6.dp)
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.16f), bannerShape)
-            .border(1.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.55f), bannerShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 5.dp),
-    ) {
-        Text(
-            text     = message,
-            modifier = Modifier
-                .fillMaxWidth()
-                .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
-            style      = MaterialTheme.typography.bodyMedium,
-            fontFamily = BergenSans,
-            color      = MaterialTheme.colorScheme.onSurface,
-            maxLines   = 1,
-            overflow   = TextOverflow.Clip,
         )
     }
 }

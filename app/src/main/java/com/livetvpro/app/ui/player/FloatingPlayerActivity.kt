@@ -1141,7 +1141,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         }
     }
 
-    private fun switchToChannel(newChannel: Channel) {
+    private fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
         releasePlayer()
         channelData = newChannel
         eventData = null
@@ -1163,8 +1163,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                     drmLicenseUrl = it.drmLicenseUrl
                 )
             }
-            currentLinkIndex = 0
-            streamUrl = allEventLinks.firstOrNull()?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
+            currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
+            streamUrl = allEventLinks.getOrNull(currentLinkIndex)?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
         } else {
             allEventLinks = emptyList()
             streamUrl = newChannel.streamUrl

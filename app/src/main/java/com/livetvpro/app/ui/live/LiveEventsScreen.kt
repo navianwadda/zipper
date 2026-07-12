@@ -64,9 +64,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
@@ -275,29 +280,45 @@ fun LiveEventsScreen(
     }
 }
 
+private fun Modifier.fadingEdge(brush: Brush): Modifier = this
+    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+    .drawWithContent {
+        drawContent()
+        drawRect(brush = brush, blendMode = BlendMode.DstIn)
+    }
+
 @Composable
 private fun MarqueeBanner(
     text: String,
     url: String,
     context: Context,
 ) {
-    val bannerShape = RoundedCornerShape(18.dp)
+    val bannerShape = RoundedCornerShape(16.dp)
+    val edgeFade = remember {
+        Brush.horizontalGradient(
+            0f to Color.Transparent,
+            0.06f to Color.Black,
+            0.94f to Color.Black,
+            1f to Color.Transparent,
+        )
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 2.dp)
+            .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 2.dp)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f), bannerShape)
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), bannerShape)
             .clickable(enabled = url.isNotBlank()) {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
             }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
             text = text,
             modifier = Modifier
                 .fillMaxWidth()
-                .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
+                .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp)
+                .fadingEdge(edgeFade),
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = BergenSans,
             color = MaterialTheme.colorScheme.onSurface,

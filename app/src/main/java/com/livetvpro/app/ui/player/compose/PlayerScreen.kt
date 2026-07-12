@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -42,6 +43,8 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.data.models.LiveEventLink
+import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
+import com.livetvpro.app.ui.player.dialogs.toLinkItem
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val CardLogoBg  = Color(0x80000000)
@@ -62,13 +65,55 @@ fun PlayerScreen(
     messageBanner: String,
     messageBannerUrl: String,
     onLinkClick: (LiveEventLink, Int) -> Unit,
-    onChannelClick: (Channel) -> Unit,
+    onChannelClick: (Channel, Int) -> Unit,
     onEventClick: (LiveEvent, Int) -> Unit,
     onMessageBannerClick: () -> Unit,
     spanCount: Int = 3,
     eventSpanCount: Int = 2,
     modifier: Modifier = Modifier,
+    linksRowState: LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
 ) {
+    var linkDialogChannel by remember { mutableStateOf<Channel?>(null) }
+    var linkDialogEvent by remember { mutableStateOf<LiveEvent?>(null) }
+
+    val handleChannelClick: (Channel) -> Unit = { channel ->
+        if ((channel.links?.size ?: 0) > 1) {
+            linkDialogChannel = channel
+        } else {
+            onChannelClick(channel, 0)
+        }
+    }
+    val handleEventClick: (LiveEvent) -> Unit = { event ->
+        if (event.links.size > 1) {
+            linkDialogEvent = event
+        } else {
+            onEventClick(event, 0)
+        }
+    }
+
+    if (linkDialogChannel != null) {
+        val channel = linkDialogChannel!!
+        LinkSelectionDialog(
+            links = channel.links.orEmpty().map { it.toLinkItem() },
+            onLinkSelected = { _, index ->
+                onChannelClick(channel, index)
+                linkDialogChannel = null
+            },
+            onDismiss = { linkDialogChannel = null },
+        )
+    }
+    if (linkDialogEvent != null) {
+        val event = linkDialogEvent!!
+        LinkSelectionDialog(
+            links = event.links.map { it.toLinkItem() },
+            onLinkSelected = { _, index ->
+                onEventClick(event, index)
+                linkDialogEvent = null
+            },
+            onDismiss = { linkDialogEvent = null },
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -83,6 +128,7 @@ fun PlayerScreen(
                 links         = links,
                 selectedIndex = selectedLinkIndex,
                 onLinkClick   = onLinkClick,
+                state         = linksRowState,
                 background    = if (isLandscape) Color.Transparent
                                 else MaterialTheme.colorScheme.surface,
             )
@@ -108,13 +154,13 @@ fun PlayerScreen(
                 is RelatedContentState.Channels -> RelatedChannelsGrid(
                     channels       = relatedContentState.items,
                     spanCount      = spanCount,
-                    onChannelClick = onChannelClick,
+                    onChannelClick = handleChannelClick,
                     modifier       = Modifier.fillMaxSize(),
                 )
                 is RelatedContentState.Events   -> RelatedEventsGrid(
                     events       = relatedContentState.items,
                     spanCount    = eventSpanCount,
-                    onEventClick = onEventClick,
+                    onEventClick = handleEventClick,
                     modifier     = Modifier.fillMaxSize(),
                 )
             }
@@ -128,6 +174,7 @@ private fun LinksRow(
     selectedIndex: Int,
     onLinkClick: (LiveEventLink, Int) -> Unit,
     modifier: Modifier = Modifier,
+    state: LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
     background: Color = MaterialTheme.colorScheme.surface,
 ) {
     AnimatedVisibility(
@@ -137,6 +184,7 @@ private fun LinksRow(
         modifier = modifier,
     ) {
         LazyRow(
+            state                  = state,
             contentPadding      = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
@@ -345,7 +393,7 @@ private fun RelatedChannelCard(
 private fun RelatedEventsGrid(
     events: List<LiveEvent>,
     spanCount: Int,
-    onEventClick: (LiveEvent, Int) -> Unit,
+    onEventClick: (LiveEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (events.isEmpty()) return
@@ -357,7 +405,7 @@ private fun RelatedEventsGrid(
         items(events, key = { it.id }) { event ->
             com.livetvpro.app.ui.live.LiveEventCard(
                 event   = event,
-                onClick = { onEventClick(event, 0) },
+                onClick = { onEventClick(event) },
             )
         }
     }

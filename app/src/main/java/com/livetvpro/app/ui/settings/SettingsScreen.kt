@@ -129,7 +129,7 @@ fun SettingsScreen(
             SettingsCard(
                 icon         = PlaybackIcon,
                 label        = "Playback",
-                sublabel     = "Volume boosting",
+                sublabel     = "Volume boosting, Auto switching",
                 showChevron  = true,
                 bottomMargin = 16.dp,
             ) {

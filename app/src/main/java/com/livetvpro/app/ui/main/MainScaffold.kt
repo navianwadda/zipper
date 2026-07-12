@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -562,34 +563,12 @@ private fun PhoneTopBar(
                     IconButton(onClick = { showSortMenu = true }) {
                         Icon(painterResource(R.drawable.ic_sort), contentDescription = "Sort", tint = onSurface)
                     }
-                    DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    modifier              = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment     = Alignment.CenterVertically,
-                                ) {
-                                    Text("Newest First")
-                                    RadioButton(selected = historyNewestFirst, onClick = null)
-                                }
-                            },
-                            onClick = { onHistorySortSelect(true); showSortMenu = false },
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    modifier              = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment     = Alignment.CenterVertically,
-                                ) {
-                                    Text("Oldest First")
-                                    RadioButton(selected = !historyNewestFirst, onClick = null)
-                                }
-                            },
-                            onClick = { onHistorySortSelect(false); showSortMenu = false },
-                        )
-                    }
+                    HistorySortMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false },
+                        historyNewestFirst = historyNewestFirst,
+                        onSelect = { newestFirst -> onHistorySortSelect(newestFirst); showSortMenu = false },
+                    )
                 }
                 IconButton(onClick = onHistoryClearAll) {
                     Icon(painterResource(R.drawable.ic_delete_sweep), contentDescription = "Clear history", tint = onSurface)
@@ -726,34 +705,12 @@ private fun TvTopBar(
                     IconButton(onClick = { showSortMenu = true }) {
                         Icon(painterResource(R.drawable.ic_sort), contentDescription = "Sort", tint = onSurface)
                     }
-                    DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    modifier              = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment     = Alignment.CenterVertically,
-                                ) {
-                                    Text("Newest First")
-                                    RadioButton(selected = historyNewestFirst, onClick = null)
-                                }
-                            },
-                            onClick = { onHistorySortSelect(true); showSortMenu = false },
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    modifier              = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment     = Alignment.CenterVertically,
-                                ) {
-                                    Text("Oldest First")
-                                    RadioButton(selected = !historyNewestFirst, onClick = null)
-                                }
-                            },
-                            onClick = { onHistorySortSelect(false); showSortMenu = false },
-                        )
-                    }
+                    HistorySortMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false },
+                        historyNewestFirst = historyNewestFirst,
+                        onSelect = { newestFirst -> onHistorySortSelect(newestFirst); showSortMenu = false },
+                    )
                 }
                 IconButton(onClick = onHistoryClearAll) {
                     Icon(painterResource(R.drawable.ic_delete_sweep), contentDescription = "Clear history", tint = onSurface)
@@ -771,6 +728,71 @@ private fun TvTopBar(
             )
         }
     }
+}
+
+@Composable
+private fun HistorySortMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    historyNewestFirst: Boolean,
+    onSelect: (newestFirst: Boolean) -> Unit,
+) {
+    val newestFocusRequester = remember { FocusRequester() }
+
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        properties = PopupProperties(focusable = true),
+    ) {
+        LaunchedEffect(expanded) {
+            if (expanded) newestFocusRequester.requestFocus()
+        }
+        HistorySortMenuItem(
+            text = "Newest First",
+            selected = historyNewestFirst,
+            focusRequester = newestFocusRequester,
+            onClick = { onSelect(true) },
+        )
+        HistorySortMenuItem(
+            text = "Oldest First",
+            selected = !historyNewestFirst,
+            focusRequester = null,
+            onClick = { onSelect(false) },
+        )
+    }
+}
+
+@Composable
+private fun HistorySortMenuItem(
+    text: String,
+    selected: Boolean,
+    focusRequester: FocusRequester?,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    DropdownMenuItem(
+        text = {
+            Row(
+                modifier              = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent,
+                        RoundedCornerShape(6.dp),
+                    )
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Text(text)
+                RadioButton(selected = selected, onClick = null)
+            }
+        },
+        onClick = onClick,
+        interactionSource = interactionSource,
+        modifier = if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier,
+    )
 }
 
 @Composable

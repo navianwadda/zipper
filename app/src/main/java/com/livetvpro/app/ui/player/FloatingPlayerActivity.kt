@@ -1188,7 +1188,6 @@ class FloatingPlayerActivity : ComponentActivity() {
             relatedChannelsLockedForContentId = null
             val isSports = newChannel.categoryId == "sports" || intentIsSports
             val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
-            relatedContentState.value = RelatedContentState.Loading
             if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
             else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
         }

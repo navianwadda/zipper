@@ -1,6 +1,8 @@
 package com.livetvpro.app.ui.playlists
 
+import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -70,6 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -313,8 +316,8 @@ fun PlaylistsScreen(
                     if (dialog.isFile) onFileDialogDismissed()
                 },
                 onConfirm = { title, url, isFile, filePath ->
-                    if (isFile && dialog.fileUri != null) {
-                        viewModel.addPlaylist(title, "", true, dialog.fileUri.toString())
+                    if (isFile) {
+                        viewModel.addPlaylist(title, "", true, filePath)
                     } else {
                         viewModel.addPlaylist(title, url, false, "")
                     }
@@ -498,6 +501,17 @@ private fun DialogButton(
     }
 }
 
+private fun queryDisplayName(context: Context, uri: Uri): String? {
+    return try {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
 @Composable
 private fun AddPlaylistDialog(
     isFile: Boolean,
@@ -510,6 +524,13 @@ private fun AddPlaylistDialog(
     var url   by remember { mutableStateOf(if (isFile) fileUri?.toString() ?: "" else "") }
     var titleError by remember { mutableStateOf(false) }
     var urlError   by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    LaunchedEffect(fileUri) {
+        if (isFile && fileUri != null) {
+            queryDisplayName(context, fileUri)?.let { title = it }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -534,7 +555,6 @@ private fun AddPlaylistDialog(
                     onValueChange = { url = it; urlError = false },
                     label        = if (isFile) "File Path" else "URL",
                     isError      = urlError,
-                    enabled      = !isFile,
                     primaryColor = primaryColor,
                     keyboardType = KeyboardType.Uri
                 )
@@ -557,7 +577,7 @@ private fun AddPlaylistDialog(
                     text = "Add",
                     onClick = {
                         titleError = title.isBlank()
-                        urlError   = !isFile && url.isBlank()
+                        urlError   = url.isBlank()
                         if (!titleError && !urlError) {
                             onConfirm(title.trim(), url.trim(), isFile, url.trim())
                         }
@@ -611,7 +631,6 @@ private fun EditPlaylistDialog(
                     onValueChange = { url = it; urlError = false },
                     label        = if (playlist.isFile) "File Path" else "URL",
                     isError      = urlError,
-                    enabled      = !playlist.isFile,
                     primaryColor = primaryColor,
                     keyboardType = KeyboardType.Uri
                 )
@@ -640,12 +659,13 @@ private fun EditPlaylistDialog(
                     text = "Update",
                     onClick = {
                         titleError = title.isBlank()
-                        urlError   = !playlist.isFile && url.isBlank()
+                        urlError   = url.isBlank()
                         if (!titleError && !urlError) {
                             onConfirm(
                                 playlist.copy(
-                                    title = title.trim(),
-                                    url   = if (!playlist.isFile) url.trim() else playlist.url
+                                    title    = title.trim(),
+                                    url      = if (!playlist.isFile) url.trim() else playlist.url,
+                                    filePath = if (playlist.isFile) url.trim() else playlist.filePath
                                 )
                             )
                         }

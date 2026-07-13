@@ -1116,7 +1116,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                     if (isFavoritesSource) {
                         val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
                         viewModel.setChannelList(favList)
-                        val related = favList.filter { it.id != channel.id }.take(9)
+                        val related = favList.filter { it.id != channel.id }.shuffled().take(9)
                         relatedChannelsLockedForContentId = contentId
                         relatedChannels = related
                         relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
@@ -1179,7 +1179,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         if (isFavoritesSource) {
             val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
             viewModel.setChannelList(favList)
-            val related = favList.filter { it.id != newChannel.id }.take(9)
+            val related = favList.filter { it.id != newChannel.id }.shuffled().take(9)
             relatedChannelsLockedForContentId = contentId
             relatedChannels = related
             relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden

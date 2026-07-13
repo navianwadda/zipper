@@ -34,6 +34,13 @@ import com.livetvpro.app.utils.RedirectCooldownManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+class SearchBackController {
+    var isSearchActive    by mutableStateOf(false)
+    var isKeyboardVisible by mutableStateOf(false)
+    var dismissKeyboard: () -> Unit = {}
+    var cancelSearch: () -> Unit = {}
+}
+
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), SettingsActions {
 
@@ -44,6 +51,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     @Inject lateinit var dataRepository: com.livetvpro.app.data.repository.NativeDataRepository
 
     var navController: NavController? = null
+
+    private val searchBackController = SearchBackController()
 
     var isSearchVisible      by mutableStateOf(false)
     var toolbarTitle         by mutableStateOf("Live TV Pro")
@@ -90,31 +99,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
         themeManager.registerActivityContext(this)
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val nav = navController ?: return
-                val currentRoute = nav.currentDestination?.route ?: return
-
-                val exitConfirmationRoutes = if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop || DeviceUtils.isTablet) {
-                    setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS, Routes.FAVORITES)
-                } else {
-                    setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS)
-                }
-
-                when {
-                    currentRoute in exitConfirmationRoutes -> {
-                        val now = System.currentTimeMillis()
-                        if (now - backPressedTime < 2000) finishAffinity()
-                        else {
-                            backPressedTime = now
-                            Toast.makeText(this@MainActivity, "Press again to exit", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    else -> { isEnabled = false; onBackPressedDispatcher.onBackPressed(); isEnabled = true }
-                }
-            }
-        })
-
         setContent {
             LiveTVProTheme(themeManager) {
                 MainScaffold(
@@ -130,6 +114,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                         showRefreshIcon = refresh
                     },
                     onSearchVisibilityChanged = { isSearchVisible = it },
+                    searchBackController      = searchBackController,
                 )
 
                 if (showCopyrightDialog) {
@@ -252,6 +237,41 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 }
             }
         }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when {
+                    searchBackController.isSearchActive && searchBackController.isKeyboardVisible -> {
+                        searchBackController.dismissKeyboard()
+                    }
+                    searchBackController.isSearchActive -> {
+                        searchBackController.cancelSearch()
+                    }
+                    else -> {
+                        val nav = navController ?: return
+                        val currentRoute = nav.currentDestination?.route ?: return
+
+                        val exitConfirmationRoutes = if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop || DeviceUtils.isTablet) {
+                            setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS, Routes.FAVORITES)
+                        } else {
+                            setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS)
+                        }
+
+                        when {
+                            currentRoute in exitConfirmationRoutes -> {
+                                val now = System.currentTimeMillis()
+                                if (now - backPressedTime < 2000) finishAffinity()
+                                else {
+                                    backPressedTime = now
+                                    Toast.makeText(this@MainActivity, "Press again to exit", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            else -> { isEnabled = false; onBackPressedDispatcher.onBackPressed(); isEnabled = true }
+                        }
+                    }
+                }
+            }
+        })
 
         window.decorView.post { handleNotificationIntent(intent) }
     }

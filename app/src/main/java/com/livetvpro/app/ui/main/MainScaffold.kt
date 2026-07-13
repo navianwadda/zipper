@@ -127,6 +127,7 @@ private val TV_TABS = listOf(
     NavTab(Routes.SETTINGS,    R.string.nav_settings,  R.drawable.ic_settings,      R.drawable.ic_settings),
 )
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun MainScaffold(
     activity: MainActivity,

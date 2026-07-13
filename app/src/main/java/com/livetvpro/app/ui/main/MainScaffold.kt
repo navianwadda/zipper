@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -81,6 +81,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.livetvpro.app.MainActivity
+import com.livetvpro.app.SearchBackController
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -139,6 +140,7 @@ fun MainScaffold(
     onNavControllerReady: (NavController) -> Unit,
     onDestinationChanged: (route: String?, title: String, showRefresh: Boolean) -> Unit,
     onSearchVisibilityChanged: (Boolean) -> Unit,
+    searchBackController: SearchBackController,
 ) {
     val isTvOrDesktop = DeviceUtils.isTvDevice || DeviceUtils.isDesktop
     val isTablet      = DeviceUtils.isTablet
@@ -156,12 +158,11 @@ fun MainScaffold(
     val keyboardController = LocalSoftwareKeyboardController.current
     val imeVisible = WindowInsets.isImeVisible
 
-    BackHandler(enabled = isSearchActive && imeVisible) {
-        keyboardController?.hide()
-    }
-    BackHandler(enabled = isSearchActive && !imeVisible) {
-        isSearchActive = false
-        searchQuery = ""
+    SideEffect {
+        searchBackController.isSearchActive = isSearchActive
+        searchBackController.isKeyboardVisible = imeVisible
+        searchBackController.dismissKeyboard = { keyboardController?.hide() }
+        searchBackController.cancelSearch = { isSearchActive = false; searchQuery = "" }
     }
     var refreshSignal  by remember { mutableIntStateOf(0) }
     var isTopLevel     by remember { mutableStateOf(true) }

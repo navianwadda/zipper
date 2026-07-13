@@ -1663,7 +1663,6 @@ class PlayerActivity : ComponentActivity() {
             val isSports   = newChannel.categoryId == "sports" || intentIsSports
             val categoryId = newChannel.categoryId.takeIf { it.isNotEmpty() } ?: intentCategoryId ?: ""
             viewModel.loadAllChannelsForList(categoryId, newChannel.id)
-            relatedContentState.value = RelatedContentState.Loading
             if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
             else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
         }

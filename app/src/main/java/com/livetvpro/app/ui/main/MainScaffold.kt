@@ -22,7 +22,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -61,6 +63,7 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -148,6 +151,17 @@ fun MainScaffold(
     val showRefreshIcon = currentRoute in Routes.REFRESH_DESTINATIONS
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery    by remember { mutableStateOf("") }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val imeVisible = WindowInsets.isImeVisible
+
+    BackHandler(enabled = isSearchActive && imeVisible) {
+        keyboardController?.hide()
+    }
+    BackHandler(enabled = isSearchActive && !imeVisible) {
+        isSearchActive = false
+        searchQuery = ""
+    }
     var refreshSignal  by remember { mutableIntStateOf(0) }
     var isTopLevel     by remember { mutableStateOf(true) }
     var categoryTitle  by remember { mutableStateOf<String?>(null) }

@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxSize
@@ -81,7 +83,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.livetvpro.app.MainActivity
-import com.livetvpro.app.SearchBackController
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -140,7 +141,6 @@ fun MainScaffold(
     onNavControllerReady: (NavController) -> Unit,
     onDestinationChanged: (route: String?, title: String, showRefresh: Boolean) -> Unit,
     onSearchVisibilityChanged: (Boolean) -> Unit,
-    searchBackController: SearchBackController,
 ) {
     val isTvOrDesktop = DeviceUtils.isTvDevice || DeviceUtils.isDesktop
     val isTablet      = DeviceUtils.isTablet
@@ -158,12 +158,6 @@ fun MainScaffold(
     val keyboardController = LocalSoftwareKeyboardController.current
     val imeVisible = WindowInsets.isImeVisible
 
-    SideEffect {
-        searchBackController.isSearchActive = isSearchActive
-        searchBackController.isKeyboardVisible = imeVisible
-        searchBackController.dismissKeyboard = { keyboardController?.hide() }
-        searchBackController.cancelSearch = { isSearchActive = false; searchQuery = "" }
-    }
     var refreshSignal  by remember { mutableIntStateOf(0) }
     var isTopLevel     by remember { mutableStateOf(true) }
     var categoryTitle  by remember { mutableStateOf<String?>(null) }
@@ -424,6 +418,39 @@ fun MainScaffold(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+
+    val exitConfirmationRoutes = if (isTvOrDesktop || isTablet) {
+        setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS, Routes.FAVORITES)
+    } else {
+        setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS)
+    }
+    var backPressedTime by remember { mutableStateOf(0L) }
+
+    BackHandler(enabled = true) {
+        when {
+            isSearchActive && imeVisible -> {
+                keyboardController?.hide()
+            }
+            isSearchActive -> {
+                isSearchActive = false
+                searchQuery = ""
+            }
+            currentRoute in exitConfirmationRoutes -> {
+                val now = System.currentTimeMillis()
+                if (now - backPressedTime < 2000) {
+                    activity.finishAffinity()
+                } else {
+                    backPressedTime = now
+                    Toast.makeText(context, "Press again to exit", Toast.LENGTH_SHORT).show()
+                }
+            }
+            else -> {
+                if (!navController.popBackStack()) {
+                    activity.finishAffinity()
                 }
             }
         }

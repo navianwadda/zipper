@@ -6,7 +6,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -24,7 +23,6 @@ import androidx.navigation.NavController
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.ui.main.MainScaffold
-import com.livetvpro.app.ui.navigation.Routes
 import com.livetvpro.app.ui.player.dialogs.FloatingPlayerDialogContent
 import com.livetvpro.app.ui.settings.SettingsActions
 import com.livetvpro.app.ui.theme.LiveTVProTheme
@@ -33,13 +31,6 @@ import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-
-class SearchBackController {
-    var isSearchActive    by mutableStateOf(false)
-    var isKeyboardVisible by mutableStateOf(false)
-    var dismissKeyboard: () -> Unit = {}
-    var cancelSearch: () -> Unit = {}
-}
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), SettingsActions {
@@ -52,8 +43,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     var navController: NavController? = null
 
-    private val searchBackController = SearchBackController()
-
     var isSearchVisible      by mutableStateOf(false)
     var toolbarTitle         by mutableStateOf("Live TV Pro")
     var showRefreshIcon      by mutableStateOf(false)
@@ -62,8 +51,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     private var showNoticeDialog         by mutableStateOf(false)
     private var showOverlayPermDialog    by mutableStateOf(false)
     private var showFloatingPlayerDialog by mutableStateOf(false)
-
-    private var backPressedTime = 0L
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -114,7 +101,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                         showRefreshIcon = refresh
                     },
                     onSearchVisibilityChanged = { isSearchVisible = it },
-                    searchBackController      = searchBackController,
                 )
 
                 if (showCopyrightDialog) {
@@ -237,41 +223,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 }
             }
         }
-
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                when {
-                    searchBackController.isSearchActive && searchBackController.isKeyboardVisible -> {
-                        searchBackController.dismissKeyboard()
-                    }
-                    searchBackController.isSearchActive -> {
-                        searchBackController.cancelSearch()
-                    }
-                    else -> {
-                        val nav = navController ?: return
-                        val currentRoute = nav.currentDestination?.route ?: return
-
-                        val exitConfirmationRoutes = if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop || DeviceUtils.isTablet) {
-                            setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS, Routes.FAVORITES)
-                        } else {
-                            setOf(Routes.HOME, Routes.LIVE_EVENTS, Routes.SPORTS)
-                        }
-
-                        when {
-                            currentRoute in exitConfirmationRoutes -> {
-                                val now = System.currentTimeMillis()
-                                if (now - backPressedTime < 2000) finishAffinity()
-                                else {
-                                    backPressedTime = now
-                                    Toast.makeText(this@MainActivity, "Press again to exit", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            else -> { isEnabled = false; onBackPressedDispatcher.onBackPressed(); isEnabled = true }
-                        }
-                    }
-                }
-            }
-        })
 
         window.decorView.post { handleNotificationIntent(intent) }
     }

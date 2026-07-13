@@ -1466,7 +1466,7 @@ class PlayerActivity : ComponentActivity() {
                         isFavSrc -> {
                             val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
                             viewModel.setChannelList(favList)
-                            val related = favList.filter { it.id != ch.id }.take(9)
+                            val related = favList.filter { it.id != ch.id }.shuffled().take(9)
                             relatedChannelsLockedForContentId = contentId
                             relatedChannels = related
                             relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden

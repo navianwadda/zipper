@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -135,6 +136,14 @@ class SplashActivity : AppCompatActivity() {
 
         if (DeviceUtils.isBigScreenLayout) {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+        window.decorView.post {
+            window.decorView.requestApplyInsets()
         }
 
         setContent {
@@ -391,7 +400,10 @@ private fun SplashScreen(
 ) {
     val background = MaterialTheme.colorScheme.background
     Box(
-        modifier         = Modifier.fillMaxSize().background(background),
+        modifier         = Modifier
+            .fillMaxSize()
+            .background(background)
+            .systemBarsPadding(),
         contentAlignment = Alignment.Center,
     ) {
         when (state) {

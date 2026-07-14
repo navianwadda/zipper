@@ -60,8 +60,6 @@ class WebActivity : AppCompatActivity() {
         }
     }
 
-
-
     companion object {
         private const val EXTRA_URL             = "extra_url"
         private const val EXTRA_DURATION        = "extra_duration"
@@ -136,7 +134,6 @@ class WebActivity : AppCompatActivity() {
                 TimerService.stop(this)
                 onCustomTabTimerFinished()
             } else {
-                // user came back early — cancel
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
                 finish()
@@ -157,7 +154,6 @@ class WebActivity : AppCompatActivity() {
     override fun onBackPressed() {
         when {
             usingCustomTabs && !validated -> {
-                // Back on WebActivity while timer running — cancel gracefully
                 TimerService.stop(this)
                 setResult(RESULT_CANCELED)
                 finish()

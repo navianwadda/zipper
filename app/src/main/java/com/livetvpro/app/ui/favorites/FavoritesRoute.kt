@@ -166,7 +166,7 @@ fun FavoritesRoute(
     val spanCount = remember(configuration) {
         context.resources.getInteger(com.livetvpro.app.R.integer.grid_column_count)
     }
-    val isTvOrTablet = DeviceUtils.isTvDevice || DeviceUtils.isTablet
+    val isTvOrTablet = DeviceUtils.isBigScreenLayout || DeviceUtils.isTablet
 
     
     var numpadBuffer by remember { mutableStateOf("") }

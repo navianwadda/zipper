@@ -337,7 +337,40 @@ class WebActivity : AppCompatActivity() {
             loadUrl(url.ifEmpty { "about:blank" })
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            webView?.setRenderEffect(
+                android.graphics.RenderEffect.createBlurEffect(
+                    40f, 40f, android.graphics.Shader.TileMode.CLAMP
+                )
+            )
+        }
+
+        val blurScrim = FrameLayout(this).apply {
+            setBackgroundColor(Color.parseColor("#D9000000"))
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            isClickable = true
+            isFocusable = true
+        }
+
+        val blurMessage = TextView(this).apply {
+            text = "Ad content hidden\nPlease wait for the timer to finish"
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.gravity = Gravity.CENTER }
+        }
+
         root.addView(webView)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            root.addView(blurScrim)
+            root.addView(blurMessage)
+        }
         root.addView(topBar)
         root.addView(progressBar)
         root.addView(timerLabel)

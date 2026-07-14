@@ -130,7 +130,7 @@ fun LiveEventsRoute(
         messageBannerText = listenerManager.getMessage(),
         messageBannerUrl = listenerManager.getMessageUrl(),
         spanCount = spanCount,
-        isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
+        isTvDevice = DeviceUtils.isBigScreenLayout || DeviceUtils.isTablet,
         onEventClick = { event, linkIndex ->
             proceedWithPlayer(event, linkIndex)
         },

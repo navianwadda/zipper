@@ -63,9 +63,10 @@ class WebActivity : AppCompatActivity() {
 
 
     companion object {
-        private const val EXTRA_URL      = "extra_url"
-        private const val EXTRA_DURATION = "extra_duration"
-        const val RESULT_VALIDATED       = 100
+        private const val EXTRA_URL             = "extra_url"
+        private const val EXTRA_DURATION        = "extra_duration"
+        private const val EXTRA_HIDE_AD_CONTENT = "extra_hide_ad_content"
+        const val RESULT_VALIDATED              = 100
 
         private val CUSTOM_TABS_BROWSERS = listOf(
             "com.android.chrome", "com.chrome.beta", "com.chrome.dev",
@@ -101,6 +102,7 @@ class WebActivity : AppCompatActivity() {
 
         val url             = intent.getStringExtra(EXTRA_URL) ?: ""
         val durationSeconds = intent.getLongExtra(EXTRA_DURATION, 10L)
+        val hideAdContent   = intent.getBooleanExtra(EXTRA_HIDE_AD_CONTENT, true)
 
         if (isVpnOrProxyActive()) {
             Toast.makeText(this, "Please disable VPN/Proxy to continue", Toast.LENGTH_LONG).show()
@@ -117,7 +119,12 @@ class WebActivity : AppCompatActivity() {
             registerReceiver(timerDoneReceiver, IntentFilter(TimerService.ACTION_TIMER_DONE))
         }
 
-        launchWebView(url, durationSeconds)
+        if (!hideAdContent && isCustomTabsSupported(this)) {
+            usingCustomTabs = true
+            startCustomTabFlow(url, durationSeconds)
+        } else {
+            launchWebView(url, durationSeconds)
+        }
     }
 
     override fun onResume() {

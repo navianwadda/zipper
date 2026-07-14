@@ -41,7 +41,7 @@ fun PlaylistsRoute(navController: NavController) {
     }
 
     PlaylistsScreen(
-        isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
+        isTvDevice = DeviceUtils.isBigScreenLayout || DeviceUtils.isTablet,
         onNavigateToCategory = { id, name ->
             navController.navigate(Routes.categoryChannels(id, name))
         },

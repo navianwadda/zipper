@@ -126,7 +126,7 @@ class SplashActivity : AppCompatActivity() {
 
         themeManager.registerActivityContext(this)
 
-        if (DeviceUtils.isTvDevice) {
+        if (DeviceUtils.isBigScreenLayout) {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
 
@@ -152,8 +152,8 @@ class SplashActivity : AppCompatActivity() {
                         if (url.isNotBlank()) openUrl(url)
                     },
                     onLater          = { finishAndRemoveTask() },
-                    isTv             = DeviceUtils.isTvDevice,
-                
+                    isTv             = DeviceUtils.isBigScreenLayout,
+                    canSelfUpdate    = !DeviceUtils.isTvDevice,
                 )
             }
         }
@@ -346,6 +346,7 @@ private fun SplashScreen(
     onWebsite: () -> Unit,
     onLater: () -> Unit,
     isTv: Boolean,
+    canSelfUpdate: Boolean = true,
 ) {
     val background = MaterialTheme.colorScheme.background
     Box(
@@ -374,8 +375,7 @@ private fun SplashScreen(
                         onUpdate         = onUpdate,
                         onWebsite        = onWebsite,
                         onLater          = onLater,
-                        isTv             = true,
-                    
+                        canSelfUpdate    = canSelfUpdate,
                     )
                 } else {
                     UpdateScreenPortrait(
@@ -577,7 +577,7 @@ private fun UpdateScreenLandscape(
     onUpdate: () -> Unit,
     onWebsite: () -> Unit,
     onLater: () -> Unit,
-    isTv: Boolean,
+    canSelfUpdate: Boolean = true,
 ) {
     val primary  = MaterialTheme.colorScheme.primary
     val onBg     = MaterialTheme.colorScheme.onBackground
@@ -632,7 +632,7 @@ private fun UpdateScreenLandscape(
 
             Spacer(Modifier.height(14.dp))
 
-            if (!isTv) {
+            if (canSelfUpdate) {
                 SplashButton(
                     text = when {
                         isDownloading -> "CANCEL"
@@ -655,7 +655,7 @@ private fun UpdateScreenLandscape(
 
             Spacer(Modifier.height(10.dp))
 
-            if (!isTv) {
+            if (canSelfUpdate) {
                 SplashButton(text = "DOWNLOAD FROM WEBSITE", onClick = onWebsite)
                 Spacer(Modifier.height(8.dp))
             }

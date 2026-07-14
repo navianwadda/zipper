@@ -239,8 +239,8 @@ class PlayerActivity : ComponentActivity() {
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        if (DeviceUtils.isTvDevice) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        val isLandscape = DeviceUtils.isTvDevice ||
+        if (DeviceUtils.isBigScreenLayout) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        val isLandscape = DeviceUtils.isBigScreenLayout ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         parseIntent()
         setupWindowFlags(isLandscape)
@@ -373,7 +373,7 @@ class PlayerActivity : ComponentActivity() {
 
         val isChannelListAvailable = contentType == ContentType.CHANNEL &&
             channelListItems.isNotEmpty() &&
-            (isLandscape || DeviceUtils.isTvDevice)
+            (isLandscape || DeviceUtils.isBigScreenLayout)
         val isPipEnabled = !DeviceUtils.isTvDevice &&
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -467,7 +467,8 @@ class PlayerActivity : ComponentActivity() {
 
                 showAspectRatioButton  = true,
                 isLandscape            = isLandscape,
-                isTvMode               = DeviceUtils.isTvDevice,
+                isTvMode               = DeviceUtils.isBigScreenLayout,
+                supportsPointerInput   = !DeviceUtils.isTvDevice,
                 layoutMode     = if (contentType == ContentType.NETWORK_STREAM) 0 else preferencesManager.getLayoutMode(),
                 isNetworkStream        = contentType == ContentType.NETWORK_STREAM,
                 isChannelListAvailable = isChannelListAvailable,
@@ -704,7 +705,7 @@ class PlayerActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
     private fun setupSystemUI() {
-        val isLandscape = DeviceUtils.isTvDevice ||
+        val isLandscape = DeviceUtils.isBigScreenLayout ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         windowInsetsController.apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -1062,7 +1063,9 @@ class PlayerActivity : ComponentActivity() {
         if (code == android.view.KeyEvent.KEYCODE_MEDIA_NEXT ||
             code == android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS ||
             code == android.view.KeyEvent.KEYCODE_CHANNEL_UP ||
-            code == android.view.KeyEvent.KEYCODE_CHANNEL_DOWN) {
+            code == android.view.KeyEvent.KEYCODE_CHANNEL_DOWN ||
+            code == android.view.KeyEvent.KEYCODE_PAGE_UP ||
+            code == android.view.KeyEvent.KEYCODE_PAGE_DOWN) {
             return when (event.action) {
                 android.view.KeyEvent.ACTION_DOWN -> onKeyDown(code, event)
                 android.view.KeyEvent.ACTION_UP   -> onKeyUp(code, event)
@@ -1075,11 +1078,14 @@ class PlayerActivity : ComponentActivity() {
         return when (keyCode) {
             android.view.KeyEvent.KEYCODE_CHANNEL_UP,
             android.view.KeyEvent.KEYCODE_MEDIA_NEXT,
+            android.view.KeyEvent.KEYCODE_PAGE_UP,
             android.view.KeyEvent.KEYCODE_CHANNEL_DOWN,
-            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+            android.view.KeyEvent.KEYCODE_PAGE_DOWN -> {
                 val direction = when (keyCode) {
                     android.view.KeyEvent.KEYCODE_CHANNEL_UP,
-                    android.view.KeyEvent.KEYCODE_MEDIA_NEXT -> +1
+                    android.view.KeyEvent.KEYCODE_MEDIA_NEXT,
+                    android.view.KeyEvent.KEYCODE_PAGE_UP -> +1
                     else -> -1
                 }
                 val index = pendingChannelIndex
@@ -1122,7 +1128,8 @@ class PlayerActivity : ComponentActivity() {
         return when (keyCode) {
             android.view.KeyEvent.KEYCODE_MEDIA_PLAY,
             android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,
-            android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+            android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            android.view.KeyEvent.KEYCODE_SPACE -> {
                 cancelNumberInput()
                 player?.let {
                     if (errorMessage.value.isNotBlank() || it.playbackState == Player.STATE_ENDED) retryPlayback()
@@ -1151,7 +1158,7 @@ class PlayerActivity : ComponentActivity() {
             android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
                 val items     = viewModel.channelListItems.value
                 val available = contentType == ContentType.CHANNEL && !items.isNullOrEmpty() &&
-                    (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE || DeviceUtils.isTvDevice)
+                    (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE || DeviceUtils.isBigScreenLayout)
                 if (available) {
                     if (!showChannelList.value) cancelNumberInput()
                     showChannelList.value = !showChannelList.value
@@ -1176,7 +1183,8 @@ class PlayerActivity : ComponentActivity() {
                 true
             }
             android.view.KeyEvent.KEYCODE_CHANNEL_UP,
-            android.view.KeyEvent.KEYCODE_MEDIA_NEXT -> {
+            android.view.KeyEvent.KEYCODE_MEDIA_NEXT,
+            android.view.KeyEvent.KEYCODE_PAGE_UP -> {
                 if (showChannelList.value) { cancelNumberInput(); showChannelList.value = false; return true }
                 clearNumberTyping()
                 if (contentType == ContentType.EVENT) {
@@ -1205,7 +1213,8 @@ class PlayerActivity : ComponentActivity() {
                 true
             }
             android.view.KeyEvent.KEYCODE_CHANNEL_DOWN,
-            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+            android.view.KeyEvent.KEYCODE_PAGE_DOWN -> {
                 if (showChannelList.value) { cancelNumberInput(); showChannelList.value = false; return true }
                 clearNumberTyping()
                 if (contentType == ContentType.EVENT) {
@@ -1239,7 +1248,7 @@ class PlayerActivity : ComponentActivity() {
             android.view.KeyEvent.KEYCODE_5, android.view.KeyEvent.KEYCODE_6,
             android.view.KeyEvent.KEYCODE_7, android.view.KeyEvent.KEYCODE_8,
             android.view.KeyEvent.KEYCODE_9 -> {
-                if (!DeviceUtils.isTvDevice) return super.onKeyDown(keyCode, event)
+                if (!DeviceUtils.isBigScreenLayout) return super.onKeyDown(keyCode, event)
                 if (event?.repeatCount != 0 || showChannelList.value) return true
                 pendingChannelDirection = 0
                 channelNumberInput += (keyCode - android.view.KeyEvent.KEYCODE_0).toString()
@@ -1293,7 +1302,7 @@ class PlayerActivity : ComponentActivity() {
         channelNumberHandler.removeCallbacks(overlayHideRunnable)
     }
     internal fun cycleAspectRatio() {
-        val isLandscape = DeviceUtils.isTvDevice ||
+        val isLandscape = DeviceUtils.isBigScreenLayout ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val next = when (resizeMode) {
             AspectRatioFrameLayout.RESIZE_MODE_FIT         -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM

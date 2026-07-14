@@ -405,7 +405,7 @@ class WebActivity : AppCompatActivity() {
     }
 
     private fun buildUserAgent(): String =
-        WebSettings.getDefaultUserAgentString(this).replace(" wv", "")
+        WebSettings.getDefaultUserAgent(this).replace(" wv", "")
 
     private fun isTvDevice(): Boolean {
         val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as? android.app.UiModeManager

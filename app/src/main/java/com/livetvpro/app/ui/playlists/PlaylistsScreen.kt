@@ -103,6 +103,7 @@ private sealed class PlaylistDialog {
 fun PlaylistsScreen(
     viewModel: PlaylistsViewModel = hiltViewModel(),
     isTvDevice: Boolean = false,
+    showAddPlaylistFab: Boolean = true,
     pendingFileUri: Uri? = null,
     onNavigateToCategory: (playlistId: String, playlistName: String) -> Unit,
     onPickFile: () -> Unit,
@@ -222,7 +223,7 @@ fun PlaylistsScreen(
                 }
             }
 
-            if (!isTvDevice) {
+            if (showAddPlaylistFab) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)

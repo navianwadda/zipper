@@ -90,35 +90,24 @@ fun CategoryChannelsRoute(
         uniqueIdProvider = { lastUniqueId },
     )
 
-    // Load channels for this category once, or whenever the category changes.
     LaunchedEffect(categoryId) {
         categoryId?.let { id ->
             if (id != viewModel.lastLoadedCategoryId) viewModel.loadChannels(id)
         }
     }
 
-    // Report this screen's real title upward (the category name), replacing
-    // the old dead findViewById(R.id.toolbar_title) attempt - that view never
-    // existed in the live layout, and MainScaffold's resolveTitle previously
-    // showed a generic "Channels" label regardless.
     LaunchedEffect(viewModel.categoryName) {
         if (viewModel.categoryName.isNotEmpty()) onTitleResolved(viewModel.categoryName)
     }
 
-    // Mirror the old onSearchQuery(query) dispatch from SearchableFragment.
     LaunchedEffect(searchQuery) {
         viewModel.searchChannels(searchQuery)
     }
 
-    // Mirror the old refreshData() dispatch from Refreshable.
     LaunchedEffect(refreshSignal) {
         if (refreshSignal > 0) categoryId?.let { viewModel.loadChannels(it) }
     }
 
-    // Mirror the old onResume() pending-redirect-action flush. The Fragment's
-    // onResume() fired every time the hosting Activity resumed - e.g.
-    // returning from PlayerActivity after a redirect - so this must observe
-    // the real Activity lifecycle, not just first composition.
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -135,7 +124,6 @@ fun CategoryChannelsRoute(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Mirror the old onDestroyView() cleanup.
     DisposableEffect(Unit) {
         onDispose {
             viewModel.dismissError()
@@ -197,10 +185,8 @@ fun CategoryChannelsRoute(
     }
     var showGroupsDialog by remember { mutableStateOf(false) }
     val bergenSans = FontFamily(Font(R.font.bergen_sans))
-    val isTvOrTablet = DeviceUtils.isTvDevice || DeviceUtils.isTablet
+    val isTvOrTablet = DeviceUtils.isBigScreenLayout || DeviceUtils.isTablet
 
-    // TV remote numpad search: types digits into a quick channel-number
-    // search, same debounce-and-reset behavior as the old View.setOnKeyListener.
     var numpadBuffer by remember { mutableStateOf("") }
     val numpadHandler = remember { Handler(Looper.getMainLooper()) }
     val numpadResetRunnable = remember {

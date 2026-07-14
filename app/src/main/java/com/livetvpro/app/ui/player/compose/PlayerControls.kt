@@ -129,6 +129,7 @@ fun PlayerControls(
     showAspectRatioButton: Boolean,
     isLandscape: Boolean,
     isTvMode: Boolean = false,
+    supportsPointerInput: Boolean = true,
     layoutMode: Int = 0,
     isNetworkStream: Boolean = false,
     onBackClick: () -> Unit,
@@ -176,7 +177,7 @@ fun PlayerControls(
 
     Box(modifier = modifier.fillMaxSize()) {
 
-        if (!isTvMode) {
+        if (supportsPointerInput) {
             GestureOverlay(
                 modifier            = Modifier
                     .fillMaxSize()
@@ -266,6 +267,7 @@ fun PlayerControls(
                 showAspectRatioButton  = showAspectRatioButton,
                 isLandscape            = isLandscape,
                 isTvMode               = isTvMode,
+                supportsPointerInput   = supportsPointerInput,
                 layoutMode     = layoutMode,
                 isNetworkStream        = isNetworkStream,
                 onBackClick            = onBackClick,
@@ -286,7 +288,7 @@ fun PlayerControls(
                 onInteraction          = { state.show(scope) },
                 onToggle               = { state.toggle(scope) },
                 onTvFocusWithinControls    = { isTvFocusWithinControls = it },
-                onMouseHoverWithinControls = { if (!isTvMode) isMouseHoverWithinControls = it },
+                onMouseHoverWithinControls = { if (supportsPointerInput) isMouseHoverWithinControls = it },
             )
         }
 
@@ -378,6 +380,7 @@ internal fun PlayerControlsContent(
     showAspectRatioButton: Boolean,
     isLandscape: Boolean,
     isTvMode: Boolean,
+    supportsPointerInput: Boolean = true,
     layoutMode: Int = 0,
     isNetworkStream: Boolean = false,
     onBackClick: () -> Unit,
@@ -549,7 +552,7 @@ internal fun PlayerControlsContent(
                         size               = topIconSize,
                         isTvMode           = isTvMode,
                     )
-                    if (!isTvMode) {
+                    if (supportsPointerInput) {
                         PlayerIconButton(
                             onClick            = { onLockClick(); onInteraction() },
                             iconRes            = R.drawable.ic_lock_open,
@@ -698,7 +701,7 @@ internal fun PlayerControlsContent(
                             )
                         }
 
-                        if (!isTvMode) {
+                        if (supportsPointerInput) {
                             PlayerIconButton(
                                 onClick            = { onFullscreenClick(); onInteraction() },
                                 iconRes            = if (isLandscape) R.drawable.ic_fullscreen_exit
@@ -820,7 +823,6 @@ private fun ExoPlayerTimeBar(
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    // Live position while the user is dragging the scrubber, in millis. Null when not dragging.
     var scrubPositionMs by remember { mutableStateOf<Long?>(null) }
     val displayedPosition = scrubPositionMs ?: currentPosition
 

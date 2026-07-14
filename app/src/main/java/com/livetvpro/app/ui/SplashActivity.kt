@@ -20,6 +20,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
@@ -74,6 +76,10 @@ import com.livetvpro.app.data.repository.NativeDataRepository
 import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.MultiFormatWriter
+import com.google.zxing.common.BitMatrix
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -106,6 +112,7 @@ class SplashActivity : AppCompatActivity() {
     private var downloadedApk: File? = null
     private var cachedWebUrl     = ""
     private var downloadCancelled = false
+    private var qrBitmap by mutableStateOf<Bitmap?>(null)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -153,7 +160,8 @@ class SplashActivity : AppCompatActivity() {
                     },
                     onLater          = { finishAndRemoveTask() },
                     isTv             = DeviceUtils.isBigScreenLayout,
-                    canSelfUpdate    = !DeviceUtils.isTvDevice,
+                    canSelfUpdate    = true,
+                    qrBitmap         = qrBitmap,
                 )
             }
         }
@@ -193,11 +201,43 @@ class SplashActivity : AppCompatActivity() {
                 }
                 val url = listenerManager.getWebUrl()
                 if (url.isNotBlank()) cachedWebUrl = url
-                if (isUpdateRequired()) uiState = SplashState.UpdateRequired
-                else navigateToMain()
+                if (isUpdateRequired()) {
+                    if (DeviceUtils.isBigScreenLayout) {
+                        val apkUrl = listenerManager.getDownloadUrl()
+                        if (apkUrl.isNotBlank()) {
+                            qrBitmap = withContext(Dispatchers.Default) {
+                                generateQrBitmap(apkUrl)
+                            }
+                        }
+                    }
+                    uiState = SplashState.UpdateRequired
+                } else navigateToMain()
             } else {
                 uiState = SplashState.Error("Connection error")
             }
+        }
+    }
+
+    private fun generateQrBitmap(content: String, sizePx: Int = 320): Bitmap? {
+        if (content.isBlank()) return null
+        return try {
+            val hints = mapOf(EncodeHintType.MARGIN to 1)
+            val matrix: BitMatrix = MultiFormatWriter().encode(
+                content,
+                BarcodeFormat.QR_CODE,
+                sizePx,
+                sizePx,
+                hints
+            )
+            val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
+            for (x in 0 until sizePx) {
+                for (y in 0 until sizePx) {
+                    bitmap.setPixel(x, y, if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                }
+            }
+            bitmap
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -347,6 +387,7 @@ private fun SplashScreen(
     onLater: () -> Unit,
     isTv: Boolean,
     canSelfUpdate: Boolean = true,
+    qrBitmap: Bitmap? = null,
 ) {
     val background = MaterialTheme.colorScheme.background
     Box(
@@ -376,6 +417,7 @@ private fun SplashScreen(
                         onWebsite        = onWebsite,
                         onLater          = onLater,
                         canSelfUpdate    = canSelfUpdate,
+                        qrBitmap         = qrBitmap,
                     )
                 } else {
                     UpdateScreenPortrait(
@@ -424,7 +466,7 @@ private fun LoadingScreen(versionName: String) {
 
         Spacer(Modifier.weight(0.1f))
 
-        Spacer(Modifier.weight(0.42f))
+        Spacer(Modifier.weight(0.36f))
 
         Text(
             text          = "VERSION $versionName",
@@ -578,6 +620,7 @@ private fun UpdateScreenLandscape(
     onWebsite: () -> Unit,
     onLater: () -> Unit,
     canSelfUpdate: Boolean = true,
+    qrBitmap: Bitmap? = null,
 ) {
     val primary  = MaterialTheme.colorScheme.primary
     val onBg     = MaterialTheme.colorScheme.onBackground
@@ -591,7 +634,30 @@ private fun UpdateScreenLandscape(
             modifier         = Modifier.weight(0.45f).fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            AppIcon()
+            if (qrBitmap != null) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    AppIcon()
+                    Spacer(Modifier.height(20.dp))
+                    Image(
+                        bitmap             = qrBitmap.asImageBitmap(),
+                        contentDescription = "Scan to download the update APK",
+                        modifier           = Modifier
+                            .size(140.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White)
+                            .padding(8.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text       = "Scan to download",
+                        color      = onBg.copy(alpha = 0.8f),
+                        fontSize   = 12.sp,
+                        fontFamily = BergenSans,
+                    )
+                }
+            } else {
+                AppIcon()
+            }
         }
 
         Box(

@@ -74,7 +74,7 @@ fun HomeRoute(
     HomeScreen(
         viewModel = viewModel,
         spanCount = spanCount,
-        isTvDevice = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
+        isTvDevice = DeviceUtils.isBigScreenLayout || DeviceUtils.isTablet,
         onCategoryClick = { category ->
             navController.navigate(Routes.categoryChannels(category.id, category.name))
         },

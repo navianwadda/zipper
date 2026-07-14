@@ -248,7 +248,9 @@ class WebActivity : AppCompatActivity() {
 
         val closeBtn = ImageButton(this).apply {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
-            setBackgroundColor(Color.TRANSPARENT)
+            val outValue = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+            setBackgroundResource(outValue.resourceId)
             setColorFilter(Color.WHITE)
             isFocusable = true
             isFocusableInTouchMode = true

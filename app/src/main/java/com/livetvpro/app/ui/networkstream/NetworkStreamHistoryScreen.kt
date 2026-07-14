@@ -47,7 +47,7 @@ import com.livetvpro.app.utils.DeviceUtils
 fun NetworkStreamHistoryScreen(
     navController: NavController,
     viewModel: NetworkStreamHistoryViewModel,
-    isTvDevice: Boolean = DeviceUtils.isTvDevice || DeviceUtils.isTablet,
+    isTvDevice: Boolean = DeviceUtils.isBigScreenLayout || DeviceUtils.isTablet,
 ) {
     val parentEntry = remember(navController) {
         navController.getBackStackEntry(Routes.NETWORK_STREAM)

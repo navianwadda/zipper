@@ -1,13 +1,11 @@
 package com.livetvpro.app.ui.webview
 
 import android.annotation.SuppressLint
-import android.app.UiModeManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.ConnectivityManager
@@ -252,7 +250,7 @@ class WebActivity : AppCompatActivity() {
             isFocusable = true
             isFocusableInTouchMode = true
             layoutParams = FrameLayout.LayoutParams(
-                (40 * dp).toInt(), (40 * dp).toInt()
+                (48 * dp).toInt(), (48 * dp).toInt()
             ).also { it.gravity = Gravity.TOP or Gravity.END }
             setOnClickListener { setResult(RESULT_CANCELED); finish() }
             post { requestFocus() }
@@ -266,6 +264,11 @@ class WebActivity : AppCompatActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
+            if (isTvDevice()) {
+                isFocusable = false
+                isFocusableInTouchMode = false
+                descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
+            }
             cookieManager.setAcceptThirdPartyCookies(this, true)
             settings.apply {
                 javaScriptEnabled                = true
@@ -348,8 +351,8 @@ class WebActivity : AppCompatActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
-            isClickable = true
-            isFocusable = true
+            isClickable = !isTvDevice()
+            isFocusable = !isTvDevice()
         }
 
         val blurMessage = TextView(this).apply {
@@ -401,32 +404,20 @@ class WebActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun buildUserAgent(): String {
-        val androidVersion = android.os.Build.VERSION.RELEASE
-        val model          = android.os.Build.MODEL
-        val uiModeManager  = getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
-        return when (uiModeManager.currentModeType) {
-            Configuration.UI_MODE_TYPE_TELEVISION ->
-                "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/4.0 Chrome/124.0.0.0 TV Safari/537.36"
-            Configuration.UI_MODE_TYPE_DESK ->
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            else -> {
-                if (resources.configuration.smallestScreenWidthDp >= 600)
-                    "Mozilla/5.0 (Linux; Android $androidVersion; $model) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-                else
-                    "Mozilla/5.0 (Linux; Android $androidVersion; $model) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
-            }
-        }
+    private fun buildUserAgent(): String =
+        WebSettings.getDefaultUserAgentString(this).replace(" wv", "")
+
+    private fun isTvDevice(): Boolean {
+        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as? android.app.UiModeManager
+        return uiModeManager?.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+            || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
     }
 
     private fun isVpnOrProxyActive(): Boolean {
         val cm   = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
         if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true
-        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as? android.app.UiModeManager
-        val isTv = uiModeManager?.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
-                || packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
-        if (isTv) return false
+        if (isTvDevice()) return false
         if (!Proxy.getDefaultHost().isNullOrEmpty()) return true
         if (!System.getProperty("http.proxyHost").isNullOrEmpty()) return true
         if (!System.getProperty("https.proxyHost").isNullOrEmpty()) return true

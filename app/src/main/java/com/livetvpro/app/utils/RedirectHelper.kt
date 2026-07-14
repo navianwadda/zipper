@@ -33,12 +33,6 @@ object RedirectHelper {
     private var dialogShowing = false
     private var pendingPostDialogAction: (() -> Unit)? = null
 
-    /**
-     * Composable replacement for the old Fragment-based registerLauncher.
-     * Call once per screen at composition time (same lifecycle guarantee as
-     * registering in Fragment.onCreate, since rememberLauncherForActivityResult
-     * registers during composition, before the host can move past STARTED).
-     */
     @Composable
     fun rememberRedirectLauncher(
         cooldownMgr: RedirectCooldownManager,
@@ -133,6 +127,7 @@ object RedirectHelper {
                 val intent = Intent(context, WebActivity::class.java).apply {
                     putExtra("extra_url", url)
                     putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
+                    putExtra("extra_hide_ad_content", listenerMgr.isAdContentHidden())
                 }
                 pendingPostDialogAction = onAfterDialog
                 launcher.launch(intent)

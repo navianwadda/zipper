@@ -60,6 +60,9 @@ fun LiveTVProTheme(
             statusBarStyle = SystemBarStyle.auto(bg, bg) { resources ->
                 themeManager.resolveIsDarkForResources(resources)
             },
+            navigationBarStyle = SystemBarStyle.auto(bg, bg) { resources ->
+                themeManager.resolveIsDarkForResources(resources)
+            },
         )
     }
 

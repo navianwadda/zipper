@@ -234,11 +234,11 @@ class FloatingPlayerActivity : ComponentActivity() {
 
         windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-        if (DeviceUtils.isTvDevice) {
+        if (DeviceUtils.isBigScreenLayout) {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
 
-        val isLandscape = DeviceUtils.isTvDevice ||
+        val isLandscape = DeviceUtils.isBigScreenLayout ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         parseIntent()
         if (savedInstanceState != null && contentId.isEmpty()) {
@@ -336,7 +336,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     @Composable
     private fun FloatingPlayerActivityRoot() {
-        val isLandscape = DeviceUtils.isTvDevice || isLandscapeState.value
+        val isLandscape = DeviceUtils.isBigScreenLayout || isLandscapeState.value
 
         val isPlaying by produceState(initialValue = false, player) {
             while (true) { value = player?.isPlaying == true; delay(100) }
@@ -359,7 +359,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         var showChannelList by remember { mutableStateOf(false) }
         val channelListItems by viewModel.channelListItems.observeAsState(emptyList())
         val isChannelListAvailable = contentType == ContentType.CHANNEL &&
-            channelListItems.isNotEmpty() && (isLandscape || DeviceUtils.isTvDevice)
+            channelListItems.isNotEmpty() && (isLandscape || DeviceUtils.isBigScreenLayout)
 
         val isPipEnabled = !DeviceUtils.isTvDevice &&
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) isPipSupported() else false
@@ -449,7 +449,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                 showPipButton          = isPipEnabled,
                 showAspectRatioButton  = true,
                 isLandscape            = landscapeMode,
-                isTvMode               = DeviceUtils.isTvDevice,
+                isTvMode               = DeviceUtils.isBigScreenLayout,
+                supportsPointerInput   = !DeviceUtils.isTvDevice,
                 layoutMode     = preferencesManager.getLayoutMode(),
                 isNetworkStream        = contentType == ContentType.NETWORK_STREAM,
                 isChannelListAvailable = isChannelListAvailable,
@@ -734,7 +735,7 @@ class FloatingPlayerActivity : ComponentActivity() {
     }
 
     private fun setupSystemUI() {
-        val isLandscape = DeviceUtils.isTvDevice ||
+        val isLandscape = DeviceUtils.isBigScreenLayout ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         windowInsetsController.apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -886,8 +887,41 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
         when (keyCode) {
+            android.view.KeyEvent.KEYCODE_MEDIA_PLAY,
+            android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,
+            android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+            android.view.KeyEvent.KEYCODE_ENTER,
+            android.view.KeyEvent.KEYCODE_NUMPAD_ENTER,
+            android.view.KeyEvent.KEYCODE_SPACE -> {
+                player?.let {
+                    val hasError = errorMessage.value.isNotBlank()
+                    val hasEnded = it.playbackState == Player.STATE_ENDED
+                    if (hasError || hasEnded) retryPlayback()
+                    else if (it.isPlaying) it.pause() else it.play()
+                }
+                controlsState.show(lifecycleScope)
+                return true
+            }
+            android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                player?.let {
+                    val newPos = it.currentPosition + skipMs
+                    if (it.isCurrentWindowLive && it.duration != C.TIME_UNSET && newPos >= it.duration) it.seekTo(it.duration)
+                    else it.seekTo(newPos)
+                }
+                controlsState.show(lifecycleScope)
+                return true
+            }
+            android.view.KeyEvent.KEYCODE_MEDIA_REWIND,
+            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                player?.let { it.seekTo((it.currentPosition - skipMs).coerceAtLeast(0L)) }
+                controlsState.show(lifecycleScope)
+                return true
+            }
             android.view.KeyEvent.KEYCODE_CHANNEL_UP,
-            android.view.KeyEvent.KEYCODE_MEDIA_NEXT -> {
+            android.view.KeyEvent.KEYCODE_MEDIA_NEXT,
+            android.view.KeyEvent.KEYCODE_PAGE_UP -> {
                 if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
                     val next = (currentLinkIndex + 1).coerceAtMost(allEventLinks.size - 1)
                     if (next != currentLinkIndex) switchToLink(allEventLinks[next], next)
@@ -896,7 +930,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                 }
             }
             android.view.KeyEvent.KEYCODE_CHANNEL_DOWN,
-            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+            android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+            android.view.KeyEvent.KEYCODE_PAGE_DOWN -> {
                 if (contentType == ContentType.EVENT && allEventLinks.size > 1) {
                     val prev = (currentLinkIndex - 1).coerceAtLeast(0)
                     if (prev != currentLinkIndex) switchToLink(allEventLinks[prev], prev)
@@ -1535,7 +1570,7 @@ class FloatingPlayerActivity : ComponentActivity() {
     }
 
     private fun cycleAspectRatio() {
-        val isLandscape = DeviceUtils.isTvDevice || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val isLandscape = DeviceUtils.isBigScreenLayout || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val next = when (resizeMode) {
             AspectRatioFrameLayout.RESIZE_MODE_FIT   -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
             AspectRatioFrameLayout.RESIZE_MODE_ZOOM  -> AspectRatioFrameLayout.RESIZE_MODE_FILL

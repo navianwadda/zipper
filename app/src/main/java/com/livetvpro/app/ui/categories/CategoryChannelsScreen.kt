@@ -76,6 +76,7 @@ import com.livetvpro.app.R
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.ui.player.dialogs.LinkSelectionDialog
 import com.livetvpro.app.ui.player.dialogs.toLinkItem
+import kotlinx.coroutines.delay
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 private val CardLogoBg = Color(0x80000000)
@@ -98,6 +99,15 @@ fun CategoryChannelsScreen(
     val pullToRefreshState = rememberPullToRefreshState()
     var linkDialogChannel by remember { mutableStateOf<Channel?>(null) }
     var favoriteDialogChannel by remember { mutableStateOf<Channel?>(null) }
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            viewModel.refreshChannels()
+            delay(1_000)
+            isRefreshing = false
+        }
+    }
 
     val hasGroups = categoryGroups.isNotEmpty()
 
@@ -212,8 +222,8 @@ fun CategoryChannelsScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
             PullToRefreshBox(
-                isRefreshing = isLoading,
-                onRefresh = { if (!isTvDevice) viewModel.refreshChannels() },
+                isRefreshing = isRefreshing,
+                onRefresh = { if (!isTvDevice) isRefreshing = true },
                 state = pullToRefreshState,
                 modifier = Modifier.fillMaxSize()
             ) {

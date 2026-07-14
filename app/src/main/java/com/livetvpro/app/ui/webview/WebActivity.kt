@@ -117,12 +117,7 @@ class WebActivity : AppCompatActivity() {
             registerReceiver(timerDoneReceiver, IntentFilter(TimerService.ACTION_TIMER_DONE))
         }
 
-        if (isCustomTabsSupported(this)) {
-            usingCustomTabs = true
-            startCustomTabFlow(url, durationSeconds)
-        } else {
-            launchWebView(url, durationSeconds)
-        }
+        launchWebView(url, durationSeconds)
     }
 
     override fun onResume() {
@@ -367,10 +362,8 @@ class WebActivity : AppCompatActivity() {
         }
 
         root.addView(webView)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            root.addView(blurScrim)
-            root.addView(blurMessage)
-        }
+        root.addView(blurScrim)
+        root.addView(blurMessage)
         root.addView(topBar)
         root.addView(progressBar)
         root.addView(timerLabel)

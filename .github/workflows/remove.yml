@@ -1,0 +1,112 @@
+name: Remove Dead Drawables
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  remove-dead-drawables:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete dead drawables
+        run: |
+          FILES=(
+            "app/src/main/res/drawable/bg_error_overlay.xml"
+            "app/src/main/res/drawable/bg_floating_nav.xml"
+            "app/src/main/res/drawable/bg_time_pill.xml"
+            "app/src/main/res/drawable/bottom_nav_background.xml"
+            "app/src/main/res/drawable/bottom_nav_container_bg.xml"
+            "app/src/main/res/drawable/bottom_nav_glass_background.xml"
+            "app/src/main/res/drawable/bottom_nav_indicator_background.xml"
+            "app/src/main/res/drawable/bottom_nav_indicator_bg.xml"
+            "app/src/main/res/drawable/bottom_nav_item_selected.xml"
+            "app/src/main/res/drawable/bottom_nav_text_colors.xml"
+            "app/src/main/res/drawable/button_hover_effect.xml"
+            "app/src/main/res/drawable/checkbox_indeterminate.xml"
+            "app/src/main/res/drawable/checkbox_ripple.xml"
+            "app/src/main/res/drawable/checkbox_selector.xml"
+            "app/src/main/res/drawable/circle_bg.xml"
+            "app/src/main/res/drawable/circular_button_bg.xml"
+            "app/src/main/res/drawable/circular_logo_background.xml"
+            "app/src/main/res/drawable/error_message_background.xml"
+            "app/src/main/res/drawable/ic_aspect_fill.xml"
+            "app/src/main/res/drawable/ic_aspect_fit.xml"
+            "app/src/main/res/drawable/ic_aspect_zoom.xml"
+            "app/src/main/res/drawable/ic_clock.xml"
+            "app/src/main/res/drawable/ic_error.xml"
+            "app/src/main/res/drawable/ic_home.xml"
+            "app/src/main/res/drawable/ic_placeholder_team.xml"
+            "app/src/main/res/drawable/ic_screen_landscape_24dp.xml"
+            "app/src/main/res/drawable/ic_screen_lock_landscape_24dp.xml"
+            "app/src/main/res/drawable/ic_screen_lock_portrait_24dp.xml"
+            "app/src/main/res/drawable/ic_screen_lock_rotation_24dp.xml"
+            "app/src/main/res/drawable/ic_screen_portrait_24dp.xml"
+            "app/src/main/res/drawable/ic_screen_rotation_24dp.xml"
+            "app/src/main/res/drawable/ic_skip_back.xml"
+            "app/src/main/res/drawable/ic_theme_toggle.xml"
+            "app/src/main/res/drawable/ic_tv_placeholder.xml"
+            "app/src/main/res/drawable/link_option_selector.xml"
+            "app/src/main/res/drawable/nav_pill_active.xml"
+            "app/src/main/res/drawable/preview_bar_shape.xml"
+            "app/src/main/res/drawable/preview_dot_shape.xml"
+            "app/src/main/res/drawable/preview_switch_shape.xml"
+            "app/src/main/res/drawable/radio_button_red.xml"
+            "app/src/main/res/drawable/radio_button_selector.xml"
+            "app/src/main/res/drawable/radio_checked.xml"
+            "app/src/main/res/drawable/radio_unchecked.xml"
+            "app/src/main/res/drawable/ripple_circle_white.xml"
+            "app/src/main/res/drawable/ripple_white_borderless.xml"
+            "app/src/main/res/drawable/theme_button_selected.xml"
+            "app/src/main/res/drawable/tv_focus_button_background.xml"
+            "app/src/main/res/drawable/tv_tab_background.xml"
+            "app/src/main/res/drawable/bg_category_pill.xml"
+            "app/src/main/res/drawable/bg_channel_number.xml"
+            "app/src/main/res/drawable/bg_favorite_button.xml"
+            "app/src/main/res/drawable/bg_message_banner.xml"
+            "app/src/main/res/drawable/bg_search_box.xml"
+            "app/src/main/res/drawable/bg_wrapper_badge.xml"
+            "app/src/main/res/drawable/circular_logo_stroke_overlay.xml"
+            "app/src/main/res/drawable/ic_broadcast_live.xml"
+            "app/src/main/res/drawable/ic_category.xml"
+            "app/src/main/res/drawable/ic_channel_placeholder.xml"
+            "app/src/main/res/drawable/ic_check_circle.xml"
+            "app/src/main/res/drawable/ic_live_indicator.xml"
+            "app/src/main/res/drawable/ic_play_custom.xml"
+            "app/src/main/res/drawable/ic_theme_dark.xml"
+            "app/src/main/res/drawable/ic_theme_light.xml"
+            "app/src/main/res/drawable/league_badge_background.xml"
+            "app/src/main/res/drawable/link_chip_background.xml"
+            "app/src/main/res/drawable/ripple_item_bg.xml"
+            "app/src/main/res/drawable/segmented_button_bg.xml"
+            "app/src/main/res/drawable/segmented_item_bg.xml"
+            "app/src/main/res/drawable/splash_bar_shape.xml"
+            "app/src/main/res/drawable/theme_button_background.xml"
+            "app/src/main/res/drawable/theme_toggle_background.xml"
+          )
+
+          DELETED=0
+          for f in "${FILES[@]}"; do
+            if [ -f "$f" ]; then
+              git rm -q "$f"
+              DELETED=$((DELETED+1))
+            fi
+          done
+          echo "DELETED_COUNT=$DELETED" >> "$GITHUB_ENV"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --cached --quiet; then
+            echo "Nothing to delete, all files already removed."
+            exit 0
+          fi
+          git commit -m "chore: remove ${DELETED_COUNT} dead drawables"
+          git push

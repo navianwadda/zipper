@@ -1,66 +1,101 @@
-name: Remove Dead Migration Files
+name: Remove Dead Files
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run only (list what would be deleted, don't commit/PR)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   remove-dead-files:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Delete dead files
+      - name: Delete dead Kotlin files
         run: |
-          set -e
           FILES=(
-            "app/src/main/java/com/livetvpro/app/ui/home/HomeFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/live/LiveEventsFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/sports/SportsFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/favorites/FavoritesFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/categories/CategoryChannelsFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/settings/SettingsFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/playlists/PlaylistsFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/networkstream/NetworkStreamFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/score/CricketScoreFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/score/FootballScoreFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/deviceid/DeviceIdFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/appearance/AppearanceFragment.kt"
-            "app/src/main/java/com/livetvpro/app/ui/appearance/ThemePreviewAdapter.kt"
-            "app/src/main/java/com/livetvpro/app/ui/components/FloatingNavView.kt"
-            "app/src/main/res/navigation/nav_graph.xml"
-            "app/src/main/res/layout/activity_main.xml"
-            "app/src/main/res/layout-television/activity_main.xml"
-            "app/src/main/res/layout/item_theme_preview.xml"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/CategoryAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/CategoryGroupChipAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/CategoryGroupDialogAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/ChannelAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/EventCategoryAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/FavoriteAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/LinkChipAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/LiveEventAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/PlaylistAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/adapters/RelatedChannelAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/player/settings/TrackAdapter.kt"
+            "app/src/main/java/com/livetvpro/app/ui/player/BasePlayerActivity.kt"
+            "app/src/main/java/com/livetvpro/app/utils/NetworkUtils.kt"
+            "app/src/main/java/com/livetvpro/app/utils/FileLogger.kt"
+            "app/src/main/java/com/livetvpro/app/utils/OrientationHelper.kt"
+            "app/src/main/java/com/livetvpro/app/utils/PlayerOrientation.kt"
+            "app/src/main/java/com/livetvpro/app/utils/Constants.kt"
+            "app/src/main/res/layout/item_category.xml"
+            "app/src/main/res/layout/item_channel.xml"
+            "app/src/main/res/layout/item_event_category.xml"
+            "app/src/main/res/layout/item_favorite.xml"
+            "app/src/main/res/layout/item_live_event.xml"
+            "app/src/main/res/layout/item_related_channel.xml"
+            "app/src/main/res/layout/item_related_event.xml"
+            "app/src/main/res/layout/item_track_option.xml"
+            "app/src/main/res/layout/item_category_group_chip.xml"
+            "app/src/main/res/layout/item_category_group_dialog.xml"
+            "app/src/main/res/layout/item_link_chip.xml"
+            "app/src/main/res/layout/item_playlist.xml"
           )
 
-          deleted=0
-          missing=0
+          echo "## Dead file removal report" >> "$GITHUB_STEP_SUMMARY"
+          DELETED=0
+          MISSING=0
+
           for f in "${FILES[@]}"; do
             if [ -f "$f" ]; then
-              git rm -q "$f"
-              echo "DELETED  $f"
-              deleted=$((deleted + 1))
+              echo "- 🗑️ $f" >> "$GITHUB_STEP_SUMMARY"
+              if [ "${{ inputs.dry_run }}" != "true" ]; then
+                git rm -q "$f"
+              fi
+              DELETED=$((DELETED+1))
             else
-              echo "SKIP (already gone)  $f"
-              missing=$((missing + 1))
+              echo "- ⚠️ not found (already removed?): $f" >> "$GITHUB_STEP_SUMMARY"
+              MISSING=$((MISSING+1))
             fi
           done
 
-          echo
-          echo "Deleted: $deleted, already absent: $missing"
-          echo "deleted_count=$deleted" >> "$GITHUB_ENV"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Deleted: $DELETED, Missing: $MISSING**" >> "$GITHUB_STEP_SUMMARY"
+          echo "DELETED_COUNT=$DELETED" >> "$GITHUB_ENV"
 
-      - name: Commit and push
-        run: |
-          if [ "$deleted_count" -eq 0 ]; then
-            echo "Nothing to commit, all dead files were already removed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "Remove dead Fragment/legacy files from Compose Navigation migration"
-          git push
+      - name: Stop here if dry run
+        if: ${{ inputs.dry_run == true }}
+        run: echo "Dry run — no changes committed."
+
+      - name: Create Pull Request
+        if: ${{ inputs.dry_run != true }}
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: remove dead/unused files"
+          branch: chore/remove-dead-files
+          delete-branch: true
+          title: "chore: remove ${{ env.DELETED_COUNT }} dead files"
+          body: |
+            Automated removal of confirmed-unused files:
+
+            - 11 legacy RecyclerView adapters (superseded by Compose UI)
+            - `BasePlayerActivity.kt` (abstract, never extended)
+            - `NetworkUtils.kt`, `FileLogger.kt`, `OrientationHelper.kt`, `PlayerOrientation.kt`, `Constants.kt` (unused utils)
+            - 12 layout XMLs that were exclusively used by the removed adapters
+
+            Generated by the `Remove Dead Files` workflow. **Review the diff and run a full build before merging** — this was verified by static reference search (grep across source, resources, manifest, and proguard rules), not a compiler/lint pass.
+          labels: |
+            cleanup
+            automated

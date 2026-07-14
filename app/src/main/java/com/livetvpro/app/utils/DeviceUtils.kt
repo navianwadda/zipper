@@ -36,6 +36,8 @@ object DeviceUtils {
     val isEmulator: Boolean get() = deviceType == DeviceType.EMULATOR
     val isDesktop: Boolean get() = deviceType == DeviceType.DESKTOP
 
+    val isBigScreenLayout: Boolean get() = isTvDevice || isDesktop
+
     fun init(context: Context) {
         val pm = context.packageManager
 

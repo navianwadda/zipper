@@ -38,6 +38,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.livetvpro.app.MainActivity
 
 class WebActivity : AppCompatActivity() {
@@ -369,6 +371,19 @@ class WebActivity : AppCompatActivity() {
         root.addView(timerLabel)
         root.addView(closeBtn)
         setContentView(root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            (topBar.layoutParams as FrameLayout.LayoutParams).height = (40 * dp).toInt() + statusBarTop
+            topBar.requestLayout()
+            (progressBar.layoutParams as FrameLayout.LayoutParams).topMargin = (40 * dp).toInt() + statusBarTop
+            progressBar.requestLayout()
+            (timerLabel.layoutParams as FrameLayout.LayoutParams).topMargin = (44 * dp).toInt() + statusBarTop
+            timerLabel.requestLayout()
+            (closeBtn.layoutParams as FrameLayout.LayoutParams).topMargin = statusBarTop
+            closeBtn.requestLayout()
+            insets
+        }
     }
 
     private fun startWebViewTimer(durationSeconds: Long) {

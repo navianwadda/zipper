@@ -4,9 +4,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -249,6 +250,7 @@ fun FavoritesScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FavoriteCard(
     favorite: FavoriteChannel,
@@ -266,16 +268,17 @@ private fun FavoriteCard(
     )
 
     Card(
-        onClick = onClick,
-        interactionSource = interactionSource,
         modifier = Modifier
             .padding(4.dp)
             .fillMaxWidth()
             .wrapContentHeight()
             .scale(scale)
-            .pointerInput(onRemove) {
-                detectTapGestures(onLongPress = { onRemove() })
-            },
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = onClick,
+                onLongClick = onRemove
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -315,20 +318,18 @@ private fun FavoriteCard(
                     }
                 }
 
-                if (!isTvDevice) {
-                    IconButton(
-                        onClick = onRemove,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .align(Alignment.TopEnd)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_close),
-                            contentDescription = "Remove from favorites",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .align(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = "Remove from favorites",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 

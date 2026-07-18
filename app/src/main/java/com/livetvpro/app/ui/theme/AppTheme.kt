@@ -57,12 +57,8 @@ fun LiveTVProTheme(
     SideEffect {
         val bg = colorScheme.background.toArgb()
         activity?.enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(bg, bg) { resources ->
-                themeManager.resolveIsDarkForResources(resources)
-            },
-            navigationBarStyle = SystemBarStyle.auto(bg, bg) { resources ->
-                themeManager.resolveIsDarkForResources(resources)
-            },
+            statusBarStyle = SystemBarStyle.auto(bg, bg) { isDark },
+            navigationBarStyle = SystemBarStyle.auto(bg, bg) { isDark },
         )
     }
 

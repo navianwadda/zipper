@@ -34,9 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -195,12 +192,8 @@ fun CategoryChannelsRoute(
             viewModel.searchChannels("")
         }
     }
-    val focusRequester = remember { FocusRequester() }
     DisposableEffect(Unit) {
         onDispose { numpadHandler.removeCallbacksAndMessages(null) }
-    }
-    LaunchedEffect(isTvOrTablet) {
-        if (isTvOrTablet) focusRequester.requestFocus()
     }
 
     Column(
@@ -209,8 +202,6 @@ fun CategoryChannelsRoute(
             .then(
                 if (isTvOrTablet) {
                     Modifier
-                        .focusRequester(focusRequester)
-                        .focusTarget()
                         .onKeyEvent { keyEvent ->
                             if (keyEvent.type != KeyEventType.KeyDown) return@onKeyEvent false
                             val digit = when (keyEvent.key) {

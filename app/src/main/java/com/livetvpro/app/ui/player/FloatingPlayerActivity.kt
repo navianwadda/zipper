@@ -1433,11 +1433,15 @@ class FloatingPlayerActivity : ComponentActivity() {
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
                 ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
+            val resolved = PlayerStreamHelper.resolvePlayableUrl(parsed.url, headers)
+            val playableUrl = resolved.first
+            headers.clear()
+            headers.putAll(resolved.second)
 
             val mimeType: String? = parsed.forcedMimeType
-                ?: PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
+                ?: PlayerStreamHelper.detectMimeTypeFromUrl(playableUrl)
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    PlayerStreamHelper.resolveContentType(parsed.url, headers)
+                    PlayerStreamHelper.resolveContentType(playableUrl, headers)
                 }
 
             val dataSourceFactory = DefaultHttpDataSource.Factory()
@@ -1508,7 +1512,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
 
-            val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
+            val mediaItemBuilder = MediaItem.Builder().setUri(playableUrl)
             mimeType?.let { mediaItemBuilder.setMimeType(it) }
 
             if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
@@ -1829,4 +1833,3 @@ class FloatingPlayerActivity : ComponentActivity() {
         }
     }
 }
-

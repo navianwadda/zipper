@@ -1913,7 +1913,8 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         val drmKeyId: String?,
         val drmKey: String?,
         val drmLicenseUrl: String?,
-        val customHeaders: Map<String, String> = emptyMap()
+        val customHeaders: Map<String, String> = emptyMap(),
+        val forcedMimeType: String? = null
     )
 
     private fun buildStreamInfoFromLink(

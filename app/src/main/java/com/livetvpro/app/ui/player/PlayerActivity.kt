@@ -1507,10 +1507,8 @@ class PlayerActivity : ComponentActivity() {
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
                 ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
-            if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
-            }
-            val mimeType = PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
+            val mimeType = parsed.forcedMimeType
+                ?: PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     PlayerStreamHelper.resolveContentType(parsed.url, headers)
                 }

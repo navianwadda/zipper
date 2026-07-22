@@ -300,6 +300,101 @@ object PlayerStreamHelper {
         }
     }
 
+    private val mediaUrlRegex = Regex(
+        "https?://[^\"'\\s\\\\<>]+\\.(?:m3u8|mpd)(?:\\?[^\"'\\s\\\\<>]*)?",
+        RegexOption.IGNORE_CASE
+    )
+
+    private val iframeSrcRegex = Regex(
+        "<iframe[^>]+src=[\"']([^\"']+)[\"']",
+        RegexOption.IGNORE_CASE
+    )
+
+    suspend fun resolvePlayableUrl(startUrl: String, startHeaders: Map<String, String>): Pair<String, Map<String, String>> {
+        var url = startUrl
+        var headers = startHeaders
+        var depth = 0
+        while (depth < 3) {
+            val html = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                fetchHtmlBody(url, headers)
+            } ?: return url to headers
+            val extracted = extractMediaUrlFromHtml(html, url) ?: return url to headers
+            val nextHeaders = headers.toMutableMap()
+            if (nextHeaders["Referer"].isNullOrEmpty()) nextHeaders["Referer"] = url
+            if (nextHeaders["Origin"].isNullOrEmpty()) {
+                try {
+                    val u = java.net.URL(url)
+                    nextHeaders["Origin"] = "${u.protocol}://${u.host}"
+                } catch (e: Exception) { }
+            }
+            headers = nextHeaders
+            url = extracted
+            depth++
+        }
+        return url to headers
+    }
+
+    fun resolvePlayableUrlBlocking(url: String, headers: Map<String, String>): Pair<String, Map<String, String>> {
+        return try {
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                resolvePlayableUrl(url, headers)
+            }
+        } catch (e: Exception) {
+            url to headers
+        }
+    }
+
+    private fun fetchHtmlBody(url: String, headers: Map<String, String>): String? {
+        return try {
+            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 8000
+            connection.readTimeout = 8000
+            connection.instanceFollowRedirects = true
+            headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
+            connection.connect()
+
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                connection.disconnect()
+                return null
+            }
+
+            val contentType = connection.contentType ?: ""
+            val bytes = connection.inputStream.use { readUpTo(it, 262_144) }
+            connection.disconnect()
+
+            val text = String(bytes, Charsets.UTF_8)
+            val looksLikeHtml = contentType.contains("text/html", ignoreCase = true) ||
+                contentType.contains("text/plain", ignoreCase = true) ||
+                text.trimStart().startsWith("<")
+
+            if (!looksLikeHtml) return null
+            if (text.contains("#EXTM3U") || text.contains("<MPD", ignoreCase = true)) return null
+            text
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "fetchHtmlBody failed for $url", e)
+            null
+        }
+    }
+
+    private fun extractMediaUrlFromHtml(html: String, baseUrl: String): String? {
+        val unescaped = html.replace("\\/", "/")
+        mediaUrlRegex.find(unescaped)?.let { return it.value }
+        iframeSrcRegex.find(unescaped)?.let { m ->
+            return resolveRelativeUrl(baseUrl, m.groupValues[1])
+        }
+        return null
+    }
+
+    private fun resolveRelativeUrl(baseUrl: String, ref: String): String? {
+        return try {
+            java.net.URL(java.net.URL(baseUrl), ref).toString()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun buildClearKeyInlineManager(keyIdHex: String, keyHex: String): DefaultDrmSessionManager? {
         return try {
             val keyIdBytes = hexToBytes(keyIdHex)

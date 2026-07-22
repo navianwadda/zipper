@@ -17,9 +17,29 @@ data class StreamInfo(
     val drmKey: String?,
     val drmLicenseUrl: String? = null,
     val customHeaders: Map<String, String> = emptyMap(),
+    val forcedMimeType: String? = null,
 )
 
 object PlayerStreamHelper {
+
+    private const val TAG = "PlayerStreamHelper"
+
+    fun normalizeMimeTypeAlias(value: String): String? {
+        val lower = value.trim().lowercase()
+        return when (lower) {
+            "hls", "m3u8" -> MimeTypes.APPLICATION_M3U8
+            "dash", "mpd" -> MimeTypes.APPLICATION_MPD
+            "ss", "smoothstreaming", "ism", "isml" -> MimeTypes.APPLICATION_SS
+            "mp4", "m4v", "m4a" -> "video/mp4"
+            "ts", "mpegts" -> "video/mp2t"
+            "mkv", "matroska" -> "video/x-matroska"
+            "webm" -> "video/webm"
+            "flv" -> "video/x-flv"
+            "avi" -> "video/avi"
+            "" -> null
+            else -> if (lower.contains("/")) value.trim() else null
+        }
+    }
 
     fun parseStreamUrl(streamUrl: String): StreamInfo {
         val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
@@ -50,6 +70,7 @@ object PlayerStreamHelper {
         var drmKeyId: String? = null
         var drmKey: String? = null
         var drmLicenseUrl: String? = null
+        var forcedMimeType: String? = null
 
         for (part in parts) {
             val eqIndex = part.indexOf('=')
@@ -59,6 +80,7 @@ object PlayerStreamHelper {
             val value = part.substring(eqIndex + 1).trim()
 
             when (key.lowercase()) {
+                "type", "extension", "format", "mimetype" -> forcedMimeType = normalizeMimeTypeAlias(value)
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
                 "drmlicense" -> {
                     if (value.startsWith("http://", ignoreCase = true) ||
@@ -85,7 +107,7 @@ object PlayerStreamHelper {
             }
         }
 
-        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders)
+        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders, forcedMimeType)
     }
 
     fun normalizeDrmScheme(scheme: String): String {
@@ -149,7 +171,8 @@ object PlayerStreamHelper {
             drmKeyId = resolvedDrmKeyId,
             drmKey = resolvedDrmKey,
             drmLicenseUrl = resolvedDrmLicenseUrl,
-            customHeaders = customHeaders
+            customHeaders = customHeaders,
+            forcedMimeType = base.forcedMimeType
         )
     }
 
@@ -193,26 +216,9 @@ object PlayerStreamHelper {
 
     suspend fun resolveContentType(url: String, headers: Map<String, String>): String? {
         return try {
-            val headValue = tryHeadContentType(url, headers)
-            headValue ?: trySniffByGet(url, headers)
+            trySniffByGet(url, headers)
         } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun tryHeadContentType(url: String, headers: Map<String, String>): String? {
-        return try {
-            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-            connection.requestMethod = "HEAD"
-            connection.connectTimeout = 5000
-            connection.readTimeout = 5000
-            connection.instanceFollowRedirects = true
-            headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
-            connection.connect()
-            val contentType = connection.contentType ?: ""
-            connection.disconnect()
-            mimeFromContentTypeHeader(contentType)
-        } catch (e: Exception) {
+            android.util.Log.e(TAG, "resolveContentType failed for $url", e)
             null
         }
     }
@@ -221,12 +227,19 @@ object PlayerStreamHelper {
         return try {
             val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
             connection.requestMethod = "GET"
-            connection.connectTimeout = 5000
-            connection.readTimeout = 5000
+            connection.connectTimeout = 8000
+            connection.readTimeout = 8000
             connection.instanceFollowRedirects = true
             connection.setRequestProperty("Range", "bytes=0-4095")
             headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
             connection.connect()
+
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                android.util.Log.w(TAG, "trySniffByGet got HTTP $responseCode for $url")
+                connection.disconnect()
+                return null
+            }
 
             val headerMime = mimeFromContentTypeHeader(connection.contentType ?: "")
             if (headerMime != null) {
@@ -236,8 +249,13 @@ object PlayerStreamHelper {
 
             val sample = connection.inputStream.use { readUpTo(it, 4096) }
             connection.disconnect()
-            sniffContentSignature(sample)
+            val signatureMime = sniffContentSignature(sample)
+            if (signatureMime == null) {
+                android.util.Log.w(TAG, "trySniffByGet could not identify content for $url")
+            }
+            signatureMime
         } catch (e: Exception) {
+            android.util.Log.e(TAG, "trySniffByGet threw for $url", e)
             null
         }
     }

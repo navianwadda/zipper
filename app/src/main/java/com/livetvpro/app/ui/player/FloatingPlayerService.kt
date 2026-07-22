@@ -537,10 +537,6 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             }
             val actualUrl = parsedStream.url
             val headers = parsedStream.headers.toMutableMap()
-            val ua = headers["User-Agent"]
-            if (ua.isNullOrBlank() || ua == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
-            }
             val effectiveStreamInfo = parsedStream
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
@@ -908,11 +904,11 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
                 userAgent
             else
-                headers["User-Agent"] ?: "okhttp/4.12.0"
-            headers["User-Agent"] = effectiveUserAgent
+                headers["User-Agent"]
+            effectiveUserAgent?.let { headers["User-Agent"] = it }
 
             val nsDataSourceFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(effectiveUserAgent)
+                .setUserAgent(effectiveUserAgent ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
                 .setConnectTimeoutMs(15_000)
                 .setReadTimeoutMs(15_000)
@@ -1036,10 +1032,6 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
 
             if (parsedStream.url.isBlank()) return
             val headers = parsedStream.headers.toMutableMap()
-            val ua = headers["User-Agent"]
-            if (ua.isNullOrBlank() || ua == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
-            }
 
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
@@ -1138,12 +1130,12 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             if (origin.isNotEmpty()) headers["Origin"] = origin
             if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                userAgent else "okhttp/4.12.0"
-            headers["User-Agent"] = effectiveUserAgent
+                userAgent else headers["User-Agent"]
+            effectiveUserAgent?.let { headers["User-Agent"] = it }
 
             val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
             val dataSourceFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(effectiveUserAgent)
+                .setUserAgent(effectiveUserAgent ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
                 .setConnectTimeoutMs(15_000)
                 .setReadTimeoutMs(15_000)
@@ -1720,12 +1712,12 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 if (origin.isNotEmpty()) headers["Origin"] = origin
                 if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
                 val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                    userAgent else "okhttp/4.12.0"
-                headers["User-Agent"] = effectiveUserAgent
+                    userAgent else headers["User-Agent"]
+                effectiveUserAgent?.let { headers["User-Agent"] = it }
 
                 val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
                 val dataSourceFactory = DefaultHttpDataSource.Factory()
-                    .setUserAgent(effectiveUserAgent)
+                    .setUserAgent(effectiveUserAgent ?: "LiveTVPro/1.0")
                     .setDefaultRequestProperties(headers)
                     .setConnectTimeoutMs(15_000)
                     .setReadTimeoutMs(15_000)
@@ -2216,12 +2208,16 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
 
     private fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
         val builder = MediaItem.Builder().setUri(streamInfo.url)
-        val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(streamInfo.url)
+        val mimeType: String? = streamInfo.forcedMimeType
+            ?: PlayerStreamHelper.detectMimeTypeFromUrl(streamInfo.url)
             ?: try {
                 kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                     PlayerStreamHelper.resolveContentType(streamInfo.url, headers)
                 }
-            } catch (e: Exception) { null }
+            } catch (e: Exception) {
+                android.util.Log.e("FloatingPlayerService", "buildDrmMediaItem mime resolution failed for ${streamInfo.url}", e)
+                null
+            }
         mimeType?.let { builder.setMimeType(it) }
         if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->

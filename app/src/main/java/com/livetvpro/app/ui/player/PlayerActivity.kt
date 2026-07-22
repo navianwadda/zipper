@@ -1507,10 +1507,14 @@ class PlayerActivity : ComponentActivity() {
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
                 ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
+            val resolved = PlayerStreamHelper.resolvePlayableUrl(parsed.url, headers)
+            val playableUrl = resolved.first
+            headers.clear()
+            headers.putAll(resolved.second)
             val mimeType = parsed.forcedMimeType
-                ?: PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
+                ?: PlayerStreamHelper.detectMimeTypeFromUrl(playableUrl)
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    PlayerStreamHelper.resolveContentType(parsed.url, headers)
+                    PlayerStreamHelper.resolveContentType(playableUrl, headers)
                 }
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
@@ -1574,7 +1578,7 @@ class PlayerActivity : ComponentActivity() {
             com.livetvpro.app.utils.VolumeBoostHelper.attach(exo, preferencesManager)
             playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
-            val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
+            val mediaItemBuilder = MediaItem.Builder().setUri(playableUrl)
             mimeType?.let { mediaItemBuilder.setMimeType(it) }
             if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
                 val uuid = if (parsed.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
@@ -1740,4 +1744,3 @@ private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.li
     drmLicenseUrl = drmLicenseUrl,
     customHeaders = customHeaders,
 )
-

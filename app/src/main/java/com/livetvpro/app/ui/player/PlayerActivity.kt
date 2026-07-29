@@ -1507,14 +1507,12 @@ class PlayerActivity : ComponentActivity() {
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
                 ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
-            val resolved = PlayerStreamHelper.resolvePlayableUrl(parsed.url, headers)
-            val playableUrl = resolved.first
-            headers.clear()
-            headers.putAll(resolved.second)
-            val mimeType = parsed.forcedMimeType
-                ?: PlayerStreamHelper.detectMimeTypeFromUrl(playableUrl)
+            if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
+                headers["User-Agent"] = "okhttp/4.12.0"
+            }
+            val mimeType = PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    PlayerStreamHelper.resolveContentType(playableUrl, headers)
+                    PlayerStreamHelper.resolveContentType(parsed.url, headers)
                 }
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
@@ -1578,7 +1576,7 @@ class PlayerActivity : ComponentActivity() {
             com.livetvpro.app.utils.VolumeBoostHelper.attach(exo, preferencesManager)
             playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
-            val mediaItemBuilder = MediaItem.Builder().setUri(playableUrl)
+            val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
             mimeType?.let { mediaItemBuilder.setMimeType(it) }
             if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
                 val uuid = if (parsed.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
@@ -1744,3 +1742,4 @@ private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.li
     drmLicenseUrl = drmLicenseUrl,
     customHeaders = customHeaders,
 )
+

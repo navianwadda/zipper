@@ -77,7 +77,6 @@ object PlayerTrackMapper {
 
                 val baseLanguage = languageDisplayName(format.language)
                 val language = when {
-                    isCea    -> "$baseLanguage (CC)"
                     isForced -> "$baseLanguage (Forced)"
                     else     -> baseLanguage
                 }

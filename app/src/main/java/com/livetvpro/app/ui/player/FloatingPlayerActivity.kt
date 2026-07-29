@@ -1433,15 +1433,13 @@ class FloatingPlayerActivity : ComponentActivity() {
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
                 ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
-            val resolved = PlayerStreamHelper.resolvePlayableUrl(parsed.url, headers)
-            val playableUrl = resolved.first
-            headers.clear()
-            headers.putAll(resolved.second)
+            if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
+                headers["User-Agent"] = "okhttp/4.12.0"
+            }
 
-            val mimeType: String? = parsed.forcedMimeType
-                ?: PlayerStreamHelper.detectMimeTypeFromUrl(playableUrl)
+            val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    PlayerStreamHelper.resolveContentType(playableUrl, headers)
+                    PlayerStreamHelper.resolveContentType(parsed.url, headers)
                 }
 
             val dataSourceFactory = DefaultHttpDataSource.Factory()
@@ -1512,7 +1510,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
 
-            val mediaItemBuilder = MediaItem.Builder().setUri(playableUrl)
+            val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
             mimeType?.let { mediaItemBuilder.setMimeType(it) }
 
             if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
@@ -1833,3 +1831,4 @@ class FloatingPlayerActivity : ComponentActivity() {
         }
     }
 }
+

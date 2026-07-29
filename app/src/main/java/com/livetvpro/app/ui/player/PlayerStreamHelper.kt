@@ -17,29 +17,9 @@ data class StreamInfo(
     val drmKey: String?,
     val drmLicenseUrl: String? = null,
     val customHeaders: Map<String, String> = emptyMap(),
-    val forcedMimeType: String? = null,
 )
 
 object PlayerStreamHelper {
-
-    private const val TAG = "PlayerStreamHelper"
-
-    fun normalizeMimeTypeAlias(value: String): String? {
-        val lower = value.trim().lowercase()
-        return when (lower) {
-            "hls", "m3u8" -> MimeTypes.APPLICATION_M3U8
-            "dash", "mpd" -> MimeTypes.APPLICATION_MPD
-            "ss", "smoothstreaming", "ism", "isml" -> MimeTypes.APPLICATION_SS
-            "mp4", "m4v", "m4a" -> "video/mp4"
-            "ts", "mpegts" -> "video/mp2t"
-            "mkv", "matroska" -> "video/x-matroska"
-            "webm" -> "video/webm"
-            "flv" -> "video/x-flv"
-            "avi" -> "video/avi"
-            "" -> null
-            else -> if (lower.contains("/")) value.trim() else null
-        }
-    }
 
     fun parseStreamUrl(streamUrl: String): StreamInfo {
         val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
@@ -70,7 +50,6 @@ object PlayerStreamHelper {
         var drmKeyId: String? = null
         var drmKey: String? = null
         var drmLicenseUrl: String? = null
-        var forcedMimeType: String? = null
 
         for (part in parts) {
             val eqIndex = part.indexOf('=')
@@ -80,7 +59,6 @@ object PlayerStreamHelper {
             val value = part.substring(eqIndex + 1).trim()
 
             when (key.lowercase()) {
-                "type", "extension", "format", "mimetype" -> forcedMimeType = normalizeMimeTypeAlias(value)
                 "drmscheme" -> drmScheme = normalizeDrmScheme(value)
                 "drmlicense" -> {
                     if (value.startsWith("http://", ignoreCase = true) ||
@@ -107,7 +85,7 @@ object PlayerStreamHelper {
             }
         }
 
-        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders, forcedMimeType)
+        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders)
     }
 
     fun normalizeDrmScheme(scheme: String): String {
@@ -171,8 +149,7 @@ object PlayerStreamHelper {
             drmKeyId = resolvedDrmKeyId,
             drmKey = resolvedDrmKey,
             drmLicenseUrl = resolvedDrmLicenseUrl,
-            customHeaders = customHeaders,
-            forcedMimeType = base.forcedMimeType
+            customHeaders = customHeaders
         )
     }
 
@@ -216,30 +193,69 @@ object PlayerStreamHelper {
 
     suspend fun resolveContentType(url: String, headers: Map<String, String>): String? {
         return try {
-            trySniffByGet(url, headers)
+            val headValue = tryHeadContentType(url, headers)
+            headValue ?: trySniffByGet(url, headers)
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "resolveContentType failed for $url", e)
+            null
+        }
+    }
+
+    /**
+     * HttpURLConnection's `instanceFollowRedirects` only follows redirects within the same
+     * protocol (http->http or https->https) — it silently refuses to follow a redirect that
+     * crosses http<->https (this is a long-standing JDK limitation, not a bug in this code).
+     * Many stream redirector endpoints (e.g. play.php?id=... style links) 302 across protocols,
+     * so we have to follow Location headers ourselves to reach the real resource before sniffing it.
+     */
+    private fun openFollowingRedirects(
+        url: String,
+        headers: Map<String, String>,
+        method: String,
+        maxRedirects: Int = 5,
+    ): java.net.HttpURLConnection {
+        var currentUrl = url
+        var connection: java.net.HttpURLConnection
+        var redirects = 0
+        while (true) {
+            connection = java.net.URL(currentUrl).openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = method
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.instanceFollowRedirects = false // we handle redirects manually below
+            if (method == "GET") {
+                connection.setRequestProperty("Range", "bytes=0-4095")
+            }
+            headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
+            connection.connect()
+
+            val code = connection.responseCode
+            val isRedirect = code in intArrayOf(301, 302, 303, 307, 308)
+            if (isRedirect && redirects < maxRedirects) {
+                val location = connection.getHeaderField("Location")
+                connection.disconnect()
+                if (location.isNullOrBlank()) return connection // nowhere to go, give up as-is
+                currentUrl = java.net.URI(currentUrl).resolve(location).toString()
+                redirects++
+                continue
+            }
+            return connection
+        }
+    }
+
+    private fun tryHeadContentType(url: String, headers: Map<String, String>): String? {
+        return try {
+            val connection = openFollowingRedirects(url, headers, "HEAD")
+            val contentType = connection.contentType ?: ""
+            connection.disconnect()
+            mimeFromContentTypeHeader(contentType)
+        } catch (e: Exception) {
             null
         }
     }
 
     private fun trySniffByGet(url: String, headers: Map<String, String>): String? {
         return try {
-            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 8000
-            connection.readTimeout = 8000
-            connection.instanceFollowRedirects = true
-            connection.setRequestProperty("Range", "bytes=0-4095")
-            headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
-            connection.connect()
-
-            val responseCode = connection.responseCode
-            if (responseCode !in 200..299) {
-                android.util.Log.w(TAG, "trySniffByGet got HTTP $responseCode for $url")
-                connection.disconnect()
-                return null
-            }
+            val connection = openFollowingRedirects(url, headers, "GET")
 
             val headerMime = mimeFromContentTypeHeader(connection.contentType ?: "")
             if (headerMime != null) {
@@ -249,13 +265,8 @@ object PlayerStreamHelper {
 
             val sample = connection.inputStream.use { readUpTo(it, 4096) }
             connection.disconnect()
-            val signatureMime = sniffContentSignature(sample)
-            if (signatureMime == null) {
-                android.util.Log.w(TAG, "trySniffByGet could not identify content for $url")
-            }
-            signatureMime
+            sniffContentSignature(sample)
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "trySniffByGet threw for $url", e)
             null
         }
     }
@@ -297,101 +308,6 @@ object PlayerStreamHelper {
                 bytes[2] == 0xDF.toByte() && bytes[3] == 0xA3.toByte() -> "video/webm"
             text.startsWith("FLV") -> "video/x-flv"
             else -> null
-        }
-    }
-
-    private val mediaUrlRegex = Regex(
-        "https?://[^\"'\\s\\\\<>]+\\.(?:m3u8|mpd)(?:\\?[^\"'\\s\\\\<>]*)?",
-        RegexOption.IGNORE_CASE
-    )
-
-    private val iframeSrcRegex = Regex(
-        "<iframe[^>]+src=[\"']([^\"']+)[\"']",
-        RegexOption.IGNORE_CASE
-    )
-
-    suspend fun resolvePlayableUrl(startUrl: String, startHeaders: Map<String, String>): Pair<String, Map<String, String>> {
-        var url = startUrl
-        var headers = startHeaders
-        var depth = 0
-        while (depth < 3) {
-            val html = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                fetchHtmlBody(url, headers)
-            } ?: return url to headers
-            val extracted = extractMediaUrlFromHtml(html, url) ?: return url to headers
-            val nextHeaders = headers.toMutableMap()
-            if (nextHeaders["Referer"].isNullOrEmpty()) nextHeaders["Referer"] = url
-            if (nextHeaders["Origin"].isNullOrEmpty()) {
-                try {
-                    val u = java.net.URL(url)
-                    nextHeaders["Origin"] = "${u.protocol}://${u.host}"
-                } catch (e: Exception) { }
-            }
-            headers = nextHeaders
-            url = extracted
-            depth++
-        }
-        return url to headers
-    }
-
-    fun resolvePlayableUrlBlocking(url: String, headers: Map<String, String>): Pair<String, Map<String, String>> {
-        return try {
-            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-                resolvePlayableUrl(url, headers)
-            }
-        } catch (e: Exception) {
-            url to headers
-        }
-    }
-
-    private fun fetchHtmlBody(url: String, headers: Map<String, String>): String? {
-        return try {
-            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 8000
-            connection.readTimeout = 8000
-            connection.instanceFollowRedirects = true
-            headers.forEach { (k, v) -> connection.setRequestProperty(k, v) }
-            connection.connect()
-
-            val responseCode = connection.responseCode
-            if (responseCode !in 200..299) {
-                connection.disconnect()
-                return null
-            }
-
-            val contentType = connection.contentType ?: ""
-            val bytes = connection.inputStream.use { readUpTo(it, 262_144) }
-            connection.disconnect()
-
-            val text = String(bytes, Charsets.UTF_8)
-            val looksLikeHtml = contentType.contains("text/html", ignoreCase = true) ||
-                contentType.contains("text/plain", ignoreCase = true) ||
-                text.trimStart().startsWith("<")
-
-            if (!looksLikeHtml) return null
-            if (text.contains("#EXTM3U") || text.contains("<MPD", ignoreCase = true)) return null
-            text
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "fetchHtmlBody failed for $url", e)
-            null
-        }
-    }
-
-    private fun extractMediaUrlFromHtml(html: String, baseUrl: String): String? {
-        val unescaped = html.replace("\\/", "/")
-        mediaUrlRegex.find(unescaped)?.let { return it.value }
-        iframeSrcRegex.find(unescaped)?.let { m ->
-            return resolveRelativeUrl(baseUrl, m.groupValues[1])
-        }
-        return null
-    }
-
-    private fun resolveRelativeUrl(baseUrl: String, ref: String): String? {
-        return try {
-            java.net.URL(java.net.URL(baseUrl), ref).toString()
-        } catch (e: Exception) {
-            null
         }
     }
 

@@ -537,10 +537,11 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             }
             val actualUrl = parsedStream.url
             val headers = parsedStream.headers.toMutableMap()
-            val resolved1 = PlayerStreamHelper.resolvePlayableUrlBlocking(actualUrl, headers)
-            headers.clear()
-            headers.putAll(resolved1.second)
-            val effectiveStreamInfo = parsedStream.copy(url = resolved1.first)
+            val ua = headers["User-Agent"]
+            if (ua.isNullOrBlank() || ua == "Default") {
+                headers["User-Agent"] = "okhttp/4.12.0"
+            }
+            val effectiveStreamInfo = parsedStream
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
                 .setDefaultRequestProperties(headers)
@@ -907,22 +908,18 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
                 userAgent
             else
-                headers["User-Agent"]
-            effectiveUserAgent?.let { headers["User-Agent"] = it }
-
-            val resolved2 = PlayerStreamHelper.resolvePlayableUrlBlocking(parsedPipe.url, headers)
-            headers.clear()
-            headers.putAll(resolved2.second)
+                headers["User-Agent"] ?: "okhttp/4.12.0"
+            headers["User-Agent"] = effectiveUserAgent
 
             val nsDataSourceFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(effectiveUserAgent ?: "LiveTVPro/1.0")
+                .setUserAgent(effectiveUserAgent)
                 .setDefaultRequestProperties(headers)
                 .setConnectTimeoutMs(15_000)
                 .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            val nsStreamInfo = resolveNetworkStreamInfo(resolved2.first, headers, drmScheme, drmLicense)
+            val nsStreamInfo = resolveNetworkStreamInfo(parsedPipe.url, headers, drmScheme, drmLicense)
             val nsMediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, nsDataSourceFactory, headers)
 
             val renderersFactory = DefaultRenderersFactory(this)
@@ -1039,10 +1036,10 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
 
             if (parsedStream.url.isBlank()) return
             val headers = parsedStream.headers.toMutableMap()
-            val resolved3 = PlayerStreamHelper.resolvePlayableUrlBlocking(parsedStream.url, headers)
-            headers.clear()
-            headers.putAll(resolved3.second)
-            val effectiveStream3 = parsedStream.copy(url = resolved3.first)
+            val ua = headers["User-Agent"]
+            if (ua.isNullOrBlank() || ua == "Default") {
+                headers["User-Agent"] = "okhttp/4.12.0"
+            }
 
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(headers["User-Agent"] ?: "LiveTVPro/1.0")
@@ -1051,7 +1048,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
-            val mediaSourceFactory = buildDrmMediaSourceFactory(effectiveStream3, dataSourceFactory, headers)
+            val mediaSourceFactory = buildDrmMediaSourceFactory(parsedStream, dataSourceFactory, headers)
 
             instance.currentChannel = channel
             instance.currentEvent = event
@@ -1104,7 +1101,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             newPlayer.volume = if (wasMuted) 0f else 1f
             instance.playerView.player = newPlayer
 
-            val mediaItem = buildDrmMediaItem(effectiveStream3, headers)
+            val mediaItem = buildDrmMediaItem(parsedStream, headers)
             newPlayer.setMediaItem(mediaItem)
 
             activeInstances[instanceId] = instance.copy(player = newPlayer)
@@ -1141,16 +1138,12 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             if (origin.isNotEmpty()) headers["Origin"] = origin
             if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                userAgent else headers["User-Agent"]
-            effectiveUserAgent?.let { headers["User-Agent"] = it }
+                userAgent else "okhttp/4.12.0"
+            headers["User-Agent"] = effectiveUserAgent
 
-            val resolved4 = PlayerStreamHelper.resolvePlayableUrlBlocking(streamUrl, headers)
-            headers.clear()
-            headers.putAll(resolved4.second)
-
-            val nsStreamInfo = resolveNetworkStreamInfo(resolved4.first, headers, drmScheme, drmLicense)
+            val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
             val dataSourceFactory = DefaultHttpDataSource.Factory()
-                .setUserAgent(effectiveUserAgent ?: "LiveTVPro/1.0")
+                .setUserAgent(effectiveUserAgent)
                 .setDefaultRequestProperties(headers)
                 .setConnectTimeoutMs(15_000)
                 .setReadTimeoutMs(15_000)
@@ -1727,16 +1720,12 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 if (origin.isNotEmpty()) headers["Origin"] = origin
                 if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
                 val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                    userAgent else headers["User-Agent"]
-                effectiveUserAgent?.let { headers["User-Agent"] = it }
+                    userAgent else "okhttp/4.12.0"
+                headers["User-Agent"] = effectiveUserAgent
 
-                val resolved5 = PlayerStreamHelper.resolvePlayableUrlBlocking(streamUrl, headers)
-                headers.clear()
-                headers.putAll(resolved5.second)
-
-                val nsStreamInfo = resolveNetworkStreamInfo(resolved5.first, headers, drmScheme, drmLicense)
+                val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
                 val dataSourceFactory = DefaultHttpDataSource.Factory()
-                    .setUserAgent(effectiveUserAgent ?: "LiveTVPro/1.0")
+                    .setUserAgent(effectiveUserAgent)
                     .setDefaultRequestProperties(headers)
                     .setConnectTimeoutMs(15_000)
                     .setReadTimeoutMs(15_000)
@@ -1932,8 +1921,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         val drmKeyId: String?,
         val drmKey: String?,
         val drmLicenseUrl: String?,
-        val customHeaders: Map<String, String> = emptyMap(),
-        val forcedMimeType: String? = null
+        val customHeaders: Map<String, String> = emptyMap()
     )
 
     private fun buildStreamInfoFromLink(
@@ -2228,16 +2216,12 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
 
     private fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
         val builder = MediaItem.Builder().setUri(streamInfo.url)
-        val mimeType: String? = streamInfo.forcedMimeType
-            ?: PlayerStreamHelper.detectMimeTypeFromUrl(streamInfo.url)
+        val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(streamInfo.url)
             ?: try {
                 kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                     PlayerStreamHelper.resolveContentType(streamInfo.url, headers)
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("FloatingPlayerService", "buildDrmMediaItem mime resolution failed for ${streamInfo.url}", e)
-                null
-            }
+            } catch (e: Exception) { null }
         mimeType?.let { builder.setMimeType(it) }
         if (streamInfo.drmScheme == "widevine" || streamInfo.drmScheme == "playready") {
             streamInfo.drmLicenseUrl?.let { licUrl ->

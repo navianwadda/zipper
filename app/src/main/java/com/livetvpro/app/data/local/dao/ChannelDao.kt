@@ -1,123 +1,56 @@
-package com.livetvpro.app.data.repository
+package com.livetvpro.app.data.local.dao
 
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
-import androidx.paging.map
-import com.livetvpro.app.data.local.dao.ChannelDao
-import com.livetvpro.app.data.local.entity.toEntity
-import com.livetvpro.app.data.models.Channel
-import com.livetvpro.app.utils.M3uParser
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
+import androidx.paging.PagingSource
+import androidx.room.*
+import com.livetvpro.app.data.local.entity.ChannelEntity
 
-@Singleton
-class ChannelRepository @Inject constructor(
-    private val dataRepository: NativeDataRepository,
-    private val categoryRepository: CategoryRepository,
-    private val channelDao: ChannelDao
-) {
-    companion object {
-        private const val PAGE_SIZE = 50
-        private const val INSERT_CHUNK = 500
-        private val gson = com.google.gson.Gson()
-    }
+@Dao
+interface ChannelDao {
 
+    @Query("SELECT * FROM channels WHERE categoryId = :categoryId ORDER BY position ASC")
+    suspend fun getChannelsByCategory(categoryId: String): List<ChannelEntity>
+
+    @Query("""
+        SELECT * FROM channels
+        WHERE categoryId = :categoryId
+          AND (:group = 'All' OR groupTitle = :group)
+          AND (:query = '' OR name LIKE '%' || :query || '%')
+        ORDER BY position ASC
+    """)
     fun getChannelsPaged(
         categoryId: String,
         group: String = "All",
         query: String = ""
-    ): Flow<PagingData<Channel>> = Pager(
-        config = PagingConfig(
-            pageSize           = PAGE_SIZE,
-            prefetchDistance   = PAGE_SIZE,
-            enablePlaceholders = false
-        ),
-        pagingSourceFactory = {
-            channelDao.getChannelsPaged(
-                categoryId = categoryId,
-                group      = group,
-                query      = query
-            )
-        }
-    ).flow.map { pagingData ->
-        pagingData.map { entity ->
-            val links = entity.linksJson?.let {
-                gson.fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
-            }
-            entity.toChannel(links)
-        }
+    ): PagingSource<Int, ChannelEntity>
+
+    @Query("""
+        SELECT DISTINCT groupTitle FROM channels
+        WHERE categoryId = :categoryId
+          AND groupTitle != ''
+        ORDER BY groupTitle ASC
+    """)
+    suspend fun getGroups(categoryId: String): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(channels: List<ChannelEntity>)
+
+    @Query("DELETE FROM channels WHERE categoryId = :categoryId")
+    suspend fun deleteByCategory(categoryId: String)
+
+    @Transaction
+    suspend fun insertAllChunked(channels: List<ChannelEntity>) {
+        channels.chunked(500).forEach { insertAll(it) }
     }
 
-    suspend fun getChannelsByCategory(categoryId: String): List<Channel> =
-        channelDao.getChannelsByCategory(categoryId).map { entity ->
-            val links = entity.linksJson?.let {
-                gson.fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
-            }
-            entity.toChannel(links)
-        }
-
-    suspend fun getGroups(categoryId: String): List<String> =
-        channelDao.getGroups(categoryId)
-
-    suspend fun syncCategory(categoryId: String) = withContext(Dispatchers.IO) {
-        if (!dataRepository.isDataLoaded()) return@withContext
-
-        try {
-            val staticChannels = dataRepository.getChannels().filter { it.categoryId == categoryId }
-            channelDao.replaceCategoryChannels(categoryId, staticChannels.map { it.toEntity() })
-        } catch (e: OutOfMemoryError) {
-            System.gc()
-            return@withContext
-        }
-
-        val category = categoryRepository.getCategories().find { it.id == categoryId }
-        if (category?.m3uUrl != null && category.m3uUrl.isNotEmpty()) {
-            streamInsertM3u(category.m3uUrl, categoryId, category.name)
-        }
+    @Transaction
+    suspend fun replaceCategoryChannels(categoryId: String, channels: List<ChannelEntity>) {
+        deleteByCategory(categoryId)
+        channels.chunked(500).forEach { insertAll(it) }
     }
 
-    suspend fun syncPlaylist(
-        playlistId: String,
-        playlistTitle: String,
-        source: String,
-        isFile: Boolean,
-        application: android.app.Application
-    ) = withContext(Dispatchers.IO) {
-        channelDao.deleteByCategory(playlistId)
+    @Query("DELETE FROM channels")
+    suspend fun deleteAll()
 
-        if (isFile) {
-            try {
-                val uri = android.net.Uri.parse(source)
-                val content = application.contentResolver.openInputStream(uri)
-                    ?.bufferedReader()?.use { it.readText() } ?: return@withContext
-                val parsed = M3uParser.parseM3uContent(content)
-                val entities = M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
-                    .map { it.toEntity() }
-                channelDao.insertAllChunked(entities)
-            } catch (e: OutOfMemoryError) {
-                System.gc()
-            }
-        } else {
-            streamInsertM3u(source, playlistId, playlistTitle)
-        }
-    }
-
-    private suspend fun streamInsertM3u(url: String, categoryId: String, categoryName: String) {
-        try {
-            val raw = M3uParser.parseM3uFromUrl(url)
-            val entities = M3uParser.convertToChannels(raw, categoryId, categoryName)
-                .map { it.toEntity() }
-            channelDao.insertAllChunked(entities)
-        } catch (e: OutOfMemoryError) {
-            System.gc()
-        }
-    }
-
-    suspend fun isCategorySynced(categoryId: String): Boolean =
-        channelDao.countByCategory(categoryId) > 0
+    @Query("SELECT COUNT(*) FROM channels WHERE categoryId = :categoryId")
+    suspend fun countByCategory(categoryId: String): Int
 }

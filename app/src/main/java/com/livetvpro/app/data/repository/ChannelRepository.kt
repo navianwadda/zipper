@@ -23,7 +23,7 @@ class ChannelRepository @Inject constructor(
 ) {
     companion object {
         private const val PAGE_SIZE = 50
-        private const val INSERT_CHUNK = 100
+        private const val INSERT_CHUNK = 500
         private val gson = com.google.gson.Gson()
     }
 
@@ -67,13 +67,9 @@ class ChannelRepository @Inject constructor(
     suspend fun syncCategory(categoryId: String) = withContext(Dispatchers.IO) {
         if (!dataRepository.isDataLoaded()) return@withContext
 
-        channelDao.deleteByCategory(categoryId)
-
         try {
             val staticChannels = dataRepository.getChannels().filter { it.categoryId == categoryId }
-            staticChannels.chunked(INSERT_CHUNK).forEach { chunk ->
-                channelDao.insertAll(chunk.map { it.toEntity() })
-            }
+            channelDao.replaceCategoryChannels(categoryId, staticChannels.map { it.toEntity() })
         } catch (e: OutOfMemoryError) {
             System.gc()
             return@withContext
@@ -100,9 +96,9 @@ class ChannelRepository @Inject constructor(
                 val content = application.contentResolver.openInputStream(uri)
                     ?.bufferedReader()?.use { it.readText() } ?: return@withContext
                 val parsed = M3uParser.parseM3uContent(content)
-                M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
-                    .chunked(INSERT_CHUNK)
-                    .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+                val entities = M3uParser.convertToChannels(parsed, playlistId, playlistTitle)
+                    .map { it.toEntity() }
+                channelDao.insertAllChunked(entities)
             } catch (e: OutOfMemoryError) {
                 System.gc()
             }
@@ -114,9 +110,9 @@ class ChannelRepository @Inject constructor(
     private suspend fun streamInsertM3u(url: String, categoryId: String, categoryName: String) {
         try {
             val raw = M3uParser.parseM3uFromUrl(url)
-            M3uParser.convertToChannels(raw, categoryId, categoryName)
-                .chunked(INSERT_CHUNK)
-                .forEach { chunk -> channelDao.insertAll(chunk.map { it.toEntity() }) }
+            val entities = M3uParser.convertToChannels(raw, categoryId, categoryName)
+                .map { it.toEntity() }
+            channelDao.insertAllChunked(entities)
         } catch (e: OutOfMemoryError) {
             System.gc()
         }

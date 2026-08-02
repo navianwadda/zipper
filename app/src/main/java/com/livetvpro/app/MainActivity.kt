@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
@@ -30,6 +31,8 @@ import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -271,21 +274,27 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     }
 
     override fun onSettingsShareApp() {
-        try {
-            val apk   = java.io.File(packageManager.getApplicationInfo(packageName, 0).sourceDir)
-            val name  = getString(R.string.app_name).replace(" ", "_")
-            val share = java.io.File(cacheDir, "$name.apk")
-            apk.copyTo(share, overwrite = true)
-            val uri   = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", share)
-            startActivity(Intent.createChooser(
-                Intent(Intent.ACTION_SEND).apply {
-                    type = "application/vnd.android.package-archive"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }, "Share ${getString(R.string.app_name)}"
-            ))
-        } catch (_: Exception) { Toast.makeText(this, "Unable to share APK", Toast.LENGTH_SHORT).show() }
+        lifecycleScope.launch {
+            try {
+                val apk = java.io.File(packageManager.getApplicationInfo(packageName, 0).sourceDir)
+                val name = getString(R.string.app_name).replace(" ", "_")
+                val share = java.io.File(cacheDir, "$name.apk")
+                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    apk.copyTo(share, overwrite = true)
+                }
+                val uri = androidx.core.content.FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", share)
+                startActivity(Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "application/vnd.android.package-archive"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }, "Share ${getString(R.string.app_name)}"
+                ))
+            } catch (_: Exception) {
+                Toast.makeText(this@MainActivity, "Unable to share APK", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onSettingsFloatingPlayer() {

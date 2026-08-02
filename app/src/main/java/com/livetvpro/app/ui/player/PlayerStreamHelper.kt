@@ -153,7 +153,7 @@ object PlayerStreamHelper {
         )
     }
 
-    fun buildStreamUrl(link: LiveEventLink): String {
+    fun buildStreamUrl(link: LiveEventLink): String = try {
         var url = link.url
         val params = mutableListOf<String>()
 
@@ -164,13 +164,15 @@ object PlayerStreamHelper {
         link.xForwardedFor?.let { if (it.isNotEmpty()) params.add("x-forwarded-for=$it") }
         link.drmScheme?.let { if (it.isNotEmpty()) params.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) params.add("drmLicense=$it") }
-        link.customHeaders.forEach { (k, v) -> if (v.isNotEmpty()) params.add("$k=$v") }
+        (link.customHeaders ?: emptyMap()).forEach { (k, v) -> if (v.isNotEmpty()) params.add("$k=$v") }
 
         if (params.isNotEmpty()) {
             url += "|" + params.joinToString("|")
         }
 
-        return url
+        url
+    } catch (t: Throwable) {
+        runCatching { link.url }.getOrNull() ?: ""
     }
 
     fun detectMimeTypeFromUrl(url: String): String? {

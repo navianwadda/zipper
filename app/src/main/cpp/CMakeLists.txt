@@ -21,3 +21,5 @@ target_link_libraries(
 )
 
 target_compile_options(native-lib PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
+
+target_link_options(native-lib PRIVATE "-Wl,-z,max-page-size=16384")

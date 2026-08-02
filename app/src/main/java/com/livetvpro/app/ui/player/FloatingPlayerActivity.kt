@@ -241,6 +241,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         val isLandscape = DeviceUtils.isBigScreenLayout ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         parseIntent()
+        if (isFinishing) return
         if (savedInstanceState != null && contentId.isEmpty()) {
             restoreFromBundle(savedInstanceState)
         }
@@ -789,7 +790,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         releasePlayer()
-        parseIntent()
+        if (!parseIntent()) return
         setupWindowFlags(resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
         setupPlayer()
         setupLinksUI()
@@ -943,7 +944,18 @@ class FloatingPlayerActivity : ComponentActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
-    private fun parseIntent() {
+    private fun parseIntent(): Boolean {
+        return try {
+            parseIntentInternal()
+            true
+        } catch (t: Throwable) {
+            android.widget.Toast.makeText(this, "Unable to play this channel", android.widget.Toast.LENGTH_SHORT).show()
+            finish()
+            false
+        }
+    }
+
+    private fun parseIntentInternal() {
         val isNetworkStream = intent.getBooleanExtra("IS_NETWORK_STREAM", false)
 
         if (isNetworkStream) {
@@ -1177,54 +1189,58 @@ class FloatingPlayerActivity : ComponentActivity() {
     }
 
     private fun switchToChannel(newChannel: Channel, linkIndex: Int = -1) {
-        releasePlayer()
-        channelData = newChannel
-        eventData = null
-        contentType = ContentType.CHANNEL
-        contentId = newChannel.id
-        contentName = newChannel.name
+        try {
+            releasePlayer()
+            channelData = newChannel
+            eventData = null
+            contentType = ContentType.CHANNEL
+            contentId = newChannel.id
+            contentName = newChannel.name
 
-        if (newChannel.links != null && newChannel.links.isNotEmpty()) {
-            allEventLinks = newChannel.links.map {
-                LiveEventLink(
-                    quality = it.quality,
-                    url = it.url,
-                    cookie = it.cookie,
-                    referer = it.referer,
-                    origin = it.origin,
-                    userAgent = it.userAgent,
-                    xForwardedFor = it.xForwardedFor,
-                    drmScheme = it.drmScheme,
-                    drmLicenseUrl = it.drmLicenseUrl
-                )
+            if (newChannel.links != null && newChannel.links.isNotEmpty()) {
+                allEventLinks = newChannel.links.map {
+                    LiveEventLink(
+                        quality = it.quality,
+                        url = it.url,
+                        cookie = it.cookie,
+                        referer = it.referer,
+                        origin = it.origin,
+                        userAgent = it.userAgent,
+                        xForwardedFor = it.xForwardedFor,
+                        drmScheme = it.drmScheme,
+                        drmLicenseUrl = it.drmLicenseUrl
+                    )
+                }
+                currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
+                streamUrl = allEventLinks.getOrNull(currentLinkIndex)?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
+            } else {
+                allEventLinks = emptyList()
+                streamUrl = newChannel.streamUrl
             }
-            currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0
-            streamUrl = allEventLinks.getOrNull(currentLinkIndex)?.let { PlayerStreamHelper.buildStreamUrl(it) } ?: newChannel.streamUrl
-        } else {
-            allEventLinks = emptyList()
-            streamUrl = newChannel.streamUrl
-        }
 
-        setupPlayer()
-        setupLinksUI()
+            setupPlayer()
+            setupLinksUI()
 
-        val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-        val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
+            val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+            val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
 
-        if (isFavoritesSource) {
-            val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
-            viewModel.setChannelList(favList)
-            val related = favList.filter { it.id != newChannel.id }.shuffled().take(9)
-            relatedChannelsLockedForContentId = contentId
-            relatedChannels = related
-            relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
-            else RelatedContentState.Channels(related)
-        } else {
-            relatedChannelsLockedForContentId = null
-            val isSports = newChannel.categoryId == "sports" || intentIsSports
-            val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
-            if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
-            else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
+            if (isFavoritesSource) {
+                val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
+                viewModel.setChannelList(favList)
+                val related = favList.filter { it.id != newChannel.id }.shuffled().take(9)
+                relatedChannelsLockedForContentId = contentId
+                relatedChannels = related
+                relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+                else RelatedContentState.Channels(related)
+            } else {
+                relatedChannelsLockedForContentId = null
+                val isSports = newChannel.categoryId == "sports" || intentIsSports
+                val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: newChannel.categoryId
+                if (isSports) viewModel.loadRandomRelatedSports(newChannel.id)
+                else viewModel.loadRandomRelatedChannels(categoryId, newChannel.id, intentSelectedGroup)
+            }
+        } catch (t: Throwable) {
+            errorMessage.value = "Unable to play this channel"
         }
     }
 
@@ -1478,7 +1494,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             }
 
             val renderersFactory = DefaultRenderersFactory(this@FloatingPlayerActivity)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
                 .setEnableDecoderFallback(true)
 
             val ts = DefaultTrackSelector(this@FloatingPlayerActivity).apply {
@@ -1490,20 +1506,37 @@ class FloatingPlayerActivity : ComponentActivity() {
             }
             trackSelector = ts
 
-            val exo = ExoPlayer.Builder(this@FloatingPlayerActivity)
-                .setRenderersFactory(renderersFactory)
-                .setTrackSelector(ts)
-                .setMediaSourceFactory(mediaSourceFactory)
-                .setWakeMode(C.WAKE_MODE_NETWORK)
-                .setHandleAudioBecomingNoisy(true)
-                .setAudioAttributes(
-                    androidx.media3.common.AudioAttributes.Builder()
-                        .setUsage(C.USAGE_MEDIA)
-                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                        .build(),
-                    true
-                )
-                .build()
+            val exo = try {
+                ExoPlayer.Builder(this@FloatingPlayerActivity)
+                    .setRenderersFactory(renderersFactory)
+                    .setTrackSelector(ts)
+                    .setMediaSourceFactory(mediaSourceFactory)
+                    .setWakeMode(C.WAKE_MODE_NETWORK)
+                    .setHandleAudioBecomingNoisy(true)
+                    .setAudioAttributes(
+                        androidx.media3.common.AudioAttributes.Builder()
+                            .setUsage(C.USAGE_MEDIA)
+                            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                            .build(),
+                        true
+                    )
+                    .build()
+            } catch (t: Throwable) {
+                try {
+                    val safeRenderersFactory = DefaultRenderersFactory(this@FloatingPlayerActivity)
+                        .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+                    ExoPlayer.Builder(this@FloatingPlayerActivity)
+                        .setRenderersFactory(safeRenderersFactory)
+                        .setTrackSelector(ts)
+                        .setMediaSourceFactory(mediaSourceFactory)
+                        .setWakeMode(C.WAKE_MODE_NETWORK)
+                        .build()
+                } catch (t2: Throwable) {
+                    errorMessage.value = "Unable to start playback on this device"
+                    playerSetupInProgress = false
+                    return@launch
+                }
+            }
 
             player = exo
             com.livetvpro.app.utils.VolumeBoostHelper.attach(exo, preferencesManager)

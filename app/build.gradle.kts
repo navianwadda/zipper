@@ -37,7 +37,8 @@ android {
                 cppFlags += ""
                 arguments += listOf(
                     "-DANDROID_ARM_NEON=TRUE",
-                    "-DANDROID_STL=c++_static"
+                    "-DANDROID_STL=c++_static",
+                    "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
                 )
             }
         }

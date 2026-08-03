@@ -117,6 +117,7 @@ class PlayerActivity : ComponentActivity() {
     private var networkLandscapeResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
     private var networkPortraitResizeMode  = AspectRatioFrameLayout.RESIZE_MODE_FIT
     private var resizeModesRestoredFromState = false
+    private var aspectRatioAppliedForCurrentLoad = false
 
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
@@ -1318,6 +1319,8 @@ class PlayerActivity : ComponentActivity() {
         }
     }
     internal fun applyRememberedAspectRatioIfEnabled() {
+        if (aspectRatioAppliedForCurrentLoad) return
+        aspectRatioAppliedForCurrentLoad = true
         if (!resizeModesRestoredFromState) {
             if (contentType != ContentType.NETWORK_STREAM && preferencesManager.isRememberAspectRatioEnabled()) {
                 val savedL = preferencesManager.getSavedAspectRatio()
@@ -1513,6 +1516,7 @@ class PlayerActivity : ComponentActivity() {
     private fun setupPlayer() {
         if (streamUrl.isBlank()) { errorMessage.value = "No stream URL"; return }
         if (player != null || playerSetupInProgress) return
+        aspectRatioAppliedForCurrentLoad = false
         playerSetupInProgress = true
         lifecycleScope.launch {
             val parsed = allEventLinks.getOrNull(currentLinkIndex)

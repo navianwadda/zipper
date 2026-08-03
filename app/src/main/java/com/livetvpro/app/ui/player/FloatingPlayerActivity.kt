@@ -125,6 +125,7 @@ class FloatingPlayerActivity : ComponentActivity() {
     private var networkPortraitResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     private var networkLandscapeResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
     private var resizeModesRestoredFromState = false
+    private var aspectRatioAppliedForCurrentLoad = false
 
     private var savedPlaybackPosition: Long = -1L
     private var relatedChannels = listOf<Channel>()
@@ -1386,6 +1387,8 @@ class FloatingPlayerActivity : ComponentActivity() {
     }
 
     private fun applyRememberedAspectRatioIfEnabled() {
+        if (aspectRatioAppliedForCurrentLoad) return
+        aspectRatioAppliedForCurrentLoad = true
         if (!resizeModesRestoredFromState) {
             if (contentType != ContentType.NETWORK_STREAM && preferencesManager.isRememberAspectRatioEnabled()) {
                 val savedLandscape = preferencesManager.getSavedAspectRatio()
@@ -1406,6 +1409,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             return
         }
         if (player != null || playerSetupInProgress) return
+        aspectRatioAppliedForCurrentLoad = false
 
         val isTransferredFromFloating = intent.getBooleanExtra("use_transferred_player", false)
         if (isTransferredFromFloating && PlayerHolder.player != null) {

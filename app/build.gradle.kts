@@ -198,6 +198,10 @@ dependencies {
     implementation("androidx.media3:media3-ui-compose:$media3Version")
     implementation("androidx.media3:media3-common:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
+    implementation("androidx.media3:media3-cast:$media3Version")
+    // Google Cast
+    implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
+    implementation("androidx.mediarouter:mediarouter:1.7.0")
     // Prebuilt FFmpeg decoder AAR by Jellyfin (published to Maven Central).
     // androidx.media3:media3-exoplayer-ffmpeg is NOT on Maven â€” it needs manual native compilation.
     // This drop-in provides the same libffmpegjni.so for all ABIs from the same source.

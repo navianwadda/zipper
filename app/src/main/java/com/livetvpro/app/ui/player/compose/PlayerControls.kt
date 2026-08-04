@@ -152,6 +152,9 @@ fun PlayerControls(
     initialVolume: Int = 100,
     initialBrightness: Int = 0,
     volumeBoostEnabled: Boolean = false,
+    showCastButton: Boolean = false,
+    isCastConnected: Boolean = false,
+    onCastClick: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
 
@@ -285,6 +288,9 @@ fun PlayerControls(
                 onFullscreenClick      = onFullscreenClick,
                 onChannelListClick     = onChannelListClick,
                 isChannelListAvailable = isChannelListAvailable,
+                showCastButton         = showCastButton,
+                isCastConnected        = isCastConnected,
+                onCastClick            = onCastClick,
                 onInteraction          = { state.show(scope) },
                 onToggle               = { state.toggle(scope) },
                 onTvFocusWithinControls    = { isTvFocusWithinControls = it },
@@ -398,6 +404,9 @@ internal fun PlayerControlsContent(
     onFullscreenClick: () -> Unit,
     onChannelListClick: () -> Unit,
     isChannelListAvailable: Boolean,
+    showCastButton: Boolean = false,
+    isCastConnected: Boolean = false,
+    onCastClick: () -> Unit = {},
     onInteraction: () -> Unit,
     onToggle: () -> Unit = {},
     onTvFocusWithinControls: (Boolean) -> Unit = {},
@@ -535,6 +544,16 @@ internal fun PlayerControlsContent(
                             iconRes            = R.drawable.ic_pip,
                             contentDescription = "Picture in Picture",
                             size               = topIconSize,
+                            isTvMode           = isTvMode,
+                        )
+                    }
+                    if (showCastButton) {
+                        PlayerIconButton(
+                            onClick            = { onCastClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_cast,
+                            contentDescription = if (isCastConnected) "Casting to device" else "Cast to device",
+                            size               = topIconSize,
+                            tint               = if (isCastConnected) Color(0xFF2AABEE) else Color.White,
                             isTvMode           = isTvMode,
                         )
                     }

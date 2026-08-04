@@ -549,7 +549,13 @@ class PlayerActivity : ComponentActivity() {
                 showCastButton         = com.livetvpro.app.cast.CastManager.isAvailable() &&
                     contentType != ContentType.NETWORK_STREAM,
                 isCastConnected        = isCasting,
-                onCastClick            = { com.livetvpro.app.cast.CastManager.showCastPicker(this@PlayerActivity) },
+                onCastClick            = {
+                    com.livetvpro.app.cast.CastManager.showCastPicker(
+                        context        = this@PlayerActivity,
+                        colorThemeName = themeManager.colorThemeFlow.value.name,
+                        isDark         = themeManager.isDarkMode(this@PlayerActivity),
+                    )
+                },
             )
         }
         Column(modifier = Modifier

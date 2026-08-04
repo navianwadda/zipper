@@ -538,15 +538,6 @@ internal fun PlayerControlsContent(
                             .weight(1f)
                             .padding(start = 12.dp),
                     )
-                    if (showPipButton) {
-                        PlayerIconButton(
-                            onClick            = { onPipClick(); onInteraction() },
-                            iconRes            = R.drawable.ic_pip,
-                            contentDescription = "Picture in Picture",
-                            size               = topIconSize,
-                            isTvMode           = isTvMode,
-                        )
-                    }
                     if (showCastButton) {
                         PlayerIconButton(
                             onClick            = { onCastClick(); onInteraction() },
@@ -554,6 +545,15 @@ internal fun PlayerControlsContent(
                             contentDescription = if (isCastConnected) "Casting to device" else "Cast to device",
                             size               = topIconSize,
                             tint               = if (isCastConnected) Color(0xFF2AABEE) else Color.White,
+                            isTvMode           = isTvMode,
+                        )
+                    }
+                    if (showPipButton) {
+                        PlayerIconButton(
+                            onClick            = { onPipClick(); onInteraction() },
+                            iconRes            = R.drawable.ic_pip,
+                            contentDescription = "Picture in Picture",
+                            size               = topIconSize,
                             isTvMode           = isTvMode,
                         )
                     }

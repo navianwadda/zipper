@@ -1,6 +1,7 @@
 package com.livetvpro.app.cast
 
 import android.content.Context
+import android.view.ContextThemeWrapper
 import androidx.mediarouter.app.MediaRouteChooserDialog
 import androidx.mediarouter.app.MediaRouteControllerDialog
 import androidx.mediarouter.media.MediaRouteSelector
@@ -13,6 +14,7 @@ import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.CastState
 import com.google.android.gms.cast.framework.CastStateListener
 import com.google.android.gms.cast.framework.SessionManagerListener
+import com.livetvpro.app.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -26,7 +28,49 @@ data class PendingCastMedia(
     val startPositionMs: Long,
 )
 
+private data class CastThemeRes(val lightThemeResId: Int, val darkThemeResId: Int)
+
 object CastManager {
+
+    private val themeMap: Map<String, CastThemeRes> = mapOf(
+        "Legacy" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Legacy_Light, darkThemeResId = R.style.Theme_Cast_Legacy),
+        "Default" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Default_Light, darkThemeResId = R.style.Theme_Cast_Default),
+        "Dynamic" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Dynamic_Light, darkThemeResId = R.style.Theme_Cast_Dynamic),
+        "Catppuccin" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Catppuccin_Light, darkThemeResId = R.style.Theme_Cast_Catppuccin),
+        "Cloudflare" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Cloudflare_Light, darkThemeResId = R.style.Theme_Cast_Cloudflare),
+        "CottonCandy" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_CottonCandy_Light, darkThemeResId = R.style.Theme_Cast_CottonCandy),
+        "Doom" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Doom_Light, darkThemeResId = R.style.Theme_Cast_Doom),
+        "GreenApple" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_GreenApple_Light, darkThemeResId = R.style.Theme_Cast_GreenApple),
+        "Gruvbox" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Gruvbox_Light, darkThemeResId = R.style.Theme_Cast_Gruvbox),
+        "Kanagawa" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Kanagawa_Light, darkThemeResId = R.style.Theme_Cast_Kanagawa),
+        "Lavender" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Lavender_Light, darkThemeResId = R.style.Theme_Cast_Lavender),
+        "Midnight" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Midnight_Light, darkThemeResId = R.style.Theme_Cast_Midnight),
+        "Mocha" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Mocha_Light, darkThemeResId = R.style.Theme_Cast_Mocha),
+        "Nord" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Nord_Light, darkThemeResId = R.style.Theme_Cast_Nord),
+        "RosePine" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_RosePine_Light, darkThemeResId = R.style.Theme_Cast_RosePine),
+        "Strawberry" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Strawberry_Light, darkThemeResId = R.style.Theme_Cast_Strawberry),
+        "Tidal" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Tidal_Light, darkThemeResId = R.style.Theme_Cast_Tidal),
+        "TakoGreen" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_TakoGreen_Light, darkThemeResId = R.style.Theme_Cast_TakoGreen),
+        "TokyoNight" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_TokyoNight_Light, darkThemeResId = R.style.Theme_Cast_TokyoNight),
+        "YinYang" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_YinYang_Light, darkThemeResId = R.style.Theme_Cast_YinYang),
+        "Yotsuba" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Yotsuba_Light, darkThemeResId = R.style.Theme_Cast_Yotsuba),
+        "Sapphire" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Sapphire_Light, darkThemeResId = R.style.Theme_Cast_Sapphire),
+        "Sunset" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Sunset_Light, darkThemeResId = R.style.Theme_Cast_Sunset),
+        "Ocean" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Ocean_Light, darkThemeResId = R.style.Theme_Cast_Ocean),
+        "Forest" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Forest_Light, darkThemeResId = R.style.Theme_Cast_Forest),
+        "RoseGold" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_RoseGold_Light, darkThemeResId = R.style.Theme_Cast_RoseGold),
+        "Violet" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Violet_Light, darkThemeResId = R.style.Theme_Cast_Violet),
+        "Amber" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Amber_Light, darkThemeResId = R.style.Theme_Cast_Amber),
+        "Coral" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Coral_Light, darkThemeResId = R.style.Theme_Cast_Coral),
+        "Slate" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Slate_Light, darkThemeResId = R.style.Theme_Cast_Slate),
+        "Dracula" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Dracula_Light, darkThemeResId = R.style.Theme_Cast_Dracula),
+        "Monochrome" to CastThemeRes(lightThemeResId = R.style.Theme_Cast_Monochrome_Light, darkThemeResId = R.style.Theme_Cast_Monochrome),
+    )
+
+    private fun resolveThemeResId(colorThemeName: String, isDark: Boolean): Int {
+        val res = themeMap[colorThemeName] ?: themeMap.getValue("Default")
+        return if (isDark) res.darkThemeResId else res.lightThemeResId
+    }
 
     private var castContext: CastContext? = null
     private var currentSession: CastSession? = null
@@ -82,13 +126,14 @@ object CastManager {
 
     fun routeSelector(): MediaRouteSelector? = castContext?.mergedSelector
 
-    fun showCastPicker(context: Context) {
+    fun showCastPicker(context: Context, colorThemeName: String, isDark: Boolean) {
+        val themedContext = ContextThemeWrapper(context, resolveThemeResId(colorThemeName, isDark))
         if (isConnected()) {
-            MediaRouteControllerDialog(context).show()
+            MediaRouteControllerDialog(themedContext).show()
             return
         }
         val selector = routeSelector() ?: return
-        MediaRouteChooserDialog(context).apply { routeSelector = selector }.show()
+        MediaRouteChooserDialog(themedContext).apply { routeSelector = selector }.show()
     }
 
     fun requestLoad(url: String, title: String, mimeType: String?, isLive: Boolean, startPositionMs: Long) {

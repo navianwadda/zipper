@@ -1,0 +1,516 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Cast.Legacy.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFEF4444</item>
+        <item name="colorPrimaryDark">#FFEF4444</item>
+        <item name="colorAccent">#FFB91C1C</item>
+        <item name="colorControlActivated">#FFB91C1C</item>
+        <item name="android:colorBackground">#FFFFF5F5</item>
+    </style>
+
+    <style name="Theme.Cast.Legacy" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFEF4444</item>
+        <item name="colorPrimaryDark">#FFEF4444</item>
+        <item name="colorAccent">#FFF87171</item>
+        <item name="colorControlActivated">#FFF87171</item>
+        <item name="android:colorBackground">#FF0D1117</item>
+    </style>
+
+    <style name="Theme.Cast.Default.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF1A8AB8</item>
+        <item name="colorPrimaryDark">#FF1A8AB8</item>
+        <item name="colorAccent">#FF229ED0</item>
+        <item name="colorControlActivated">#FF229ED0</item>
+        <item name="android:colorBackground">#FFF5F5F5</item>
+    </style>
+
+    <style name="Theme.Cast.Default" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF2AABEE</item>
+        <item name="colorPrimaryDark">#FF2AABEE</item>
+        <item name="colorAccent">#FF229ED0</item>
+        <item name="colorControlActivated">#FF229ED0</item>
+        <item name="android:colorBackground">#FF0D1117</item>
+    </style>
+
+    <style name="Theme.Cast.Dynamic.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF6750A4</item>
+        <item name="colorPrimaryDark">#FF6750A4</item>
+        <item name="colorAccent">#FF625B71</item>
+        <item name="colorControlActivated">#FF625B71</item>
+        <item name="android:colorBackground">#FFFFFBFE</item>
+    </style>
+
+    <style name="Theme.Cast.Dynamic" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFD0BCFF</item>
+        <item name="colorPrimaryDark">#FFD0BCFF</item>
+        <item name="colorAccent">#FFCCC2DC</item>
+        <item name="colorControlActivated">#FFCCC2DC</item>
+        <item name="android:colorBackground">#FF1C1B1F</item>
+    </style>
+
+    <style name="Theme.Cast.Catppuccin.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF4C6B9A</item>
+        <item name="colorPrimaryDark">#FF4C6B9A</item>
+        <item name="colorAccent">#FFB76B8F</item>
+        <item name="colorControlActivated">#FFB76B8F</item>
+        <item name="android:colorBackground">#FFEFF1F5</item>
+    </style>
+
+    <style name="Theme.Cast.Catppuccin" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF9BA8CF</item>
+        <item name="colorPrimaryDark">#FF9BA8CF</item>
+        <item name="colorAccent">#FFD4A5B8</item>
+        <item name="colorControlActivated">#FFD4A5B8</item>
+        <item name="android:colorBackground">#FF1E1E2E</item>
+    </style>
+
+    <style name="Theme.Cast.Cloudflare.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFF6821F</item>
+        <item name="colorPrimaryDark">#FFF6821F</item>
+        <item name="colorAccent">#FF6B5E4C</item>
+        <item name="colorControlActivated">#FF6B5E4C</item>
+        <item name="android:colorBackground">#FFFFFBF7</item>
+    </style>
+
+    <style name="Theme.Cast.Cloudflare" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFFFB77C</item>
+        <item name="colorPrimaryDark">#FFFFB77C</item>
+        <item name="colorAccent">#FFD6C5AC</item>
+        <item name="colorControlActivated">#FFD6C5AC</item>
+        <item name="android:colorBackground">#FF1A1612</item>
+    </style>
+
+    <style name="Theme.Cast.CottonCandy.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFE993C1</item>
+        <item name="colorPrimaryDark">#FFE993C1</item>
+        <item name="colorAccent">#FF70A2C2</item>
+        <item name="colorControlActivated">#FF70A2C2</item>
+        <item name="android:colorBackground">#FFFFF8FA</item>
+    </style>
+
+    <style name="Theme.Cast.CottonCandy" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFFFB1D5</item>
+        <item name="colorPrimaryDark">#FFFFB1D5</item>
+        <item name="colorAccent">#FF9ED0EF</item>
+        <item name="colorControlActivated">#FF9ED0EF</item>
+        <item name="android:colorBackground">#FF1A1418</item>
+    </style>
+
+    <style name="Theme.Cast.Doom.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFBB2929</item>
+        <item name="colorPrimaryDark">#FFBB2929</item>
+        <item name="colorAccent">#FF6B5353</item>
+        <item name="colorControlActivated">#FF6B5353</item>
+        <item name="android:colorBackground">#FFFFF8F7</item>
+    </style>
+
+    <style name="Theme.Cast.Doom" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFFF6B6B</item>
+        <item name="colorPrimaryDark">#FFFF6B6B</item>
+        <item name="colorAccent">#FFD6BABA</item>
+        <item name="colorControlActivated">#FFD6BABA</item>
+        <item name="android:colorBackground">#FF1A1010</item>
+    </style>
+
+    <style name="Theme.Cast.GreenApple.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF2E7D32</item>
+        <item name="colorPrimaryDark">#FF2E7D32</item>
+        <item name="colorAccent">#FF4A6349</item>
+        <item name="colorControlActivated">#FF4A6349</item>
+        <item name="android:colorBackground">#FFF6FFF6</item>
+    </style>
+
+    <style name="Theme.Cast.GreenApple" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF81C784</item>
+        <item name="colorPrimaryDark">#FF81C784</item>
+        <item name="colorAccent">#FFB0CFB1</item>
+        <item name="colorControlActivated">#FFB0CFB1</item>
+        <item name="android:colorBackground">#FF0F1A0F</item>
+    </style>
+
+    <style name="Theme.Cast.Gruvbox.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF9D5B3F</item>
+        <item name="colorPrimaryDark">#FF9D5B3F</item>
+        <item name="colorAccent">#FF7A7556</item>
+        <item name="colorControlActivated">#FF7A7556</item>
+        <item name="android:colorBackground">#FFFBF1C7</item>
+    </style>
+
+    <style name="Theme.Cast.Gruvbox" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFD89B6A</item>
+        <item name="colorPrimaryDark">#FFD89B6A</item>
+        <item name="colorAccent">#FFB0AE8A</item>
+        <item name="colorControlActivated">#FFB0AE8A</item>
+        <item name="android:colorBackground">#FF282828</item>
+    </style>
+
+    <style name="Theme.Cast.Kanagawa.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF5A7785</item>
+        <item name="colorPrimaryDark">#FF5A7785</item>
+        <item name="colorAccent">#FF8A7A6E</item>
+        <item name="colorControlActivated">#FF8A7A6E</item>
+        <item name="android:colorBackground">#FFF2ECBC</item>
+    </style>
+
+    <style name="Theme.Cast.Kanagawa" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF7E9CD8</item>
+        <item name="colorPrimaryDark">#FF7E9CD8</item>
+        <item name="colorAccent">#FFDCA561</item>
+        <item name="colorControlActivated">#FFDCA561</item>
+        <item name="android:colorBackground">#FF1F1F28</item>
+    </style>
+
+    <style name="Theme.Cast.Lavender.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF7C5AB8</item>
+        <item name="colorPrimaryDark">#FF7C5AB8</item>
+        <item name="colorAccent">#FF635B70</item>
+        <item name="colorControlActivated">#FF635B70</item>
+        <item name="android:colorBackground">#FFFCF8FF</item>
+    </style>
+
+    <style name="Theme.Cast.Lavender" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFCFBCFF</item>
+        <item name="colorPrimaryDark">#FFCFBCFF</item>
+        <item name="colorAccent">#FFCBC3DA</item>
+        <item name="colorControlActivated">#FFCBC3DA</item>
+        <item name="android:colorBackground">#FF16121A</item>
+    </style>
+
+    <style name="Theme.Cast.Midnight.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF0D47A1</item>
+        <item name="colorPrimaryDark">#FF0D47A1</item>
+        <item name="colorAccent">#FF455A64</item>
+        <item name="colorControlActivated">#FF455A64</item>
+        <item name="android:colorBackground">#FFF5F9FF</item>
+    </style>
+
+    <style name="Theme.Cast.Midnight" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF90CAF9</item>
+        <item name="colorPrimaryDark">#FF90CAF9</item>
+        <item name="colorAccent">#FFB0BEC5</item>
+        <item name="colorControlActivated">#FFB0BEC5</item>
+        <item name="android:colorBackground">#FF0D1117</item>
+    </style>
+
+    <style name="Theme.Cast.Mocha.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF795548</item>
+        <item name="colorPrimaryDark">#FF795548</item>
+        <item name="colorAccent">#FF5D4037</item>
+        <item name="colorControlActivated">#FF5D4037</item>
+        <item name="android:colorBackground">#FFFFF9F5</item>
+    </style>
+
+    <style name="Theme.Cast.Mocha" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFBCAAA4</item>
+        <item name="colorPrimaryDark">#FFBCAAA4</item>
+        <item name="colorAccent">#FFA1887F</item>
+        <item name="colorControlActivated">#FFA1887F</item>
+        <item name="android:colorBackground">#FF1A1512</item>
+    </style>
+
+    <style name="Theme.Cast.Nord.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF5E81AC</item>
+        <item name="colorPrimaryDark">#FF5E81AC</item>
+        <item name="colorAccent">#FF4C566A</item>
+        <item name="colorControlActivated">#FF4C566A</item>
+        <item name="android:colorBackground">#FFECEFF4</item>
+    </style>
+
+    <style name="Theme.Cast.Nord" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF88C0D0</item>
+        <item name="colorPrimaryDark">#FF88C0D0</item>
+        <item name="colorAccent">#FFD8DEE9</item>
+        <item name="colorControlActivated">#FFD8DEE9</item>
+        <item name="android:colorBackground">#FF2E3440</item>
+    </style>
+
+    <style name="Theme.Cast.RosePine.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF907AA9</item>
+        <item name="colorPrimaryDark">#FF907AA9</item>
+        <item name="colorAccent">#FFB4637A</item>
+        <item name="colorControlActivated">#FFB4637A</item>
+        <item name="android:colorBackground">#FFFAF4ED</item>
+    </style>
+
+    <style name="Theme.Cast.RosePine" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFC4A7E7</item>
+        <item name="colorPrimaryDark">#FFC4A7E7</item>
+        <item name="colorAccent">#FFEBBCBA</item>
+        <item name="colorControlActivated">#FFEBBCBA</item>
+        <item name="android:colorBackground">#FF232136</item>
+    </style>
+
+    <style name="Theme.Cast.Strawberry.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFD81B60</item>
+        <item name="colorPrimaryDark">#FFD81B60</item>
+        <item name="colorAccent">#FF6B4958</item>
+        <item name="colorControlActivated">#FF6B4958</item>
+        <item name="android:colorBackground">#FFFFF5F8</item>
+    </style>
+
+    <style name="Theme.Cast.Strawberry" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFF48FB1</item>
+        <item name="colorPrimaryDark">#FFF48FB1</item>
+        <item name="colorAccent">#FFD6B0C1</item>
+        <item name="colorControlActivated">#FFD6B0C1</item>
+        <item name="android:colorBackground">#FF1A1015</item>
+    </style>
+
+    <style name="Theme.Cast.Tidal.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF00796B</item>
+        <item name="colorPrimaryDark">#FF00796B</item>
+        <item name="colorAccent">#FF4A635E</item>
+        <item name="colorControlActivated">#FF4A635E</item>
+        <item name="android:colorBackground">#FFF2FFFD</item>
+    </style>
+
+    <style name="Theme.Cast.Tidal" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF80CBC4</item>
+        <item name="colorPrimaryDark">#FF80CBC4</item>
+        <item name="colorAccent">#FFB0CFC9</item>
+        <item name="colorControlActivated">#FFB0CFC9</item>
+        <item name="android:colorBackground">#FF0F1A18</item>
+    </style>
+
+    <style name="Theme.Cast.TakoGreen.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF66BB6A</item>
+        <item name="colorPrimaryDark">#FF66BB6A</item>
+        <item name="colorAccent">#FF546E7A</item>
+        <item name="colorControlActivated">#FF546E7A</item>
+        <item name="android:colorBackground">#FFF5FFF5</item>
+    </style>
+
+    <style name="Theme.Cast.TakoGreen" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFA5D6A7</item>
+        <item name="colorPrimaryDark">#FFA5D6A7</item>
+        <item name="colorAccent">#FF90A4AE</item>
+        <item name="colorControlActivated">#FF90A4AE</item>
+        <item name="android:colorBackground">#FF121A12</item>
+    </style>
+
+    <style name="Theme.Cast.TokyoNight.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF3D5A80</item>
+        <item name="colorPrimaryDark">#FF3D5A80</item>
+        <item name="colorAccent">#FF6B5B95</item>
+        <item name="colorControlActivated">#FF6B5B95</item>
+        <item name="android:colorBackground">#FFF0F1F5</item>
+    </style>
+
+    <style name="Theme.Cast.TokyoNight" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF7D9BC1</item>
+        <item name="colorPrimaryDark">#FF7D9BC1</item>
+        <item name="colorAccent">#FFA89DC9</item>
+        <item name="colorControlActivated">#FFA89DC9</item>
+        <item name="android:colorBackground">#FF1A1B26</item>
+    </style>
+
+    <style name="Theme.Cast.YinYang.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF424242</item>
+        <item name="colorPrimaryDark">#FF424242</item>
+        <item name="colorAccent">#FF616161</item>
+        <item name="colorControlActivated">#FF616161</item>
+        <item name="android:colorBackground">#FFFAFAFA</item>
+    </style>
+
+    <style name="Theme.Cast.YinYang" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFBDBDBD</item>
+        <item name="colorPrimaryDark">#FFBDBDBD</item>
+        <item name="colorAccent">#FFE0E0E0</item>
+        <item name="colorControlActivated">#FFE0E0E0</item>
+        <item name="android:colorBackground">#FF121212</item>
+    </style>
+
+    <style name="Theme.Cast.Yotsuba.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFFF8A65</item>
+        <item name="colorPrimaryDark">#FFFF8A65</item>
+        <item name="colorAccent">#FF6D5D5B</item>
+        <item name="colorControlActivated">#FF6D5D5B</item>
+        <item name="android:colorBackground">#FFFFF8F5</item>
+    </style>
+
+    <style name="Theme.Cast.Yotsuba" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFFFAB91</item>
+        <item name="colorPrimaryDark">#FFFFAB91</item>
+        <item name="colorAccent">#FFD6C4C2</item>
+        <item name="colorControlActivated">#FFD6C4C2</item>
+        <item name="android:colorBackground">#FF1A1412</item>
+    </style>
+
+    <style name="Theme.Cast.Sapphire.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF1E88E5</item>
+        <item name="colorPrimaryDark">#FF1E88E5</item>
+        <item name="colorAccent">#FF5C6BC0</item>
+        <item name="colorControlActivated">#FF5C6BC0</item>
+        <item name="android:colorBackground">#FFF3F8FF</item>
+    </style>
+
+    <style name="Theme.Cast.Sapphire" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF64B5F6</item>
+        <item name="colorPrimaryDark">#FF64B5F6</item>
+        <item name="colorAccent">#FF9FA8DA</item>
+        <item name="colorControlActivated">#FF9FA8DA</item>
+        <item name="android:colorBackground">#FF0D1620</item>
+    </style>
+
+    <style name="Theme.Cast.Sunset.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFE65100</item>
+        <item name="colorPrimaryDark">#FFE65100</item>
+        <item name="colorAccent">#FFEF6C00</item>
+        <item name="colorControlActivated">#FFEF6C00</item>
+        <item name="android:colorBackground">#FFFFF5F0</item>
+    </style>
+
+    <style name="Theme.Cast.Sunset" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFFF9E80</item>
+        <item name="colorPrimaryDark">#FFFF9E80</item>
+        <item name="colorAccent">#FFFFCC80</item>
+        <item name="colorControlActivated">#FFFFCC80</item>
+        <item name="android:colorBackground">#FF1A120D</item>
+    </style>
+
+    <style name="Theme.Cast.Ocean.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF006064</item>
+        <item name="colorPrimaryDark">#FF006064</item>
+        <item name="colorAccent">#FF00838F</item>
+        <item name="colorControlActivated">#FF00838F</item>
+        <item name="android:colorBackground">#FFF0FFFF</item>
+    </style>
+
+    <style name="Theme.Cast.Ocean" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF4DD0E1</item>
+        <item name="colorPrimaryDark">#FF4DD0E1</item>
+        <item name="colorAccent">#FF80DEEA</item>
+        <item name="colorControlActivated">#FF80DEEA</item>
+        <item name="android:colorBackground">#FF0A1A1C</item>
+    </style>
+
+    <style name="Theme.Cast.Forest.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF1B5E20</item>
+        <item name="colorPrimaryDark">#FF1B5E20</item>
+        <item name="colorAccent">#FF33691E</item>
+        <item name="colorControlActivated">#FF33691E</item>
+        <item name="android:colorBackground">#FFF1F8E9</item>
+    </style>
+
+    <style name="Theme.Cast.Forest" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF66BB6A</item>
+        <item name="colorPrimaryDark">#FF66BB6A</item>
+        <item name="colorAccent">#FF9CCC65</item>
+        <item name="colorControlActivated">#FF9CCC65</item>
+        <item name="android:colorBackground">#FF0D1A0D</item>
+    </style>
+
+    <style name="Theme.Cast.RoseGold.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFB76E79</item>
+        <item name="colorPrimaryDark">#FFB76E79</item>
+        <item name="colorAccent">#FFAD8075</item>
+        <item name="colorControlActivated">#FFAD8075</item>
+        <item name="android:colorBackground">#FFFFF5F5</item>
+    </style>
+
+    <style name="Theme.Cast.RoseGold" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFE8A9B0</item>
+        <item name="colorPrimaryDark">#FFE8A9B0</item>
+        <item name="colorAccent">#FFDDBFB8</item>
+        <item name="colorControlActivated">#FFDDBFB8</item>
+        <item name="android:colorBackground">#FF1A1315</item>
+    </style>
+
+    <style name="Theme.Cast.Violet.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF6A1B9A</item>
+        <item name="colorPrimaryDark">#FF6A1B9A</item>
+        <item name="colorAccent">#FF7B1FA2</item>
+        <item name="colorControlActivated">#FF7B1FA2</item>
+        <item name="android:colorBackground">#FFFCF5FF</item>
+    </style>
+
+    <style name="Theme.Cast.Violet" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFCE93D8</item>
+        <item name="colorPrimaryDark">#FFCE93D8</item>
+        <item name="colorAccent">#FFE1BEE7</item>
+        <item name="colorControlActivated">#FFE1BEE7</item>
+        <item name="android:colorBackground">#FF150D1A</item>
+    </style>
+
+    <style name="Theme.Cast.Amber.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFFF8F00</item>
+        <item name="colorPrimaryDark">#FFFF8F00</item>
+        <item name="colorAccent">#FFFFA000</item>
+        <item name="colorControlActivated">#FFFFA000</item>
+        <item name="android:colorBackground">#FFFFFBF0</item>
+    </style>
+
+    <style name="Theme.Cast.Amber" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFFFCA28</item>
+        <item name="colorPrimaryDark">#FFFFCA28</item>
+        <item name="colorAccent">#FFFFD54F</item>
+        <item name="colorControlActivated">#FFFFD54F</item>
+        <item name="android:colorBackground">#FF1A1508</item>
+    </style>
+
+    <style name="Theme.Cast.Coral.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FFFF5252</item>
+        <item name="colorPrimaryDark">#FFFF5252</item>
+        <item name="colorAccent">#FFFF6E40</item>
+        <item name="colorControlActivated">#FFFF6E40</item>
+        <item name="android:colorBackground">#FFFFF5F5</item>
+    </style>
+
+    <style name="Theme.Cast.Coral" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFFF8A80</item>
+        <item name="colorPrimaryDark">#FFFF8A80</item>
+        <item name="colorAccent">#FFFFAB91</item>
+        <item name="colorControlActivated">#FFFFAB91</item>
+        <item name="android:colorBackground">#FF1A1010</item>
+    </style>
+
+    <style name="Theme.Cast.Slate.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF455A64</item>
+        <item name="colorPrimaryDark">#FF455A64</item>
+        <item name="colorAccent">#FF546E7A</item>
+        <item name="colorControlActivated">#FF546E7A</item>
+        <item name="android:colorBackground">#FFF5F7F8</item>
+    </style>
+
+    <style name="Theme.Cast.Slate" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FF90A4AE</item>
+        <item name="colorPrimaryDark">#FF90A4AE</item>
+        <item name="colorAccent">#FFB0BEC5</item>
+        <item name="colorControlActivated">#FFB0BEC5</item>
+        <item name="android:colorBackground">#FF151A1C</item>
+    </style>
+
+    <style name="Theme.Cast.Dracula.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF6272A4</item>
+        <item name="colorPrimaryDark">#FF6272A4</item>
+        <item name="colorAccent">#FF44475A</item>
+        <item name="colorControlActivated">#FF44475A</item>
+        <item name="android:colorBackground">#FFF8F8F2</item>
+    </style>
+
+    <style name="Theme.Cast.Dracula" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFBD93F9</item>
+        <item name="colorPrimaryDark">#FFBD93F9</item>
+        <item name="colorAccent">#FFFF79C6</item>
+        <item name="colorControlActivated">#FFFF79C6</item>
+        <item name="android:colorBackground">#FF282A36</item>
+    </style>
+
+    <style name="Theme.Cast.Monochrome.Light" parent="Theme.MediaRouter.Light">
+        <item name="colorPrimary">#FF212121</item>
+        <item name="colorPrimaryDark">#FF212121</item>
+        <item name="colorAccent">#FF424242</item>
+        <item name="colorControlActivated">#FF424242</item>
+        <item name="android:colorBackground">#FFFFFFFF</item>
+    </style>
+
+    <style name="Theme.Cast.Monochrome" parent="Theme.MediaRouter">
+        <item name="colorPrimary">#FFE0E0E0</item>
+        <item name="colorPrimaryDark">#FFE0E0E0</item>
+        <item name="colorAccent">#FFBDBDBD</item>
+        <item name="colorControlActivated">#FFBDBDBD</item>
+        <item name="android:colorBackground">#FF0A0A0A</item>
+    </style>
+
+</resources>

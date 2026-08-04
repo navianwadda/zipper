@@ -234,6 +234,7 @@ class PlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        com.livetvpro.app.cast.CastManager.init(this)
         themeManager.registerActivityContext(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
@@ -357,16 +358,57 @@ class PlayerActivity : ComponentActivity() {
             while (true) { value = player?.playbackState == Player.STATE_BUFFERING; delay(100) }
         }
 
+        val castState by com.livetvpro.app.cast.CastManager.connectionState.collectAsState()
+        val isCasting = castState == com.livetvpro.app.cast.CastConnectionState.CONNECTED
+        var castIsPlaying by remember { mutableStateOf(false) }
+
         var currentPosition  by remember { mutableLongStateOf(0L) }
         var duration         by remember { mutableLongStateOf(0L) }
         var bufferedPosition by remember { mutableLongStateOf(0L) }
 
-        LaunchedEffect(player) {
+        LaunchedEffect(player, isCasting) {
             while (true) {
-                currentPosition  = player?.currentPosition ?: 0L
-                bufferedPosition = player?.bufferedPosition ?: 0L
-                duration         = player?.contentDuration?.coerceAtLeast(0L) ?: 0L
+                if (isCasting) {
+                    currentPosition  = com.livetvpro.app.cast.CastManager.remotePosition()
+                    duration         = com.livetvpro.app.cast.CastManager.remoteDuration()
+                    bufferedPosition = currentPosition
+                    castIsPlaying    = com.livetvpro.app.cast.CastManager.isRemotePlaying()
+                } else {
+                    currentPosition  = player?.currentPosition ?: 0L
+                    bufferedPosition = player?.bufferedPosition ?: 0L
+                    duration         = player?.contentDuration?.coerceAtLeast(0L) ?: 0L
+                }
                 delay(500L)
+            }
+        }
+
+        var wasCasting by remember { mutableStateOf(false) }
+        LaunchedEffect(castState) {
+            when (castState) {
+                com.livetvpro.app.cast.CastConnectionState.CONNECTED -> {
+                    wasCasting = true
+                    val mimeType = PlayerStreamHelper.detectMimeTypeFromUrl(streamUrl)
+                    val isLive   = contentType == ContentType.CHANNEL || contentType == ContentType.EVENT
+                    com.livetvpro.app.cast.CastManager.requestLoad(
+                        url             = streamUrl,
+                        title           = contentName,
+                        mimeType        = mimeType,
+                        isLive          = isLive,
+                        startPositionMs = player?.currentPosition ?: 0L,
+                    )
+                    player?.pause()
+                }
+                com.livetvpro.app.cast.CastConnectionState.DISCONNECTED -> {
+                    if (wasCasting) {
+                        wasCasting = false
+                        val resumePosition = com.livetvpro.app.cast.CastManager.remotePosition()
+                        player?.let {
+                            if (resumePosition > 0L) it.seekTo(resumePosition)
+                            it.play()
+                        }
+                    }
+                }
+                else -> {}
             }
         }
 
@@ -382,7 +424,10 @@ class PlayerActivity : ComponentActivity() {
             else false
 
         val onPlayPause: () -> Unit = {
-            player?.let {
+            if (isCasting) {
+                if (castIsPlaying) com.livetvpro.app.cast.CastManager.pause()
+                else com.livetvpro.app.cast.CastManager.play()
+            } else player?.let {
                 val hasError = errorMessage.value.isNotBlank()
                 val hasEnded = it.playbackState == Player.STATE_ENDED
                 if (hasError || hasEnded) retryPlayback()
@@ -390,10 +435,15 @@ class PlayerActivity : ComponentActivity() {
             }
         }
         val onRewind: () -> Unit = {
-            player?.let { it.seekTo((it.currentPosition - skipMs).coerceAtLeast(0L)) }
+            if (isCasting) {
+                com.livetvpro.app.cast.CastManager.seekTo((currentPosition - skipMs).coerceAtLeast(0L))
+            } else player?.let { it.seekTo((it.currentPosition - skipMs).coerceAtLeast(0L)) }
         }
         val onForward: () -> Unit = {
-            player?.let {
+            if (isCasting) {
+                val newPos = currentPosition + skipMs
+                com.livetvpro.app.cast.CastManager.seekTo(if (duration > 0L) newPos.coerceAtMost(duration) else newPos)
+            } else player?.let {
                 val newPos = it.currentPosition + skipMs
                 if (it.isCurrentWindowLive && it.duration != C.TIME_UNSET && newPos >= it.duration)
                     it.seekTo(it.duration)
@@ -459,7 +509,7 @@ class PlayerActivity : ComponentActivity() {
         fun Controls(isLandscape: Boolean) {
             PlayerControls(
                 state                  = controlsState,
-                isPlaying              = isPlaying,
+                isPlaying              = if (isCasting) castIsPlaying else isPlaying,
                 isMuted                = isMuted,
                 currentPosition        = currentPosition,
                 duration               = duration,
@@ -481,7 +531,10 @@ class PlayerActivity : ComponentActivity() {
                 onLockClick            = { locked -> if (locked) controlsState.lock() else controlsState.unlock(scope) },
                 onChannelListClick     = { showChannelList.value = true },
                 onPlayPauseClick       = onPlayPause,
-                onSeek                 = { position -> player?.seekTo(position) },
+                onSeek                 = { position ->
+                    if (isCasting) com.livetvpro.app.cast.CastManager.seekTo(position)
+                    else player?.seekTo(position)
+                },
                 onRewindClick          = onRewind,
                 onForwardClick         = onForward,
                 onPrevClick            = onPrev,
@@ -493,6 +546,10 @@ class PlayerActivity : ComponentActivity() {
                 initialVolume          = gestureVolume,
                 initialBrightness      = gestureBrightness,
                 volumeBoostEnabled     = preferencesManager.isVolumeBoostingEnabled(),
+                showCastButton         = com.livetvpro.app.cast.CastManager.isAvailable() &&
+                    contentType != ContentType.NETWORK_STREAM,
+                isCastConnected        = isCasting,
+                onCastClick            = { com.livetvpro.app.cast.CastManager.showCastPicker(this@PlayerActivity) },
             )
         }
         Column(modifier = Modifier

@@ -369,7 +369,8 @@ private fun ChannelCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                        it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                            .override(160, 160)
                             .placeholder(appIconRes)
                             .error(appIconRes)
                             .fallback(appIconRes)
@@ -401,7 +402,7 @@ private fun ChannelCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
-                    .basicMarquee(iterations = Int.MAX_VALUE)
+                    .basicMarquee(iterations = if (hasFocus) Int.MAX_VALUE else 0)
             )
         }
     }

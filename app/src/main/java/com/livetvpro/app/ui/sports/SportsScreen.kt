@@ -300,7 +300,8 @@ private fun SportChannelCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                        it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                            .override(160, 160)
                             .placeholder(appIconRes)
                             .error(appIconRes)
                             .fallback(appIconRes)

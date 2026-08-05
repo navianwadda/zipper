@@ -1,5 +1,6 @@
 package com.livetvpro.app.utils
 
+import android.app.ActivityManager
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -11,6 +12,7 @@ import com.bumptech.glide.integration.okhttp3.OkHttpUrlLoader
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.cache.InternalCacheDiskCacheFactory
 import com.bumptech.glide.load.engine.cache.LruResourceCache
+import com.bumptech.glide.load.engine.cache.MemorySizeCalculator
 import com.bumptech.glide.load.model.GlideUrl
 import com.bumptech.glide.module.AppGlideModule
 import com.bumptech.glide.request.RequestOptions
@@ -29,17 +31,30 @@ import javax.net.ssl.X509TrustManager
 class AppGlideModule : AppGlideModule() {
 
     override fun applyOptions(context: Context, builder: GlideBuilder) {
-        
-        val memoryCacheSizeBytes = (Runtime.getRuntime().maxMemory() * 0.25).toLong()
+
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val isLowRamDevice = activityManager?.isLowRamDevice == true
+
+        val calculator = MemorySizeCalculator.Builder(context)
+            .setMemoryCacheScreens(if (isLowRamDevice) 1f else 2f)
+            .setBitmapPoolScreens(if (isLowRamDevice) 1f else 1.5f)
+            .build()
+
+        val hardCeilingBytes = if (isLowRamDevice) 24 * 1024 * 1024L else 48 * 1024 * 1024L
+        val memoryCacheSizeBytes = calculator.memoryCacheSize.toLong().coerceAtMost(hardCeilingBytes)
+        val bitmapPoolSizeBytes  = calculator.bitmapPoolSize.toLong().coerceAtMost(hardCeilingBytes)
+
         builder.setMemoryCache(LruResourceCache(memoryCacheSizeBytes))
-        
+        builder.setBitmapPool(com.bumptech.glide.load.engine.bitmap_recycle.LruBitmapPool(bitmapPoolSizeBytes))
+
         builder.setDiskCache(InternalCacheDiskCacheFactory(context, 100 * 1024 * 1024))
         builder.setDefaultRequestOptions(
             RequestOptions()
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                 .skipMemoryCache(false)
         )
     }
+
 
     override fun registerComponents(context: Context, glide: Glide, registry: Registry) {
         val tlsSpec = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)

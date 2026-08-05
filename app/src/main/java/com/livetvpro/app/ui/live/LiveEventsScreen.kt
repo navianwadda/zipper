@@ -346,7 +346,8 @@ private fun CategoryChip(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             ) {
-                it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                    .override(160, 160)
                     .placeholder(appIconRes)
                     .error(appIconRes)
                     .fallback(appIconRes)
@@ -498,7 +499,8 @@ fun LiveEventCard(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(28.dp)
                     ) {
-                        it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                        it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                            .override(96, 96)
                             .placeholder(appIconRes)
                             .error(appIconRes)
                             .fallback(appIconRes)
@@ -594,7 +596,8 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
                 .size(48.dp)
                 .clip(CircleShape)
         ) {
-            it.diskCacheStrategy(DiskCacheStrategy.ALL)
+            it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                .override(96, 96)
                 .placeholder(appIconRes)
                 .error(appIconRes)
                 .fallback(appIconRes)

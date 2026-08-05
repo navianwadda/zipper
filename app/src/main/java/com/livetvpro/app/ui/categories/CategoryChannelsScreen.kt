@@ -278,6 +278,7 @@ fun CategoryChannelsScreen(
                                 ChannelCard(
                                     channel = channel,
                                     isFavorite = viewModel.isFavorite(channel.id),
+                                    isTvDevice = isTvDevice,
                                     onClick = {
                                         val action: () -> Unit = {
                                             if ((channel.links?.size ?: 0) > 1) {
@@ -313,6 +314,7 @@ fun CategoryChannelsScreen(
 private fun ChannelCard(
     channel: Channel,
     isFavorite: Boolean,
+    isTvDevice: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -402,7 +404,7 @@ private fun ChannelCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
-                    .basicMarquee(iterations = if (hasFocus) Int.MAX_VALUE else 0)
+                    .basicMarquee(iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0)
             )
         }
     }

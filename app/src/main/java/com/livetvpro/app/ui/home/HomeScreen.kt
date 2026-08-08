@@ -163,6 +163,7 @@ fun HomeScreen(
                             CategoryCard(
                                 category = category,
                                 primaryColor = Color(primaryColor),
+                                isTvDevice = isTvDevice,
                                 onClick = {
                                     val navAction: () -> Unit = { onCategoryClick(category) }
                                     val redirected =
@@ -189,6 +190,7 @@ fun HomeScreen(
 private fun CategoryCard(
     category: Category,
     primaryColor: Color = MaterialTheme.colorScheme.primary,
+    isTvDevice: Boolean,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -261,7 +263,7 @@ private fun CategoryCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
-                    .basicMarquee(iterations = Int.MAX_VALUE)
+                    .basicMarquee(iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0)
             )
         }
     }

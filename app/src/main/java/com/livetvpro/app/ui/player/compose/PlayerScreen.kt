@@ -72,6 +72,9 @@ sealed class NowPlayingState {
         val team2Name: String,
         val team2Logo: String,
         val sourceName: String,
+        val startTime: String = "",
+        val endTime: String? = null,
+        val isLive: Boolean = false,
     ) : NowPlayingState()
 }
 
@@ -160,36 +163,56 @@ fun PlayerScreen(
                 onClick = onMessageBannerClick,
             )
         }
-        if (!isLandscape) {
-            NowPlayingSection(
-                nowPlaying = nowPlaying,
-                onToggleFavorite = onToggleFavorite,
-            )
-        }
-        Box(
+        Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .background(
-                    if (isLandscape) Color.Transparent
-                    else MaterialTheme.colorScheme.surface
-                )
+                .then(
+                    if (!isLandscape && nowPlaying !is NowPlayingState.Hidden)
+                        Modifier
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(nowPlayingCardBackground())
+                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                    else
+                        Modifier.background(
+                            if (isLandscape) Color.Transparent
+                            else MaterialTheme.colorScheme.surface
+                        )
+                ),
         ) {
-            when (relatedContentState) {
-                is RelatedContentState.Hidden   -> Unit
-                is RelatedContentState.Loading  -> RelatedLoadingRow(modifier = Modifier.fillMaxSize())
-                is RelatedContentState.Channels -> RelatedChannelsGrid(
-                    channels       = relatedContentState.items,
-                    spanCount      = spanCount,
-                    onChannelClick = handleChannelClick,
-                    modifier       = Modifier.fillMaxSize(),
+            if (!isLandscape) {
+                NowPlayingSection(
+                    nowPlaying = nowPlaying,
+                    onToggleFavorite = onToggleFavorite,
                 )
-                is RelatedContentState.Events   -> RelatedEventsGrid(
-                    events       = relatedContentState.items,
-                    spanCount    = eventSpanCount,
-                    onEventClick = handleEventClick,
-                    modifier     = Modifier.fillMaxSize(),
-                )
+                if (nowPlaying !is NowPlayingState.Hidden) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                when (relatedContentState) {
+                    is RelatedContentState.Hidden   -> Unit
+                    is RelatedContentState.Loading  -> RelatedLoadingRow(modifier = Modifier.fillMaxSize())
+                    is RelatedContentState.Channels -> RelatedChannelsGrid(
+                        channels       = relatedContentState.items,
+                        spanCount      = spanCount,
+                        onChannelClick = handleChannelClick,
+                        modifier       = Modifier.fillMaxSize(),
+                    )
+                    is RelatedContentState.Events   -> RelatedEventsGrid(
+                        events       = relatedContentState.items,
+                        spanCount    = eventSpanCount,
+                        onEventClick = handleEventClick,
+                        modifier     = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }
@@ -452,7 +475,6 @@ private fun NowPlayingTeamLogo(
 ) {
     Box(
         modifier = modifier
-            .size(32.dp)
             .clip(CircleShape)
             .background(CardLogoBg),
     ) {
@@ -484,40 +506,36 @@ private fun NowPlayingChannelCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(nowPlayingCardBackground())
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-            .padding(16.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Text(
             text = "NOW PLAYING",
             color = MaterialTheme.colorScheme.primary,
             fontFamily = BergenSans,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
+            fontSize = 11.sp,
             letterSpacing = 1.sp,
         )
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            NowPlayingTeamLogo(url = channel.logoUrl, modifier = Modifier.size(40.dp))
+            NowPlayingTeamLogo(url = channel.logoUrl, modifier = Modifier.size(30.dp))
             Text(
                 text = channel.name,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Clip,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 12.dp)
+                    .padding(horizontal = 10.dp)
                     .basicMarquee(iterations = Int.MAX_VALUE),
             )
-            IconButton(onClick = onToggleFavorite) {
+            IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
                 Icon(
                     painter = painterResource(
                         if (isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
@@ -525,6 +543,7 @@ private fun NowPlayingChannelCard(
                     contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                     tint = if (isFavorite) MaterialTheme.colorScheme.tertiary
                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }
@@ -539,49 +558,45 @@ private fun NowPlayingEventCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(nowPlayingCardBackground())
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-            .padding(16.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Text(
             text = "NOW PLAYING",
             color = MaterialTheme.colorScheme.primary,
             fontFamily = BergenSans,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
+            fontSize = 11.sp,
             letterSpacing = 1.sp,
         )
         if (info.title.isNotBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = info.title,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
+                fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.weight(1f),
             ) {
-                NowPlayingTeamLogo(url = info.team1Logo)
+                NowPlayingTeamLogo(url = info.team1Logo, modifier = Modifier.size(26.dp))
                 Text(
                     text = info.team1Name,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontFamily = BergenSans,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -592,12 +607,12 @@ private fun NowPlayingEventCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(horizontal = 8.dp),
+                fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 6.dp),
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
@@ -605,41 +620,141 @@ private fun NowPlayingEventCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     fontFamily = BergenSans,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.End,
                     modifier = Modifier.weight(1f),
                 )
-                NowPlayingTeamLogo(url = info.team2Logo)
+                NowPlayingTeamLogo(url = info.team2Logo, modifier = Modifier.size(26.dp))
             }
             if (info.sourceName.isNotBlank()) {
                 VerticalDivider(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .height(36.dp),
+                        .padding(horizontal = 10.dp)
+                        .height(34.dp),
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                 )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Live Now",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontFamily = BergenSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                    )
-                    Text(
-                        text = info.sourceName,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontFamily = BergenSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                NowPlayingEventStatus(info = info)
             }
         }
+    }
+}
+
+@Composable
+private fun NowPlayingEventStatus(
+    info: NowPlayingState.EventInfo,
+    modifier: Modifier = Modifier,
+) {
+    var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(info.startTime, info.endTime, info.isLive) {
+        while (true) {
+            currentTime = System.currentTimeMillis()
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+
+    val startMillis = remember(info.startTime) { parseEventTimestamp(info.startTime) }
+    val endMillis = remember(info.endTime) { info.endTime?.let { parseEventTimestamp(it) } }
+
+    val status = when {
+        endMillis != null && currentTime in startMillis..endMillis -> EventStatus.LIVE
+        info.isLive && currentTime >= startMillis -> EventStatus.LIVE
+        startMillis > 0 && currentTime < startMillis -> EventStatus.UPCOMING
+        endMillis != null && currentTime > endMillis -> EventStatus.ENDED
+        startMillis > 0 && currentTime > startMillis -> EventStatus.ENDED
+        else -> EventStatus.LIVE
+    }
+
+    val liveRed = Color(0xFFE53935)
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
+    ) {
+        Text(
+            text = info.sourceName,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontFamily = BergenSans,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+            text = when (status) {
+                EventStatus.LIVE -> "Live Now"
+                EventStatus.UPCOMING -> "Starts in"
+                EventStatus.ENDED -> "Ended"
+            },
+            color = when (status) {
+                EventStatus.LIVE -> MaterialTheme.colorScheme.primary
+                EventStatus.UPCOMING -> MaterialTheme.colorScheme.primary
+                EventStatus.ENDED -> MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            fontFamily = BergenSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+        )
+        when (status) {
+            EventStatus.LIVE -> if (startMillis > 0) {
+                Spacer(modifier = Modifier.height(1.dp))
+                Text(
+                    text = formatElapsed(currentTime - startMillis),
+                    color = liveRed,
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                )
+            }
+            EventStatus.UPCOMING -> {
+                Spacer(modifier = Modifier.height(1.dp))
+                Text(
+                    text = formatCountdown(startMillis - currentTime),
+                    color = liveRed,
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                )
+            }
+            EventStatus.ENDED -> Unit
+        }
+    }
+}
+
+private enum class EventStatus { LIVE, UPCOMING, ENDED }
+
+private fun parseEventTimestamp(timeString: String): Long {
+    if (timeString.isBlank()) return 0L
+    return try {
+        java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }.parse(timeString)?.time ?: 0L
+    } catch (e: Exception) {
+        0L
+    }
+}
+
+private fun formatElapsed(elapsedMs: Long): String {
+    val elapsed = elapsedMs.coerceAtLeast(0L)
+    val h = (elapsed / 1000 / 3600).toInt()
+    val m = ((elapsed / 1000 / 60) % 60).toInt()
+    val s = ((elapsed / 1000) % 60).toInt()
+    return String.format("%02d:%02d:%02d", h, m, s)
+}
+
+private fun formatCountdown(remainingMs: Long): String {
+    val diff = remainingMs.coerceAtLeast(0L)
+    val days = (diff / (1000 * 60 * 60 * 24)).toInt()
+    val hours = ((diff / (1000 * 60 * 60)) % 24).toInt()
+    val minutes = ((diff / (1000 * 60)) % 60).toInt()
+    val seconds = ((diff / 1000) % 60).toInt()
+    return when {
+        days > 0 -> String.format("%dd %02dh %02dm", days, hours, minutes)
+        hours > 0 -> String.format("%02dh %02dm %02ds", hours, minutes, seconds)
+        minutes > 0 -> String.format("%02dm %02ds", minutes, seconds)
+        else -> String.format("%02ds", seconds)
     }
 }
 

@@ -346,7 +346,7 @@ private fun FavoriteCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
-                    .basicMarquee(iterations = Int.MAX_VALUE)
+                    .basicMarquee(iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0)
             )
         }
     }

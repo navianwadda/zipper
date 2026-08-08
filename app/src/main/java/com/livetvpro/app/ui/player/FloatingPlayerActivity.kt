@@ -1288,6 +1288,9 @@ class FloatingPlayerActivity : ComponentActivity() {
                         team2Name  = ev.team2Name,
                         team2Logo  = ev.team2Logo,
                         sourceName = sourceName,
+                        startTime  = ev.startTime,
+                        endTime    = ev.endTime,
+                        isLive     = ev.isLive,
                     )
                 }
             }

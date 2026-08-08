@@ -82,10 +82,12 @@ class PlayerActivity : ComponentActivity() {
     @Inject lateinit var themeManager: ThemeManager
     @Inject lateinit var preferencesManager: PreferencesManager
     @Inject lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
+    @Inject lateinit var favoritesRepository: com.livetvpro.app.data.repository.FavoritesRepository
 
     internal val viewModel: PlayerViewModel by viewModels()
 
     private val relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
+    private val nowPlayingState     = mutableStateOf<NowPlayingState>(NowPlayingState.Hidden)
     private val linksState          = mutableStateOf<List<LiveEventLink>>(emptyList())
     private val selectedLinkState   = mutableStateOf(0)
     private val linksRowState       = androidx.compose.foundation.lazy.LazyListState()
@@ -684,6 +686,8 @@ class PlayerActivity : ComponentActivity() {
                             catch (_: Exception) {}
                         }
                     },
+                    nowPlaying       = nowPlayingState.value,
+                    onToggleFavorite = { channel -> toggleNowPlayingFavorite(channel) },
                     spanCount      = spanCount,
                     eventSpanCount = eventSpanCount,
                     linksRowState  = linksRowState,
@@ -1511,6 +1515,7 @@ class PlayerActivity : ComponentActivity() {
             }
             else -> { finish(); return }
         }
+        updateNowPlayingState()
     }
     private var relatedChannels = listOf<Channel>()
 
@@ -1753,6 +1758,7 @@ class PlayerActivity : ComponentActivity() {
                 allEventLinks = emptyList(); streamUrl = newChannel.streamUrl
             }
             setupPlayer(); setupLinksUI()
+            updateNowPlayingState()
             refreshPipParamsIfNeeded()
             val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
             val isFavSrc       = channelListKey?.startsWith("favorites_") == true
@@ -1789,10 +1795,71 @@ class PlayerActivity : ComponentActivity() {
                 streamUrl = PlayerStreamHelper.buildStreamUrl(allEventLinks[currentLinkIndex])
             } else { currentLinkIndex = 0; streamUrl = "" }
             setupPlayer(); setupLinksUI()
+            updateNowPlayingState()
             refreshPipParamsIfNeeded()
             relatedContentState.value = RelatedContentState.Loading
             viewModel.loadRelatedEvents(newEvent.id)
         } catch (_: Exception) {}
+    }
+    private fun updateNowPlayingState() {
+        when (contentType) {
+            ContentType.CHANNEL -> {
+                val ch = channelData
+                if (ch == null) {
+                    nowPlayingState.value = NowPlayingState.Hidden
+                } else {
+                    nowPlayingState.value = NowPlayingState.ChannelInfo(channel = ch, isFavorite = false)
+                    lifecycleScope.launch {
+                        val fav     = favoritesRepository.isFavorite(ch.id)
+                        val current = nowPlayingState.value
+                        if (current is NowPlayingState.ChannelInfo && current.channel.id == ch.id) {
+                            nowPlayingState.value = current.copy(isFavorite = fav)
+                        }
+                    }
+                }
+            }
+            ContentType.EVENT -> {
+                val ev = eventData
+                if (ev == null) {
+                    nowPlayingState.value = NowPlayingState.Hidden
+                } else {
+                    val sourceName = allEventLinks.getOrNull(currentLinkIndex)?.quality.orEmpty()
+                    nowPlayingState.value = NowPlayingState.EventInfo(
+                        title      = ev.title,
+                        team1Name  = ev.team1Name,
+                        team1Logo  = ev.team1Logo,
+                        team2Name  = ev.team2Name,
+                        team2Logo  = ev.team2Logo,
+                        sourceName = sourceName,
+                    )
+                }
+            }
+            ContentType.NETWORK_STREAM -> nowPlayingState.value = NowPlayingState.Hidden
+        }
+    }
+    internal fun toggleNowPlayingFavorite(channel: Channel) {
+        lifecycleScope.launch {
+            val isFav = favoritesRepository.isFavorite(channel.id)
+            if (isFav) {
+                favoritesRepository.removeFavorite(channel.id)
+            } else {
+                favoritesRepository.addFavorite(
+                    com.livetvpro.app.data.models.FavoriteChannel(
+                        id           = channel.id,
+                        name         = channel.name,
+                        logoUrl      = channel.logoUrl,
+                        streamUrl    = channel.streamUrl,
+                        categoryId   = channel.categoryId,
+                        categoryName = channel.categoryName,
+                        links        = channel.links,
+                    )
+                )
+            }
+            val current = nowPlayingState.value
+            if (current is NowPlayingState.ChannelInfo && current.channel.id == channel.id) {
+                nowPlayingState.value = current.copy(isFavorite = !isFav)
+            }
+        }
     }
     internal fun switchToLink(link: LiveEventLink, position: Int) {
         currentLinkIndex        = position
@@ -1800,6 +1867,7 @@ class PlayerActivity : ComponentActivity() {
         streamUrl               = PlayerStreamHelper.buildStreamUrl(link)
         releasePlayer()
         setupPlayer()
+        updateNowPlayingState()
         refreshPipParamsIfNeeded()
     }
     internal fun showSettingsDialog() {

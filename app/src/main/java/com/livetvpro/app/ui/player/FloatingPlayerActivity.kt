@@ -1282,7 +1282,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 } else {
                     val sourceName = allEventLinks.getOrNull(currentLinkIndex)?.quality.orEmpty()
                     nowPlayingState.value = NowPlayingState.EventInfo(
-                        title      = ev.title,
+                        title      = ev.league,
                         team1Name  = ev.team1Name,
                         team1Logo  = ev.team1Logo,
                         team2Name  = ev.team2Name,

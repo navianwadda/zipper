@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,7 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +59,22 @@ sealed class RelatedContentState {
     data class Events(val items: List<LiveEvent>)   : RelatedContentState()
 }
 
+sealed class NowPlayingState {
+    object Hidden : NowPlayingState()
+    data class ChannelInfo(
+        val channel: Channel,
+        val isFavorite: Boolean,
+    ) : NowPlayingState()
+    data class EventInfo(
+        val title: String,
+        val team1Name: String,
+        val team1Logo: String,
+        val team2Name: String,
+        val team2Logo: String,
+        val sourceName: String,
+    ) : NowPlayingState()
+}
+
 @Composable
 fun PlayerScreen(
     isLandscape: Boolean,
@@ -68,6 +87,8 @@ fun PlayerScreen(
     onChannelClick: (Channel, Int) -> Unit,
     onEventClick: (LiveEvent, Int) -> Unit,
     onMessageBannerClick: () -> Unit,
+    nowPlaying: NowPlayingState = NowPlayingState.Hidden,
+    onToggleFavorite: (Channel) -> Unit = {},
     spanCount: Int = 3,
     eventSpanCount: Int = 2,
     modifier: Modifier = Modifier,
@@ -137,6 +158,12 @@ fun PlayerScreen(
             com.livetvpro.app.ui.components.MarqueeMessageBanner(
                 text = messageBanner,
                 onClick = onMessageBannerClick,
+            )
+        }
+        if (!isLandscape) {
+            NowPlayingSection(
+                nowPlaying = nowPlaying,
+                onToggleFavorite = onToggleFavorite,
             )
         }
         Box(
@@ -385,6 +412,233 @@ private fun RelatedChannelCard(
                     .padding(top = 6.dp)
                     .basicMarquee(iterations = Int.MAX_VALUE),
             )
+        }
+    }
+}
+
+@Composable
+private fun NowPlayingSection(
+    nowPlaying: NowPlayingState,
+    onToggleFavorite: (Channel) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (nowPlaying) {
+        is NowPlayingState.Hidden -> Unit
+        is NowPlayingState.ChannelInfo -> NowPlayingChannelCard(
+            channel = nowPlaying.channel,
+            isFavorite = nowPlaying.isFavorite,
+            onToggleFavorite = { onToggleFavorite(nowPlaying.channel) },
+            modifier = modifier,
+        )
+        is NowPlayingState.EventInfo -> NowPlayingEventCard(
+            info = nowPlaying,
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun nowPlayingCardBackground(): Color {
+    return MaterialTheme.colorScheme.surfaceVariant
+        .copy(alpha = 0.35f)
+        .compositeOver(MaterialTheme.colorScheme.background)
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+private fun NowPlayingTeamLogo(
+    url: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(CardLogoBg),
+    ) {
+        val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
+            androidx.compose.ui.platform.LocalContext.current
+        )
+        GlideImage(
+            model = url.takeIf { it.isNotBlank() },
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            it.diskCacheStrategy(DiskCacheStrategy.ALL)
+                .placeholder(appIconRes)
+                .error(appIconRes)
+                .fallback(appIconRes)
+        }
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+private fun NowPlayingChannelCard(
+    channel: Channel,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(nowPlayingCardBackground())
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+    ) {
+        Text(
+            text = "NOW PLAYING",
+            color = MaterialTheme.colorScheme.primary,
+            fontFamily = BergenSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            letterSpacing = 1.sp,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            NowPlayingTeamLogo(url = channel.logoUrl, modifier = Modifier.size(40.dp))
+            Text(
+                text = channel.name,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFamily = BergenSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+                    .basicMarquee(iterations = Int.MAX_VALUE),
+            )
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    painter = painterResource(
+                        if (isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+                    ),
+                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                    tint = if (isFavorite) MaterialTheme.colorScheme.tertiary
+                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NowPlayingEventCard(
+    info: NowPlayingState.EventInfo,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(nowPlayingCardBackground())
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+    ) {
+        Text(
+            text = "NOW PLAYING",
+            color = MaterialTheme.colorScheme.primary,
+            fontFamily = BergenSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            letterSpacing = 1.sp,
+        )
+        if (info.title.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = info.title,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFamily = BergenSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                NowPlayingTeamLogo(url = info.team1Logo)
+                Text(
+                    text = info.team1Name,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = "VS",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = BergenSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text = info.team2Name,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f),
+                )
+                NowPlayingTeamLogo(url = info.team2Logo)
+            }
+            if (info.sourceName.isNotBlank()) {
+                VerticalDivider(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .height(36.dp),
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Live Now",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontFamily = BergenSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                    )
+                    Text(
+                        text = info.sourceName,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = BergenSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
 }

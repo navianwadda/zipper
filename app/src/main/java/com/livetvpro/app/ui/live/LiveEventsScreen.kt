@@ -787,7 +787,7 @@ private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
                 MaterialTheme.colorScheme.tertiary,
                 RoundedCornerShape(topStart = 0.dp, topEnd = 12.dp, bottomEnd = 0.dp, bottomStart = 12.dp)
             )
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = 10.dp, vertical = 3.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

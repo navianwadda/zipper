@@ -915,8 +915,8 @@ object M3uParser {
         } catch (e: Exception) { "" }
     }
 
-    private fun generateChannelId(streamUrl: String, name: String, index: Int): String {
-        val combined = "$streamUrl|$name|$index"
+    private fun generateChannelId(streamUrl: String, name: String): String {
+        val combined = "$streamUrl|$name"
         return try {
             val digest = MessageDigest.getInstance("MD5").digest(combined.toByteArray())
             digest.joinToString("") { "%02x".format(it) }
@@ -933,7 +933,7 @@ object M3uParser {
         return m3uChannels.mapIndexed { index, m3u ->
             val metaUrl = buildStreamUrlWithMetadata(m3u)
             Channel(
-                id           = generateChannelId(m3u.streamUrl, m3u.name, index),
+                id           = generateChannelId(m3u.streamUrl, m3u.name),
                 name         = m3u.name,
                 logoUrl      = m3u.logoUrl,
                 streamUrl    = metaUrl,

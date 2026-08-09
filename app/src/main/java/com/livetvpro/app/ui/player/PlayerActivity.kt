@@ -86,7 +86,21 @@ class PlayerActivity : ComponentActivity() {
 
     internal val viewModel: PlayerViewModel by viewModels()
 
-    private val relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
+    private var relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
+    private var relatedLoadingTimeoutJob: kotlinx.coroutines.Job? = null
+
+    private fun setRelatedContentState(state: RelatedContentState) {
+        relatedLoadingTimeoutJob?.cancel()
+        relatedContentState.value = state
+        if (state is RelatedContentState.Loading) {
+            relatedLoadingTimeoutJob = lifecycleScope.launch {
+                delay(8000)
+                if (relatedContentState.value is RelatedContentState.Loading) {
+                    relatedContentState.value = RelatedContentState.Hidden
+                }
+            }
+        }
+    }
     private val nowPlayingState     = mutableStateOf<NowPlayingState>(NowPlayingState.Hidden)
     private val linksState          = mutableStateOf<List<LiveEventLink>>(emptyList())
     private val selectedLinkState   = mutableStateOf(0)
@@ -274,9 +288,9 @@ class PlayerActivity : ComponentActivity() {
         setupMessageBanner()
         setupBackHandler()
         if (DeviceUtils.isTvDevice) {
-            relatedContentState.value = RelatedContentState.Hidden
+            setRelatedContentState(RelatedContentState.Hidden)
         } else if (!isLandscape) {
-            relatedContentState.value = RelatedContentState.Loading
+            setRelatedContentState(RelatedContentState.Loading)
         }
         setupPlayer()
         loadRelatedContent()
@@ -326,15 +340,17 @@ class PlayerActivity : ComponentActivity() {
             if (contentType != ContentType.CHANNEL) return@observe
             if (relatedChannelsLockedForContentId == contentId) return@observe
             relatedChannels = channels
-            relatedContentState.value =
+            setRelatedContentState(
                 if (channels.isEmpty()) RelatedContentState.Hidden
                 else RelatedContentState.Channels(channels)
+            )
         }
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
             if (contentType != ContentType.EVENT) return@observe
-            relatedContentState.value =
+            setRelatedContentState(
                 if (liveEvents.isEmpty()) RelatedContentState.Hidden
                 else RelatedContentState.Events(liveEvents)
+            )
         }
 
         setContent {
@@ -802,18 +818,20 @@ class PlayerActivity : ComponentActivity() {
         isLandscapeState.value = isLandscape
         resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
         if (isLandscape) {
-            relatedContentState.value = RelatedContentState.Hidden
+            setRelatedContentState(RelatedContentState.Hidden)
         } else if (contentType != ContentType.NETWORK_STREAM) {
             if (relatedChannels.isNotEmpty() || contentType == ContentType.EVENT) {
-                relatedContentState.value = when (contentType) {
-                    ContentType.EVENT   -> viewModel.relatedLiveEvents.value
-                        ?.let { if (it.isNotEmpty()) RelatedContentState.Events(it) else RelatedContentState.Loading }
-                        ?: RelatedContentState.Loading
-                    ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
-                    else                -> RelatedContentState.Hidden
-                }
+                setRelatedContentState(
+                    when (contentType) {
+                        ContentType.EVENT   -> viewModel.relatedLiveEvents.value
+                            ?.let { if (it.isNotEmpty()) RelatedContentState.Events(it) else RelatedContentState.Loading }
+                            ?: RelatedContentState.Loading
+                        ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
+                        else                -> RelatedContentState.Hidden
+                    }
+                )
             } else {
-                relatedContentState.value = RelatedContentState.Loading
+                setRelatedContentState(RelatedContentState.Loading)
             }
         }
     }
@@ -1521,9 +1539,9 @@ class PlayerActivity : ComponentActivity() {
 
     private fun setupRelatedChannels() {
         if (contentType == ContentType.NETWORK_STREAM || DeviceUtils.isTvDevice) {
-            relatedContentState.value = RelatedContentState.Hidden; return
+            setRelatedContentState(RelatedContentState.Hidden); return
         }
-        relatedContentState.value = RelatedContentState.Loading
+        setRelatedContentState(RelatedContentState.Loading)
     }
 
     private fun setupLinksUI() { updateLinksState() }
@@ -1552,8 +1570,10 @@ class PlayerActivity : ComponentActivity() {
                             val related = passedRelated.filter { it.id != ch.id }.take(9)
                             relatedChannelsLockedForContentId = contentId
                             relatedChannels = related
-                            relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
-                                                        else RelatedContentState.Channels(related)
+                            setRelatedContentState(
+                                if (related.isEmpty()) RelatedContentState.Hidden
+                                else RelatedContentState.Channels(related)
+                            )
                         }
                         isFavSrc -> {
                             val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
@@ -1561,8 +1581,10 @@ class PlayerActivity : ComponentActivity() {
                             val related = favList.filter { it.id != ch.id }.shuffled().take(9)
                             relatedChannelsLockedForContentId = contentId
                             relatedChannels = related
-                            relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
-                                                        else RelatedContentState.Channels(related)
+                            setRelatedContentState(
+                                if (related.isEmpty()) RelatedContentState.Hidden
+                                else RelatedContentState.Channels(related)
+                            )
                         }
                         intentIsSports -> {
                             relatedChannelsLockedForContentId = null
@@ -1768,8 +1790,10 @@ class PlayerActivity : ComponentActivity() {
                 val updated = fav.filter { it.id != newChannel.id }.shuffled().take(9)
                 relatedChannels = updated
                 relatedChannelsLockedForContentId = contentId
-                relatedContentState.value = if (updated.isEmpty()) RelatedContentState.Hidden
-                                            else RelatedContentState.Channels(updated)
+                setRelatedContentState(
+                    if (updated.isEmpty()) RelatedContentState.Hidden
+                    else RelatedContentState.Channels(updated)
+                )
             } else {
                 relatedChannelsLockedForContentId = null
                 val isSports   = newChannel.categoryId == "sports" || intentIsSports
@@ -1797,7 +1821,7 @@ class PlayerActivity : ComponentActivity() {
             setupPlayer(); setupLinksUI()
             updateNowPlayingState()
             refreshPipParamsIfNeeded()
-            relatedContentState.value = RelatedContentState.Loading
+            setRelatedContentState(RelatedContentState.Loading)
             viewModel.loadRelatedEvents(newEvent.id)
         } catch (_: Exception) {}
     }

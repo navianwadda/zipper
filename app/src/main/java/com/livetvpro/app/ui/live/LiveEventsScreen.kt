@@ -469,7 +469,7 @@ fun LiveEventCard(
             .padding(horizontal = 6.dp, vertical = 5.dp)
             .scale(scale)
             .fillMaxWidth()
-            .height(145.dp),
+            .height(125.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(),
         elevation = CardDefaults.cardElevation(
@@ -483,7 +483,7 @@ fun LiveEventCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .padding(6.dp)
+                    .padding(5.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -497,7 +497,7 @@ fun LiveEventCard(
                         model = event.leagueLogo?.takeIf { it.isNotBlank() },
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                             .override(96, 96)
@@ -534,14 +534,14 @@ fun LiveEventCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(1.dp)
                         .background(MaterialTheme.colorScheme.outlineVariant)
                 )
-                Spacer(modifier = Modifier.height(5.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -593,7 +593,7 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
             contentDescription = name,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(48.dp)
+                .size(40.dp)
                 .clip(CircleShape)
         ) {
             it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
@@ -602,7 +602,7 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
                 .error(appIconRes)
                 .fallback(appIconRes)
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = name,
             style = MaterialTheme.typography.labelSmall,
@@ -692,7 +692,7 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
                 LottieAnimation(
                     composition = lottieComposition,
                     progress = { lottieProgress },
-                    modifier = Modifier.size(width = 64.dp, height = 48.dp)
+                    modifier = Modifier.size(width = 56.dp, height = 42.dp)
                 )
                 val elapsed = currentTime - startMillis
                 val h = (elapsed / 1000 / 3600).toInt()

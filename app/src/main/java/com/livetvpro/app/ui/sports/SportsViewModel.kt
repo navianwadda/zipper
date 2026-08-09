@@ -22,6 +22,7 @@ class SportsViewModel @Inject constructor(
     private val _filteredChannels = MutableLiveData<List<Channel>>()
     val filteredChannels: LiveData<List<Channel>> = _filteredChannels
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteStatusCache: kotlinx.coroutines.flow.StateFlow<Set<String>> = _favoriteStatusCache
     var currentQuery: String = ""
         private set
 

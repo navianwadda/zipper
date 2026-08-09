@@ -544,8 +544,10 @@ fun LiveEventCard(
                 Spacer(modifier = Modifier.height(5.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = if (event.wrapper.isNotEmpty()) 18.dp else 0.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
                     TeamSection(
                         name = event.team1Name,
@@ -663,7 +665,7 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
     Column(
         modifier = Modifier.padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
         if (parseResult == null) {
             Text(

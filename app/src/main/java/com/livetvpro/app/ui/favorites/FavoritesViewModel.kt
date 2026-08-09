@@ -9,6 +9,7 @@ import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.repository.FavoritesRepository
 import com.livetvpro.app.data.repository.NativeDataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,11 +19,41 @@ class FavoritesViewModel @Inject constructor(
     private val nativeDataRepository: NativeDataRepository
 ) : ViewModel() {
 
-    val favorites = favoritesRepository.getFavoritesFlow().asLiveData()
+    val favorites = favoritesRepository.getFavoriteIdsFlow()
+        .map { ids -> resolveFavorites(ids) }
+        .asLiveData()
 
     private val _filteredFavorites = MutableLiveData<List<FavoriteChannel>>(emptyList())
     val filteredFavorites: androidx.lifecycle.LiveData<List<FavoriteChannel>> = _filteredFavorites
     private var searchQuery = ""
+
+    private fun resolveFavorites(ids: List<String>): List<FavoriteChannel> {
+        val liveChannels = try {
+            nativeDataRepository.getChannels()
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val byId = liveChannels.associateBy { it.id }
+        return ids.map { id ->
+            val channel = byId[id]
+            if (channel != null) {
+                FavoriteChannel(
+                    id = channel.id,
+                    name = channel.name,
+                    logoUrl = channel.logoUrl,
+                    streamUrl = channel.streamUrl,
+                    categoryId = channel.categoryId,
+                    categoryName = channel.categoryName,
+                    links = channel.links
+                )
+            } else {
+                FavoriteChannel(id = id, name = id)
+            }
+        }
+    }
 
     fun searchFavorites(query: String) {
         searchQuery = query
@@ -52,44 +83,8 @@ class FavoritesViewModel @Inject constructor(
             if (favoritesRepository.isFavorite(channel.id)) {
                 favoritesRepository.removeFavorite(channel.id)
             } else {
-                val streamUrlToSave = when {
-                    channel.streamUrl.isNotEmpty() -> channel.streamUrl
-                    !channel.links.isNullOrEmpty() -> {
-                        val firstLink = channel.links.first()
-                        buildStreamUrlFromLink(firstLink)
-                    }
-                    else -> ""
-                }
-                
-                val fav = FavoriteChannel(
-                    id = channel.id,
-                    name = channel.name,
-                    logoUrl = channel.logoUrl,
-                    streamUrl = streamUrlToSave,
-                    categoryId = channel.categoryId,
-                    categoryName = channel.categoryName,
-                    links = channel.links
-                )
-                favoritesRepository.addFavorite(fav)
+                favoritesRepository.addFavorite(channel.id)
             }
-        }
-    }
-    
-    private fun buildStreamUrlFromLink(link: com.livetvpro.app.data.models.ChannelLink): String {
-        val parts = mutableListOf<String>()
-        parts.add(link.url)
-        
-        link.referer?.let { if (it.isNotEmpty()) parts.add("referer=$it") }
-        link.cookie?.let { if (it.isNotEmpty()) parts.add("cookie=$it") }
-        link.origin?.let { if (it.isNotEmpty()) parts.add("origin=$it") }
-        link.userAgent?.let { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
-        link.drmScheme?.let { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
-        link.drmLicenseUrl?.let { if (it.isNotEmpty()) parts.add("drmLicense=$it") }
-        
-        return if (parts.size > 1) {
-            parts.joinToString("|")
-        } else {
-            parts[0]
         }
     }
 

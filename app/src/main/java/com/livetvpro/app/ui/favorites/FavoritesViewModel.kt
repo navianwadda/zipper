@@ -29,7 +29,7 @@ class FavoritesViewModel @Inject constructor(
 
     private fun resolveFavorites(ids: List<String>): List<FavoriteChannel> {
         val liveChannels = try {
-            nativeDataRepository.getChannels()
+            nativeDataRepository.getChannels() + nativeDataRepository.getSports()
         } catch (e: OutOfMemoryError) {
             System.gc()
             emptyList()
@@ -70,6 +70,7 @@ class FavoritesViewModel @Inject constructor(
     fun getLiveChannel(channelId: String): Channel? {
         return try {
             nativeDataRepository.getChannels().find { it.id == channelId }
+                ?: nativeDataRepository.getSports().find { it.id == channelId }
         } catch (e: OutOfMemoryError) {
             System.gc()
             null

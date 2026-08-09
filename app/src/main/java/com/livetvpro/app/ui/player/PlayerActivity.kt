@@ -1846,17 +1846,7 @@ class PlayerActivity : ComponentActivity() {
             if (isFav) {
                 favoritesRepository.removeFavorite(channel.id)
             } else {
-                favoritesRepository.addFavorite(
-                    com.livetvpro.app.data.models.FavoriteChannel(
-                        id           = channel.id,
-                        name         = channel.name,
-                        logoUrl      = channel.logoUrl,
-                        streamUrl    = channel.streamUrl,
-                        categoryId   = channel.categoryId,
-                        categoryName = channel.categoryName,
-                        links        = channel.links,
-                    )
-                )
+                favoritesRepository.addFavorite(channel.id)
             }
             val current = nowPlayingState.value
             if (current is NowPlayingState.ChannelInfo && current.channel.id == channel.id) {

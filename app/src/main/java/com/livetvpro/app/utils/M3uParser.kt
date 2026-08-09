@@ -930,10 +930,15 @@ object M3uParser {
         categoryId: String,
         categoryName: String
     ): List<Channel> {
+        val idOccurrences = mutableMapOf<String, Int>()
         return m3uChannels.mapIndexed { index, m3u ->
             val metaUrl = buildStreamUrlWithMetadata(m3u)
+            val baseId = generateChannelId(m3u.streamUrl, m3u.name)
+            val occurrence = idOccurrences.getOrDefault(baseId, 0)
+            idOccurrences[baseId] = occurrence + 1
+            val id = if (occurrence == 0) baseId else "${baseId}_dup$occurrence"
             Channel(
-                id           = generateChannelId(m3u.streamUrl, m3u.name),
+                id           = id,
                 name         = m3u.name,
                 logoUrl      = m3u.logoUrl,
                 streamUrl    = metaUrl,

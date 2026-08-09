@@ -6,6 +6,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.livetvpro.app.data.models.Channel
 import com.livetvpro.app.data.models.FavoriteChannel
+import com.livetvpro.app.data.repository.ChannelRepository
 import com.livetvpro.app.data.repository.FavoritesRepository
 import com.livetvpro.app.data.repository.NativeDataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class FavoritesViewModel @Inject constructor(
     private val favoritesRepository: FavoritesRepository,
-    private val nativeDataRepository: NativeDataRepository
+    private val nativeDataRepository: NativeDataRepository,
+    private val channelRepository: ChannelRepository
 ) : ViewModel() {
 
     val favorites = favoritesRepository.getFavoriteIdsFlow()
@@ -27,7 +29,7 @@ class FavoritesViewModel @Inject constructor(
     val filteredFavorites: androidx.lifecycle.LiveData<List<FavoriteChannel>> = _filteredFavorites
     private var searchQuery = ""
 
-    private fun resolveFavorites(ids: List<String>): List<FavoriteChannel> {
+    private suspend fun resolveFavorites(ids: List<String>): List<FavoriteChannel> {
         val liveChannels = try {
             nativeDataRepository.getChannels() + nativeDataRepository.getSports()
         } catch (e: OutOfMemoryError) {
@@ -36,7 +38,19 @@ class FavoritesViewModel @Inject constructor(
         } catch (e: Exception) {
             emptyList()
         }
-        val byId = liveChannels.associateBy { it.id }
+        val byId = liveChannels.associateBy { it.id }.toMutableMap()
+
+        val unresolvedIds = ids.filter { it !in byId }
+        if (unresolvedIds.isNotEmpty()) {
+            try {
+                val playlistChannels = channelRepository.getChannelsByIds(unresolvedIds)
+                playlistChannels.forEach { byId[it.id] = it }
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+            } catch (e: Exception) {
+            }
+        }
+
         return ids.map { id ->
             val channel = byId[id]
             if (channel != null) {

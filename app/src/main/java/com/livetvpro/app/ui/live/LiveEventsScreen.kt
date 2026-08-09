@@ -692,7 +692,7 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
                 LottieAnimation(
                     composition = lottieComposition,
                     progress = { lottieProgress },
-                    modifier = Modifier.size(width = 56.dp, height = 40.dp)
+                    modifier = Modifier.size(width = 64.dp, height = 48.dp)
                 )
                 val elapsed = currentTime - startMillis
                 val h = (elapsed / 1000 / 3600).toInt()

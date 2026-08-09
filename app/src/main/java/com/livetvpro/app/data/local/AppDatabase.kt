@@ -2,7 +2,6 @@ package com.livetvpro.app.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.livetvpro.app.data.local.dao.ChannelDao
@@ -10,15 +9,13 @@ import com.livetvpro.app.data.local.dao.FavoriteChannelDao
 import com.livetvpro.app.data.local.dao.PlaylistDao
 import com.livetvpro.app.data.local.entity.ChannelEntity
 import com.livetvpro.app.data.local.entity.FavoriteChannelEntity
-import com.livetvpro.app.data.local.entity.FavoriteChannelConverters
 import com.livetvpro.app.data.local.entity.PlaylistEntity
 
 @Database(
     entities = [FavoriteChannelEntity::class, PlaylistEntity::class, ChannelEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
-@TypeConverters(FavoriteChannelConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun favoriteChannelDao(): FavoriteChannelDao
     abstract fun playlistDao(): PlaylistDao
@@ -60,6 +57,22 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE playlists ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("UPDATE playlists SET position = (SELECT COUNT(*) FROM playlists p2 WHERE p2.createdAt <= playlists.createdAt) - 1")
+            }
+        }
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS favorite_channels_new (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        addedAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO favorite_channels_new (id, addedAt)
+                    SELECT id, addedAt FROM favorite_channels
+                """.trimIndent())
+                db.execSQL("DROP TABLE favorite_channels")
+                db.execSQL("ALTER TABLE favorite_channels_new RENAME TO favorite_channels")
             }
         }
     }

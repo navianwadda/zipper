@@ -43,6 +43,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +87,7 @@ fun SportsScreen(
 ) {
     val channels by viewModel.filteredChannels.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(false)
+    val favoriteIds by viewModel.favoriteStatusCache.collectAsState()
     val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
@@ -120,7 +122,7 @@ fun SportsScreen(
     }
 
     favoriteDialogChannel?.let { channel ->
-        val isFav = viewModel.isFavorite(channel.id)
+        val isFav = favoriteIds.contains(channel.id)
         AlertDialog(
             onDismissRequest = { favoriteDialogChannel = null },
             title = {
@@ -218,7 +220,7 @@ fun SportsScreen(
                     items(channels, key = { it.id }) { channel ->
                         SportChannelCard(
                             channel = channel,
-                            isFavorite = viewModel.isFavorite(channel.id),
+                            isFavorite = favoriteIds.contains(channel.id),
                             isTvDevice = isTvDevice,
                             onClick = {
                                 val action: () -> Unit = {

@@ -44,6 +44,7 @@ class CategoryChannelsViewModel @Inject constructor(
     val currentSearchQuery: String get() = _searchQuery.value
 
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteStatusCache: kotlinx.coroutines.flow.StateFlow<Set<String>> = _favoriteStatusCache
 
     val categoryName: String = savedStateHandle.get<String>("categoryName") ?: "Channels"
 

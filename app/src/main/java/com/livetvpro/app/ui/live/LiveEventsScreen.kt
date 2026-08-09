@@ -544,9 +544,7 @@ fun LiveEventCard(
                 Spacer(modifier = Modifier.height(5.dp))
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = if (event.wrapper.isNotEmpty()) 18.dp else 0.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Top
                 ) {
                     TeamSection(
@@ -694,13 +692,13 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
                 LottieAnimation(
                     composition = lottieComposition,
                     progress = { lottieProgress },
-                    modifier = Modifier.size(width = 80.dp, height = 60.dp)
+                    modifier = Modifier.size(width = 56.dp, height = 40.dp)
                 )
                 val elapsed = currentTime - startMillis
                 val h = (elapsed / 1000 / 3600).toInt()
                 val m = ((elapsed / 1000 / 60) % 60).toInt()
                 val s = ((elapsed / 1000) % 60).toInt()
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(1.dp))
                 Text(
                     text = String.format("%02d:%02d:%02d", h, m, s),
                     style = MaterialTheme.typography.labelSmall,
@@ -789,7 +787,7 @@ private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
                 MaterialTheme.colorScheme.tertiary,
                 RoundedCornerShape(topStart = 0.dp, topEnd = 12.dp, bottomEnd = 0.dp, bottomStart = 12.dp)
             )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

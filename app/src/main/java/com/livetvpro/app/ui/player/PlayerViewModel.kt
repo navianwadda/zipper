@@ -5,8 +5,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.livetvpro.app.data.models.Channel
-import com.livetvpro.app.data.models.ChannelLink
-import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.data.repository.ChannelRepository
 import com.livetvpro.app.data.repository.FavoritesRepository
@@ -148,30 +146,7 @@ class PlayerViewModel @Inject constructor(
                 favoritesRepository.removeFavorite(channel.id)
                 _isFavorite.value = false
             } else {
-                val favoriteLinks = channel.links?.map { channelLink ->
-                    ChannelLink(
-                        quality = channelLink.quality,
-                        url = channelLink.url,
-                        cookie = channelLink.cookie,
-                        referer = channelLink.referer,
-                        origin = channelLink.origin,
-                        userAgent = channelLink.userAgent,
-                        xForwardedFor = channelLink.xForwardedFor,
-                        drmScheme = channelLink.drmScheme,
-                        drmLicenseUrl = channelLink.drmLicenseUrl
-                    )
-                }
-
-                val favorite = FavoriteChannel(
-                    id = channel.id,
-                    name = channel.name,
-                    logoUrl = channel.logoUrl,
-                    streamUrl = channel.streamUrl,
-                    categoryId = channel.categoryId,
-                    categoryName = channel.categoryName,
-                    links = favoriteLinks
-                )
-                favoritesRepository.addFavorite(favorite)
+                favoritesRepository.addFavorite(channel.id)
                 _isFavorite.value = true
             }
         }

@@ -11,9 +11,10 @@ import com.livetvpro.app.data.repository.FavoritesRepository
 import com.livetvpro.app.utils.RetryViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
 
 @HiltViewModel
 class SportsViewModel @Inject constructor(
@@ -24,6 +25,7 @@ class SportsViewModel @Inject constructor(
     private val _filteredChannels = MutableLiveData<List<Channel>>()
     val filteredChannels: LiveData<List<Channel>> = _filteredChannels
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteIds: StateFlow<Set<String>> = _favoriteStatusCache.asStateFlow()
     var currentQuery: String = ""
         private set
 

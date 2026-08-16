@@ -15,7 +15,7 @@ import com.livetvpro.app.data.local.entity.PlaylistEntity
 
 @Database(
     entities = [FavoriteChannelEntity::class, PlaylistEntity::class, ChannelEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(FavoriteChannelConverters::class)
@@ -76,6 +76,16 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent())
                 db.execSQL("DROP TABLE favorite_channels")
                 db.execSQL("ALTER TABLE favorite_channels_new RENAME TO favorite_channels")
+            }
+        }
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE favorite_channels ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE favorite_channels ADD COLUMN logoUrl TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE favorite_channels ADD COLUMN streamUrl TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE favorite_channels ADD COLUMN categoryId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE favorite_channels ADD COLUMN categoryName TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE favorite_channels ADD COLUMN linksJson TEXT")
             }
         }
     }

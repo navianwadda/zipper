@@ -17,8 +17,8 @@ android {
         applicationId = "com.livetvpro.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.9.9"
+        versionCode = 15
+        versionName = "1.9.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

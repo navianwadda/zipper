@@ -45,7 +45,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -95,7 +94,6 @@ fun CategoryChannelsScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val categoryGroups by viewModel.categoryGroups.observeAsState(emptyList())
     val currentGroup by viewModel.currentGroup.observeAsState("All")
-    val favoriteIds by viewModel.favoriteStatusCache.collectAsState()
 
     val gridState = rememberLazyGridState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -126,7 +124,7 @@ fun CategoryChannelsScreen(
     }
 
     favoriteDialogChannel?.let { channel ->
-        val isFav = favoriteIds.contains(channel.id)
+        val isFav = viewModel.isFavorite(channel.id)
         AlertDialog(
             onDismissRequest = { favoriteDialogChannel = null },
             title = {
@@ -279,7 +277,7 @@ fun CategoryChannelsScreen(
                                 val channel = channels[index] ?: return@items
                                 ChannelCard(
                                     channel = channel,
-                                    isFavorite = favoriteIds.contains(channel.id),
+                                    isFavorite = viewModel.isFavorite(channel.id),
                                     isTvDevice = isTvDevice,
                                     onClick = {
                                         val action: () -> Unit = {

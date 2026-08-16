@@ -10,9 +10,6 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE categoryId = :categoryId ORDER BY position ASC")
     suspend fun getChannelsByCategory(categoryId: String): List<ChannelEntity>
 
-    @Query("SELECT * FROM channels WHERE id IN (:ids)")
-    suspend fun getChannelsByIds(ids: List<String>): List<ChannelEntity>
-
     @Query("""
         SELECT * FROM channels
         WHERE categoryId = :categoryId

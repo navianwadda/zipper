@@ -81,21 +81,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     private val viewModel: PlayerViewModel by viewModels()
 
-    private var relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
-    private var relatedLoadingTimeoutJob: kotlinx.coroutines.Job? = null
-
-    private fun setRelatedContentState(state: RelatedContentState) {
-        relatedLoadingTimeoutJob?.cancel()
-        relatedContentState.value = state
-        if (state is RelatedContentState.Loading) {
-            relatedLoadingTimeoutJob = lifecycleScope.launch {
-                delay(8000)
-                if (relatedContentState.value is RelatedContentState.Loading) {
-                    relatedContentState.value = RelatedContentState.Hidden
-                }
-            }
-        }
-    }
+    private val relatedContentState = mutableStateOf<RelatedContentState>(RelatedContentState.Hidden)
     private val nowPlayingState     = mutableStateOf<NowPlayingState>(NowPlayingState.Hidden)
     private val linksState          = mutableStateOf<List<LiveEventLink>>(emptyList())
     private val selectedLinkState   = mutableStateOf(0)
@@ -327,18 +313,14 @@ class FloatingPlayerActivity : ComponentActivity() {
             if (contentType != ContentType.CHANNEL) return@observe
             if (relatedChannelsLockedForContentId == contentId) return@observe
             relatedChannels = channels
-            setRelatedContentState(
-                if (channels.isEmpty()) RelatedContentState.Hidden
-                else RelatedContentState.Channels(channels)
-            )
+            relatedContentState.value = if (channels.isEmpty()) RelatedContentState.Hidden
+            else RelatedContentState.Channels(channels)
         }
 
         viewModel.relatedLiveEvents.observe(this) { liveEvents ->
             if (contentType != ContentType.EVENT) return@observe
-            setRelatedContentState(
-                if (liveEvents.isEmpty()) RelatedContentState.Hidden
-                else RelatedContentState.Events(liveEvents)
-            )
+            relatedContentState.value = if (liveEvents.isEmpty()) RelatedContentState.Hidden
+            else RelatedContentState.Events(liveEvents)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -857,20 +839,18 @@ class FloatingPlayerActivity : ComponentActivity() {
         isLandscapeState.value = isLandscape
         resizeMode = if (isLandscape) networkLandscapeResizeMode else networkPortraitResizeMode
         if (isLandscape) {
-            setRelatedContentState(RelatedContentState.Hidden)
+            relatedContentState.value = RelatedContentState.Hidden
         } else if (contentType != ContentType.NETWORK_STREAM) {
             if (relatedChannels.isNotEmpty() || contentType == ContentType.EVENT) {
-                setRelatedContentState(
-                    when (contentType) {
-                        ContentType.EVENT   -> viewModel.relatedLiveEvents.value
-                            ?.let { if (it.isNotEmpty()) RelatedContentState.Events(it) else RelatedContentState.Loading }
-                            ?: RelatedContentState.Loading
-                        ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
-                        else                -> RelatedContentState.Hidden
-                    }
-                )
+                relatedContentState.value = when (contentType) {
+                    ContentType.EVENT   -> viewModel.relatedLiveEvents.value
+                        ?.let { if (it.isNotEmpty()) RelatedContentState.Events(it) else RelatedContentState.Loading }
+                        ?: RelatedContentState.Loading
+                    ContentType.CHANNEL -> RelatedContentState.Channels(relatedChannels)
+                    else                -> RelatedContentState.Hidden
+                }
             } else {
-                setRelatedContentState(RelatedContentState.Loading)
+                relatedContentState.value = RelatedContentState.Loading
             }
         }
     }
@@ -1223,10 +1203,10 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     private fun setupRelatedChannels() {
         if (contentType == ContentType.NETWORK_STREAM || DeviceUtils.isTvDevice) {
-            setRelatedContentState(RelatedContentState.Hidden)
+            relatedContentState.value = RelatedContentState.Hidden
             return
         }
-        setRelatedContentState(RelatedContentState.Loading)
+        relatedContentState.value = RelatedContentState.Loading
     }
 
     private fun setupLinksUI() {
@@ -1256,10 +1236,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                         val related = favList.filter { it.id != channel.id }.shuffled().take(9)
                         relatedChannelsLockedForContentId = contentId
                         relatedChannels = related
-                        setRelatedContentState(
-                            if (related.isEmpty()) RelatedContentState.Hidden
-                            else RelatedContentState.Channels(related)
-                        )
+                        relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+                        else RelatedContentState.Channels(related)
                     } else if (intentIsSports) {
                         relatedChannelsLockedForContentId = null
                         viewModel.loadRandomRelatedSports(channel.id)
@@ -1325,7 +1303,17 @@ class FloatingPlayerActivity : ComponentActivity() {
             if (isFav) {
                 favoritesRepository.removeFavorite(channel.id)
             } else {
-                favoritesRepository.addFavorite(channel.id)
+                favoritesRepository.addFavorite(
+                    com.livetvpro.app.data.models.FavoriteChannel(
+                        id           = channel.id,
+                        name         = channel.name,
+                        logoUrl      = channel.logoUrl,
+                        streamUrl    = channel.streamUrl,
+                        categoryId   = channel.categoryId,
+                        categoryName = channel.categoryName,
+                        links        = channel.links,
+                    )
+                )
             }
             val current = nowPlayingState.value
             if (current is NowPlayingState.ChannelInfo && current.channel.id == channel.id) {
@@ -1376,10 +1364,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                 val related = favList.filter { it.id != newChannel.id }.shuffled().take(9)
                 relatedChannelsLockedForContentId = contentId
                 relatedChannels = related
-                setRelatedContentState(
-                    if (related.isEmpty()) RelatedContentState.Hidden
-                    else RelatedContentState.Channels(related)
-                )
+                relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+                else RelatedContentState.Channels(related)
             } else {
                 relatedChannelsLockedForContentId = null
                 val isSports = newChannel.categoryId == "sports" || intentIsSports
@@ -1419,7 +1405,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             setupPlayer()
             setupLinksUI()
             updateNowPlayingState()
-            setRelatedContentState(RelatedContentState.Loading)
+            relatedContentState.value = RelatedContentState.Loading
             viewModel.loadRelatedEvents(newEvent.id)
 
         } catch (e: Exception) {

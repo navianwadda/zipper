@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.livetvpro.app.data.models.Channel
+import com.livetvpro.app.data.models.ChannelLink
+import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.repository.CategoryRepository
 import com.livetvpro.app.data.repository.ChannelRepository
 import com.livetvpro.app.data.repository.FavoritesRepository
@@ -44,7 +46,6 @@ class CategoryChannelsViewModel @Inject constructor(
     val currentSearchQuery: String get() = _searchQuery.value
 
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
-    val favoriteStatusCache: kotlinx.coroutines.flow.StateFlow<Set<String>> = _favoriteStatusCache
 
     val categoryName: String = savedStateHandle.get<String>("categoryName") ?: "Channels"
 
@@ -84,8 +85,8 @@ class CategoryChannelsViewModel @Inject constructor(
 
     private fun loadFavoriteCache() {
         viewModelScope.launch {
-            favoritesRepository.getFavoriteIdsFlow().collect { ids ->
-                _favoriteStatusCache.value = ids.toSet()
+            favoritesRepository.getFavoritesFlow().collect { favorites ->
+                _favoriteStatusCache.value = favorites.map { it.id }.toSet()
             }
         }
     }
@@ -174,12 +175,54 @@ class CategoryChannelsViewModel @Inject constructor(
 
     fun toggleFavorite(channel: Channel) {
         viewModelScope.launch {
+            val favoriteLinks = channel.links?.map { channelLink ->
+                ChannelLink(
+                    quality       = channelLink.quality,
+                    url           = channelLink.url,
+                    cookie        = channelLink.cookie,
+                    referer       = channelLink.referer,
+                    origin        = channelLink.origin,
+                    userAgent     = channelLink.userAgent,
+                    xForwardedFor = channelLink.xForwardedFor,
+                    drmScheme     = channelLink.drmScheme,
+                    drmLicenseUrl = channelLink.drmLicenseUrl
+                )
+            }
+
+            val streamUrlToSave = when {
+                channel.streamUrl.isNotEmpty() -> channel.streamUrl
+                !favoriteLinks.isNullOrEmpty()  -> buildStreamUrlFromLink(favoriteLinks.first())
+                else                            -> ""
+            }
+
+            val favoriteChannel = FavoriteChannel(
+                id           = channel.id,
+                name         = channel.name,
+                logoUrl      = channel.logoUrl,
+                streamUrl    = streamUrlToSave,
+                categoryId   = channel.categoryId,
+                categoryName = categoryName,
+                links        = favoriteLinks
+            )
+
             if (favoritesRepository.isFavorite(channel.id)) {
                 favoritesRepository.removeFavorite(channel.id)
             } else {
-                favoritesRepository.addFavorite(channel.id)
+                favoritesRepository.addFavorite(favoriteChannel)
             }
         }
+    }
+
+    private fun buildStreamUrlFromLink(link: ChannelLink): String {
+        val parts = mutableListOf(link.url)
+        link.referer?.let        { if (it.isNotEmpty()) parts.add("referer=$it") }
+        link.cookie?.let         { if (it.isNotEmpty()) parts.add("cookie=$it") }
+        link.origin?.let         { if (it.isNotEmpty()) parts.add("origin=$it") }
+        link.userAgent?.let      { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
+        link.xForwardedFor?.let  { if (it.isNotEmpty()) parts.add("X-Forwarded-For=$it") }
+        link.drmScheme?.let      { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
+        link.drmLicenseUrl?.let  { if (it.isNotEmpty()) parts.add("drmLicense=$it") }
+        return if (parts.size > 1) parts.joinToString("|") else parts[0]
     }
 
     fun isFavorite(channelId: String): Boolean =

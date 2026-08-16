@@ -5,6 +5,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.livetvpro.app.data.models.Channel
+import com.livetvpro.app.data.models.ChannelLink
+import com.livetvpro.app.data.models.FavoriteChannel
 import com.livetvpro.app.data.models.LiveEvent
 import com.livetvpro.app.data.repository.ChannelRepository
 import com.livetvpro.app.data.repository.FavoritesRepository
@@ -55,9 +57,15 @@ class PlayerViewModel @Inject constructor(
     private val _pendingRefreshChannelId = MutableLiveData<String?>(null)
     val pendingRefreshChannelId: LiveData<String?> = _pendingRefreshChannelId
 
+    // Monotonically increasing token identifying the most recently *requested* related-channels
+    // load. Any in-flight coroutine whose token no longer matches when it completes is stale
+    // (superseded by a newer switch, e.g. jumping to Favourites while the previous category's
+    // load was still running) and must not be allowed to post its result.
     private var relatedRequestGeneration: Int = 0
     private fun nextRelatedGeneration(): Int = ++relatedRequestGeneration
 
+    // Same idea for the channel-list panel, since switching channels/categories can also race
+    // with an in-flight loadAllChannelsForList call.
     private var channelListRequestGeneration: Int = 0
     private fun nextChannelListGeneration(): Int = ++channelListRequestGeneration
 
@@ -67,6 +75,7 @@ class PlayerViewModel @Inject constructor(
         val existing = cachedChannelList
         if (existing != null && cachedChannelListCategoryId == categoryId) {
             _channelListItems.postValue(existing)
+            // Cache hit — safe to refresh now
             refreshChannelId?.let { refreshChannelData(it) }
             return
         }
@@ -90,6 +99,8 @@ class PlayerViewModel @Inject constructor(
                 cachedChannelListCategoryId = categoryId
                 cachedChannelList = channels
                 _channelListItems.postValue(channels)
+                // Now that channels are loaded and cached, refresh channel data safely
+                // (getChannels() will be served from AtomicReference cache, no re-parse)
                 refreshChannelId?.let { refreshChannelData(it) }
             } catch (e: OutOfMemoryError) {
                 System.gc()
@@ -101,6 +112,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun setChannelList(channels: List<Channel>) {
+        // Explicit/synchronous selection always wins: invalidate any in-flight load so it can't
+        // clobber this value when it eventually completes.
         nextChannelListGeneration()
         cachedChannelList = channels
         _channelListItems.postValue(channels)
@@ -135,7 +148,30 @@ class PlayerViewModel @Inject constructor(
                 favoritesRepository.removeFavorite(channel.id)
                 _isFavorite.value = false
             } else {
-                favoritesRepository.addFavorite(channel.id)
+                val favoriteLinks = channel.links?.map { channelLink ->
+                    ChannelLink(
+                        quality = channelLink.quality,
+                        url = channelLink.url,
+                        cookie = channelLink.cookie,
+                        referer = channelLink.referer,
+                        origin = channelLink.origin,
+                        userAgent = channelLink.userAgent,
+                        xForwardedFor = channelLink.xForwardedFor,
+                        drmScheme = channelLink.drmScheme,
+                        drmLicenseUrl = channelLink.drmLicenseUrl
+                    )
+                }
+
+                val favorite = FavoriteChannel(
+                    id = channel.id,
+                    name = channel.name,
+                    logoUrl = channel.logoUrl,
+                    streamUrl = channel.streamUrl,
+                    categoryId = channel.categoryId,
+                    categoryName = channel.categoryName,
+                    links = favoriteLinks
+                )
+                favoritesRepository.addFavorite(favorite)
                 _isFavorite.value = true
             }
         }
@@ -275,6 +311,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun setRelatedChannels(channels: List<Channel>) {
+        // Explicit/synchronous selection (e.g. favourites source) always wins: invalidate any
+        // in-flight related-channels load so a late result can't overwrite this afterward.
         nextRelatedGeneration()
         _relatedItems.postValue(channels.take(9))
     }

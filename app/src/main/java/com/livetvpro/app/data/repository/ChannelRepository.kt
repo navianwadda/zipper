@@ -61,14 +61,6 @@ class ChannelRepository @Inject constructor(
             entity.toChannel(links)
         }
 
-    suspend fun getChannelsByIds(ids: List<String>): List<Channel> =
-        channelDao.getChannelsByIds(ids).map { entity ->
-            val links = entity.linksJson?.let {
-                gson.fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
-            }
-            entity.toChannel(links)
-        }
-
     suspend fun getGroups(categoryId: String): List<String> =
         channelDao.getGroups(categoryId)
 

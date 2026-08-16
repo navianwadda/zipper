@@ -1226,34 +1226,41 @@ class FloatingPlayerActivity : ComponentActivity() {
         if (DeviceUtils.isTvDevice) return
         when (contentType) {
             ContentType.CHANNEL -> {
-                channelData?.let { channel ->
-                    val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-                    val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
+                val channel = channelData
+                if (channel == null) {
+                    relatedContentState.value = RelatedContentState.Hidden
+                    return
+                }
+                val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+                val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
 
-                    if (isFavoritesSource) {
-                        val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
-                        viewModel.setChannelList(favList)
-                        val related = favList.filter { it.id != channel.id }.shuffled().take(9)
-                        relatedChannelsLockedForContentId = contentId
-                        relatedChannels = related
-                        relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
-                        else RelatedContentState.Channels(related)
-                    } else if (intentIsSports) {
-                        relatedChannelsLockedForContentId = null
-                        viewModel.loadRandomRelatedSports(channel.id)
-                    } else {
-                        relatedChannelsLockedForContentId = null
-                        val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
-                        viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
-                    }
+                if (isFavoritesSource) {
+                    val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
+                    viewModel.setChannelList(favList)
+                    val related = favList.filter { it.id != channel.id }.shuffled().take(9)
+                    relatedChannelsLockedForContentId = contentId
+                    relatedChannels = related
+                    relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+                    else RelatedContentState.Channels(related)
+                } else if (intentIsSports) {
+                    relatedChannelsLockedForContentId = null
+                    viewModel.loadRandomRelatedSports(channel.id)
+                } else {
+                    relatedChannelsLockedForContentId = null
+                    val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
+                    viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
                 }
             }
             ContentType.EVENT -> {
-                eventData?.let { event ->
+                val event = eventData
+                if (event == null) {
+                    relatedContentState.value = RelatedContentState.Hidden
+                } else {
                     viewModel.loadRelatedEvents(event.id)
                 }
             }
             ContentType.NETWORK_STREAM -> {
+                relatedContentState.value = RelatedContentState.Hidden
             }
         }
     }
@@ -2003,4 +2010,3 @@ class FloatingPlayerActivity : ComponentActivity() {
         }
     }
 }
-

@@ -116,16 +116,21 @@ object M3uParser {
         android.util.Log.d("M3uParser", "Fetching playlist from: $trimmedUrl")
 
         var lastException: java.io.IOException? = null
+        var got403 = false
 
         for (userAgent in USER_AGENT_FALLBACKS) {
             android.util.Log.d("M3uParser", "Trying User-Agent: $userAgent")
             try {
                 val result = fetchWithUserAgent(trimmedUrl, userAgent)
                 if (result != null) return result
+                got403 = true
             } catch (e: java.io.IOException) {
                 if (e.message?.contains("401") == true ||
                     e.message?.contains("404") == true ||
                     e.message?.startsWith("HTTP 5") == true) {
+                    throw e
+                }
+                if (!got403) {
                     throw e
                 }
                 lastException = e
@@ -139,8 +144,8 @@ object M3uParser {
         val url = URL(trimmedUrl)
         val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
-        connection.connectTimeout = 30000
-        connection.readTimeout = 30000
+        connection.connectTimeout = 8000
+        connection.readTimeout    = 8000
 
         connection.setRequestProperty("User-Agent", userAgent)
         connection.setRequestProperty("Accept", "*/*")
@@ -964,4 +969,3 @@ object M3uParser {
         return if (parts.size > 1) parts.joinToString("|") else parts[0]
     }
 }
-

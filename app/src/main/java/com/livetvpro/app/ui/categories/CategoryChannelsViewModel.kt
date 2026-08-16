@@ -21,6 +21,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -46,6 +48,7 @@ class CategoryChannelsViewModel @Inject constructor(
     val currentSearchQuery: String get() = _searchQuery.value
 
     private val _favoriteStatusCache = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteIds: StateFlow<Set<String>> = _favoriteStatusCache.asStateFlow()
 
     val categoryName: String = savedStateHandle.get<String>("categoryName") ?: "Channels"
 

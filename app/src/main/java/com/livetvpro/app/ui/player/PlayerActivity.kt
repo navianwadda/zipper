@@ -1617,6 +1617,8 @@ class PlayerActivity : ComponentActivity() {
                 .setKeepPostFor302Redirects(true)
             val clearKeyMgr = when {
                 parsed.drmScheme != "clearkey" -> null
+                parsed.drmJwk != null ->
+                    PlayerStreamHelper.buildClearKeyJwkManager(parsed.drmJwk)
                 parsed.drmKeyId != null && parsed.drmKey != null ->
                     PlayerStreamHelper.buildClearKeyInlineManager(parsed.drmKeyId, parsed.drmKey)
                 parsed.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->

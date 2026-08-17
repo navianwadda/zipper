@@ -17,6 +17,7 @@ data class StreamInfo(
     val drmKey: String?,
     val drmLicenseUrl: String? = null,
     val customHeaders: Map<String, String> = emptyMap(),
+    val drmJwk: String? = null,
 )
 
 object PlayerStreamHelper {
@@ -50,6 +51,7 @@ object PlayerStreamHelper {
         var drmKeyId: String? = null
         var drmKey: String? = null
         var drmLicenseUrl: String? = null
+        var drmJwk: String? = null
 
         for (part in parts) {
             val eqIndex = part.indexOf('=')
@@ -74,6 +76,14 @@ object PlayerStreamHelper {
                         }
                     }
                 }
+                "drmjwk" -> {
+                    try {
+                        drmJwk = String(
+                            android.util.Base64.decode(value, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP),
+                            Charsets.UTF_8
+                        )
+                    } catch (_: Exception) { drmJwk = value }
+                }
                 "drmkeyid" -> drmKeyId = value
                 "drmkey" -> drmKey = value
                 "referer", "referrer" -> headers["Referer"] = value
@@ -85,7 +95,7 @@ object PlayerStreamHelper {
             }
         }
 
-        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders)
+        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders, drmJwk)
     }
 
     fun normalizeDrmScheme(scheme: String): String {
@@ -149,7 +159,8 @@ object PlayerStreamHelper {
             drmKeyId = resolvedDrmKeyId,
             drmKey = resolvedDrmKey,
             drmLicenseUrl = resolvedDrmLicenseUrl,
-            customHeaders = customHeaders
+            customHeaders = customHeaders,
+            drmJwk = base.drmJwk,
         )
     }
 
@@ -331,9 +342,13 @@ object PlayerStreamHelper {
 
     fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
         return try {
+            val isMultiKey = try {
+                val arr = org.json.JSONObject(jwkJson).optJSONArray("keys")
+                arr != null && arr.length() > 1
+            } catch (_: Exception) { false }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(isMultiKey)
                 .setPlayClearSamplesWithoutKeys(true)
                 .build(LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }

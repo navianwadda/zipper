@@ -1614,6 +1614,8 @@ class FloatingPlayerActivity : ComponentActivity() {
 
             val clearKeyMgr: androidx.media3.exoplayer.drm.DefaultDrmSessionManager? = when {
                 parsed.drmScheme != "clearkey" -> null
+                parsed.drmJwk != null ->
+                    PlayerStreamHelper.buildClearKeyJwkManager(parsed.drmJwk)
                 parsed.drmKeyId != null && parsed.drmKey != null ->
                     PlayerStreamHelper.buildClearKeyInlineManager(parsed.drmKeyId, parsed.drmKey)
                 parsed.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->

@@ -21,7 +21,8 @@ object M3uParser {
         val httpHeaders: Map<String, String> = emptyMap(),
         val drmScheme: String? = null,
         val drmKeyId: String? = null,
-        val drmKey: String? = null
+        val drmKey: String? = null,
+        val drmLicenseUrl: String? = null,
     )
 
     private val PIPE_PARAM_PATTERN    = Regex("[&?]([^=]+)=(?:%7C|\\|)([^=]+)=([^&]+)")
@@ -442,6 +443,7 @@ object M3uParser {
         var currentDrmScheme: String? = null
         var currentDrmKeyId: String?  = null
         var currentDrmKey: String?    = null
+        var currentDrmLicenseUrl: String? = null
 
         content.reader().forEachLine { line ->
             val trimmedLine = line.trim()
@@ -461,29 +463,50 @@ object M3uParser {
                             currentDrmKeyId = keyValue
                             currentDrmKey   = "LICENSE_URL"
                         }
-                        keyValue.contains(":") && !keyValue.startsWith("{") -> {
+                        keyValue.startsWith("{") -> {
+                            try {
+                                val json = org.json.JSONObject(keyValue)
+                                val keysArray = json.optJSONArray("keys")
+                                if (keysArray != null && keysArray.length() > 1) {
+                                    currentDrmKeyId = null
+                                    currentDrmKey   = null
+                                    currentDrmLicenseUrl = keyValue
+                                } else {
+                                    val (keyId, key) = parseJWKToKeyIdPair(keyValue)
+                                    if (keyId != null && key != null) {
+                                        currentDrmKeyId      = keyId
+                                        currentDrmKey        = key
+                                        currentDrmLicenseUrl = null
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                val (keyId, key) = parseJWKToKeyIdPair(keyValue)
+                                if (keyId != null && key != null) {
+                                    currentDrmKeyId = keyId
+                                    currentDrmKey   = key
+                                }
+                            }
+                        }
+                        keyValue.contains(":") -> {
                             val parts = keyValue.split(":", limit = 2)
                             if (parts.size == 2) {
                                 currentDrmKeyId = parts[0].trim()
                                 currentDrmKey   = parts[1].trim()
                             }
                         }
-                        keyValue.startsWith("{") -> {
-                            val (keyId, key) = parseJWKToKeyIdPair(keyValue)
-                            if (keyId != null && key != null) {
-                                currentDrmKeyId = keyId
-                                currentDrmKey   = key
-                            }
-                        }
                     }
                 }
 
                 trimmedLine.startsWith("#EXTINF:") -> {
-                    currentUserAgent = null
-                    currentHeaders   = mutableMapOf()
-                    currentName      = extractChannelName(trimmedLine)
-                    currentLogo      = extractAttribute(trimmedLine, "tvg-logo")
-                    currentGroup     = extractAttribute(trimmedLine, "group-title")
+                    currentUserAgent     = null
+                    currentHeaders       = mutableMapOf()
+                    currentDrmScheme     = null
+                    currentDrmKeyId      = null
+                    currentDrmKey        = null
+                    currentDrmLicenseUrl = null
+                    currentName          = extractChannelName(trimmedLine)
+                    currentLogo          = extractAttribute(trimmedLine, "tvg-logo")
+                    currentGroup         = extractAttribute(trimmedLine, "group-title")
                 }
 
                 trimmedLine.startsWith("#EXTVLCOPT:http-user-agent=") -> {
@@ -539,20 +562,22 @@ object M3uParser {
                         finalHeaders.putAll(inlineHeaders)
 
                         channels.add(M3uChannel(
-                            name        = currentName,
-                            logoUrl     = currentLogo,
-                            streamUrl   = streamUrl,
-                            groupTitle  = currentGroup,
-                            userAgent   = currentUserAgent,
-                            httpHeaders = finalHeaders,
-                            drmScheme   = inlineDrmInfo.first  ?: currentDrmScheme,
-                            drmKeyId    = inlineDrmInfo.second ?: currentDrmKeyId,
-                            drmKey      = inlineDrmInfo.third  ?: currentDrmKey
+                            name         = currentName,
+                            logoUrl      = currentLogo,
+                            streamUrl    = streamUrl,
+                            groupTitle   = currentGroup,
+                            userAgent    = currentUserAgent,
+                            httpHeaders  = finalHeaders,
+                            drmScheme    = inlineDrmInfo.first  ?: currentDrmScheme,
+                            drmKeyId     = inlineDrmInfo.second ?: currentDrmKeyId,
+                            drmKey       = inlineDrmInfo.third  ?: currentDrmKey,
+                            drmLicenseUrl = currentDrmLicenseUrl,
                         ))
 
-                        currentDrmScheme = null
-                        currentDrmKeyId  = null
-                        currentDrmKey    = null
+                        currentDrmScheme     = null
+                        currentDrmKeyId      = null
+                        currentDrmKey        = null
+                        currentDrmLicenseUrl = null
                     }
                 }
             }
@@ -957,12 +982,21 @@ object M3uParser {
         m3u.httpHeaders.forEach { (key, value) -> parts.add("$key=$value") }
         if (m3u.drmScheme != null) {
             parts.add("drmScheme=${m3u.drmScheme}")
-            if (m3u.drmKeyId != null && m3u.drmKey != null) {
-                if (m3u.drmKeyId.startsWith("http://", ignoreCase = true) ||
-                    m3u.drmKeyId.startsWith("https://", ignoreCase = true)) {
-                    parts.add("drmLicense=${m3u.drmKeyId}")
-                } else {
-                    parts.add("drmLicense=${m3u.drmKeyId}:${m3u.drmKey}")
+            when {
+                m3u.drmLicenseUrl != null && m3u.drmLicenseUrl.startsWith("{") -> {
+                    val encoded = android.util.Base64.encodeToString(
+                        m3u.drmLicenseUrl.toByteArray(Charsets.UTF_8),
+                        android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP or android.util.Base64.NO_PADDING
+                    )
+                    parts.add("drmJwk=$encoded")
+                }
+                m3u.drmKeyId != null && m3u.drmKey != null -> {
+                    if (m3u.drmKeyId.startsWith("http://", ignoreCase = true) ||
+                        m3u.drmKeyId.startsWith("https://", ignoreCase = true)) {
+                        parts.add("drmLicense=${m3u.drmKeyId}")
+                    } else {
+                        parts.add("drmLicense=${m3u.drmKeyId}:${m3u.drmKey}")
+                    }
                 }
             }
         }

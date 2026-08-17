@@ -1929,7 +1929,8 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         val drmKeyId: String?,
         val drmKey: String?,
         val drmLicenseUrl: String?,
-        val customHeaders: Map<String, String> = emptyMap()
+        val customHeaders: Map<String, String> = emptyMap(),
+        val drmJwk: String? = null,
     )
 
     private fun buildStreamInfoFromLink(
@@ -1992,7 +1993,8 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
             drmKeyId = resolvedDrmKeyId,
             drmKey = resolvedDrmKey,
             drmLicenseUrl = resolvedDrmLicenseUrl,
-            customHeaders = custom
+            customHeaders = custom,
+            drmJwk = base.drmJwk,
         )
     }
 
@@ -2020,6 +2022,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         var drmKeyId: String? = null
         var drmKey: String? = null
         var drmLicenseUrl: String? = null
+        var drmJwk: String? = null
 
         for (part in parts) {
             val eqIndex = part.indexOf('=')
@@ -2040,6 +2043,14 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                         }
                     }
                 }
+                "drmjwk" -> {
+                    try {
+                        drmJwk = String(
+                            android.util.Base64.decode(value, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP),
+                            Charsets.UTF_8
+                        )
+                    } catch (_: Exception) { drmJwk = value }
+                }
                 "drmkeyid" -> drmKeyId = value
                 "drmkey" -> drmKey = value
                 "user-agent", "useragent" -> headers["User-Agent"] = value
@@ -2050,7 +2061,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 else -> customHeaders[key] = value
             }
         }
-        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders)
+        return StreamInfo(url, headers + customHeaders, drmScheme, drmKeyId, drmKey, drmLicenseUrl, customHeaders, drmJwk)
     }
 
     private fun buildStreamInfoFromDrmFields(
@@ -2094,7 +2105,8 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
             drmKeyId = parsed.drmKeyId ?: explicitInfo.drmKeyId,
             drmKey = parsed.drmKey ?: explicitInfo.drmKey,
             drmLicenseUrl = parsed.drmLicenseUrl ?: explicitInfo.drmLicenseUrl,
-            customHeaders = parsed.customHeaders
+            customHeaders = parsed.customHeaders,
+            drmJwk = parsed.drmJwk,
         )
     }
 
@@ -2134,9 +2146,13 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
 
     private fun buildClearKeyJwkManager(jwkJson: String): DefaultDrmSessionManager? {
         return try {
+            val isMultiKey = try {
+                val arr = org.json.JSONObject(jwkJson).optJSONArray("keys")
+                arr != null && arr.length() > 1
+            } catch (_: Exception) { false }
             DefaultDrmSessionManager.Builder()
                 .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .setMultiSession(false)
+                .setMultiSession(isMultiKey)
                 .setPlayClearSamplesWithoutKeys(true)
                 .build(LocalMediaDrmCallback(jwkJson.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) { null }
@@ -2192,6 +2208,8 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
     ): DefaultMediaSourceFactory {
         val drmMgr = when {
             streamInfo.drmScheme == "clearkey" -> when {
+                streamInfo.drmJwk != null ->
+                    buildClearKeyJwkManager(streamInfo.drmJwk)
                 streamInfo.drmKeyId != null && streamInfo.drmKey != null ->
                     buildClearKeyInlineManager(streamInfo.drmKeyId, streamInfo.drmKey)
                 streamInfo.drmLicenseUrl?.trimStart()?.startsWith("{") == true ->

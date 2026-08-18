@@ -15,8 +15,8 @@ import com.livetvpro.app.utils.FloatingPlayerHelper
 fun NetworkStreamRoute(preferencesManager: PreferencesManager) {
     val context = LocalContext.current
     NetworkStreamScreen(
-        onPlay = { streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme ->
-            launchPlayer(context, preferencesManager, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme)
+        onPlay = { streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, customHeaders ->
+            launchPlayer(context, preferencesManager, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, customHeaders)
         }
     )
 }
@@ -30,7 +30,8 @@ private fun launchPlayer(
     origin: String,
     drmLicense: String,
     userAgent: String,
-    drmScheme: String
+    drmScheme: String,
+    customHeaders: String = ""
 ) {
     if (streamUrl.isBlank()) {
         Toast.makeText(context, R.string.stream_url_required, Toast.LENGTH_SHORT).show()
@@ -40,12 +41,12 @@ private fun launchPlayer(
     val hasPermission = FloatingPlayerHelper.hasOverlayPermission(context)
 
     if (DeviceUtils.isTvDevice || !floatingEnabled) {
-        launchFullscreenPlayer(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme)
+        launchFullscreenPlayer(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, customHeaders)
         return
     }
     if (!hasPermission) {
         Toast.makeText(context, "Overlay permission required for floating player. Opening normally instead.", Toast.LENGTH_LONG).show()
-        launchFullscreenPlayer(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme)
+        launchFullscreenPlayer(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, customHeaders)
         return
     }
     try {
@@ -58,11 +59,12 @@ private fun launchPlayer(
             drmLicense = drmLicense,
             userAgent = userAgent,
             drmScheme = drmScheme,
-            streamName = "Network Stream"
+            streamName = "Network Stream",
+            customHeaders = customHeaders
         )
     } catch (e: Exception) {
         Toast.makeText(context, "Failed to launch floating player: ${e.message}", Toast.LENGTH_SHORT).show()
-        launchFullscreenPlayer(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme)
+        launchFullscreenPlayer(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, customHeaders)
     }
 }
 
@@ -74,7 +76,8 @@ private fun launchFullscreenPlayer(
     origin: String,
     drmLicense: String,
     userAgent: String,
-    drmScheme: String
+    drmScheme: String,
+    customHeaders: String = ""
 ) {
     val intent = Intent(context, PlayerActivity::class.java).apply {
         putExtra("IS_NETWORK_STREAM", true)
@@ -86,6 +89,7 @@ private fun launchFullscreenPlayer(
         putExtra("USER_AGENT", userAgent)
         putExtra("DRM_SCHEME", drmScheme)
         putExtra("CHANNEL_NAME", "Network Stream")
+        putExtra("CUSTOM_HEADERS", customHeaders)
     }
     context.startActivity(intent)
 }

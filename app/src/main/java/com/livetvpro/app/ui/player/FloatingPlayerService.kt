@@ -539,13 +539,13 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 channel != null -> {
                     val links = channel.links
                     val sel = if (links != null && linkIndex in links.indices) links[linkIndex] else links?.firstOrNull()
-                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
+                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders, sel.drmJwk)
                     else parseStreamUrl(streamUrl)
                 }
                 event != null -> {
                     val links = event.links
                     val sel = if (linkIndex in links.indices) links[linkIndex] else links.firstOrNull()
-                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
+                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders, sel.drmJwk)
                     else parseStreamUrl(streamUrl)
                 }
                 else -> parseStreamUrl(streamUrl)
@@ -1044,7 +1044,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                         if (linkIndex in channel.links!!.indices) channel.links!![linkIndex]
                         else channel.links!!.firstOrNull()
                     } else null
-                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
+                    if (sel != null) buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders, sel.drmJwk)
                     else {
                         val fallbackUrl = channel.streamUrl.takeIf { it.isNotBlank() } ?: return
                         parseStreamUrl(fallbackUrl)
@@ -1054,7 +1054,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     val links = event.links
                     if (links.isEmpty()) return
                     val sel = if (linkIndex in links.indices) links[linkIndex] else links.firstOrNull() ?: return
-                    buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders)
+                    buildStreamInfoFromLink(sel.url, sel.cookie, sel.referer, sel.origin, sel.userAgent, sel.drmScheme, sel.drmLicenseUrl, sel.xForwardedFor, sel.customHeaders, sel.drmJwk)
                 }
                 else -> return
             }
@@ -1975,7 +1975,8 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         drmScheme: String?,
         drmLicenseUrl: String?,
         xForwardedFor: String? = null,
-        customHeaders: Map<String, String> = emptyMap()
+        customHeaders: Map<String, String> = emptyMap(),
+        drmJwk: String? = null,
     ): StreamInfo {
         val base = parseStreamUrl(url)
 
@@ -2027,7 +2028,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
             drmKey = resolvedDrmKey,
             drmLicenseUrl = resolvedDrmLicenseUrl,
             customHeaders = custom,
-            drmJwk = base.drmJwk,
+            drmJwk = drmJwk ?: base.drmJwk,
         )
     }
 

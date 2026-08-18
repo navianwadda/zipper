@@ -1464,6 +1464,13 @@ class PlayerActivity : ComponentActivity() {
                 allEventLinks = listOf(mergedLink)
                 streamUrl = PlayerStreamHelper.buildStreamUrl(mergedLink)
             } else {
+                val extraHeaders = try {
+                    val raw = intent.getStringExtra("CUSTOM_HEADERS") ?: ""
+                    if (raw.isNotBlank()) {
+                        val json = org.json.JSONObject(raw)
+                        json.keys().asSequence().associateWith { json.getString(it) }
+                    } else emptyMap()
+                } catch (_: Exception) { emptyMap() }
                 val link = LiveEventLink(
                     quality   = "Network Stream", url = rawUrl,
                     cookie    = intent.getStringExtra("COOKIE") ?: "",
@@ -1472,6 +1479,7 @@ class PlayerActivity : ComponentActivity() {
                     userAgent = intent.getStringExtra("USER_AGENT") ?: "Default",
                     drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey",
                     drmLicenseUrl = intent.getStringExtra("DRM_LICENSE") ?: "",
+                    customHeaders = extraHeaders,
                 )
                 allEventLinks = listOf(link)
                 streamUrl = PlayerStreamHelper.buildStreamUrl(link)

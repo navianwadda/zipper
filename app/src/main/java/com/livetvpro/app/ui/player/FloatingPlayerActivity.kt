@@ -1096,15 +1096,12 @@ class FloatingPlayerActivity : ComponentActivity() {
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
                 val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
                 val customHeadersRaw = intent.getStringExtra("CUSTOM_HEADERS") ?: ""
-                val customHeadersMap = if (customHeadersRaw.isNotBlank()) {
+                val customHeadersMap = mutableMapOf<String, String>()
+                if (customHeadersRaw.isNotBlank()) {
                     try {
                         val json = org.json.JSONObject(customHeadersRaw)
-                        json.keys().asSequence().associateWith { json.getString(it) }
-                    } catch (_: Exception) {
-                        emptyMap()
-                    }
-                } else {
-                    emptyMap()
+                        json.keys().asSequence().forEach { customHeadersMap[it] = json.getString(it) }
+                    } catch (_: Exception) {}
                 }
 
                 allEventLinks = listOf(

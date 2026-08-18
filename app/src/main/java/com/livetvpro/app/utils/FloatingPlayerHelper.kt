@@ -120,7 +120,7 @@ object FloatingPlayerHelper {
         customHeaders: String = ""
     ): String? {
         if (DeviceUtils.isTvDevice) {
-            FloatingPlayerActivity.startWithNetworkStream(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, customHeaders = customHeaders)
+            FloatingPlayerActivity.startWithNetworkStream(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor = xForwardedFor, customHeaders = customHeaders)
             return null
         }
 

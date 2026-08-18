@@ -74,6 +74,7 @@ class FloatingPlayerService : Service() {
         var networkUserAgent: String? = null,
         var networkDrmScheme: String? = null,
         var networkXForwardedFor: String? = null,
+        var networkCustomHeaders: String? = null,
         var currentLinkIndex: Int = 0,
         var channelList: List<Channel>? = null,
 var channelListCacheKey: String? = null,
@@ -193,7 +194,8 @@ var isBoosted: Boolean = false
             userAgent: String = "",
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
-            xForwardedFor: String = ""
+            xForwardedFor: String = "",
+            customHeaders: String = ""
         ): Boolean {
             try {
                 val intent = Intent(context, FloatingPlayerService::class.java).apply {
@@ -208,6 +210,7 @@ var isBoosted: Boolean = false
                     putExtra("DRM_SCHEME", drmScheme)
                     putExtra("CHANNEL_NAME", streamName)
                     putExtra("X_FORWARDED_FOR", xForwardedFor)
+                    putExtra("CUSTOM_HEADERS", customHeaders)
                     putExtra(EXTRA_LINK_INDEX, 0)
                 }
 
@@ -257,7 +260,8 @@ var isBoosted: Boolean = false
             userAgent: String = "",
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
-            xForwardedFor: String = ""
+            xForwardedFor: String = "",
+            customHeaders: String = ""
         ) {
             val intent = Intent(context, FloatingPlayerService::class.java).apply {
                 action = ACTION_UPDATE_NETWORK_STREAM
@@ -271,6 +275,7 @@ var isBoosted: Boolean = false
                 putExtra("DRM_SCHEME", drmScheme)
                 putExtra("CHANNEL_NAME", streamName)
                 putExtra("X_FORWARDED_FOR", xForwardedFor)
+                putExtra("CUSTOM_HEADERS", customHeaders)
             }
             context.startService(intent)
         }
@@ -383,8 +388,9 @@ var isBoosted: Boolean = false
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
                 val streamName = intent.getStringExtra("CHANNEL_NAME") ?: "Network Stream"
                 val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
+                val customHeaders = intent.getStringExtra("CUSTOM_HEADERS") ?: ""
                 if (instanceId != null && streamUrl.isNotBlank()) {
-                    updateInstanceStreamWithNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor)
+                    updateInstanceStreamWithNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders)
                 }
                 return START_STICKY
             }
@@ -408,15 +414,16 @@ var isBoosted: Boolean = false
             val drmScheme = intent?.getStringExtra("DRM_SCHEME") ?: "clearkey"
             val streamName = intent?.getStringExtra("CHANNEL_NAME") ?: "Network Stream"
             val xForwardedFor = intent?.getStringExtra("X_FORWARDED_FOR") ?: ""
+            val customHeaders = intent?.getStringExtra("CUSTOM_HEADERS") ?: ""
 
             val restorePosition = intent?.getBooleanExtra(EXTRA_RESTORE_POSITION, false) ?: false
             if (isRestoredFromFullscreen && PlayerHolder.player != null) {
                 createFloatingPlayerInstanceFromNetworkStreamTransfer(
-                    instanceId, streamName, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, xForwardedFor, restorePosition = restorePosition
+                    instanceId, streamName, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, xForwardedFor, customHeaders = customHeaders, restorePosition = restorePosition
                 )
                 updateNotification()
             } else if (streamUrl.isNotBlank()) {
-                createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, restorePosition = restorePosition)
+                createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders = customHeaders, restorePosition = restorePosition)
                 updateNotification()
             }
             return START_STICKY
@@ -749,13 +756,14 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         userAgent: String,
         drmScheme: String,
         xForwardedFor: String = "",
+        customHeaders: String = "",
         restorePosition: Boolean = false
     ) {
         try {
             val transferredPlayer = PlayerHolder.player
             if (transferredPlayer == null) {
                 createFloatingPlayerInstanceForNetworkStream(
-                    instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, restorePosition = restorePosition
+                    instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders = customHeaders, restorePosition = restorePosition
                 )
                 return
             }
@@ -833,7 +841,8 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 networkDrmLicense = drmLicense,
                 networkUserAgent = userAgent,
                 networkDrmScheme = drmScheme,
-                networkXForwardedFor = xForwardedFor
+                networkXForwardedFor = xForwardedFor,
+                networkCustomHeaders = customHeaders,
             )
             activeInstances[instanceId] = instance
 
@@ -863,6 +872,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         drmScheme: String,
         streamName: String,
         xForwardedFor: String = "",
+        customHeaders: String = "",
         restorePosition: Boolean = false
     ) {
         try {
@@ -913,6 +923,12 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             if (referer.isNotEmpty()) headers["Referer"] = referer
             if (origin.isNotEmpty()) headers["Origin"] = origin
             if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
+            if (customHeaders.isNotBlank()) {
+                try {
+                    val json = org.json.JSONObject(customHeaders)
+                    json.keys().asSequence().forEach { headers[it] = json.getString(it) }
+                } catch (_: Exception) {}
+            }
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
                 userAgent
             else
@@ -995,7 +1011,8 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 networkDrmLicense = drmLicense,
                 networkUserAgent = userAgent,
                 networkDrmScheme = drmScheme,
-                networkXForwardedFor = xForwardedFor
+                networkXForwardedFor = xForwardedFor,
+                networkCustomHeaders = customHeaders,
             )
             activeInstances[instanceId] = instance
 
@@ -1135,7 +1152,8 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         userAgent: String,
         drmScheme: String,
         streamName: String,
-        xForwardedFor: String
+        xForwardedFor: String,
+        customHeaders: String = ""
     ) {
         val instance = activeInstances[instanceId] ?: return
 
@@ -1145,6 +1163,12 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             if (referer.isNotEmpty()) headers["Referer"] = referer
             if (origin.isNotEmpty()) headers["Origin"] = origin
             if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
+            if (customHeaders.isNotBlank()) {
+                try {
+                    val json = org.json.JSONObject(customHeaders)
+                    json.keys().asSequence().forEach { headers[it] = json.getString(it) }
+                } catch (_: Exception) {}
+            }
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
                 userAgent else "okhttp/4.12.0"
             headers["User-Agent"] = effectiveUserAgent
@@ -1211,7 +1235,8 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 networkDrmLicense = drmLicense,
                 networkUserAgent = userAgent,
                 networkDrmScheme = drmScheme,
-                networkXForwardedFor = xForwardedFor
+                networkXForwardedFor = xForwardedFor,
+                networkCustomHeaders = customHeaders,
             )
             val btnPlayPause = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
             attachPlayerListener(newPlayer, btnPlayPause, instanceId)
@@ -1305,6 +1330,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                         putExtra("USER_AGENT", inst.networkUserAgent ?: "Default")
                         putExtra("DRM_SCHEME", inst.networkDrmScheme ?: "clearkey")
                         putExtra("X_FORWARDED_FOR", inst.networkXForwardedFor ?: "")
+                        putExtra("CUSTOM_HEADERS", inst.networkCustomHeaders ?: "")
                     } else {
                         if (currentChannel != null) putExtra("extra_channel", currentChannel)
 if (currentEvent != null) putExtra("extra_event", currentEvent)
@@ -1721,12 +1747,19 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 val userAgent = instance.networkUserAgent ?: "Default"
                 val drmScheme = instance.networkDrmScheme ?: "clearkey"
                 val xForwardedFor = instance.networkXForwardedFor ?: ""
+                val customHeaders = instance.networkCustomHeaders ?: ""
 
                 val headers = mutableMapOf<String, String>()
                 if (cookie.isNotEmpty()) headers["Cookie"] = cookie
                 if (referer.isNotEmpty()) headers["Referer"] = referer
                 if (origin.isNotEmpty()) headers["Origin"] = origin
                 if (xForwardedFor.isNotEmpty()) headers["X-Forwarded-For"] = xForwardedFor
+                if (customHeaders.isNotBlank()) {
+                    try {
+                        val json = org.json.JSONObject(customHeaders)
+                        json.keys().asSequence().forEach { headers[it] = json.getString(it) }
+                    } catch (_: Exception) {}
+                }
                 val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
                     userAgent else "okhttp/4.12.0"
                 headers["User-Agent"] = effectiveUserAgent

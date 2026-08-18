@@ -310,6 +310,7 @@ object FloatingPlayerHelper {
         var xForwardedFor: String? = null
         var drmScheme: String? = null
         var drmLicenseUrl: String? = null
+        var drmJwk: String? = null
         val extraHeaders = mutableMapOf<String, String>()
 
         for (segment in rawParams.split("|")) {
@@ -324,6 +325,14 @@ object FloatingPlayerHelper {
             when (key.lowercase()) {
                 "drmscheme" -> drmScheme = value
                 "drmlicense" -> drmLicenseUrl = value
+                "drmjwk" -> {
+                    try {
+                        drmJwk = String(
+                            android.util.Base64.decode(value, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP),
+                            Charsets.UTF_8
+                        )
+                    } catch (_: Exception) { drmJwk = value }
+                }
                 "cookie" -> cookie = value
                 "referer", "referrer" -> referer = value
                 "origin" -> origin = value
@@ -346,7 +355,8 @@ object FloatingPlayerHelper {
             xForwardedFor = xForwardedFor,
             drmScheme = drmScheme,
             drmLicenseUrl = drmLicenseUrl,
-            customHeaders = extraHeaders
+            customHeaders = extraHeaders,
+            drmJwk = drmJwk,
         )
     }
 }

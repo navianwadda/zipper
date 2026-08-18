@@ -197,11 +197,11 @@ class FloatingPlayerActivity : ComponentActivity() {
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
             xForwardedFor: String = "",
-            playbackPosition: Long = -1L,
-            customHeaders: String = ""
+            playbackPosition: Long = -1L
         ) {
             val intent = Intent(context, FloatingPlayerActivity::class.java).apply {
                 putExtra("IS_NETWORK_STREAM", true)
+
                 putExtra("STREAM_URL", streamUrl)
                 putExtra("COOKIE", cookie)
                 putExtra("REFERER", referer)
@@ -210,11 +210,13 @@ class FloatingPlayerActivity : ComponentActivity() {
                 putExtra("USER_AGENT", userAgent)
                 putExtra("DRM_SCHEME", drmScheme)
                 putExtra("X_FORWARDED_FOR", xForwardedFor)
+
                 putExtra("CHANNEL_NAME", streamName)
-                putExtra("CUSTOM_HEADERS", customHeaders)
+
                 if (playbackPosition > 0) {
                     putExtra("playback_position", playbackPosition)
                 }
+
                 addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
             }
             context.startActivity(intent)
@@ -1078,8 +1080,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                     drmScheme = resolvedDrmScheme,
                     drmLicenseUrl = resolvedDrmLicenseUrl
                         ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } },
-                    customHeaders = parsed.customHeaders,
-                    drmJwk = parsed.drmJwk,
+                    customHeaders = parsed.customHeaders
                 )
 
                 allEventLinks = listOf(mergedLink)
@@ -1092,13 +1093,6 @@ class FloatingPlayerActivity : ComponentActivity() {
                 val userAgent = intent.getStringExtra("USER_AGENT") ?: ""
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
                 val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
-                val extraHeaders = try {
-                    val raw = intent.getStringExtra("CUSTOM_HEADERS") ?: ""
-                    if (raw.isNotBlank()) {
-                        val json = org.json.JSONObject(raw)
-                        json.keys().asSequence().associateWith { json.getString(it) }
-                    } else emptyMap()
-                } catch (_: Exception) { emptyMap() }
 
                 allEventLinks = listOf(
                     LiveEventLink(
@@ -1110,8 +1104,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                         userAgent = userAgent,
                         xForwardedFor = xForwardedFor.ifEmpty { null },
                         drmScheme = drmScheme,
-                        drmLicenseUrl = drmLicense,
-                        customHeaders = extraHeaders,
+                        drmLicenseUrl = drmLicense
                     )
                 )
 
@@ -1235,41 +1228,34 @@ class FloatingPlayerActivity : ComponentActivity() {
         if (DeviceUtils.isTvDevice) return
         when (contentType) {
             ContentType.CHANNEL -> {
-                val channel = channelData
-                if (channel == null) {
-                    relatedContentState.value = RelatedContentState.Hidden
-                    return
-                }
-                val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-                val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
+                channelData?.let { channel ->
+                    val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+                    val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
 
-                if (isFavoritesSource) {
-                    val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
-                    viewModel.setChannelList(favList)
-                    val related = favList.filter { it.id != channel.id }.shuffled().take(9)
-                    relatedChannelsLockedForContentId = contentId
-                    relatedChannels = related
-                    relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
-                    else RelatedContentState.Channels(related)
-                } else if (intentIsSports) {
-                    relatedChannelsLockedForContentId = null
-                    viewModel.loadRandomRelatedSports(channel.id)
-                } else {
-                    relatedChannelsLockedForContentId = null
-                    val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
-                    viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
+                    if (isFavoritesSource) {
+                        val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
+                        viewModel.setChannelList(favList)
+                        val related = favList.filter { it.id != channel.id }.shuffled().take(9)
+                        relatedChannelsLockedForContentId = contentId
+                        relatedChannels = related
+                        relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+                        else RelatedContentState.Channels(related)
+                    } else if (intentIsSports) {
+                        relatedChannelsLockedForContentId = null
+                        viewModel.loadRandomRelatedSports(channel.id)
+                    } else {
+                        relatedChannelsLockedForContentId = null
+                        val categoryId = intentCategoryId?.takeIf { it.isNotEmpty() } ?: channel.categoryId
+                        viewModel.loadRandomRelatedChannels(categoryId, channel.id, intentSelectedGroup)
+                    }
                 }
             }
             ContentType.EVENT -> {
-                val event = eventData
-                if (event == null) {
-                    relatedContentState.value = RelatedContentState.Hidden
-                } else {
+                eventData?.let { event ->
                     viewModel.loadRelatedEvents(event.id)
                 }
             }
             ContentType.NETWORK_STREAM -> {
-                relatedContentState.value = RelatedContentState.Hidden
             }
         }
     }
@@ -2022,3 +2008,4 @@ class FloatingPlayerActivity : ComponentActivity() {
         }
     }
 }
+

@@ -31,6 +31,7 @@ class NetworkStreamHistoryManager @Inject constructor(
         selectedUserAgent: String = "Default",
         customUserAgent: String = "",
         drmScheme: String = "clearkey",
+        customHeaders: String = "",
     ) {
         if (url.isBlank()) return
         val current = readEntries().toMutableList()
@@ -47,6 +48,7 @@ class NetworkStreamHistoryManager @Inject constructor(
                 selectedUserAgent = selectedUserAgent,
                 customUserAgent = customUserAgent,
                 drmScheme = drmScheme,
+                customHeaders = customHeaders,
             )
         )
         writeEntries(current.take(MAX_ENTRIES))
@@ -86,6 +88,7 @@ class NetworkStreamHistoryManager @Inject constructor(
                     selectedUserAgent = obj.optString("selectedUserAgent", "Default"),
                     customUserAgent = obj.optString("customUserAgent", ""),
                     drmScheme = obj.optString("drmScheme", "clearkey"),
+                    customHeaders = obj.optString("customHeaders", ""),
                 )
             }
         } catch (e: Exception) {
@@ -106,6 +109,7 @@ class NetworkStreamHistoryManager @Inject constructor(
             obj.put("selectedUserAgent", entry.selectedUserAgent)
             obj.put("customUserAgent", entry.customUserAgent)
             obj.put("drmScheme", entry.drmScheme)
+            obj.put("customHeaders", entry.customHeaders)
             array.put(obj)
         }
         prefs.edit().putString(KEY_ENTRIES, array.toString()).apply()

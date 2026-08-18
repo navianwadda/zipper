@@ -288,7 +288,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                             userAgent = it.userAgent,
                             xForwardedFor = it.xForwardedFor,
                             drmScheme = it.drmScheme,
-                            drmLicenseUrl = it.drmLicenseUrl
+                            drmLicenseUrl = it.drmLicenseUrl,
+                            drmJwk = it.drmJwk,
                         )
                     }
 
@@ -1077,7 +1078,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                     drmScheme = resolvedDrmScheme,
                     drmLicenseUrl = resolvedDrmLicenseUrl
                         ?: resolvedDrmKeyId?.let { id -> resolvedDrmKey?.let { k -> "$id:$k" } },
-                    customHeaders = parsed.customHeaders
+                    customHeaders = parsed.customHeaders,
+                    drmJwk = parsed.drmJwk,
                 )
 
                 allEventLinks = listOf(mergedLink)
@@ -1178,7 +1180,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                         userAgent = it.userAgent,
                         xForwardedFor = it.xForwardedFor,
                         drmScheme = it.drmScheme,
-                        drmLicenseUrl = it.drmLicenseUrl
+                        drmLicenseUrl = it.drmLicenseUrl,
+                        drmJwk = it.drmJwk,
                     )
                 }
 
@@ -1354,7 +1357,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                         userAgent = it.userAgent,
                         xForwardedFor = it.xForwardedFor,
                         drmScheme = it.drmScheme,
-                        drmLicenseUrl = it.drmLicenseUrl
+                        drmLicenseUrl = it.drmLicenseUrl,
+                        drmJwk = it.drmJwk,
                     )
                 }
                 currentLinkIndex = if (linkIndex in allEventLinks.indices) linkIndex else 0

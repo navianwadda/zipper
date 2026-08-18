@@ -10,4 +10,5 @@ data class NetworkStreamHistoryEntry(
     val selectedUserAgent: String = "Default",
     val customUserAgent: String = "",
     val drmScheme: String = "clearkey",
+    val customHeaders: String = "",
 )

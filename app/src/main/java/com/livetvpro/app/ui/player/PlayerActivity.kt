@@ -1464,13 +1464,6 @@ class PlayerActivity : ComponentActivity() {
                 allEventLinks = listOf(mergedLink)
                 streamUrl = PlayerStreamHelper.buildStreamUrl(mergedLink)
             } else {
-                val extraHeaders = try {
-                    val raw = intent.getStringExtra("CUSTOM_HEADERS") ?: ""
-                    if (raw.isNotBlank()) {
-                        val json = org.json.JSONObject(raw)
-                        json.keys().asSequence().associateWith { json.getString(it) }
-                    } else emptyMap()
-                } catch (_: Exception) { emptyMap() }
                 val link = LiveEventLink(
                     quality   = "Network Stream", url = rawUrl,
                     cookie    = intent.getStringExtra("COOKIE") ?: "",
@@ -1479,7 +1472,6 @@ class PlayerActivity : ComponentActivity() {
                     userAgent = intent.getStringExtra("USER_AGENT") ?: "Default",
                     drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey",
                     drmLicenseUrl = intent.getStringExtra("DRM_LICENSE") ?: "",
-                    customHeaders = extraHeaders,
                 )
                 allEventLinks = listOf(link)
                 streamUrl = PlayerStreamHelper.buildStreamUrl(link)
@@ -1551,51 +1543,41 @@ class PlayerActivity : ComponentActivity() {
         if (DeviceUtils.isTvDevice) return
         when (contentType) {
             ContentType.CHANNEL -> {
-                val ch = channelData
-                if (ch == null) {
-                    relatedContentState.value = RelatedContentState.Hidden
-                    return
-                }
-                val passedRelated  = intent.getStringExtra(EXTRA_RELATED_CHANNELS_KEY)?.let { ChannelListCache.get(it) }
-                val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
-                val isFavSrc       = channelListKey?.startsWith("favorites_") == true
-                when {
-                    !passedRelated.isNullOrEmpty() -> {
-                        val related = passedRelated.filter { it.id != ch.id }.take(9)
-                        relatedChannelsLockedForContentId = contentId
-                        relatedChannels = related
-                        relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
-                                                    else RelatedContentState.Channels(related)
-                    }
-                    isFavSrc -> {
-                        val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
-                        viewModel.setChannelList(favList)
-                        val related = favList.filter { it.id != ch.id }.shuffled().take(9)
-                        relatedChannelsLockedForContentId = contentId
-                        relatedChannels = related
-                        relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
-                                                    else RelatedContentState.Channels(related)
-                    }
-                    intentIsSports -> {
-                        relatedChannelsLockedForContentId = null
-                        viewModel.loadRandomRelatedSports(ch.id)
-                    }
-                    else -> {
-                        relatedChannelsLockedForContentId = null
-                        viewModel.loadRandomRelatedChannels(
-                            intentCategoryId?.takeIf { it.isNotEmpty() } ?: ch.categoryId, ch.id, intentSelectedGroup)
+                channelData?.let { ch ->
+                    val passedRelated  = intent.getStringExtra(EXTRA_RELATED_CHANNELS_KEY)?.let { ChannelListCache.get(it) }
+                    val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
+                    val isFavSrc       = channelListKey?.startsWith("favorites_") == true
+                    when {
+                        !passedRelated.isNullOrEmpty() -> {
+                            val related = passedRelated.filter { it.id != ch.id }.take(9)
+                            relatedChannelsLockedForContentId = contentId
+                            relatedChannels = related
+                            relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+                                                        else RelatedContentState.Channels(related)
+                        }
+                        isFavSrc -> {
+                            val favList = ChannelListCache.get(channelListKey!!) ?: emptyList()
+                            viewModel.setChannelList(favList)
+                            val related = favList.filter { it.id != ch.id }.shuffled().take(9)
+                            relatedChannelsLockedForContentId = contentId
+                            relatedChannels = related
+                            relatedContentState.value = if (related.isEmpty()) RelatedContentState.Hidden
+                                                        else RelatedContentState.Channels(related)
+                        }
+                        intentIsSports -> {
+                            relatedChannelsLockedForContentId = null
+                            viewModel.loadRandomRelatedSports(ch.id)
+                        }
+                        else -> {
+                            relatedChannelsLockedForContentId = null
+                            viewModel.loadRandomRelatedChannels(
+                                intentCategoryId?.takeIf { it.isNotEmpty() } ?: ch.categoryId, ch.id, intentSelectedGroup)
+                        }
                     }
                 }
             }
-            ContentType.EVENT -> {
-                val event = eventData
-                if (event == null) {
-                    relatedContentState.value = RelatedContentState.Hidden
-                } else {
-                    viewModel.loadRelatedEvents(event.id)
-                }
-            }
-            else -> relatedContentState.value = RelatedContentState.Hidden
+            ContentType.EVENT -> eventData?.let { viewModel.loadRelatedEvents(it.id) }
+            else -> {}
         }
     }
     private var playerSetupInProgress = false
@@ -1932,4 +1914,6 @@ private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.li
     drmScheme     = drmScheme,
     drmLicenseUrl = drmLicenseUrl,
     customHeaders = customHeaders,
+    drmJwk        = drmJwk,
 )
+

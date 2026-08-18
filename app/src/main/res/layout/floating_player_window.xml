@@ -12,7 +12,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
 
-        <!-- Video Player with ExoPlayer controller (includes BOTH top and bottom controls) -->
         <androidx.media3.ui.PlayerView
             android:id="@+id/player_view"
             android:layout_width="match_parent"
@@ -22,9 +21,8 @@
             app:controller_layout_id="@layout/floating_player_controls"
             app:show_timeout="3000"
             app:resize_mode="fill"
-            app:surface_type="texture_view" />
+            app:surface_type="surface_view" />
 
-        <!-- Lock Overlay (appears on top of everything when locked) -->
         <FrameLayout
             android:id="@+id/lock_overlay"
             android:layout_width="match_parent"
@@ -36,7 +34,6 @@
             
             android:elevation="10dp">
 
-            <!-- Unlock Button (appears in top-left when locked) -->
             <ImageButton
                 android:id="@+id/unlock_button"
                 android:layout_width="32dp"

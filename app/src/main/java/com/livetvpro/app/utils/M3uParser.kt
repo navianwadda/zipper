@@ -986,6 +986,12 @@ object M3uParser {
                     )
                     parts.add("drmJwk=$encoded")
                 }
+                m3u.drmLicenseUrl != null && (
+                    m3u.drmLicenseUrl.startsWith("http://", ignoreCase = true) ||
+                    m3u.drmLicenseUrl.startsWith("https://", ignoreCase = true)
+                ) -> {
+                    parts.add("drmLicense=${m3u.drmLicenseUrl}")
+                }
                 m3u.drmKeyId != null && m3u.drmKey != null -> {
                     if (m3u.drmKeyId.startsWith("http://", ignoreCase = true) ||
                         m3u.drmKeyId.startsWith("https://", ignoreCase = true)) {

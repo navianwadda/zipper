@@ -2,12 +2,9 @@ package com.livetvpro.app.ui.player.compose
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,10 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -42,6 +37,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.ui.DefaultTimeBar
+import androidx.media3.ui.TimeBar
 
 private val exoEnterAnim = fadeIn(tween(150, easing = LinearEasing))
 private val exoExitAnim  = fadeOut(tween(150, easing = LinearEasing))
@@ -924,110 +922,39 @@ private fun CustomTimeBar(
     isFocused: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    var isDragging   by remember { mutableStateOf(false) }
-    var dragPosition by remember { mutableFloatStateOf(0f) }
-    var isHovering   by remember { mutableStateOf(false) }
-    var hoverX       by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
 
-    val progress = if (duration > 0)
-        (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-    else 0f
-
-    val bufferedProgress = if (duration > 0)
-        (bufferedPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-    else 0f
-
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .pointerInput("seek") {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    isDragging   = true
-                    dragPosition = (down.position.x / size.width).coerceIn(0f, 1f)
-                    onScrub((dragPosition * duration).toLong())
-                    down.consume()
-                    while (true) {
-                        val event  = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) {
-                            isDragging = false
-                            isHovering = false
-                            onSeek((dragPosition * duration).toLong())
-                            onScrub(null)
-                            break
-                        }
-                        val newX = (change.position.x / size.width).coerceIn(0f, 1f)
-                        if (newX != dragPosition) {
-                            dragPosition = newX
-                            onScrub((dragPosition * duration).toLong())
-                            change.consume()
-                        }
+    AndroidView(
+        modifier = modifier.fillMaxWidth(),
+        factory = { context ->
+            DefaultTimeBar(context).apply {
+                isFocusable = false
+                addListener(object : TimeBar.OnScrubListener {
+                    override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                        isDragging = true
+                        onScrub(position)
                     }
-                }
-            }
-            .pointerInput("hover") {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        when (event.type) {
-                            PointerEventType.Enter -> isHovering = true
-                            PointerEventType.Exit  -> isHovering = false
-                            PointerEventType.Move  -> {
-                                isHovering = true
-                                hoverX = event.changes.firstOrNull()?.position?.x ?: hoverX
-                            }
-                            else -> {}
-                        }
+
+                    override fun onScrubMove(timeBar: TimeBar, position: Long) {
+                        onScrub(position)
                     }
-                }
+
+                    override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                        isDragging = false
+                        onScrub(null)
+                        if (!canceled) onSeek(position)
+                    }
+                })
             }
-    ) {
-        val barHeight            = 4.dp.toPx()
-        val barHeightActive      = 6.dp.toPx()
-        val scrubberRadius       = 6.dp.toPx()
-        val scrubberRadiusActive = 9.dp.toPx()
-        val centerY              = size.height / 2f
-
-        val active         = isHovering || isDragging || isFocused
-        val activeBar      = if (active) barHeightActive      else barHeight
-        val activeScrubber = if (active) scrubberRadiusActive else scrubberRadius
-
-        drawLine(
-            color = Color.White.copy(alpha = 0.3f),
-            start = Offset(0f, centerY), end = Offset(size.width, centerY),
-            strokeWidth = activeBar, cap = StrokeCap.Round,
-        )
-        val bufferedWidth = size.width * bufferedProgress
-        if (bufferedWidth > 0f) {
-            drawLine(
-                color = Color.White.copy(alpha = 0.5f),
-                start = Offset(0f, centerY), end = Offset(bufferedWidth, centerY),
-                strokeWidth = activeBar, cap = StrokeCap.Round,
-            )
-        }
-        val currentProgress = if (isDragging) dragPosition else progress
-        val playedWidth     = size.width * currentProgress
-        if (playedWidth > 0f) {
-            drawLine(
-                color = Color.White,
-                start = Offset(0f, centerY), end = Offset(playedWidth, centerY),
-                strokeWidth = activeBar, cap = StrokeCap.Round,
-            )
-        }
-        drawCircle(
-            color  = Color.White,
-            radius = activeScrubber,
-            center = Offset(playedWidth, centerY),
-        )
-        if (isHovering && !isDragging && duration > 0L) {
-            drawCircle(
-                color  = Color.White.copy(alpha = 0.45f),
-                radius = 4.dp.toPx(),
-                center = Offset(hoverX.coerceIn(0f, size.width), centerY),
-            )
-        }
-    }
+        },
+        update = { timeBar ->
+            timeBar.setDuration(duration.coerceAtLeast(0L))
+            timeBar.setBufferedPosition(bufferedPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
+            if (!isDragging) {
+                timeBar.setPosition(currentPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
+            }
+        },
+    )
 }
 
 private fun formatTime(timeMs: Long): String {

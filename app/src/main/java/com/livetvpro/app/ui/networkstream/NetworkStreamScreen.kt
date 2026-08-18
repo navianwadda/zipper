@@ -81,7 +81,7 @@ private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 @Composable
 fun NetworkStreamScreen(
     viewModel: NetworkStreamViewModel = hiltViewModel(),
-    onPlay: (streamUrl: String, cookie: String, referer: String, origin: String, drmLicense: String, userAgent: String, drmScheme: String) -> Unit
+    onPlay: (streamUrl: String, cookie: String, referer: String, origin: String, drmLicense: String, userAgent: String, drmScheme: String, customHeaders: String) -> Unit
 ) {
     val primaryColorInt by viewModel.primaryColorFlow.collectAsState()
     val primaryColor = Color(primaryColorInt)
@@ -97,6 +97,7 @@ fun NetworkStreamScreen(
     var customUserAgent by remember { mutableStateOf(viewModel.customUserAgent) }
     var selectedUserAgent by remember { mutableStateOf(viewModel.selectedUserAgent) }
     var selectedDrmScheme by remember { mutableStateOf(viewModel.selectedDrmScheme) }
+    var customHeaders by remember { mutableStateOf(viewModel.customHeaders) }
 
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -151,6 +152,12 @@ fun NetworkStreamScreen(
                     primaryColor = primaryColor,
                     keyboardType = KeyboardType.Uri
                 )
+                StreamTextField(
+                    value = customHeaders,
+                    onValueChange = { customHeaders = it; viewModel.customHeaders = it },
+                    label = "Custom Headers (JSON: {\"key\":\"value\"})",
+                    primaryColor = primaryColor
+                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -197,7 +204,7 @@ fun NetworkStreamScreen(
                     if (streamUrl.isBlank()) return@FloatingActionButton
                     val ua = if (selectedUserAgent == "Custom") customUserAgent else selectedUserAgent
                     viewModel.recordPlayed(streamUrl)
-                    onPlay(streamUrl, cookie, referer, origin, drmLicense, ua, selectedDrmScheme)
+                    onPlay(streamUrl, cookie, referer, origin, drmLicense, ua, selectedDrmScheme, customHeaders)
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)

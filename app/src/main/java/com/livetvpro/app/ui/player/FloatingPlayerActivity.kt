@@ -197,6 +197,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
             xForwardedFor: String = "",
+            customHeaders: String = "",
             playbackPosition: Long = -1L
         ) {
             val intent = Intent(context, FloatingPlayerActivity::class.java).apply {
@@ -210,6 +211,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 putExtra("USER_AGENT", userAgent)
                 putExtra("DRM_SCHEME", drmScheme)
                 putExtra("X_FORWARDED_FOR", xForwardedFor)
+                putExtra("CUSTOM_HEADERS", customHeaders)
 
                 putExtra("CHANNEL_NAME", streamName)
 
@@ -1093,6 +1095,17 @@ class FloatingPlayerActivity : ComponentActivity() {
                 val userAgent = intent.getStringExtra("USER_AGENT") ?: ""
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
                 val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
+                val customHeadersRaw = intent.getStringExtra("CUSTOM_HEADERS") ?: ""
+                val customHeadersMap = if (customHeadersRaw.isNotBlank()) {
+                    try {
+                        val json = org.json.JSONObject(customHeadersRaw)
+                        json.keys().asSequence().associateWith { json.getString(it) }
+                    } catch (_: Exception) {
+                        emptyMap()
+                    }
+                } else {
+                    emptyMap()
+                }
 
                 allEventLinks = listOf(
                     LiveEventLink(
@@ -1104,7 +1117,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                         userAgent = userAgent,
                         xForwardedFor = xForwardedFor.ifEmpty { null },
                         drmScheme = drmScheme,
-                        drmLicenseUrl = drmLicense
+                        drmLicenseUrl = drmLicense,
+                        customHeaders = customHeadersMap
                     )
                 )
 

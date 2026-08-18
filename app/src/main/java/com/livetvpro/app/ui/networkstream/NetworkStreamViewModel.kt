@@ -21,6 +21,7 @@ class NetworkStreamViewModel @Inject constructor(
     var customUserAgent: String = ""
     var selectedUserAgent: String = "Default"
     var selectedDrmScheme: String = "clearkey"
+    var customHeaders: String = ""
 
     fun recordPlayed(url: String) = historyManager.addEntry(
         url = url,
@@ -31,5 +32,6 @@ class NetworkStreamViewModel @Inject constructor(
         selectedUserAgent = selectedUserAgent,
         customUserAgent = customUserAgent,
         drmScheme = selectedDrmScheme,
+        customHeaders = customHeaders,
     )
 }

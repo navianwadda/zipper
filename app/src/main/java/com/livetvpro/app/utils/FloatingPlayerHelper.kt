@@ -116,10 +116,11 @@ object FloatingPlayerHelper {
         userAgent: String = "",
         drmScheme: String = "clearkey",
         streamName: String = "Network Stream",
-        xForwardedFor: String = ""
+        xForwardedFor: String = "",
+        customHeaders: String = ""
     ): String? {
         if (DeviceUtils.isTvDevice) {
-            FloatingPlayerActivity.startWithNetworkStream(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName)
+            FloatingPlayerActivity.startWithNetworkStream(context, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, customHeaders = customHeaders)
             return null
         }
 
@@ -139,7 +140,8 @@ object FloatingPlayerHelper {
                     userAgent = userAgent,
                     drmScheme = drmScheme,
                     streamName = streamName,
-                    xForwardedFor = xForwardedFor
+                    xForwardedFor = xForwardedFor,
+                    customHeaders = customHeaders
                 )
                 return lastId
             }
@@ -161,7 +163,8 @@ object FloatingPlayerHelper {
                 userAgent = userAgent,
                 drmScheme = drmScheme,
                 streamName = streamName,
-                xForwardedFor = xForwardedFor
+                xForwardedFor = xForwardedFor,
+                customHeaders = customHeaders
             )
             if (started) {
                 createdInstances.add(instanceId)

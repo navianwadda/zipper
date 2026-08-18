@@ -500,10 +500,6 @@ object M3uParser {
                 trimmedLine.startsWith("#EXTINF:") -> {
                     currentUserAgent     = null
                     currentHeaders       = mutableMapOf()
-                    currentDrmScheme     = null
-                    currentDrmKeyId      = null
-                    currentDrmKey        = null
-                    currentDrmLicenseUrl = null
                     currentName          = extractChannelName(trimmedLine)
                     currentLogo          = extractAttribute(trimmedLine, "tvg-logo")
                     currentGroup         = extractAttribute(trimmedLine, "group-title")

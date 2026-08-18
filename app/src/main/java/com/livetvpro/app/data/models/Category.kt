@@ -48,7 +48,8 @@ data class ChannelLink(
     val xForwardedFor: String? = null,
     val drmScheme: String? = null,
     val drmLicenseUrl: String? = null,
-    val customHeaders: Map<String, String> = emptyMap()
+    val customHeaders: Map<String, String> = emptyMap(),
+    val drmJwk: String? = null,
 ) : Parcelable
 
 @Parcelize
@@ -122,7 +123,8 @@ data class LiveEventLink(
     val xForwardedFor: String? = null,
     val drmScheme: String? = null,
     val drmLicenseUrl: String? = null,
-    val customHeaders: Map<String, String> = emptyMap()
+    val customHeaders: Map<String, String> = emptyMap(),
+    val drmJwk: String? = null,
 ) : Parcelable
 
 @Parcelize

@@ -197,11 +197,11 @@ class FloatingPlayerActivity : ComponentActivity() {
             drmScheme: String = "clearkey",
             streamName: String = "Network Stream",
             xForwardedFor: String = "",
-            playbackPosition: Long = -1L
+            playbackPosition: Long = -1L,
+            customHeaders: String = ""
         ) {
             val intent = Intent(context, FloatingPlayerActivity::class.java).apply {
                 putExtra("IS_NETWORK_STREAM", true)
-
                 putExtra("STREAM_URL", streamUrl)
                 putExtra("COOKIE", cookie)
                 putExtra("REFERER", referer)
@@ -210,13 +210,11 @@ class FloatingPlayerActivity : ComponentActivity() {
                 putExtra("USER_AGENT", userAgent)
                 putExtra("DRM_SCHEME", drmScheme)
                 putExtra("X_FORWARDED_FOR", xForwardedFor)
-
                 putExtra("CHANNEL_NAME", streamName)
-
+                putExtra("CUSTOM_HEADERS", customHeaders)
                 if (playbackPosition > 0) {
                     putExtra("playback_position", playbackPosition)
                 }
-
                 addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
             }
             context.startActivity(intent)
@@ -1092,6 +1090,13 @@ class FloatingPlayerActivity : ComponentActivity() {
                 val userAgent = intent.getStringExtra("USER_AGENT") ?: ""
                 val drmScheme = intent.getStringExtra("DRM_SCHEME") ?: "clearkey"
                 val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
+                val extraHeaders = try {
+                    val raw = intent.getStringExtra("CUSTOM_HEADERS") ?: ""
+                    if (raw.isNotBlank()) {
+                        val json = org.json.JSONObject(raw)
+                        json.keys().asSequence().associateWith { json.getString(it) }
+                    } else emptyMap()
+                } catch (_: Exception) { emptyMap() }
 
                 allEventLinks = listOf(
                     LiveEventLink(
@@ -1103,7 +1108,8 @@ class FloatingPlayerActivity : ComponentActivity() {
                         userAgent = userAgent,
                         xForwardedFor = xForwardedFor.ifEmpty { null },
                         drmScheme = drmScheme,
-                        drmLicenseUrl = drmLicense
+                        drmLicenseUrl = drmLicense,
+                        customHeaders = extraHeaders,
                     )
                 )
 

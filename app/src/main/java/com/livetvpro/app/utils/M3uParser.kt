@@ -495,6 +495,9 @@ object M3uParser {
                             }
                         }
                     }
+                    if (currentDrmScheme == null) {
+                        currentDrmScheme = "clearkey"
+                    }
                 }
 
                 trimmedLine.startsWith("#EXTINF:") -> {

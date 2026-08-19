@@ -35,12 +35,6 @@ object M3uParser {
     private val QUESTION_AMP_PATTERN  = Regex("\\?&")
     private val JWK_KID_PATTERN       = Regex(""""kid"\s*:\s*"([^"]+)"""")
     private val JWK_K_PATTERN         = Regex(""""k"\s*:\s*"([^"]+)"""")
-    private val BASE64_URL_PATTERN    = Regex("([?&])(url|u|target|dest|destination|link|redirect|goto)=([A-Za-z0-9+/=_-]{20,})")
-    private val PROXY_D_PARAM_PATTERN = Regex("[?&]d=([^&]+)")
-    private val HMA_URL_PATTERN       = Regex("[?&](url|u|target)=([^&]+)")
-    private val KPROXY_PATTERN        = Regex("kproxy\\.com/\\?([^&]+)")
-    private val HIDE_ME_PATTERN       = Regex("[?&]u=([^&]+)")
-    private val CROXY_PATTERN         = Regex("croxyproxy\\.com/\\?url=([^&]+)")
 
     private val BASE64_PARAM_PATTERNS = listOf("data", "meta", "params", "h", "headers", "b64", "encoded")
         .map { name -> name to Regex("[&?]$name=([A-Za-z0-9+/=_-]{20,})") }
@@ -287,8 +281,6 @@ object M3uParser {
                 referer?.let { headers["Referer"] = it }
                 origin?.let  { headers["Origin"]  = it }
 
-                link = decodeProxyUrl(link)
-
                 var drmScheme = item.optString("drmScheme", null)
                     ?: item.optString("drm_scheme", null)
                     ?: item.optString("drm", null)
@@ -339,97 +331,6 @@ object M3uParser {
         return channels
     }
 
-    private fun decodeProxyUrl(url: String): String {
-        if (url.isEmpty()) return url
-
-        try {
-            if (url.contains("proxysite.com/process.php"))        return decodeProxySiteUrl(url)
-            if (url.contains("hidemyass.com") || url.contains("hma.com")) return decodeHMAProxyUrl(url)
-            if (url.contains("/process.php") && url.contains("d=")) return decodeGenericProxyUrl(url)
-            if (url.contains("kproxy.com"))    return decodeKProxyUrl(url)
-            if (url.contains("hide.me/proxy")) return decodeHideMeProxyUrl(url)
-            if (url.contains("croxyproxy.com")) return decodeCroxyProxyUrl(url)
-
-            val base64Match = BASE64_URL_PATTERN.find(url)
-            if (base64Match != null) {
-                try {
-                    val encoded = base64Match.groupValues[3]
-                    val decoded = try {
-                        String(Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_WRAP))
-                    } catch (e: Exception) {
-                        String(Base64.decode(encoded, Base64.DEFAULT))
-                    }
-                    if (decoded.startsWith("http", ignoreCase = true)) return decoded
-                } catch (e: Exception) {}
-            }
-
-        } catch (e: Exception) {
-        }
-
-        return url
-    }
-
-    private fun decodeProxySiteUrl(url: String): String {
-        return try {
-            val dParamMatch = PROXY_D_PARAM_PATTERN.find(url) ?: return url
-            val urlDecoded  = java.net.URLDecoder.decode(dParamMatch.groupValues[1], "UTF-8")
-            val decoded     = try {
-                String(Base64.decode(urlDecoded, Base64.URL_SAFE or Base64.NO_WRAP))
-            } catch (e: Exception) {
-                String(Base64.decode(urlDecoded, Base64.DEFAULT))
-            }
-            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) { url }
-    }
-
-    private fun decodeGenericProxyUrl(url: String): String {
-        return try {
-            val dParamMatch = PROXY_D_PARAM_PATTERN.find(url) ?: return url
-            val decoded     = java.net.URLDecoder.decode(dParamMatch.groupValues[1], "UTF-8")
-            val base64Decoded = try {
-                String(Base64.decode(decoded, Base64.URL_SAFE or Base64.NO_WRAP))
-            } catch (e: Exception) {
-                String(Base64.decode(decoded, Base64.DEFAULT))
-            }
-            if (base64Decoded.startsWith("http", ignoreCase = true)) base64Decoded else url
-        } catch (e: Exception) { url }
-    }
-
-    private fun decodeHMAProxyUrl(url: String): String {
-        return try {
-            val match = HMA_URL_PATTERN.find(url) ?: return url
-            val decoded = java.net.URLDecoder.decode(match.groupValues[2], "UTF-8")
-            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) { url }
-    }
-
-    private fun decodeKProxyUrl(url: String): String {
-        return try {
-            val match = KPROXY_PATTERN.find(url) ?: return url
-            val decoded = java.net.URLDecoder.decode(match.groupValues[1], "UTF-8")
-            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) { url }
-    }
-
-    private fun decodeHideMeProxyUrl(url: String): String {
-        return try {
-            val match   = HIDE_ME_PATTERN.find(url) ?: return url
-            val encoded = match.groupValues[1]
-            val decoded = try {
-                String(Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_WRAP))
-            } catch (e: Exception) {
-                java.net.URLDecoder.decode(encoded, "UTF-8")
-            }
-            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) { url }
-    }
-
-    private fun decodeCroxyProxyUrl(url: String): String {
-        return try {
-            val match = CROXY_PATTERN.find(url) ?: return url
-            val decoded = java.net.URLDecoder.decode(match.groupValues[1], "UTF-8")
-            if (decoded.startsWith("http", ignoreCase = true)) decoded else url
-        } catch (e: Exception) { url }
     }
 
     fun parseM3uContent(content: String): List<M3uChannel> {

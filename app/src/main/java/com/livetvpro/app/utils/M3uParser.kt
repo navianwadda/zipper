@@ -281,6 +281,7 @@ object M3uParser {
                 referer?.let { headers["Referer"] = it }
                 origin?.let  { headers["Origin"]  = it }
 
+
                 var drmScheme = item.optString("drmScheme", null)
                     ?: item.optString("drm_scheme", null)
                     ?: item.optString("drm", null)
@@ -331,7 +332,6 @@ object M3uParser {
         return channels
     }
 
-    }
 
     fun parseM3uContent(content: String): List<M3uChannel> {
         val channels = ArrayList<M3uChannel>(1024)

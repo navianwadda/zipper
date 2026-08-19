@@ -1689,7 +1689,7 @@ class PlayerActivity : ComponentActivity() {
                         .setLicenseUri(parsed.drmLicenseUrl)
                         .setLicenseRequestHeaders(licHeaders)
                         .setForceDefaultLicenseUri(true)
-                        .setMultiSession(false)
+                        .setMultiSession(true)
                         .build()
                 )
             }

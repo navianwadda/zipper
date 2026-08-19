@@ -31,15 +31,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.ui.DefaultTimeBar
+import androidx.media3.ui.TimeBar
 import com.livetvpro.app.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.ui.DefaultTimeBar
-import androidx.media3.ui.TimeBar
 
 private val exoEnterAnim = fadeIn(tween(150, easing = LinearEasing))
 private val exoExitAnim  = fadeOut(tween(150, easing = LinearEasing))
@@ -888,13 +888,12 @@ private fun ExoPlayerTimeBar(
             textAlign = TextAlign.End,
             maxLines  = 1,
         )
-        CustomTimeBar(
+        ExoDefaultTimeBar(
             currentPosition  = currentPosition,
             duration         = duration,
             bufferedPosition = bufferedPosition,
             onSeek           = onSeek,
             onScrub          = { scrubPositionMs = it },
-            isFocused        = isFocused,
             modifier         = Modifier
                 .weight(1f)
                 .padding(horizontal = 8.dp)
@@ -913,34 +912,27 @@ private fun ExoPlayerTimeBar(
 }
 
 @Composable
-private fun CustomTimeBar(
+private fun ExoDefaultTimeBar(
     currentPosition: Long,
     duration: Long,
     bufferedPosition: Long,
     onSeek: (Long) -> Unit,
     onScrub: (Long?) -> Unit = {},
-    isFocused: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    var isDragging by remember { mutableStateOf(false) }
+    val safeDuration = duration.coerceAtLeast(0L)
 
     AndroidView(
-        modifier = modifier.fillMaxWidth(),
-        factory = { context ->
-            DefaultTimeBar(context).apply {
-                isFocusable = false
+        factory = { ctx ->
+            DefaultTimeBar(ctx, null).apply {
                 addListener(object : TimeBar.OnScrubListener {
                     override fun onScrubStart(timeBar: TimeBar, position: Long) {
-                        isDragging = true
                         onScrub(position)
                     }
-
                     override fun onScrubMove(timeBar: TimeBar, position: Long) {
                         onScrub(position)
                     }
-
                     override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
-                        isDragging = false
                         onScrub(null)
                         if (!canceled) onSeek(position)
                     }
@@ -948,12 +940,11 @@ private fun CustomTimeBar(
             }
         },
         update = { timeBar ->
-            timeBar.setDuration(duration.coerceAtLeast(0L))
-            timeBar.setBufferedPosition(bufferedPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
-            if (!isDragging) {
-                timeBar.setPosition(currentPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
-            }
+            timeBar.setDuration(safeDuration)
+            timeBar.setPosition(currentPosition.coerceIn(0L, safeDuration))
+            timeBar.setBufferedPosition(bufferedPosition.coerceIn(0L, safeDuration))
         },
+        modifier = modifier,
     )
 }
 

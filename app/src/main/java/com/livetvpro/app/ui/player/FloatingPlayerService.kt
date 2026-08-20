@@ -2294,7 +2294,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                         .setLicenseUri(licUrl)
                         .setLicenseRequestHeaders(licenseHeaders)
                         .setForceDefaultLicenseUri(true)
-                        .setMultiSession(false)
+                        .setMultiSession(true)
                         .build()
                 )
             }

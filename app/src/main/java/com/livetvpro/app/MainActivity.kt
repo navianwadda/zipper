@@ -31,6 +31,7 @@ import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
 import com.livetvpro.app.utils.RedirectCooldownManager
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.activity.enableEdgeToEdge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -80,12 +81,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         }
 
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
-        window.decorView.post {
-            window.decorView.requestApplyInsets()
-        }
+        enableEdgeToEdge()
 
         themeManager.registerActivityContext(this)
 

@@ -2,6 +2,9 @@ package com.livetvpro.app.ui.player.compose
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import android.content.Context
+import android.view.MotionEvent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -31,15 +35,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.ui.DefaultTimeBar
-import androidx.media3.ui.TimeBar
 import com.livetvpro.app.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.ui.DefaultTimeBar
+import androidx.media3.ui.TimeBar
 
 private val exoEnterAnim = fadeIn(tween(150, easing = LinearEasing))
 private val exoExitAnim  = fadeOut(tween(150, easing = LinearEasing))
@@ -888,12 +892,13 @@ private fun ExoPlayerTimeBar(
             textAlign = TextAlign.End,
             maxLines  = 1,
         )
-        ExoDefaultTimeBar(
+        CustomTimeBar(
             currentPosition  = currentPosition,
             duration         = duration,
             bufferedPosition = bufferedPosition,
             onSeek           = onSeek,
             onScrub          = { scrubPositionMs = it },
+            isFocused        = isFocused,
             modifier         = Modifier
                 .weight(1f)
                 .padding(horizontal = 8.dp)
@@ -912,40 +917,75 @@ private fun ExoPlayerTimeBar(
 }
 
 @Composable
-private fun ExoDefaultTimeBar(
+private fun CustomTimeBar(
     currentPosition: Long,
     duration: Long,
     bufferedPosition: Long,
     onSeek: (Long) -> Unit,
     onScrub: (Long?) -> Unit = {},
+    isFocused: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val safeDuration = duration.coerceAtLeast(0L)
+    var isDragging by remember { mutableStateOf(false) }
+    var hoverX by remember { mutableStateOf<Float?>(null) }
 
-    AndroidView(
-        factory = { ctx ->
-            DefaultTimeBar(ctx, null).apply {
-                addListener(object : TimeBar.OnScrubListener {
-                    override fun onScrubStart(timeBar: TimeBar, position: Long) {
-                        onScrub(position)
-                    }
-                    override fun onScrubMove(timeBar: TimeBar, position: Long) {
-                        onScrub(position)
-                    }
-                    override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
-                        onScrub(null)
-                        if (!canceled) onSeek(position)
-                    }
-                })
+    Box(modifier = modifier.fillMaxWidth()) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                HoverTimeBar(context).apply {
+                    isFocusable = false
+                    onHover = { x -> hoverX = x }
+                    addListener(object : TimeBar.OnScrubListener {
+                        override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                            isDragging = true
+                            onScrub(position)
+                        }
+
+                        override fun onScrubMove(timeBar: TimeBar, position: Long) {
+                            onScrub(position)
+                        }
+
+                        override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                            isDragging = false
+                            onScrub(null)
+                            if (!canceled) onSeek(position)
+                        }
+                    })
+                }
+            },
+            update = { timeBar ->
+                timeBar.setDuration(duration.coerceAtLeast(0L))
+                timeBar.setBufferedPosition(bufferedPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
+                if (!isDragging) {
+                    timeBar.setPosition(currentPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
+                }
+            },
+        )
+
+        val previewX = hoverX
+        if (previewX != null && !isDragging && duration > 0L) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.45f),
+                    radius = 4.dp.toPx(),
+                    center = Offset(previewX.coerceIn(0f, size.width), size.height / 2f),
+                )
             }
-        },
-        update = { timeBar ->
-            timeBar.setDuration(safeDuration)
-            timeBar.setPosition(currentPosition.coerceIn(0L, safeDuration))
-            timeBar.setBufferedPosition(bufferedPosition.coerceIn(0L, safeDuration))
-        },
-        modifier = modifier,
-    )
+        }
+    }
+}
+
+private class HoverTimeBar(context: Context) : DefaultTimeBar(context) {
+    var onHover: (Float?) -> Unit = {}
+
+    override fun onHoverEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE -> onHover(event.x)
+            MotionEvent.ACTION_HOVER_EXIT -> onHover(null)
+        }
+        return super.onHoverEvent(event)
+    }
 }
 
 private fun formatTime(timeMs: Long): String {

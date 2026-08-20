@@ -85,6 +85,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.activity.enableEdgeToEdge
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
@@ -139,12 +140,7 @@ class SplashActivity : AppCompatActivity() {
         }
 
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
-        window.decorView.post {
-            window.decorView.requestApplyInsets()
-        }
+        enableEdgeToEdge()
 
         setContent {
             LiveTVProTheme(themeManager = themeManager) {

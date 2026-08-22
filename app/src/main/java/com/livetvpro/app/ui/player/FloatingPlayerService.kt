@@ -943,7 +943,17 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
 
-            val nsStreamInfo = resolveNetworkStreamInfo(parsedPipe.url, headers, drmScheme, drmLicense)
+            val nsStreamInfo = resolveNetworkStreamInfo(
+                parsedPipe.url, headers,
+                parsedPipe.drmScheme ?: drmScheme,
+                when {
+                    parsedPipe.drmJwk != null -> parsedPipe.drmJwk
+                    parsedPipe.drmKeyId != null && parsedPipe.drmKey != null ->
+                        "${parsedPipe.drmKeyId}:${parsedPipe.drmKey}"
+                    parsedPipe.drmLicenseUrl != null -> parsedPipe.drmLicenseUrl
+                    else -> drmLicense
+                }
+            )
             val nsMediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, nsDataSourceFactory, headers)
 
             val renderersFactory = DefaultRenderersFactory(this)
@@ -2294,7 +2304,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                         .setLicenseUri(licUrl)
                         .setLicenseRequestHeaders(licenseHeaders)
                         .setForceDefaultLicenseUri(true)
-                        .setMultiSession(true)
+                        .setMultiSession(false)
                         .build()
                 )
             }

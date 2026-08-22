@@ -313,7 +313,7 @@ object FloatingPlayerHelper {
         var drmJwk: String? = null
         val extraHeaders = mutableMapOf<String, String>()
 
-        for (segment in rawParams.split("|")) {
+        for (segment in rawParams.split("|", "&")) {
             val trimmed = segment.trim()
             if (trimmed.isEmpty()) continue
             val eq = trimmed.indexOf('=')

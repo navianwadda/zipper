@@ -313,7 +313,20 @@ object FloatingPlayerHelper {
         var drmJwk: String? = null
         val extraHeaders = mutableMapOf<String, String>()
 
-        for (segment in rawParams.split("|", "&")) {
+        val parts = buildList {
+            for (segment in rawParams.split("|")) {
+                val eqIdx = segment.indexOf('=')
+                val value = if (eqIdx != -1) segment.substring(eqIdx + 1) else ""
+                if (value.startsWith("http://", ignoreCase = true) ||
+                    value.startsWith("https://", ignoreCase = true)) {
+                    add(segment)
+                } else {
+                    addAll(segment.split("&"))
+                }
+            }
+        }
+
+        for (segment in parts) {
             val trimmed = segment.trim()
             if (trimmed.isEmpty()) continue
             val eq = trimmed.indexOf('=')

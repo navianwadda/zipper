@@ -935,6 +935,21 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 headers["User-Agent"] ?: "okhttp/4.12.0"
             headers["User-Agent"] = effectiveUserAgent
 
+            val resolvedDrmScheme = parsedPipe.drmScheme ?: normalizeDrmScheme(drmScheme).takeIf { it.isNotEmpty() }
+            val resolvedDrmLicense = when {
+                parsedPipe.drmJwk != null -> parsedPipe.drmJwk
+                parsedPipe.drmKeyId != null && parsedPipe.drmKey != null ->
+                    "${parsedPipe.drmKeyId}:${parsedPipe.drmKey}"
+                parsedPipe.drmLicenseUrl != null -> parsedPipe.drmLicenseUrl
+                else -> drmLicense
+            }
+
+            val nsStreamInfo = buildStreamInfoFromDrmFields(
+                parsedPipe.url, headers,
+                resolvedDrmScheme ?: drmScheme,
+                resolvedDrmLicense
+            )
+
             val nsDataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(effectiveUserAgent)
                 .setDefaultRequestProperties(headers)
@@ -942,18 +957,6 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setKeepPostFor302Redirects(true)
-
-            val nsStreamInfo = resolveNetworkStreamInfo(
-                parsedPipe.url, headers,
-                parsedPipe.drmScheme ?: drmScheme,
-                when {
-                    parsedPipe.drmJwk != null -> parsedPipe.drmJwk
-                    parsedPipe.drmKeyId != null && parsedPipe.drmKey != null ->
-                        "${parsedPipe.drmKeyId}:${parsedPipe.drmKey}"
-                    parsedPipe.drmLicenseUrl != null -> parsedPipe.drmLicenseUrl
-                    else -> drmLicense
-                }
-            )
             val nsMediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, nsDataSourceFactory, headers)
 
             val renderersFactory = DefaultRenderersFactory(this)

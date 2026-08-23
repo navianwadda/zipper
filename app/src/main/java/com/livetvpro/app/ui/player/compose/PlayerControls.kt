@@ -45,18 +45,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.ui.DefaultTimeBar
 import androidx.media3.ui.TimeBar
 
-private val exoEnterAnim = fadeIn(tween(250, easing = LinearOutSlowInEasing))
-private val exoExitAnim  = fadeOut(tween(250, easing = FastOutLinearInEasing))
-
-private val exoTopEnterAnim = fadeIn(tween(250, easing = LinearOutSlowInEasing)) +
-    slideInVertically(tween(250, easing = LinearOutSlowInEasing)) { -it / 3 }
-private val exoTopExitAnim  = fadeOut(tween(250, easing = FastOutLinearInEasing)) +
-    slideOutVertically(tween(250, easing = FastOutLinearInEasing)) { -it / 3 }
-
-private val exoBottomEnterAnim = fadeIn(tween(250, easing = LinearOutSlowInEasing)) +
-    slideInVertically(tween(250, easing = LinearOutSlowInEasing)) { it / 3 }
-private val exoBottomExitAnim  = fadeOut(tween(250, easing = FastOutLinearInEasing)) +
-    slideOutVertically(tween(250, easing = FastOutLinearInEasing)) { it / 3 }
+private val exoEnterAnim = fadeIn(tween(250, easing = LinearOutSlowInEasing)) +
+    slideInVertically(tween(250, easing = LinearOutSlowInEasing)) { it / 5 }
+private val exoExitAnim  = fadeOut(tween(250, easing = FastOutLinearInEasing)) +
+    slideOutVertically(tween(250, easing = FastOutLinearInEasing)) { it / 5 }
 
 class PlayerControlsState(
     initialVisible: Boolean = true,
@@ -266,44 +258,49 @@ fun PlayerControls(
             )
         }
 
-        PlayerControlsContent(
-            isPlaying              = isPlaying,
-            isMuted                = isMuted,
-            currentPosition        = currentPosition,
-            duration               = duration,
-            bufferedPosition       = bufferedPosition,
-            channelName            = channelName,
-            showPipButton          = showPipButton,
-            showAspectRatioButton  = showAspectRatioButton,
-            isLandscape            = isLandscape,
-            isTvMode               = isTvMode,
-            supportsPointerInput   = supportsPointerInput,
-            layoutMode             = layoutMode,
-            isNetworkStream        = isNetworkStream,
-            controlsVisible        = state.isVisible && !state.isLocked,
-            onBackClick            = onBackClick,
-            onPipClick             = onPipClick,
-            onSettingsClick        = onSettingsClick,
-            onMuteClick            = onMuteClick,
-            onLockClick            = { state.lock(); onLockClick(true) },
-            onPlayPauseClick       = onPlayPauseClick,
-            onSeek                 = onSeek,
-            onRewindClick          = onRewindClick,
-            onForwardClick         = onForwardClick,
-            onPrevClick            = onPrevClick,
-            onNextClick            = onNextClick,
-            onAspectRatioClick     = onAspectRatioClick,
-            onFullscreenClick      = onFullscreenClick,
-            onChannelListClick     = onChannelListClick,
-            isChannelListAvailable = isChannelListAvailable,
-            showCastButton         = showCastButton,
-            isCastConnected        = isCastConnected,
-            onCastClick            = onCastClick,
-            onInteraction          = { state.show(scope) },
-            onToggle               = { state.toggle(scope) },
-            onTvFocusWithinControls    = { isTvFocusWithinControls = it },
-            onMouseHoverWithinControls = { if (supportsPointerInput) isMouseHoverWithinControls = it },
-        )
+        AnimatedVisibility(
+            visible = state.isVisible && !state.isLocked,
+            enter   = exoEnterAnim,
+            exit    = exoExitAnim,
+        ) {
+            PlayerControlsContent(
+                isPlaying              = isPlaying,
+                isMuted                = isMuted,
+                currentPosition        = currentPosition,
+                duration               = duration,
+                bufferedPosition       = bufferedPosition,
+                channelName            = channelName,
+                showPipButton          = showPipButton,
+                showAspectRatioButton  = showAspectRatioButton,
+                isLandscape            = isLandscape,
+                isTvMode               = isTvMode,
+                supportsPointerInput   = supportsPointerInput,
+                layoutMode     = layoutMode,
+                isNetworkStream        = isNetworkStream,
+                onBackClick            = onBackClick,
+                onPipClick             = onPipClick,
+                onSettingsClick        = onSettingsClick,
+                onMuteClick            = onMuteClick,
+                onLockClick            = { state.lock(); onLockClick(true) },
+                onPlayPauseClick       = onPlayPauseClick,
+                onSeek                 = onSeek,
+                onRewindClick          = onRewindClick,
+                onForwardClick         = onForwardClick,
+                onPrevClick            = onPrevClick,
+                onNextClick            = onNextClick,
+                onAspectRatioClick     = onAspectRatioClick,
+                onFullscreenClick      = onFullscreenClick,
+                onChannelListClick     = onChannelListClick,
+                isChannelListAvailable = isChannelListAvailable,
+                showCastButton         = showCastButton,
+                isCastConnected        = isCastConnected,
+                onCastClick            = onCastClick,
+                onInteraction          = { state.show(scope) },
+                onToggle               = { state.toggle(scope) },
+                onTvFocusWithinControls    = { isTvFocusWithinControls = it },
+                onMouseHoverWithinControls = { if (supportsPointerInput) isMouseHoverWithinControls = it },
+            )
+        }
 
         AnimatedVisibility(
             visible = state.isLockOverlayVisible,
@@ -396,7 +393,6 @@ internal fun PlayerControlsContent(
     supportsPointerInput: Boolean = true,
     layoutMode: Int = 0,
     isNetworkStream: Boolean = false,
-    controlsVisible: Boolean = true,
     onBackClick: () -> Unit,
     onPipClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -500,13 +496,10 @@ internal fun PlayerControlsContent(
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            AnimatedVisibility(
-                visible = controlsVisible,
-                enter   = exoTopEnterAnim,
-                exit    = exoTopExitAnim,
-                modifier = Modifier.align(Alignment.TopCenter),
-            ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -594,14 +587,9 @@ internal fun PlayerControlsContent(
                     }
                 }
             }
-            } // end top AnimatedVisibility
 
-            AnimatedVisibility(
-                visible  = controlsVisible,
-                enter    = exoBottomEnterAnim,
-                exit     = exoBottomExitAnim,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            ) {
+            Spacer(modifier = Modifier.weight(1f))
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -752,8 +740,7 @@ internal fun PlayerControlsContent(
                 if (isTvMode) TvRemoteHintBar(isCompact = isCompactBottom)
                 }
             }
-            } // end bottom AnimatedVisibility
-        } // end outer Box
+        }
     }
 }
 

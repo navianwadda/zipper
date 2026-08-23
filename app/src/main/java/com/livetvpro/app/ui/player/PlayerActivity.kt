@@ -1,6 +1,9 @@
 package com.livetvpro.app.ui.player
 
 import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
@@ -11,6 +14,7 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.BitmapFactory
 import android.graphics.drawable.Icon
 import android.media.AudioManager
 import android.os.Build
@@ -44,12 +48,17 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -57,6 +66,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.MediaSession
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.livetvpro.app.R
@@ -124,6 +134,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
 
     private var pipReceiver: BroadcastReceiver? = null
+    private var mediaSession: MediaSession? = null
     private var screenOffReceiver: BroadcastReceiver? = null
     private var isScreenOff     = false
     private var wasLockedBeforePip = false
@@ -173,6 +184,8 @@ class PlayerActivity : ComponentActivity() {
         private const val CONTROL_TYPE_FORWARD       = 4
         private const val CONTROL_TYPE_PREV_CHANNEL  = 5
         private const val CONTROL_TYPE_NEXT_CHANNEL  = 6
+        private const val MEDIA_NOTIFICATION_CHANNEL_ID = "livetvpro_media_playback"
+        private const val MEDIA_NOTIFICATION_ID          = 2001
         var isInPip: Boolean = false
         fun startWithChannel(
             context: Context, channel: Channel, linkIndex: Int = -1,
@@ -237,6 +250,7 @@ class PlayerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         com.livetvpro.app.cast.CastManager.init(this)
+        createMediaNotificationChannel()
         themeManager.registerActivityContext(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor     = android.graphics.Color.TRANSPARENT
@@ -931,6 +945,7 @@ class PlayerActivity : ComponentActivity() {
     ) {
         if (!isInPictureInPictureMode) {
             pipReceiver?.let { unregisterReceiver(it); pipReceiver = null }
+            hideMediaNotification()
             isInPipMode   = false
             isEnteringPip = false
             isInPip       = false
@@ -954,6 +969,7 @@ class PlayerActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) setPictureInPictureParams(buildPipParams(enter = true))
         controlsState.hide()
         setupPipReceiver()
+        showMediaNotification()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         super.onPictureInPictureModeChanged(true, newConfig)
     }
@@ -963,6 +979,7 @@ class PlayerActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try { setPictureInPictureParams(buildPipParams()) } catch (_: Exception) {}
         }
+        updateMediaNotificationIfNeeded()
     }
     @SuppressLint("NewApi")
     override fun onUserLeaveHint() {
@@ -1007,14 +1024,17 @@ class PlayerActivity : ComponentActivity() {
         }
         return builder.build()
     }
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun createPipActions(context: Context, isPaused: Boolean): List<RemoteAction> {
-        fun makePendingIntent(requestCode: Int, controlType: Int) = PendingIntent.getBroadcast(
+    private fun mediaControlPendingIntent(context: Context, requestCode: Int, controlType: Int): PendingIntent =
+        PendingIntent.getBroadcast(
             context, requestCode,
             Intent(ACTION_MEDIA_CONTROL).setPackage(context.packageName)
                 .putExtra(EXTRA_CONTROL_TYPE, controlType),
             PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createPipActions(context: Context, isPaused: Boolean): List<RemoteAction> {
+        fun makePendingIntent(requestCode: Int, controlType: Int) =
+            mediaControlPendingIntent(context, requestCode, controlType)
         val playPauseAction = if (isPaused) RemoteAction(
             Icon.createWithResource(context, R.drawable.ic_play),
             context.getString(R.string.play), context.getString(R.string.play),
@@ -1114,6 +1134,92 @@ class PlayerActivity : ComponentActivity() {
     }
     private fun unregisterPipReceiver() {
         try { pipReceiver?.let { unregisterReceiver(it); pipReceiver = null } } catch (_: Exception) {}
+    }
+    private fun createMediaNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                MEDIA_NOTIFICATION_CHANNEL_ID,
+                "Now Playing",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Playback controls for the current stream"
+                setShowBadge(false)
+            }
+            getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
+        }
+    }
+    private fun createMediaSession(exo: ExoPlayer) {
+        mediaSession?.release()
+        mediaSession = MediaSession.Builder(this, exo).build()
+    }
+    private fun releaseMediaSession() {
+        mediaSession?.release()
+        mediaSession = null
+    }
+    private fun buildMediaNotification(): Notification? {
+        val session = mediaSession ?: return null
+        val p        = player
+        val isPaused = p?.isPlaying != true
+
+        val playPauseAction = if (isPaused) NotificationCompat.Action(
+            R.drawable.ic_play, getString(R.string.play),
+            mediaControlPendingIntent(this, CONTROL_TYPE_PLAY, CONTROL_TYPE_PLAY),
+        ) else NotificationCompat.Action(
+            R.drawable.ic_pause, getString(R.string.pause),
+            mediaControlPendingIntent(this, CONTROL_TYPE_PAUSE, CONTROL_TYPE_PAUSE),
+        )
+        val prevAction = NotificationCompat.Action(
+            R.drawable.ic_skip_prev_channel, "Previous",
+            mediaControlPendingIntent(this, CONTROL_TYPE_PREV_CHANNEL, CONTROL_TYPE_PREV_CHANNEL),
+        )
+        val nextAction = NotificationCompat.Action(
+            R.drawable.ic_skip_next_channel, "Next",
+            mediaControlPendingIntent(this, CONTROL_TYPE_NEXT_CHANNEL, CONTROL_TYPE_NEXT_CHANNEL),
+        )
+
+        val largeIcon = try {
+            BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
+        } catch (_: Exception) { null }
+
+        val subtitle = when (contentType) {
+            ContentType.EVENT -> "Live Event"
+            ContentType.NETWORK_STREAM -> "Network Stream"
+            else -> getString(R.string.app_name)
+        }
+
+        return NotificationCompat.Builder(this, MEDIA_NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(contentName.ifBlank { getString(R.string.app_name) })
+            .setContentText(subtitle)
+            .setSmallIcon(R.drawable.ic_play)
+            .setLargeIcon(largeIcon)
+            .setOngoing(!isPaused)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .addAction(prevAction)
+            .addAction(playPauseAction)
+            .addAction(nextAction)
+            .setStyle(
+                MediaStyle()
+                    .setMediaSession(session.sessionCompatToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+            )
+            .build()
+    }
+    private fun showMediaNotification() {
+        if (mediaSession == null) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+        ) return
+        val notification = buildMediaNotification() ?: return
+        try { NotificationManagerCompat.from(this).notify(MEDIA_NOTIFICATION_ID, notification) } catch (_: Exception) {}
+    }
+    private fun updateMediaNotificationIfNeeded() {
+        if (!isInPipMode) return
+        showMediaNotification()
+    }
+    private fun hideMediaNotification() {
+        try { NotificationManagerCompat.from(this).cancel(MEDIA_NOTIFICATION_ID) } catch (_: Exception) {}
     }
     private fun setupBackHandler() {
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
@@ -1677,10 +1783,12 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
             player = exo
+            createMediaSession(exo)
             com.livetvpro.app.utils.VolumeBoostHelper.attach(exo, preferencesManager)
             playerSetupInProgress = false
             if (isMuted) exo.volume = 0f
             val mediaItemBuilder = MediaItem.Builder().setUri(parsed.url)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(contentName).build())
             mimeType?.let { mediaItemBuilder.setMimeType(it) }
             if ((parsed.drmScheme == "widevine" || parsed.drmScheme == "playready") && parsed.drmLicenseUrl != null) {
                 val uuid = if (parsed.drmScheme == "widevine") C.WIDEVINE_UUID else C.PLAYREADY_UUID
@@ -1729,6 +1837,8 @@ class PlayerActivity : ComponentActivity() {
         }
     }
     private fun releasePlayer() {
+        hideMediaNotification()
+        releaseMediaSession()
         player?.let {
             try { playerListener?.let { l -> it.removeListener(l) }; com.livetvpro.app.utils.VolumeBoostHelper.release(it); it.stop(); it.release() }
             catch (_: Throwable) {}
@@ -1861,60 +1971,4 @@ class PlayerActivity : ComponentActivity() {
                     )
                 )
             }
-            val current = nowPlayingState.value
-            if (current is NowPlayingState.ChannelInfo && current.channel.id == channel.id) {
-                nowPlayingState.value = current.copy(isFavorite = !isFav)
-            }
-        }
-    }
-    internal fun switchToLink(link: LiveEventLink, position: Int) {
-        currentLinkIndex        = position
-        selectedLinkState.value = position
-        streamUrl               = PlayerStreamHelper.buildStreamUrl(link)
-        releasePlayer()
-        setupPlayer()
-        updateNowPlayingState()
-        refreshPipParamsIfNeeded()
-    }
-    internal fun showSettingsDialog() {
-        if (player == null || isFinishing || isDestroyed || isShowingSettingsDialog) return
-        isShowingSettingsDialog  = true
-        showSettingsDialog.value = true
-    }
-    internal fun toggleMute() {
-        isMuted = PlayerStreamHelper.toggleMute(player, isMuted)
-    }
-    override fun finish() {
-        try {
-            releasePlayer()
-            unregisterPipReceiver()
-            isInPipMode        = false
-            wasLockedBeforePip = false
-            isInPip            = false
-            super.finish()
-        } catch (_: Exception) { super.finish() }
-    }
-}
-private inline fun <reified T : Parcelable> Intent.parcelableExtra(key: String): T? =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelableExtra(key, T::class.java)
-    else @Suppress("DEPRECATION") getParcelableExtra(key)
-private inline fun <reified T : Parcelable> Bundle.parcelableCompat(key: String): T? =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelable(key, T::class.java)
-    else @Suppress("DEPRECATION") getParcelable(key)
-private inline fun <reified T : Parcelable> Bundle.parcelableArrayListCompat(key: String): List<T>? =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelableArrayList(key, T::class.java)
-    else @Suppress("DEPRECATION") getParcelableArrayList<T>(key)
-private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.livetvpro.app.data.models.LiveEventLink(
-    quality       = quality,
-    url           = url,
-    cookie        = cookie,
-    referer       = referer,
-    origin        = origin,
-    userAgent     = userAgent,
-    xForwardedFor = xForwardedFor,
-    drmScheme     = drmScheme,
-    drmLicenseUrl = drmLicenseUrl,
-    customHeaders = customHeaders,
-    drmJwk        = drmJwk,
-)
-
+          

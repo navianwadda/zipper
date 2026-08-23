@@ -945,7 +945,6 @@ class PlayerActivity : ComponentActivity() {
     ) {
         if (!isInPictureInPictureMode) {
             pipReceiver?.let { unregisterReceiver(it); pipReceiver = null }
-            hideMediaNotification()
             isInPipMode   = false
             isEnteringPip = false
             isInPip       = false
@@ -1214,7 +1213,6 @@ class PlayerActivity : ComponentActivity() {
         try { NotificationManagerCompat.from(this).notify(MEDIA_NOTIFICATION_ID, notification) } catch (_: Exception) {}
     }
     private fun updateMediaNotificationIfNeeded() {
-        if (!isInPipMode) return
         showMediaNotification()
     }
     private fun hideMediaNotification() {
@@ -1808,12 +1806,14 @@ class PlayerActivity : ComponentActivity() {
                         Player.STATE_READY -> {
                             errorMessage.value = ""
                             applyRememberedAspectRatioIfEnabled()
+                            updateMediaNotificationIfNeeded()
                         }
                         else -> {}
                     }
                     refreshPipParamsIfNeeded()
                 }
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    showMediaNotification()
                     refreshPipParamsIfNeeded()
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {

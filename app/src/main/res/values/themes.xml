@@ -77,9 +77,4 @@
         <item name="textAllCaps">false</item>
     </style>
 
-    <style name="ThemeOverlay.WhiteProgressBar" parent="">
-        <item name="colorPrimary">#FFFFFF</item>
-        <item name="colorAccent">#FFFFFF</item>
-    </style>
-
 </resources>

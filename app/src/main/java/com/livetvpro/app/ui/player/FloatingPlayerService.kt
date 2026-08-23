@@ -83,6 +83,7 @@ var isBoosted: Boolean = false
     )
 
     private var windowManager: WindowManager? = null
+    private var screenWakeLock: android.os.PowerManager.WakeLock? = null
     private val activeInstances = mutableMapOf<String, FloatingPlayerInstance>()
 
     private val hideControlsHandlers = mutableMapOf<String, android.os.Handler>()
@@ -308,7 +309,12 @@ var isBoosted: Boolean = false
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
-
+        val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        @Suppress("DEPRECATION")
+        screenWakeLock = pm.newWakeLock(
+            android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or android.os.PowerManager.ON_AFTER_RELEASE,
+            "zipper:FloatingPlayerWakeLock"
+        ).also { it.setReferenceCounted(false) }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -628,6 +634,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             )
 
             activeInstances[instanceId] = instance
+            updateWakeLock()
 
             if (activeInstances.size == 1) {
                 val notification = createNotification(title)
@@ -727,6 +734,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 isSports = isSports
             )
             activeInstances[instanceId] = instance
+            updateWakeLock()
 
             val contentName = channel?.name ?: event?.title ?: "Unknown"
             val contentType = if (channel != null) "channel" else "event"
@@ -845,6 +853,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 networkCustomHeaders = customHeaders,
             )
             activeInstances[instanceId] = instance
+            updateWakeLock()
 
             com.livetvpro.app.utils.FloatingPlayerManager.addPlayer(instanceId, streamName, "network_stream")
 
@@ -1028,6 +1037,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 networkCustomHeaders = customHeaders,
             )
             activeInstances[instanceId] = instance
+            updateWakeLock()
 
             if (activeInstances.size == 1) {
                 val notification = createNotification(streamName)
@@ -1849,6 +1859,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
 
         activeInstances.remove(instanceId)
         com.livetvpro.app.utils.FloatingPlayerManager.removePlayer(instanceId)
+        updateWakeLock()
 
         if (activeInstances.isEmpty()) {
             preferencesManager.setFloatingPlayerX(Int.MIN_VALUE)
@@ -1858,6 +1869,14 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         updateNotification()
 
         if (activeInstances.isEmpty()) stopSelf()
+    }
+
+    private fun updateWakeLock() {
+        if (activeInstances.isNotEmpty()) {
+            if (screenWakeLock?.isHeld == false) screenWakeLock?.acquire(10 * 60 * 60 * 1000L)
+        } else {
+            if (screenWakeLock?.isHeld == true) screenWakeLock?.release()
+        }
     }
 
     private fun stopAllInstances() {
@@ -1964,6 +1983,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         super.onDestroy()
         serviceScope.cancel()
         stopAllInstances()
+        if (screenWakeLock?.isHeld == true) screenWakeLock?.release()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

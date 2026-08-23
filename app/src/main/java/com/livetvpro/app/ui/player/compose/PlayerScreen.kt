@@ -487,7 +487,8 @@ private fun NowPlayingTeamLogo(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         ) {
-            it.diskCacheStrategy(DiskCacheStrategy.ALL)
+            it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                .override(96, 96)
                 .placeholder(appIconRes)
                 .error(appIconRes)
                 .fallback(appIconRes)

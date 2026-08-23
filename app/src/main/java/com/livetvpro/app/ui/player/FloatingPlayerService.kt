@@ -1283,6 +1283,9 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         val btnLock = playerView.findViewById<ImageButton>(R.id.btn_lock)
         val btnPlayPause = playerView.findViewById<ImageButton>(R.id.btn_play_pause)
         val btnSeekBack = playerView.findViewById<ImageButton>(R.id.btn_seek_back)
+
+        playerView.findViewById<android.widget.ProgressBar?>(androidx.media3.ui.R.id.exo_buffering)
+            ?.indeterminateTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
         val btnSeekForward = playerView.findViewById<ImageButton>(R.id.btn_seek_forward)
         val btnPrevChannel = playerView.findViewById<ImageButton>(R.id.btn_prev_channel)
         val btnNextChannel = playerView.findViewById<ImageButton>(R.id.btn_next_channel)

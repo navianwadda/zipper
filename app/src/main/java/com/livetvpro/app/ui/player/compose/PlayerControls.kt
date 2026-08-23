@@ -45,10 +45,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.ui.DefaultTimeBar
 import androidx.media3.ui.TimeBar
 
-private val exoEnterAnim = fadeIn(tween(250, easing = LinearOutSlowInEasing)) +
-    slideInVertically(tween(250, easing = LinearOutSlowInEasing)) { it / 5 }
-private val exoExitAnim  = fadeOut(tween(250, easing = FastOutLinearInEasing)) +
-    slideOutVertically(tween(250, easing = FastOutLinearInEasing)) { it / 5 }
+private val exoEnterAnim = fadeIn(tween(150, easing = LinearEasing))
+private val exoExitAnim  = fadeOut(tween(150, easing = LinearEasing))
 
 class PlayerControlsState(
     initialVisible: Boolean = true,

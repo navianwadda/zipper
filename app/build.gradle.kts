@@ -198,6 +198,7 @@ dependencies {
     implementation("androidx.media3:media3-ui-compose:$media3Version")
     implementation("androidx.media3:media3-common:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
+    implementation("androidx.media:media:1.7.0")
     implementation("androidx.media3:media3-cast:$media3Version")
     // Google Cast
     implementation("com.google.android.gms:play-services-cast-framework:21.4.0")

@@ -481,8 +481,7 @@ private fun NowPlayingTeamLogo(
         contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = modifier
-            .clip(CircleShape)
-            .background(CardLogoBg),
+            .clip(CircleShape),
     ) {
         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
             .override(96, 96)

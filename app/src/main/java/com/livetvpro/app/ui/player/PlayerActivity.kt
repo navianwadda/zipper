@@ -55,7 +55,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -67,6 +66,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaStyleNotificationHelper
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.livetvpro.app.R
@@ -1199,8 +1199,7 @@ class PlayerActivity : ComponentActivity() {
             .addAction(playPauseAction)
             .addAction(nextAction)
             .setStyle(
-                MediaStyle()
-                    .setMediaSession(session.sessionCompatToken)
+                MediaStyleNotificationHelper.MediaStyle(session)
                     .setShowActionsInCompactView(0, 1, 2)
             )
             .build()
@@ -1971,4 +1970,60 @@ class PlayerActivity : ComponentActivity() {
                     )
                 )
             }
-          
+            val current = nowPlayingState.value
+            if (current is NowPlayingState.ChannelInfo && current.channel.id == channel.id) {
+                nowPlayingState.value = current.copy(isFavorite = !isFav)
+            }
+        }
+    }
+    internal fun switchToLink(link: LiveEventLink, position: Int) {
+        currentLinkIndex        = position
+        selectedLinkState.value = position
+        streamUrl               = PlayerStreamHelper.buildStreamUrl(link)
+        releasePlayer()
+        setupPlayer()
+        updateNowPlayingState()
+        refreshPipParamsIfNeeded()
+    }
+    internal fun showSettingsDialog() {
+        if (player == null || isFinishing || isDestroyed || isShowingSettingsDialog) return
+        isShowingSettingsDialog  = true
+        showSettingsDialog.value = true
+    }
+    internal fun toggleMute() {
+        isMuted = PlayerStreamHelper.toggleMute(player, isMuted)
+    }
+    override fun finish() {
+        try {
+            releasePlayer()
+            unregisterPipReceiver()
+            isInPipMode        = false
+            wasLockedBeforePip = false
+            isInPip            = false
+            super.finish()
+        } catch (_: Exception) { super.finish() }
+    }
+}
+private inline fun <reified T : Parcelable> Intent.parcelableExtra(key: String): T? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelableExtra(key, T::class.java)
+    else @Suppress("DEPRECATION") getParcelableExtra(key)
+private inline fun <reified T : Parcelable> Bundle.parcelableCompat(key: String): T? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelable(key, T::class.java)
+    else @Suppress("DEPRECATION") getParcelable(key)
+private inline fun <reified T : Parcelable> Bundle.parcelableArrayListCompat(key: String): List<T>? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) getParcelableArrayList(key, T::class.java)
+    else @Suppress("DEPRECATION") getParcelableArrayList<T>(key)
+private fun com.livetvpro.app.data.models.ChannelLink.toLiveEventLink() = com.livetvpro.app.data.models.LiveEventLink(
+    quality       = quality,
+    url           = url,
+    cookie        = cookie,
+    referer       = referer,
+    origin        = origin,
+    userAgent     = userAgent,
+    xForwardedFor = xForwardedFor,
+    drmScheme     = drmScheme,
+    drmLicenseUrl = drmLicenseUrl,
+    customHeaders = customHeaders,
+    drmJwk        = drmJwk,
+)
+

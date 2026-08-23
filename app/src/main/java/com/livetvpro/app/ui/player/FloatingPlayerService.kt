@@ -313,7 +313,7 @@ var isBoosted: Boolean = false
         @Suppress("DEPRECATION")
         screenWakeLock = pm.newWakeLock(
             android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or android.os.PowerManager.ON_AFTER_RELEASE,
-            "zipper:FloatingPlayerWakeLock"
+            "livetvpro:FloatingPlayerWakeLock"
         ).also { it.setReferenceCounted(false) }
     }
 

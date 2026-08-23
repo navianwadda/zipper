@@ -473,26 +473,22 @@ private fun NowPlayingTeamLogo(
     url: String,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
+        androidx.compose.ui.platform.LocalContext.current
+    )
+    GlideImage(
+        model = url.takeIf { it.isNotBlank() },
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
         modifier = modifier
             .clip(CircleShape)
             .background(CardLogoBg),
     ) {
-        val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-            androidx.compose.ui.platform.LocalContext.current
-        )
-        GlideImage(
-            model = url.takeIf { it.isNotBlank() },
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
-                .override(96, 96)
-                .placeholder(appIconRes)
-                .error(appIconRes)
-                .fallback(appIconRes)
-        }
+        it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+            .override(96, 96)
+            .placeholder(appIconRes)
+            .error(appIconRes)
+            .fallback(appIconRes)
     }
 }
 

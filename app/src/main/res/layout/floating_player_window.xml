@@ -16,6 +16,7 @@
             android:id="@+id/player_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:theme="@style/ThemeOverlay.WhiteProgressBar"
             app:show_buffering="when_playing"
             app:use_controller="true"
             app:controller_layout_id="@layout/floating_player_controls"

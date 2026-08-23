@@ -954,6 +954,7 @@ class PlayerActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) setPictureInPictureParams(buildPipParams(enter = true))
         controlsState.hide()
         setupPipReceiver()
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         super.onPictureInPictureModeChanged(true, newConfig)
     }
 

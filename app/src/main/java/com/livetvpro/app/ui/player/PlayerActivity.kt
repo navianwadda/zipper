@@ -14,6 +14,7 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.Icon
 import android.media.AudioManager
@@ -161,6 +162,9 @@ class PlayerActivity : ComponentActivity() {
     internal var currentLinkIndex = 0
     internal var contentId:   String = ""
     internal var contentName: String by mutableStateOf("")
+    private var contentLogoUrl: String = ""
+    private var mediaNotificationLargeIcon: Bitmap? = null
+    private var mediaNotificationIconUrl: String? = null
     private var streamUrl: String = ""
     private var intentCategoryId:    String? = null
     private var intentSelectedGroup: String? = null
@@ -1176,7 +1180,7 @@ class PlayerActivity : ComponentActivity() {
             mediaControlPendingIntent(this, CONTROL_TYPE_NEXT_CHANNEL, CONTROL_TYPE_NEXT_CHANNEL),
         )
 
-        val largeIcon = try {
+        val largeIcon = mediaNotificationLargeIcon ?: try {
             BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
         } catch (_: Exception) { null }
 
@@ -1202,6 +1206,31 @@ class PlayerActivity : ComponentActivity() {
                     .setShowActionsInCompactView(0, 1, 2)
             )
             .build()
+    }
+    private fun loadMediaNotificationIcon(url: String) {
+        if (url.isBlank()) {
+            mediaNotificationLargeIcon = null
+            mediaNotificationIconUrl = null
+            return
+        }
+        if (url == mediaNotificationIconUrl && mediaNotificationLargeIcon != null) return
+        mediaNotificationIconUrl = url
+        com.bumptech.glide.Glide.with(applicationContext)
+            .asBitmap()
+            .load(url)
+            .circleCrop()
+            .override(192, 192)
+            .into(object : com.bumptech.glide.request.target.CustomTarget<Bitmap>() {
+                override fun onResourceReady(
+                    resource: Bitmap,
+                    transition: com.bumptech.glide.request.transition.Transition<in Bitmap>?,
+                ) {
+                    if (mediaNotificationIconUrl != url) return
+                    mediaNotificationLargeIcon = resource
+                    showMediaNotification()
+                }
+                override fun onLoadCleared(placeholder: android.graphics.drawable.Drawable?) {}
+            })
     }
     private fun showMediaNotification() {
         if (mediaSession == null) return
@@ -1920,6 +1949,8 @@ class PlayerActivity : ComponentActivity() {
                 if (ch == null) {
                     nowPlayingState.value = NowPlayingState.Hidden
                 } else {
+                    contentLogoUrl = ch.logoUrl
+                    loadMediaNotificationIcon(contentLogoUrl)
                     nowPlayingState.value = NowPlayingState.ChannelInfo(channel = ch, isFavorite = false)
                     lifecycleScope.launch {
                         val fav     = favoritesRepository.isFavorite(ch.id)
@@ -1935,6 +1966,8 @@ class PlayerActivity : ComponentActivity() {
                 if (ev == null) {
                     nowPlayingState.value = NowPlayingState.Hidden
                 } else {
+                    contentLogoUrl = ev.leagueLogo.ifBlank { ev.team1Logo.ifBlank { ev.team2Logo } }
+                    loadMediaNotificationIcon(contentLogoUrl)
                     val sourceName = allEventLinks.getOrNull(currentLinkIndex)?.quality.orEmpty()
                     nowPlayingState.value = NowPlayingState.EventInfo(
                         title      = ev.league,
@@ -1949,7 +1982,12 @@ class PlayerActivity : ComponentActivity() {
                     )
                 }
             }
-            ContentType.NETWORK_STREAM -> nowPlayingState.value = NowPlayingState.Hidden
+            ContentType.NETWORK_STREAM -> {
+                contentLogoUrl = ""
+                mediaNotificationLargeIcon = null
+                mediaNotificationIconUrl = null
+                nowPlayingState.value = NowPlayingState.Hidden
+            }
         }
     }
     internal fun toggleNowPlayingFavorite(channel: Channel) {

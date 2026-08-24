@@ -2,8 +2,6 @@ package com.livetvpro.app.ui.player.compose
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import android.content.Context
-import android.view.MotionEvent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -167,8 +165,9 @@ fun PlayerControls(
 
     var isTvFocusWithinControls    by remember { mutableStateOf(false) }
     var isMouseHoverWithinControls by remember { mutableStateOf(false) }
+    var isScrubbingSeekBar         by remember { mutableStateOf(false) }
 
-    val shouldKeepControlsOpen = isTvFocusWithinControls || isMouseHoverWithinControls
+    val shouldKeepControlsOpen = isTvFocusWithinControls || isMouseHoverWithinControls || isScrubbingSeekBar
 
     LaunchedEffect(shouldKeepControlsOpen) {
         if (shouldKeepControlsOpen) {
@@ -600,6 +599,7 @@ internal fun PlayerControlsContent(
                     duration         = duration,
                     bufferedPosition = bufferedPosition,
                     onSeek           = { pos -> onSeek(pos); onInteraction() },
+                    onScrubbingChanged = { isScrubbingSeekBar = it },
                     isTvMode         = isTvMode,
                     isCompact        = isCompactBottom,
                     modifier         = Modifier
@@ -839,6 +839,7 @@ private fun ExoPlayerTimeBar(
     duration: Long,
     bufferedPosition: Long,
     onSeek: (Long) -> Unit,
+    onScrubbingChanged: (Boolean) -> Unit = {},
     isTvMode: Boolean = false,
     isCompact: Boolean = false,
     modifier: Modifier = Modifier,
@@ -898,6 +899,7 @@ private fun ExoPlayerTimeBar(
             bufferedPosition = bufferedPosition,
             onSeek           = onSeek,
             onScrub          = { scrubPositionMs = it },
+            onScrubbingChanged = onScrubbingChanged,
             isFocused        = isFocused,
             modifier         = Modifier
                 .weight(1f)
@@ -923,69 +925,45 @@ private fun CustomTimeBar(
     bufferedPosition: Long,
     onSeek: (Long) -> Unit,
     onScrub: (Long?) -> Unit = {},
+    onScrubbingChanged: (Boolean) -> Unit = {},
     isFocused: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var isDragging by remember { mutableStateOf(false) }
-    var hoverX by remember { mutableStateOf<Float?>(null) }
 
-    Box(modifier = modifier.fillMaxWidth()) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { context ->
-                HoverTimeBar(context).apply {
-                    isFocusable = false
-                    onHover = { x -> hoverX = x }
-                    addListener(object : TimeBar.OnScrubListener {
-                        override fun onScrubStart(timeBar: TimeBar, position: Long) {
-                            isDragging = true
-                            onScrub(position)
-                        }
+    AndroidView(
+        modifier = modifier.fillMaxWidth(),
+        factory = { context ->
+            DefaultTimeBar(context).apply {
+                isFocusable = false
+                addListener(object : TimeBar.OnScrubListener {
+                    override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                        isDragging = true
+                        onScrubbingChanged(true)
+                        onScrub(position)
+                    }
 
-                        override fun onScrubMove(timeBar: TimeBar, position: Long) {
-                            onScrub(position)
-                        }
+                    override fun onScrubMove(timeBar: TimeBar, position: Long) {
+                        onScrub(position)
+                    }
 
-                        override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
-                            isDragging = false
-                            onScrub(null)
-                            if (!canceled) onSeek(position)
-                        }
-                    })
-                }
-            },
-            update = { timeBar ->
-                timeBar.setDuration(duration.coerceAtLeast(0L))
-                timeBar.setBufferedPosition(bufferedPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
-                if (!isDragging) {
-                    timeBar.setPosition(currentPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
-                }
-            },
-        )
-
-        val previewX = hoverX
-        if (previewX != null && !isDragging && duration > 0L) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.45f),
-                    radius = 4.dp.toPx(),
-                    center = Offset(previewX.coerceIn(0f, size.width), size.height / 2f),
-                )
+                    override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                        isDragging = false
+                        onScrubbingChanged(false)
+                        onScrub(null)
+                        if (!canceled) onSeek(position)
+                    }
+                })
             }
-        }
-    }
-}
-
-private class HoverTimeBar(context: Context) : DefaultTimeBar(context) {
-    var onHover: (Float?) -> Unit = {}
-
-    override fun onHoverEvent(event: MotionEvent): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE -> onHover(event.x)
-            MotionEvent.ACTION_HOVER_EXIT -> onHover(null)
-        }
-        return super.onHoverEvent(event)
-    }
+        },
+        update = { timeBar ->
+            timeBar.setDuration(duration.coerceAtLeast(0L))
+            timeBar.setBufferedPosition(bufferedPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
+            if (!isDragging) {
+                timeBar.setPosition(currentPosition.coerceIn(0L, duration.coerceAtLeast(0L)))
+            }
+        },
+    )
 }
 
 private fun formatTime(timeMs: Long): String {

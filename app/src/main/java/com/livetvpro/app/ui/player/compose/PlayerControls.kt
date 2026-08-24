@@ -296,6 +296,7 @@ fun PlayerControls(
                 onToggle               = { state.toggle(scope) },
                 onTvFocusWithinControls    = { isTvFocusWithinControls = it },
                 onMouseHoverWithinControls = { if (supportsPointerInput) isMouseHoverWithinControls = it },
+                onScrubbingChanged         = { isScrubbingSeekBar = it },
             )
         }
 
@@ -412,6 +413,7 @@ internal fun PlayerControlsContent(
     onToggle: () -> Unit = {},
     onTvFocusWithinControls: (Boolean) -> Unit = {},
     onMouseHoverWithinControls: (Boolean) -> Unit = {},
+    onScrubbingChanged: (Boolean) -> Unit = {},
 ) {
     val playPauseFocusRequester = remember { FocusRequester() }
 
@@ -599,7 +601,7 @@ internal fun PlayerControlsContent(
                     duration         = duration,
                     bufferedPosition = bufferedPosition,
                     onSeek           = { pos -> onSeek(pos); onInteraction() },
-                    onScrubbingChanged = { isScrubbingSeekBar = it },
+                    onScrubbingChanged = onScrubbingChanged,
                     isTvMode         = isTvMode,
                     isCompact        = isCompactBottom,
                     modifier         = Modifier

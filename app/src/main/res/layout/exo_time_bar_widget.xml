@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.media3.ui.PlayerControlView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/exo_time_bar_control_view"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
+    app:controller_layout_id="@layout/exo_time_bar_controls"
+    app:show_timeout="0"
+    app:show_shuffle_button="false" />
+

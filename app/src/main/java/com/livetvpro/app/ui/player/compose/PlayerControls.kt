@@ -39,8 +39,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
+import android.view.LayoutInflater
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.Player
 import androidx.media3.ui.DefaultTimeBar
+import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.TimeBar
 
 private val exoEnterAnim = fadeIn(tween(150, easing = LinearEasing))
@@ -155,6 +159,7 @@ fun PlayerControls(
     showCastButton: Boolean = false,
     isCastConnected: Boolean = false,
     onCastClick: () -> Unit = {},
+    player: Player? = null,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -292,6 +297,7 @@ fun PlayerControls(
                 showCastButton         = showCastButton,
                 isCastConnected        = isCastConnected,
                 onCastClick            = onCastClick,
+                player                 = player,
                 onInteraction          = { state.show(scope) },
                 onToggle               = { state.toggle(scope) },
                 onTvFocusWithinControls    = { isTvFocusWithinControls = it },
@@ -409,6 +415,7 @@ internal fun PlayerControlsContent(
     showCastButton: Boolean = false,
     isCastConnected: Boolean = false,
     onCastClick: () -> Unit = {},
+    player: Player? = null,
     onInteraction: () -> Unit,
     onToggle: () -> Unit = {},
     onTvFocusWithinControls: (Boolean) -> Unit = {},
@@ -604,6 +611,8 @@ internal fun PlayerControlsContent(
                     onScrubbingChanged = onScrubbingChanged,
                     isTvMode         = isTvMode,
                     isCompact        = isCompactBottom,
+                    player           = player,
+                    isCasting        = isCastConnected,
                     modifier         = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 4.dp),
@@ -836,6 +845,37 @@ internal fun PlayerIconButton(
 }
 
 @Composable
+private fun NativeExoTimeBar(
+    player: Player,
+    onScrubbingChanged: (Boolean) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    AndroidView(
+        modifier = modifier.fillMaxWidth(),
+        factory = {
+            val controlView = LayoutInflater.from(context)
+                .inflate(R.layout.exo_time_bar_widget, null) as PlayerControlView
+            controlView.player = player
+            controlView.findViewById<DefaultTimeBar>(R.id.exo_progress)
+                ?.addListener(object : TimeBar.OnScrubListener {
+                    override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                        onScrubbingChanged(true)
+                    }
+                    override fun onScrubMove(timeBar: TimeBar, position: Long) {}
+                    override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                        onScrubbingChanged(false)
+                    }
+                })
+            controlView
+        },
+        update = { controlView ->
+            if (controlView.player !== player) controlView.player = player
+        },
+    )
+}
+
+@Composable
 private fun ExoPlayerTimeBar(
     currentPosition: Long,
     duration: Long,
@@ -844,8 +884,19 @@ private fun ExoPlayerTimeBar(
     onScrubbingChanged: (Boolean) -> Unit = {},
     isTvMode: Boolean = false,
     isCompact: Boolean = false,
+    player: Player? = null,
+    isCasting: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    if (player != null && !isCasting && !isTvMode) {
+        NativeExoTimeBar(
+            player             = player,
+            onScrubbingChanged = onScrubbingChanged,
+            modifier           = modifier,
+        )
+        return
+    }
+
     var isFocused by remember { mutableStateOf(false) }
     var scrubPositionMs by remember { mutableStateOf<Long?>(null) }
     val displayedPosition = scrubPositionMs ?: currentPosition

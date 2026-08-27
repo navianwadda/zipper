@@ -569,6 +569,7 @@ class PlayerActivity : ComponentActivity() {
                 showCastButton         = com.livetvpro.app.cast.CastManager.isAvailable() &&
                     contentType != ContentType.NETWORK_STREAM,
                 isCastConnected        = isCasting,
+                player                 = player,
                 onCastClick            = {
                     com.livetvpro.app.cast.CastManager.showCastPicker(
                         context        = this@PlayerActivity,

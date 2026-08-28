@@ -2,6 +2,7 @@ package com.livetvpro.app.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.livetvpro.app.utils.DeviceUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -91,6 +92,9 @@ class PreferencesManager @Inject constructor(
     fun isAutoSwitchStreamEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_SWITCH_STREAM_ENABLED, true)
     fun setAutoSwitchStreamEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_AUTO_SWITCH_STREAM_ENABLED, enabled).apply()
 
-    fun getLayoutMode(): Int = prefs.getInt(KEY_LAYOUT_MODE, LAYOUT_MODE_SEEKS_ONLY)
+    fun getLayoutMode(): Int {
+        val fallback = if (DeviceUtils.isBigScreenLayout) LAYOUT_MODE_SEEKS_EDGE_NAV else LAYOUT_MODE_SEEKS_ONLY
+        return prefs.getInt(KEY_LAYOUT_MODE, fallback)
+    }
     fun setLayoutMode(mode: Int) = prefs.edit().putInt(KEY_LAYOUT_MODE, mode).apply()
 }

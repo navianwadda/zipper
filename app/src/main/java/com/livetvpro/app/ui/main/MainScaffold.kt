@@ -26,6 +26,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -686,22 +688,38 @@ private fun TvTopBar(
                 .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val activeRouteForTab = if (currentRoute == Routes.CATEGORY_CHANNELS) Routes.HOME else currentRoute
-                tabs.forEach { tab ->
-                    TvTabChip(
-                        tab       = tab,
-                        selected  = tab.route == activeRouteForTab,
-                        primary   = primary,
-                        onSurface = onSurface,
-                        onClick   = { onTabSelected(tab.route) },
+            Box(modifier = Modifier.weight(1f)) {
+                val tabsScrollState = rememberScrollState()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(tabsScrollState),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val activeRouteForTab = if (currentRoute == Routes.CATEGORY_CHANNELS) Routes.HOME else currentRoute
+                    tabs.forEach { tab ->
+                        TvTabChip(
+                            tab       = tab,
+                            selected  = tab.route == activeRouteForTab,
+                            primary   = primary,
+                            onSurface = onSurface,
+                            onClick   = { onTabSelected(tab.route) },
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
+                }
+                if (tabsScrollState.maxValue > 0 && tabsScrollState.value < tabsScrollState.maxValue) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                            .width(28.dp)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(surface.copy(alpha = 0f), surface)
+                                )
+                            )
                     )
-                    Spacer(Modifier.width(4.dp))
                 }
             }
 
@@ -860,7 +878,7 @@ private fun TvTabChip(
             .clip(RoundedCornerShape(6.dp))
             .background(if (selected) primary.copy(alpha = 0.15f) else Color.Transparent)
             .border(1.dp, if (focused) primary else Color.Transparent, RoundedCornerShape(6.dp))
-            .padding(horizontal = 18.dp)
+            .padding(horizontal = 14.dp)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,

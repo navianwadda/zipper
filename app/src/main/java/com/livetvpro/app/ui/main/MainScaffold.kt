@@ -674,6 +674,10 @@ private fun TvTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(surface)
+            .then(
+                if (!DeviceUtils.isTvDevice) Modifier.windowInsetsPadding(WindowInsets.statusBars)
+                else Modifier
+            )
     ) {
         Row(
             modifier = Modifier

@@ -1294,10 +1294,12 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         val layoutMode = preferencesManager.getLayoutMode()
         val isNetworkStream = (channel == null && event == null)
         val showSeeks = layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_ONLY ||
-                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_AND_NAV
+                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_AND_NAV ||
+                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_EDGE_NAV
         val showNav   = !isNetworkStream && (
                         layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_AND_NAV ||
-                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_NAV_ONLY)
+                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_NAV_ONLY ||
+                        layoutMode == com.livetvpro.app.data.local.PreferencesManager.LAYOUT_MODE_SEEKS_EDGE_NAV)
         btnSeekBack?.visibility    = if (showSeeks) View.VISIBLE else View.GONE
         btnSeekForward?.visibility = if (showSeeks) View.VISIBLE else View.GONE
         btnPrevChannel?.visibility = if (showNav) View.VISIBLE else View.GONE

@@ -201,9 +201,19 @@ object DeviceUtils {
         if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_SENSOR_HINGE_ANGLE)) {
             return DeviceType.FOLDABLE
         }
-        if (context.resources.configuration.smallestScreenWidthDp >= 600) {
+        val stableSmallestWidthDp = stableSmallestScreenWidthDp(context)
+        val widthDp = stableSmallestWidthDp ?: context.resources.configuration.smallestScreenWidthDp
+        if (widthDp >= 600) {
             return DeviceType.TABLET
         }
         return DeviceType.PHONE
+    }
+
+    private fun stableSmallestScreenWidthDp(context: Context): Int? {
+        if (Build.VERSION.SDK_INT < 34) return null
+        val metrics = context.resources.displayMetrics
+        val stableDensity = android.util.DisplayMetrics.DENSITY_DEVICE_STABLE.takeIf { it > 0 } ?: return null
+        val smallestWidthPx = minOf(metrics.widthPixels, metrics.heightPixels)
+        return (smallestWidthPx * 160f / stableDensity).toInt()
     }
 }

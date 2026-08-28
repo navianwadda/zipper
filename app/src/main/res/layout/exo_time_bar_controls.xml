@@ -33,7 +33,7 @@
         app:bar_height="4dp"
         app:touch_target_height="48dp"
         app:scrubber_enabled_size="16dp"
-        app:scrubber_disabled_size="10dp" />
+        app:scrubber_disabled_size="0dp" />
 
     <TextView
         android:id="@+id/exo_duration"

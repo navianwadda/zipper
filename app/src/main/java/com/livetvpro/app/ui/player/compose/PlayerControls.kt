@@ -857,16 +857,20 @@ private fun NativeExoTimeBar(
             val controlView = LayoutInflater.from(context)
                 .inflate(R.layout.exo_time_bar_widget, null) as PlayerControlView
             controlView.player = player
-            controlView.findViewById<DefaultTimeBar>(R.id.exo_progress)
-                ?.addListener(object : TimeBar.OnScrubListener {
+            controlView.findViewById<DefaultTimeBar>(R.id.exo_progress)?.apply {
+                hideScrubber(false)
+                addListener(object : TimeBar.OnScrubListener {
                     override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                        showScrubber(true)
                         onScrubbingChanged(true)
                     }
                     override fun onScrubMove(timeBar: TimeBar, position: Long) {}
                     override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                        hideScrubber(true)
                         onScrubbingChanged(false)
                     }
                 })
+            }
             controlView
         },
         update = { controlView ->

@@ -188,6 +188,7 @@ class PlayerActivity : ComponentActivity() {
         private const val CONTROL_TYPE_FORWARD       = 4
         private const val CONTROL_TYPE_PREV_CHANNEL  = 5
         private const val CONTROL_TYPE_NEXT_CHANNEL  = 6
+        private const val REQUEST_CODE_CONTENT_INTENT = 100
         private const val MEDIA_NOTIFICATION_CHANNEL_ID = "livetvpro_media_playback"
         private const val MEDIA_NOTIFICATION_ID          = 2001
         var isInPip: Boolean = false
@@ -1191,11 +1192,21 @@ class PlayerActivity : ComponentActivity() {
             else -> getString(R.string.app_name)
         }
 
+        val contentPendingIntent = PendingIntent.getActivity(
+            this,
+            REQUEST_CODE_CONTENT_INTENT,
+            Intent(this, PlayerActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
         return NotificationCompat.Builder(this, MEDIA_NOTIFICATION_CHANNEL_ID)
             .setContentTitle(contentName.ifBlank { getString(R.string.app_name) })
             .setContentText(subtitle)
             .setSmallIcon(R.drawable.ic_play)
             .setLargeIcon(largeIcon)
+            .setContentIntent(contentPendingIntent)
             .setOngoing(!isPaused)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)

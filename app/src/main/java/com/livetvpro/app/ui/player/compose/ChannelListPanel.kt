@@ -31,6 +31,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.text.input.ImeAction
 import com.livetvpro.app.R
 import com.livetvpro.app.utils.GlideExtensions
 import com.livetvpro.app.data.models.Channel
@@ -103,11 +109,21 @@ fun ChannelListPanel(
                 val focusManager = LocalFocusManager.current
                 val closeFocusRequester = remember { FocusRequester() }
                 val firstSidebarFocusRequester = remember { FocusRequester() }
+                var searchQuery by remember { mutableStateOf("") }
+                val isSearching = searchQuery.isNotBlank()
+
+                val displayedChannels = remember(isSearching, searchQuery, selectedGroup, channels) {
+                    if (isSearching) {
+                        channels.filter { it.name.contains(searchQuery, ignoreCase = true) }
+                    } else {
+                        selectedGroup?.channels ?: emptyList()
+                    }
+                }
 
                 LaunchedEffect(selectedGroupIndex) { channelListState.scrollToItem(0) }
-                LaunchedEffect(visible, selectedGroupIndex) {
-                    if (visible && selectedGroup != null) {
-                        val idx = selectedGroup.channels.indexOfFirst { it.id == currentChannelId }
+                LaunchedEffect(visible, selectedGroupIndex, isSearching, searchQuery) {
+                    if (visible && !isSearching) {
+                        val idx = displayedChannels.indexOfFirst { it.id == currentChannelId }
                         if (idx >= 0) channelListState.animateScrollToItem(idx)
                     }
                 }
@@ -172,6 +188,64 @@ fun ChannelListPanel(
 
                     HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
 
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(HEADER_BG)
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search",
+                            tint = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontFamily = BergenSans
+                            ),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            modifier = Modifier.weight(1f),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            text = "Search channels",
+                                            color = Color.White.copy(alpha = 0.4f),
+                                            fontSize = 13.sp,
+                                            fontFamily = BergenSans
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        if (isSearching) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Clear search",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { searchQuery = "" }
+                                    )
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+
                     Row(modifier = Modifier.fillMaxSize()) {
 
                         LazyColumn(
@@ -183,11 +257,11 @@ fun ChannelListPanel(
                             itemsIndexed(groups) { index, group ->
                                 GroupSidebarItem(
                                     title = group.title,
-                                    isSelected = index == selectedGroupIndex,
+                                    isSelected = !isSearching && index == selectedGroupIndex,
                                     channelCount = group.channels.size,
                                     isFirstItem = index == 0,
                                     firstItemFocusRequester = if (index == 0) firstSidebarFocusRequester else null,
-                                    onClick = { selectedGroupIndex = index },
+                                    onClick = { searchQuery = ""; selectedGroupIndex = index },
                                     onFocusedMoveRight = { focusManager.moveFocus(FocusDirection.Right) }
                                 )
                             }
@@ -204,8 +278,22 @@ fun ChannelListPanel(
                             state = channelListState,
                             modifier = Modifier.fillMaxSize().background(PANEL_BG)
                         ) {
-                            val chList = selectedGroup?.channels ?: emptyList()
-                            itemsIndexed(chList) { index, channel ->
+                            if (isSearching && displayedChannels.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "No channels found",
+                                            color = Color.White.copy(alpha = 0.5f),
+                                            fontSize = 13.sp,
+                                            fontFamily = BergenSans
+                                        )
+                                    }
+                                }
+                            }
+                            itemsIndexed(displayedChannels) { index, channel ->
                                 ChannelItemRow(
                                     channel = channel,
                                     serialNumber = index + 1,

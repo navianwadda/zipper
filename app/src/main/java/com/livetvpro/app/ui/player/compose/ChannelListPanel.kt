@@ -32,7 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
@@ -111,6 +113,7 @@ fun ChannelListPanel(
                 val firstSidebarFocusRequester = remember { FocusRequester() }
                 var searchQuery by remember { mutableStateOf("") }
                 val isSearching = searchQuery.isNotBlank()
+                val keyboardController = LocalSoftwareKeyboardController.current
 
                 val displayedChannels = remember(isSearching, searchQuery, selectedGroup, channels) {
                     if (isSearching) {
@@ -188,64 +191,6 @@ fun ChannelListPanel(
 
                     HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(HEADER_BG)
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search",
-                            tint = Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            singleLine = true,
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontFamily = BergenSans
-                            ),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            modifier = Modifier.weight(1f),
-                            decorationBox = { innerTextField ->
-                                Box {
-                                    if (searchQuery.isEmpty()) {
-                                        Text(
-                                            text = "Search channels",
-                                            color = Color.White.copy(alpha = 0.4f),
-                                            fontSize = 13.sp,
-                                            fontFamily = BergenSans
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            }
-                        )
-                        if (isSearching) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = "Clear search",
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = { searchQuery = "" }
-                                    )
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
-
                     Row(modifier = Modifier.fillMaxSize()) {
 
                         LazyColumn(
@@ -274,33 +219,101 @@ fun ChannelListPanel(
                                 .background(Color.White.copy(alpha = 0.08f))
                         )
 
-                        LazyColumn(
-                            state = channelListState,
-                            modifier = Modifier.fillMaxSize().background(PANEL_BG)
-                        ) {
-                            if (isSearching && displayedChannels.isEmpty()) {
-                                item {
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth().padding(24.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "No channels found",
-                                            color = Color.White.copy(alpha = 0.5f),
-                                            fontSize = 13.sp,
-                                            fontFamily = BergenSans
-                                        )
+                        Column(modifier = Modifier.fillMaxSize()) {
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(HEADER_BG)
+                                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Search,
+                                    contentDescription = "Search",
+                                    tint = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                BasicTextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    singleLine = true,
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        fontFamily = BergenSans
+                                    ),
+                                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(
+                                        onSearch = { keyboardController?.hide() }
+                                    ),
+                                    modifier = Modifier.weight(1f),
+                                    decorationBox = { innerTextField ->
+                                        Box {
+                                            if (searchQuery.isEmpty()) {
+                                                Text(
+                                                    text = "Search channels",
+                                                    color = Color.White.copy(alpha = 0.4f),
+                                                    fontSize = 13.sp,
+                                                    fontFamily = BergenSans
+                                                )
+                                            }
+                                            innerTextField()
+                                        }
                                     }
+                                )
+                                if (isSearching) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Clear search",
+                                        tint = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = {
+                                                    searchQuery = ""
+                                                    keyboardController?.hide()
+                                                }
+                                            )
+                                            .padding(8.dp)
+                                            .size(16.dp)
+                                    )
                                 }
                             }
-                            itemsIndexed(displayedChannels) { index, channel ->
-                                ChannelItemRow(
-                                    channel = channel,
-                                    serialNumber = index + 1,
-                                    isPlaying = channel.id == currentChannelId,
-                                    onClick = { onChannelClick(channel); onDismiss() },
-                                    onFocusedMoveLeft = { focusManager.moveFocus(FocusDirection.Left) }
-                                )
+
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), thickness = 1.dp)
+
+                            LazyColumn(
+                                state = channelListState,
+                                modifier = Modifier.fillMaxSize().background(PANEL_BG)
+                            ) {
+                                if (isSearching && displayedChannels.isEmpty()) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "No channels found",
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                fontSize = 13.sp,
+                                                fontFamily = BergenSans
+                                            )
+                                        }
+                                    }
+                                }
+                                itemsIndexed(displayedChannels) { index, channel ->
+                                    ChannelItemRow(
+                                        channel = channel,
+                                        serialNumber = index + 1,
+                                        isPlaying = channel.id == currentChannelId,
+                                        onClick = { onChannelClick(channel); onDismiss() },
+                                        onFocusedMoveLeft = { focusManager.moveFocus(FocusDirection.Left) }
+                                    )
+                                }
                             }
                         }
                     }

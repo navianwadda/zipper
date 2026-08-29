@@ -22,18 +22,10 @@
     <androidx.media3.ui.DefaultTimeBar
         android:id="@+id/exo_progress"
         android:layout_width="0dp"
-        android:layout_height="24dp"
+        android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        app:played_color="#FFFFFF"
-        app:scrubber_color="#FFFFFF"
-        app:buffered_color="#80FFFFFF"
-        app:unplayed_color="#40FFFFFF"
-        app:bar_height="4dp"
-        app:touch_target_height="24dp"
-        app:scrubber_enabled_size="10dp"
-        app:scrubber_dragged_size="16dp" />
+        android:layout_marginEnd="8dp" />
 
     <TextView
         android:id="@+id/exo_duration"

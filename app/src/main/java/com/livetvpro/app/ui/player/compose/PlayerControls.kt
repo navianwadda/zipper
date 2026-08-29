@@ -615,7 +615,7 @@ internal fun PlayerControlsContent(
                     isCasting        = isCastConnected,
                     modifier         = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 0.dp),
+                        .padding(bottom = 4.dp),
                 )
 
                 val showSeeks   = layoutMode == 0 || layoutMode == 1 || layoutMode == 3
@@ -858,12 +858,15 @@ private fun NativeExoTimeBar(
                 .inflate(R.layout.exo_time_bar_widget, null) as PlayerControlView
             controlView.player = player
             controlView.findViewById<DefaultTimeBar>(R.id.exo_progress)?.apply {
+                hideScrubber(0L)
                 addListener(object : TimeBar.OnScrubListener {
                     override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                        showScrubber(0L)
                         onScrubbingChanged(true)
                     }
                     override fun onScrubMove(timeBar: TimeBar, position: Long) {}
                     override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                        hideScrubber(200L)
                         onScrubbingChanged(false)
                     }
                 })

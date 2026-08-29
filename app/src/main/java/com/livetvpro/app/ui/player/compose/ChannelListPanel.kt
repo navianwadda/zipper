@@ -304,7 +304,7 @@ fun ChannelListPanel(
                                         }
                                     }
                                 )
-                                if (isSearching) {
+                                run {
                                     val isClearHovered by clearInteractionSource.collectIsHoveredAsState()
                                     Icon(
                                         imageVector = Icons.Filled.Close,
@@ -317,6 +317,7 @@ fun ChannelListPanel(
                                                 onClick = {
                                                     searchQuery = ""
                                                     keyboardController?.hide()
+                                                    focusManager.clearFocus()
                                                 }
                                             )
                                             .hoverable(interactionSource = clearInteractionSource)

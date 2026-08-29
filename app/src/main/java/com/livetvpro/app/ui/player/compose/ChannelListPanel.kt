@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -79,7 +80,10 @@ fun ChannelListPanel(
                 fadeOut(animationSpec = tween(250)),
         modifier = modifier
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isCompact = maxWidth < 500.dp
+            val panelWidthFraction = if (isCompact) 0.92f else 0.60f
+            val sidebarWidthFraction = if (isCompact) 0.34f else 0.28f
 
             Box(
                 modifier = Modifier
@@ -95,7 +99,7 @@ fun ChannelListPanel(
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(0.60f)
+                    .fillMaxWidth(panelWidthFraction)
                     .align(Alignment.CenterEnd)
                     .background(PANEL_BG)
                     .clickable(
@@ -196,7 +200,7 @@ fun ChannelListPanel(
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxHeight()
-                                .fillMaxWidth(0.28f)
+                                .fillMaxWidth(sidebarWidthFraction)
                                 .background(SIDEBAR_BG)
                         ) {
                             itemsIndexed(groups) { index, group ->

@@ -32,9 +32,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -115,9 +119,13 @@ fun ChannelListPanel(
                 val focusManager = LocalFocusManager.current
                 val closeFocusRequester = remember { FocusRequester() }
                 val firstSidebarFocusRequester = remember { FocusRequester() }
+                val searchFocusRequester = remember { FocusRequester() }
                 var searchQuery by remember { mutableStateOf("") }
                 val isSearching = searchQuery.isNotBlank()
                 val keyboardController = LocalSoftwareKeyboardController.current
+                val searchInteractionSource = remember { MutableInteractionSource() }
+                val isSearchHovered by searchInteractionSource.collectIsHoveredAsState()
+                val clearInteractionSource = remember { MutableInteractionSource() }
 
                 val displayedChannels = remember(isSearching, searchQuery, selectedGroup, channels) {
                     if (isSearching) {
@@ -151,11 +159,13 @@ fun ChannelListPanel(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         var closeButtonFocused by remember { mutableStateOf(false) }
+                        val closeInteractionSource = remember { MutableInteractionSource() }
+                        val isCloseHovered by closeInteractionSource.collectIsHoveredAsState()
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
                                 .background(
-                                    if (closeButtonFocused) Color(0xFF2DB233).copy(alpha = 0.7f) else Color(0xFF2DB233),
+                                    if (closeButtonFocused || isCloseHovered) Color(0xFF2DB233).copy(alpha = 0.7f) else Color(0xFF2DB233),
                                     RoundedCornerShape(50)
                                 )
                                 .focusRequester(closeFocusRequester)
@@ -169,11 +179,17 @@ fun ChannelListPanel(
                                     } else if (event.type == KeyEventType.KeyDown &&
                                         event.key == Key.DirectionDown
                                     ) {
-                                        focusManager.moveFocus(FocusDirection.Down)
+                                        runCatching { searchFocusRequester.requestFocus() }
                                         true
                                     } else false
                                 }
-                                .clickable(onClick = onDismiss),
+                                .hoverable(interactionSource = closeInteractionSource)
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    interactionSource = closeInteractionSource,
+                                    indication = null,
+                                    onClick = onDismiss
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -211,7 +227,8 @@ fun ChannelListPanel(
                                     isFirstItem = index == 0,
                                     firstItemFocusRequester = if (index == 0) firstSidebarFocusRequester else null,
                                     onClick = { searchQuery = ""; selectedGroupIndex = index },
-                                    onFocusedMoveRight = { focusManager.moveFocus(FocusDirection.Right) }
+                                    onFocusedMoveRight = { focusManager.moveFocus(FocusDirection.Right) },
+                                    onFocusedMoveUp = { runCatching { searchFocusRequester.requestFocus() } }
                                 )
                             }
                         }
@@ -228,7 +245,10 @@ fun ChannelListPanel(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(HEADER_BG)
+                                    .background(
+                                        if (isSearchHovered) Color.White.copy(alpha = 0.05f) else HEADER_BG
+                                    )
+                                    .hoverable(interactionSource = searchInteractionSource)
                                     .padding(horizontal = 14.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -253,7 +273,23 @@ fun ChannelListPanel(
                                     keyboardActions = KeyboardActions(
                                         onSearch = { keyboardController?.hide() }
                                     ),
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier
+                                        .pointerHoverIcon(PointerIcon.Text)
+                                        .weight(1f)
+                                        .focusRequester(searchFocusRequester)
+                                        .onKeyEvent { event ->
+                                            if (event.type == KeyEventType.KeyDown &&
+                                                event.key == Key.DirectionDown
+                                            ) {
+                                                runCatching { firstSidebarFocusRequester.requestFocus() }
+                                                true
+                                            } else if (event.type == KeyEventType.KeyDown &&
+                                                event.key == Key.DirectionUp
+                                            ) {
+                                                runCatching { closeFocusRequester.requestFocus() }
+                                                true
+                                            } else false
+                                        },
                                     decorationBox = { innerTextField ->
                                         Box {
                                             if (searchQuery.isEmpty()) {
@@ -269,19 +305,22 @@ fun ChannelListPanel(
                                     }
                                 )
                                 if (isSearching) {
+                                    val isClearHovered by clearInteractionSource.collectIsHoveredAsState()
                                     Icon(
                                         imageVector = Icons.Filled.Close,
                                         contentDescription = "Clear search",
-                                        tint = Color.White.copy(alpha = 0.6f),
+                                        tint = if (isClearHovered) Color.White else Color.White.copy(alpha = 0.6f),
                                         modifier = Modifier
                                             .clickable(
-                                                interactionSource = remember { MutableInteractionSource() },
+                                                interactionSource = clearInteractionSource,
                                                 indication = null,
                                                 onClick = {
                                                     searchQuery = ""
                                                     keyboardController?.hide()
                                                 }
                                             )
+                                            .hoverable(interactionSource = clearInteractionSource)
+                                            .pointerHoverIcon(PointerIcon.Hand)
                                             .padding(8.dp)
                                             .size(16.dp)
                                     )
@@ -335,17 +374,20 @@ private fun GroupSidebarItem(
     isFirstItem: Boolean = false,
     firstItemFocusRequester: FocusRequester? = null,
     onClick: () -> Unit,
-    onFocusedMoveRight: () -> Unit = {}
+    onFocusedMoveRight: () -> Unit = {},
+    onFocusedMoveUp: () -> Unit = {}
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var isFocused by remember { mutableStateOf(false) }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val isHighlighted = isFocused || isHovered
 
     val baseModifier = Modifier
         .fillMaxWidth()
         .background(
             when {
                 isSelected -> RED.copy(alpha = 0.85f)
-                isFocused -> Color.White.copy(alpha = 0.08f)
+                isHighlighted -> Color.White.copy(alpha = 0.08f)
                 else -> Color.Transparent
             }
         )
@@ -365,9 +407,15 @@ private fun GroupSidebarItem(
                 event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight -> {
                     onFocusedMoveRight(); true
                 }
+                isFirstItem &&
+                event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp -> {
+                    onFocusedMoveUp(); true
+                }
                 else -> false
             }
         }
+        .hoverable(interactionSource = interactionSource)
+        .pointerHoverIcon(PointerIcon.Hand)
         .clickable(
             interactionSource = interactionSource,
             indication = null,
@@ -381,7 +429,7 @@ private fun GroupSidebarItem(
     ) {
         Text(
             text = title,
-            color = if (isSelected || isFocused) Color.White else Color.White.copy(alpha = 0.65f),
+            color = if (isSelected || isHighlighted) Color.White else Color.White.copy(alpha = 0.65f),
             fontSize = 11.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             fontFamily = BergenSans,
@@ -411,6 +459,8 @@ private fun ChannelItemRow(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var isFocused by remember { mutableStateOf(false) }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val isHighlighted = isFocused || isHovered
 
     Row(
         modifier = Modifier
@@ -418,7 +468,7 @@ private fun ChannelItemRow(
             .background(
                 when {
                     isPlaying -> RED.copy(alpha = 0.85f)
-                    isFocused -> Color.White.copy(alpha = 0.08f)
+                    isHighlighted -> Color.White.copy(alpha = 0.08f)
                     else -> Color.Transparent
                 }
             )
@@ -435,6 +485,8 @@ private fun ChannelItemRow(
                     else -> false
                 }
             }
+            .hoverable(interactionSource = interactionSource)
+            .pointerHoverIcon(PointerIcon.Hand)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

@@ -20,7 +20,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.ripple
 import androidx.compose.foundation.focusable
@@ -334,6 +336,7 @@ fun PlayerControls(
                         .padding(start = 4.dp, top = 4.dp)
                         .size(40.dp)
                         .hoverable(interactionSource = lockInteractionSource)
+                        .pointerHoverIcon(PointerIcon.Hand)
                         .focusRequester(unlockFocusRequester)
                         .onFocusChanged { isUnlockFocused = it.isFocused }
                         .onKeyEvent { event ->
@@ -815,6 +818,7 @@ internal fun PlayerIconButton(
         modifier = modifier
             .size(size.dp)
             .hoverable(interactionSource = interactionSource)
+            .pointerHoverIcon(PointerIcon.Hand)
             .onFocusChanged { isFocused = it.isFocused }
             .then(
                 if (isTvMode) Modifier.onKeyEvent { event ->
@@ -918,6 +922,7 @@ private fun ExoPlayerTimeBar(
             .fillMaxWidth()
             .wrapContentHeight()
             .focusable()
+            .pointerHoverIcon(PointerIcon.Hand)
             .onFocusChanged { isFocused = it.isFocused }
             .then(
                 if (isFocused && isTvMode) Modifier.border(

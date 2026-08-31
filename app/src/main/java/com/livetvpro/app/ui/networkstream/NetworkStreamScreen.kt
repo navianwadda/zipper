@@ -104,11 +104,6 @@ fun NetworkStreamScreen(
     var selectedUserAgent by remember { mutableStateOf(viewModel.selectedUserAgent) }
     var selectedDrmScheme by remember { mutableStateOf(viewModel.selectedDrmScheme) }
 
-    // Custom headers are edited as a list of key/value rows in the UI, but kept in
-    // sync with viewModel.customHeaders (a JSON string of {"key":"value"}) so that
-    // downstream code (persistence, onPlay callback) needs no changes. Rows with a
-    // blank key are simply skipped when serializing, so the user is free to add an
-    // empty row and fill it in afterwards.
     val customHeaderRows = remember {
         mutableStateListOf<HeaderRow>().apply { addAll(parseHeaderRows(viewModel.customHeaders)) }
     }
@@ -174,7 +169,7 @@ fun NetworkStreamScreen(
                     headers = customHeaderRows,
                     primaryColor = primaryColor,
                     onAddRawClick = {
-                        customHeaderRows.add(HeaderRow())
+                        customHeaderRows.add(HeaderRow(isRaw = true))
                     },
                     onAddHeaderClick = { showAddHeaderDialog = true },
                     onChanged = { syncCustomHeaders() },
@@ -261,16 +256,15 @@ fun NetworkStreamScreen(
     }
 }
 
-/**
- * A single custom HTTP header key/value pair. Each field is independently
- * mutable so a row can be edited in place without rebuilding the whole list.
- */
 private class HeaderRow(
     key: String = "",
-    value: String = ""
+    value: String = "",
+    raw: String = "",
+    val isRaw: Boolean = false
 ) {
     var key by mutableStateOf(key)
     var value by mutableStateOf(value)
+    var raw by mutableStateOf(raw)
 }
 
 private fun parseHeaderRows(json: String): List<HeaderRow> {
@@ -288,7 +282,19 @@ private fun parseHeaderRows(json: String): List<HeaderRow> {
 private fun serializeHeaderRows(rows: List<HeaderRow>): String {
     val obj = JSONObject()
     rows.forEach { row ->
-        if (row.key.isNotBlank()) obj.put(row.key, row.value)
+        if (row.isRaw) {
+            if (row.raw.isNotBlank()) {
+                try {
+                    val rawObj = JSONObject(row.raw)
+                    rawObj.keys().forEach { key ->
+                        obj.put(key, rawObj.optString(key, ""))
+                    }
+                } catch (e: Exception) {
+                }
+            }
+        } else if (row.key.isNotBlank()) {
+            obj.put(row.key, row.value)
+        }
     }
     return if (obj.length() == 0) "" else obj.toString()
 }
@@ -362,13 +368,6 @@ private fun StreamTextField(
     )
 }
 
-/**
- * Renders the current list of custom headers as individually editable rows
- * (styled to match the other stream fields like Origin Value / DRM License URL),
- * followed by two standalone actions below the list:
- * - "Add Raw Header": inserts a blank editable row immediately, no dialog.
- * - "Add Header": opens a dialog to type a Key/Value pair before it's added.
- */
 @Composable
 private fun CustomHeadersSection(
     headers: List<HeaderRow>,
@@ -418,13 +417,6 @@ private fun CustomHeadersSection(
     }
 }
 
-/**
- * A single editable header row: a Key field and a Value field, styled exactly
- * like [StreamTextField] (same outline, shape, colors, focus behavior), with a
- * delete icon to remove the row. Both fields can be left blank — nothing here
- * blocks empty input, since the row is only skipped from the saved JSON if its
- * key ends up blank.
- */
 @Composable
 private fun HeaderRowItem(
     row: HeaderRow,
@@ -440,21 +432,21 @@ private fun HeaderRowItem(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        if (row.isRaw) {
             StreamTextField(
-                value = row.key,
-                onValueChange = { row.key = it; onChanged() },
-                label = "Header Key",
-                primaryColor = primaryColor
+                value = row.raw,
+                onValueChange = { row.raw = it; onChanged() },
+                label = "Raw Header (JSON: {\"key\":\"value\"})",
+                primaryColor = primaryColor,
+                modifier = Modifier.weight(1f)
             )
+        } else {
             StreamTextField(
                 value = row.value,
                 onValueChange = { row.value = it; onChanged() },
-                label = "Header Value",
-                primaryColor = primaryColor
+                label = row.key.ifBlank { "Header Value" },
+                primaryColor = primaryColor,
+                modifier = Modifier.weight(1f)
             )
         }
         IconButton(
@@ -517,14 +509,6 @@ private fun AddHeaderButton(
     }
 }
 
-/**
- * Dialog for entering a new custom header's key/value before it's added to the list.
- *
- * Validation rule: a header is only accepted when the key is non-blank.
- * - key present, value present -> accepted, row added
- * - key present, value blank   -> accepted, row added (value stored as empty string)
- * - key blank (value present or not) -> rejected, shows an error, does not submit
- */
 @Composable
 private fun AddHeaderDialog(
     primaryColor: Color,

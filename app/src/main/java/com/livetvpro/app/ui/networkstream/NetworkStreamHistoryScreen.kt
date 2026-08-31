@@ -90,6 +90,7 @@ fun NetworkStreamHistoryScreen(
                     networkStreamViewModel.selectedUserAgent = entry.selectedUserAgent
                     networkStreamViewModel.customUserAgent = entry.customUserAgent
                     networkStreamViewModel.selectedDrmScheme = entry.drmScheme
+                    networkStreamViewModel.customHeaders = entry.customHeaders
                     navController.popBackStack()
                 },
                 onDelete         = { viewModel.removeEntry(entry.id) },
@@ -148,6 +149,7 @@ private fun HistoryRow(
                     if (entry.origin.isNotBlank()) add("Origin")
                     if (entry.drmLicense.isNotBlank()) add("DRM: ${entry.drmScheme}")
                     if (entry.selectedUserAgent != "Default") add("UA: ${entry.selectedUserAgent}")
+                    if (entry.customHeaders.isNotBlank()) add("Headers")
                 }
                 if (extras.isNotEmpty()) {
                     Text(

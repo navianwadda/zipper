@@ -436,7 +436,7 @@ private fun HeaderRowItem(
             StreamTextField(
                 value = row.raw,
                 onValueChange = { row.raw = it; onChanged() },
-                label = "Raw Header (JSON: {\"key\":\"value\"})",
+                label = "Custom Header (JSON: {\"key\":\"value\"})",
                 primaryColor = primaryColor,
                 modifier = Modifier.weight(1f)
             )

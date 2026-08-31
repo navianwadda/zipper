@@ -809,8 +809,10 @@ private fun HistorySortMenu(
         onDismissRequest = onDismissRequest,
         properties = PopupProperties(focusable = true),
     ) {
-        LaunchedEffect(expanded) {
-            if (expanded) newestFocusRequester.requestFocus()
+        if (DeviceUtils.isTvDevice) {
+            LaunchedEffect(expanded) {
+                if (expanded) newestFocusRequester.requestFocus()
+            }
         }
         HistorySortMenuItem(
             text = "Newest First",

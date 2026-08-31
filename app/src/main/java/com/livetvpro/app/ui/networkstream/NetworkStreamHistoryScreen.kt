@@ -59,10 +59,13 @@ fun NetworkStreamHistoryScreen(
     val listState = rememberLazyListState()
     val firstRowFocusRequester = remember { FocusRequester() }
 
+    LaunchedEffect(viewModel.newestFirst) {
+        listState.scrollToItem(0)
+    }
+
     if (isTvDevice) {
         LaunchedEffect(viewModel.entries) {
             if (viewModel.entries.isNotEmpty()) {
-                listState.scrollToItem(0)
                 firstRowFocusRequester.requestFocus()
             }
         }

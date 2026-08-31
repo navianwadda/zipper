@@ -429,7 +429,7 @@ private fun HeaderRowItem(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (row.isRaw) {
@@ -453,7 +453,6 @@ private fun HeaderRowItem(
             onClick = onRemove,
             interactionSource = removeInteractionSource,
             modifier = Modifier
-                .padding(top = 4.dp)
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(

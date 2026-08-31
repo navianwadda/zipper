@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -53,7 +52,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -78,7 +76,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -109,7 +106,9 @@ fun NetworkStreamScreen(
 
     // Custom headers are edited as a list of key/value rows in the UI, but kept in
     // sync with viewModel.customHeaders (a JSON string of {"key":"value"}) so that
-    // downstream code (persistence, onPlay callback) needs no changes.
+    // downstream code (persistence, onPlay callback) needs no changes. Rows with a
+    // blank key are simply skipped when serializing, so the user is free to add an
+    // empty row and fill it in afterwards.
     val customHeaderRows = remember {
         mutableStateListOf<HeaderRow>().apply { addAll(parseHeaderRows(viewModel.customHeaders)) }
     }
@@ -174,7 +173,11 @@ fun NetworkStreamScreen(
                 CustomHeadersSection(
                     headers = customHeaderRows,
                     primaryColor = primaryColor,
-                    onAddClick = { showAddHeaderDialog = true },
+                    onAddRawClick = {
+                        customHeaderRows.add(HeaderRow())
+                    },
+                    onAddHeaderClick = { showAddHeaderDialog = true },
+                    onChanged = { syncCustomHeaders() },
                     onRemove = { index ->
                         customHeaderRows.removeAt(index)
                         syncCustomHeaders()
@@ -259,9 +262,16 @@ fun NetworkStreamScreen(
 }
 
 /**
- * A single custom HTTP header key/value pair.
+ * A single custom HTTP header key/value pair. Each field is independently
+ * mutable so a row can be edited in place without rebuilding the whole list.
  */
-private data class HeaderRow(val key: String, val value: String)
+private class HeaderRow(
+    key: String = "",
+    value: String = ""
+) {
+    var key by mutableStateOf(key)
+    var value by mutableStateOf(value)
+}
 
 private fun parseHeaderRows(json: String): List<HeaderRow> {
     if (json.isBlank()) return emptyList()
@@ -276,7 +286,6 @@ private fun parseHeaderRows(json: String): List<HeaderRow> {
 }
 
 private fun serializeHeaderRows(rows: List<HeaderRow>): String {
-    if (rows.isEmpty()) return ""
     val obj = JSONObject()
     rows.forEach { row ->
         if (row.key.isNotBlank()) obj.put(row.key, row.value)
@@ -354,25 +363,24 @@ private fun StreamTextField(
 }
 
 /**
- * Renders the label + list of currently configured custom headers, plus an
- * "Add Header" action. Each header row shows "key: value" with a remove button.
- * Fully keyboard/D-pad (TV) and pointer navigable via focus-aware highlighting,
- * matching the same pattern used by [StreamDropdown]'s option list.
+ * Renders the current list of custom headers as individually editable rows
+ * (styled to match the other stream fields like Origin Value / DRM License URL),
+ * followed by two standalone actions below the list:
+ * - "Add Raw Header": inserts a blank editable row immediately, no dialog.
+ * - "Add Header": opens a dialog to type a Key/Value pair before it's added.
  */
 @Composable
 private fun CustomHeadersSection(
     headers: List<HeaderRow>,
     primaryColor: Color,
-    onAddClick: () -> Unit,
+    onAddRawClick: () -> Unit,
+    onAddHeaderClick: () -> Unit,
+    onChanged: () -> Unit,
     onRemove: (Int) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(8.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
             text = "Custom Headers",
@@ -381,71 +389,80 @@ private fun CustomHeadersSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        if (headers.isEmpty()) {
-            Text(
-                text = "No custom headers added yet.",
-                fontFamily = BergenSans,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        headers.forEachIndexed { index, row ->
+            HeaderRowItem(
+                row = row,
+                primaryColor = primaryColor,
+                onChanged = onChanged,
+                onRemove = { onRemove(index) }
             )
-        } else {
-            headers.forEachIndexed { index, row ->
-                HeaderRowItem(
-                    row = row,
-                    primaryColor = primaryColor,
-                    onRemove = { onRemove(index) }
-                )
-            }
         }
 
-        AddHeaderButton(primaryColor = primaryColor, onClick = onAddClick)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            AddHeaderButton(
+                text = "Add Raw Header",
+                primaryColor = primaryColor,
+                modifier = Modifier.weight(1f),
+                onClick = onAddRawClick
+            )
+            AddHeaderButton(
+                text = "Add Header",
+                primaryColor = primaryColor,
+                modifier = Modifier.weight(1f),
+                onClick = onAddHeaderClick
+            )
+        }
     }
 }
 
+/**
+ * A single editable header row: a Key field and a Value field, styled exactly
+ * like [StreamTextField] (same outline, shape, colors, focus behavior), with a
+ * delete icon to remove the row. Both fields can be left blank — nothing here
+ * blocks empty input, since the row is only skipped from the saved JSON if its
+ * key ends up blank.
+ */
 @Composable
 private fun HeaderRowItem(
     row: HeaderRow,
     primaryColor: Color,
+    onChanged: () -> Unit,
     onRemove: () -> Unit,
 ) {
     val removeInteractionSource = remember { MutableInteractionSource() }
     val isRemoveFocused by removeInteractionSource.collectIsFocusedAsState()
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(6.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = row.key,
-                fontFamily = BergenSans,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StreamTextField(
+                value = row.key,
+                onValueChange = { row.key = it; onChanged() },
+                label = "Header Key",
+                primaryColor = primaryColor
             )
-            if (row.value.isNotEmpty()) {
-                Text(
-                    text = row.value,
-                    fontFamily = BergenSans,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            StreamTextField(
+                value = row.value,
+                onValueChange = { row.value = it; onChanged() },
+                label = "Header Value",
+                primaryColor = primaryColor
+            )
         }
-        Spacer(Modifier.width(8.dp))
         IconButton(
             onClick = onRemove,
             interactionSource = removeInteractionSource,
             modifier = Modifier
-                .size(36.dp)
+                .padding(top = 4.dp)
+                .size(40.dp)
                 .clip(CircleShape)
                 .background(
                     if (isRemoveFocused) primaryColor.copy(alpha = 0.2f) else Color.Transparent
@@ -453,7 +470,7 @@ private fun HeaderRowItem(
         ) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "Remove header ${row.key}",
+                contentDescription = "Remove header",
                 tint = if (isRemoveFocused) primaryColor else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -462,7 +479,9 @@ private fun HeaderRowItem(
 
 @Composable
 private fun AddHeaderButton(
+    text: String,
     primaryColor: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -471,7 +490,7 @@ private fun AddHeaderButton(
     OutlinedButton(
         onClick = onClick,
         interactionSource = interactionSource,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = primaryColor,
@@ -489,22 +508,22 @@ private fun AddHeaderButton(
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            text = "Add Header",
+            text = text,
             fontFamily = BergenSans,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.sp
+            fontSize = 13.sp,
+            maxLines = 1
         )
     }
 }
 
 /**
- * Dialog for entering a new custom header's key/value.
+ * Dialog for entering a new custom header's key/value before it's added to the list.
  *
  * Validation rule: a header is only accepted when the key is non-blank.
- * - key present, value present -> accepted
- * - key present, value blank   -> accepted (value defaults to empty string)
- * - key blank, value present   -> rejected (shows an error, does not submit)
- * - key blank, value blank     -> rejected (Add button does nothing)
+ * - key present, value present -> accepted, row added
+ * - key present, value blank   -> accepted, row added (value stored as empty string)
+ * - key blank (value present or not) -> rejected, shows an error, does not submit
  */
 @Composable
 private fun AddHeaderDialog(
@@ -643,8 +662,7 @@ private fun HeaderDialogButton(
             fontFamily = BergenSans,
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            maxLines = 1
         )
     }
 }

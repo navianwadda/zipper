@@ -845,8 +845,8 @@ object M3uParser {
         } catch (e: Exception) { "" }
     }
 
-    private fun generateChannelId(streamUrl: String, name: String, index: Int): String {
-        val combined = "$streamUrl|$name|$index"
+    private fun generateChannelId(streamUrl: String, name: String, dupSuffix: String): String {
+        val combined = "$streamUrl|$name$dupSuffix"
         return try {
             val digest = MessageDigest.getInstance("MD5").digest(combined.toByteArray())
             digest.joinToString("") { "%02x".format(it) }
@@ -860,10 +860,15 @@ object M3uParser {
         categoryId: String,
         categoryName: String
     ): List<Channel> {
+        val seenCounts = mutableMapOf<String, Int>()
         return m3uChannels.mapIndexed { index, m3u ->
             val metaUrl = buildStreamUrlWithMetadata(m3u)
+            val baseKey = "${m3u.streamUrl}|${m3u.name}"
+            val occurrence = seenCounts.getOrDefault(baseKey, 0)
+            seenCounts[baseKey] = occurrence + 1
+            val dupSuffix = if (occurrence == 0) "" else "|dup$occurrence"
             Channel(
-                id           = generateChannelId(m3u.streamUrl, m3u.name, index),
+                id           = generateChannelId(m3u.streamUrl, m3u.name, dupSuffix),
                 name         = m3u.name,
                 logoUrl      = m3u.logoUrl,
                 streamUrl    = metaUrl,

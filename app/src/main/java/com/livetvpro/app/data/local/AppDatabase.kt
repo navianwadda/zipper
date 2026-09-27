@@ -8,14 +8,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.livetvpro.app.data.local.dao.ChannelDao
 import com.livetvpro.app.data.local.dao.FavoriteChannelDao
 import com.livetvpro.app.data.local.dao.PlaylistDao
+import com.livetvpro.app.data.local.dao.WatchHistoryDao
 import com.livetvpro.app.data.local.entity.ChannelEntity
 import com.livetvpro.app.data.local.entity.FavoriteChannelEntity
 import com.livetvpro.app.data.local.entity.FavoriteChannelConverters
 import com.livetvpro.app.data.local.entity.PlaylistEntity
+import com.livetvpro.app.data.local.entity.WatchHistoryEntity
 
 @Database(
-    entities = [FavoriteChannelEntity::class, PlaylistEntity::class, ChannelEntity::class],
-    version = 6,
+    entities = [FavoriteChannelEntity::class, PlaylistEntity::class, ChannelEntity::class, WatchHistoryEntity::class],
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(FavoriteChannelConverters::class)
@@ -23,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun favoriteChannelDao(): FavoriteChannelDao
     abstract fun playlistDao(): PlaylistDao
     abstract fun channelDao(): ChannelDao
+    abstract fun watchHistoryDao(): WatchHistoryDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -86,6 +89,26 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE favorite_channels ADD COLUMN categoryId TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE favorite_channels ADD COLUMN categoryName TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE favorite_channels ADD COLUMN linksJson TEXT")
+            }
+        }
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS watch_history (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        logoUrl TEXT NOT NULL,
+                        streamUrl TEXT NOT NULL,
+                        categoryId TEXT NOT NULL,
+                        categoryName TEXT NOT NULL,
+                        groupTitle TEXT NOT NULL,
+                        linksJson TEXT,
+                        linkIndex INTEGER NOT NULL,
+                        watchedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
             }
         }
     }

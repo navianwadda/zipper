@@ -31,6 +31,16 @@ interface ChannelDao {
     """)
     suspend fun getGroups(categoryId: String): List<String>
 
+    @Query("""
+        SELECT * FROM channels
+        WHERE name LIKE '%' || :query || '%'
+           OR groupTitle LIKE '%' || :query || '%'
+           OR categoryName LIKE '%' || :query || '%'
+        ORDER BY name ASC
+        LIMIT :limit
+    """)
+    suspend fun searchAllChannels(query: String, limit: Int = 60): List<ChannelEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(channels: List<ChannelEntity>)
 

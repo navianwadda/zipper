@@ -6,6 +6,7 @@ import com.livetvpro.app.data.local.AppDatabase
 import com.livetvpro.app.data.local.dao.ChannelDao
 import com.livetvpro.app.data.local.dao.FavoriteChannelDao
 import com.livetvpro.app.data.local.dao.PlaylistDao
+import com.livetvpro.app.data.local.dao.WatchHistoryDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,7 +26,10 @@ object DatabaseModule {
             AppDatabase::class.java,
             "live_tv_pro_database"
         )
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6)
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7
+            )
             .setJournalMode(androidx.room.RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .build()
     }
@@ -44,4 +48,9 @@ object DatabaseModule {
     @Singleton
     fun provideChannelDao(database: AppDatabase): ChannelDao =
         database.channelDao()
+
+    @Provides
+    @Singleton
+    fun provideWatchHistoryDao(database: AppDatabase): WatchHistoryDao =
+        database.watchHistoryDao()
 }

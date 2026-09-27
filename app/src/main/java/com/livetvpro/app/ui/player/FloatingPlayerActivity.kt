@@ -78,6 +78,7 @@ class FloatingPlayerActivity : ComponentActivity() {
     @Inject lateinit var preferencesManager: PreferencesManager
     @Inject lateinit var listenerManager: com.livetvpro.app.utils.NativeListenerManager
     @Inject lateinit var favoritesRepository: com.livetvpro.app.data.repository.FavoritesRepository
+    @Inject lateinit var watchHistoryRepository: com.livetvpro.app.data.repository.WatchHistoryRepository
 
     private val viewModel: PlayerViewModel by viewModels()
 
@@ -1213,6 +1214,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             this.savedPlaybackPosition = savedPosition
         }
         updateNowPlayingState()
+        recordWatchHistory()
     }
 
     private fun setupRelatedChannels() {
@@ -1268,6 +1270,20 @@ class FloatingPlayerActivity : ComponentActivity() {
                 }
             }
             ContentType.NETWORK_STREAM -> {
+            }
+        }
+    }
+
+    private fun recordWatchHistory() {
+        if (contentType != ContentType.CHANNEL) return
+        val channel = channelData ?: return
+        if (channel.id.isBlank()) return
+        val linkIndex = currentLinkIndex
+        lifecycleScope.launch {
+            try {
+                watchHistoryRepository.record(channel, linkIndex)
+            } catch (e: Exception) {
+                // Never let history tracking break playback.
             }
         }
     }
@@ -1369,6 +1385,7 @@ class FloatingPlayerActivity : ComponentActivity() {
             setupPlayer()
             setupLinksUI()
             updateNowPlayingState()
+            recordWatchHistory()
 
             val channelListKey = intent.getStringExtra(EXTRA_CHANNEL_LIST_KEY)
             val isFavoritesSource = channelListKey?.startsWith("favorites_") == true
@@ -1434,6 +1451,7 @@ class FloatingPlayerActivity : ComponentActivity() {
         releasePlayer()
         setupPlayer()
         updateNowPlayingState()
+        recordWatchHistory()
     }
 
     override fun onPause() {

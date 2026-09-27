@@ -61,6 +61,20 @@ class ChannelRepository @Inject constructor(
             entity.toChannel(links)
         }
 
+    /**
+     * Global channel search across every synced category / playlist in the local DB.
+     */
+    suspend fun searchChannels(query: String, limit: Int = 60): List<Channel> {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return emptyList()
+        return channelDao.searchAllChannels(trimmed, limit).map { entity ->
+            val links = entity.linksJson?.let {
+                gson.fromJson(it, Array<com.livetvpro.app.data.models.ChannelLink>::class.java)?.toList()
+            }
+            entity.toChannel(links)
+        }
+    }
+
     suspend fun getGroups(categoryId: String): List<String> =
         channelDao.getGroups(categoryId)
 

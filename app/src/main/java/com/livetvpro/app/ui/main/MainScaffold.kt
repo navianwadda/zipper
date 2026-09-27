@@ -164,6 +164,12 @@ fun MainScaffold(
     var isTopLevel     by remember { mutableStateOf(true) }
     var categoryTitle  by remember { mutableStateOf<String?>(null) }
 
+    fun commitAndCloseSearch() {
+        if (searchQuery.isNotBlank()) preferencesManager.addRecentSearch(searchQuery)
+        isSearchActive = false
+        searchQuery = ""
+    }
+
     val topLevelSet = if (isTvOrDesktop || isTablet) Routes.TV_TOP_LEVEL else Routes.PHONE_TOP_LEVEL
     val tabs        = if (isTvOrDesktop || isTablet) TV_TABS             else PHONE_TABS
 
@@ -219,7 +225,7 @@ fun MainScaffold(
             if (route != Routes.CATEGORY_CHANNELS) categoryTitle = null
             toolbarTitle = resolveTitle(route, categoryTitle)
             isTopLevel   = route in topLevelSet
-            if (isSearchActive) { isSearchActive = false; searchQuery = "" }
+            if (isSearchActive) commitAndCloseSearch()
             onDestinationChanged(route, toolbarTitle, route in Routes.REFRESH_DESTINATIONS)
         }
     }
@@ -252,9 +258,9 @@ fun MainScaffold(
                 searchQuery    = searchQuery,
                 showSearch     = currentRoute != Routes.NETWORK_STREAM,
                 onTabSelected  = { navigate(it) },
-                onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
+                onSearchToggle = { if (isSearchActive) commitAndCloseSearch() else isSearchActive = true },
                 onQueryChange  = { q -> searchQuery = q },
-                onSearchClose  = { isSearchActive = false; searchQuery = "" },
+                onSearchClose  = { commitAndCloseSearch() },
                 showHistory    = currentRoute == Routes.NETWORK_STREAM,
                 onHistory      = { navigateForward(Routes.NETWORK_STREAM_HISTORY) },
                 isHistoryRoute       = currentRoute == Routes.NETWORK_STREAM_HISTORY,
@@ -272,9 +278,9 @@ fun MainScaffold(
                 showSearch     = currentRoute != Routes.NETWORK_STREAM,
                 primaryColor   = Color(primaryColor.takeIf { it != 0 } ?: 0xFF2AABEE.toInt()),
                 onBack         = { activity.onBackPressedDispatcher.onBackPressed() },
-                onSearchToggle = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
+                onSearchToggle = { if (isSearchActive) commitAndCloseSearch() else isSearchActive = true },
                 onQueryChange  = { q -> searchQuery = q },
-                onSearchClose  = { isSearchActive = false; searchQuery = "" },
+                onSearchClose  = { commitAndCloseSearch() },
                 onFavorites    = { navigateForward(Routes.FAVORITES) },
                 onRefresh      = { refreshSignal++ },
                 showHistory    = currentRoute == Routes.NETWORK_STREAM,
@@ -311,8 +317,11 @@ fun MainScaffold(
                         navController = navController,
                         listenerManager = listenerManager,
                         cooldownManager = cooldownManager,
+                        preferencesManager = preferencesManager,
                         searchQuery = searchQuery,
+                        searchActive = isSearchActive,
                         refreshSignal = refreshSignal,
+                        onSearchQueryChange = { q -> searchQuery = q },
                     )
                 }
                 composable(
@@ -438,8 +447,7 @@ fun MainScaffold(
                 keyboardController?.hide()
             }
             isSearchActive -> {
-                isSearchActive = false
-                searchQuery = ""
+                commitAndCloseSearch()
             }
             currentRoute in exitConfirmationRoutes -> {
                 val now = System.currentTimeMillis()

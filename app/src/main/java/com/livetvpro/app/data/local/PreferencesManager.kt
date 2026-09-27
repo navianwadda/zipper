@@ -32,6 +32,8 @@ class PreferencesManager @Inject constructor(
         private const val KEY_LAYOUT_MODE = "layout_mode"
         private const val KEY_VOLUME_BOOSTING_ENABLED = "volume_boosting_enabled"
         private const val KEY_AUTO_SWITCH_STREAM_ENABLED = "auto_switch_stream_enabled"
+        private const val KEY_RECENT_SEARCHES = "recent_searches"
+        private const val MAX_RECENT_SEARCHES = 10
 
         const val LAYOUT_MODE_SEEKS_ONLY       = 0
         const val LAYOUT_MODE_SEEKS_AND_NAV    = 1
@@ -97,4 +99,24 @@ class PreferencesManager @Inject constructor(
         return prefs.getInt(KEY_LAYOUT_MODE, fallback)
     }
     fun setLayoutMode(mode: Int) = prefs.edit().putInt(KEY_LAYOUT_MODE, mode).apply()
+
+    fun getRecentSearches(): List<String> {
+        return try {
+            val json = prefs.getString(KEY_RECENT_SEARCHES, null) ?: return emptyList()
+            val type = object : com.google.gson.reflect.TypeToken<List<String>>() {}.type
+            com.google.gson.Gson().fromJson<List<String>>(json, type)?.filter { it.isNotBlank() } ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun addRecentSearch(query: String) {
+        val normalized = query.trim()
+        if (normalized.isEmpty()) return
+        val current = getRecentSearches().filter { !it.equals(normalized, ignoreCase = true) }
+        val updated = (listOf(normalized) + current).take(MAX_RECENT_SEARCHES)
+        prefs.edit().putString(KEY_RECENT_SEARCHES, com.google.gson.Gson().toJson(updated)).apply()
+    }
+
+    fun clearRecentSearches() = prefs.edit().remove(KEY_RECENT_SEARCHES).apply()
 }

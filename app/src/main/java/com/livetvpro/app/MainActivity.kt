@@ -237,11 +237,29 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             android.content.res.Configuration.UI_MODE_NIGHT_YES
         themeManager.notifySystemDarkChanged(isDark)
         themeManager.refreshDynamicColors(this)
+        restoreSystemBars()
     }
 
     override fun onResume() {
         super.onResume()
         themeManager.refreshDynamicColors(this)
+        restoreSystemBars()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) restoreSystemBars()
+    }
+
+    private fun restoreSystemBars() {
+        val controller = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+        if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop) {
+            controller.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+        } else {
+            controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(window.decorView)
+        window.decorView.post { androidx.core.view.ViewCompat.requestApplyInsets(window.decorView) }
     }
 
     override fun onNewIntent(intent: Intent) {

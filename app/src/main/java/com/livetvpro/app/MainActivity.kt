@@ -66,6 +66,11 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val appContext = applicationContext
+        android.os.Looper.myQueue().addIdleHandler {
+            try { android.webkit.WebView(appContext).destroy() } catch (_: Throwable) {}
+            false
+        }
 
         if (!dataRepository.isDataLoaded()) {
             startActivity(Intent(this, com.livetvpro.app.ui.SplashActivity::class.java))

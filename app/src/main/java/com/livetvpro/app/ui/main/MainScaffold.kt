@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility as ComposeAnimatedVisibilit
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
@@ -379,10 +381,22 @@ fun MainScaffold(
                         isTvDevice    = isTvOrDesktop || isTablet,
                     )
                 }
-                composable(Routes.CRICKET_SCORE) {
+                composable(
+                    Routes.CRICKET_SCORE,
+                    enterTransition = { EnterTransition.None },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None },
+                ) {
                     CricketScoreScreen(listenerManager = listenerManager)
                 }
-                composable(Routes.FOOTBALL_SCORE) {
+                composable(
+                    Routes.FOOTBALL_SCORE,
+                    enterTransition = { EnterTransition.None },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None },
+                ) {
                     FootballScoreScreen(listenerManager = listenerManager)
                 }
                 composable(Routes.DEVICE_ID) {

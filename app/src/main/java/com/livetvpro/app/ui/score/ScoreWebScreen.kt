@@ -29,7 +29,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +51,8 @@ fun ScoreWebScreen(url: String) {
     var showProgress by remember { mutableStateOf(true) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var loadTrigger by remember { mutableStateOf(0) }
+    var contentVisible by remember { mutableStateOf(false) }
+    val backgroundColor = MaterialTheme.colorScheme.background
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (!showError) {
@@ -56,6 +60,7 @@ fun ScoreWebScreen(url: String) {
                 factory = { context ->
                     WebView(context).also { wv ->
                         webViewRef = wv
+                        wv.setBackgroundColor(backgroundColor.toArgb())
                         wv.settings.apply {
                             javaScriptEnabled = true
                             domStorageEnabled = true
@@ -71,8 +76,14 @@ fun ScoreWebScreen(url: String) {
                             }
                         }
                         wv.webViewClient = object : WebViewClient() {
+                            override fun onPageCommitVisible(view: WebView, loadedUrl: String) {
+                                if (loadedUrl != "about:blank") contentVisible = true
+                            }
                             override fun onPageFinished(view: WebView, loadedUrl: String) {
-                                if (loadedUrl != "about:blank") showProgress = false
+                                if (loadedUrl != "about:blank") {
+                                    showProgress = false
+                                    contentVisible = true
+                                }
                             }
                             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                                 if (request.isForMainFrame) {
@@ -95,10 +106,11 @@ fun ScoreWebScreen(url: String) {
                     if (loadTrigger > 0 && url.isNotBlank()) {
                         showError = false
                         showProgress = true
+                        contentVisible = false
                         wv.loadUrl(url)
                     }
                 },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().alpha(if (contentVisible) 1f else 0f)
             )
         }
 
@@ -129,6 +141,7 @@ fun ScoreWebScreen(url: String) {
                     onClick = {
                         showError = false
                         showProgress = true
+                        contentVisible = false
                         loadTrigger++
                         webViewRef?.loadUrl(url)
                     },

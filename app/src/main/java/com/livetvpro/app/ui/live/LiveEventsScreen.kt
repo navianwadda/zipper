@@ -359,7 +359,7 @@ private fun CategoryChip(
     Column(
         modifier = Modifier
             .scale(scale)
-            .padding(horizontal = 2.dp, vertical = 2.dp)
+            .padding(horizontal = 3.dp, vertical = 2.dp)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -414,16 +414,16 @@ private fun CategoryChip(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .offset(x = 5.dp, y = (-5).dp)
-                        .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+                        .padding(top = 3.dp, end = 3.dp)
+                        .defaultMinSize(minWidth = 15.dp, minHeight = 15.dp)
                         .background(Color(0xFFFF0000), CircleShape)
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = 3.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (count > 99) "99+" else count.toString(),
                         color = Color.White,
-                        fontSize = 10.sp,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
                         maxLines = 1

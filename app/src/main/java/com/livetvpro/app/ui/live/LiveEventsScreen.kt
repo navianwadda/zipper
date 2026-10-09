@@ -78,7 +78,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
@@ -410,13 +412,29 @@ private fun CategoryChip(
                     .matchParentSize()
                     .background(Color.White.copy(alpha = pressAlpha))
             )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .drawBehind {
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colorStops = arrayOf(
+                                    0.6f to Color.Transparent,
+                                    1f to Color.White.copy(alpha = 0.28f)
+                                ),
+                                center = center,
+                                radius = size.minDimension * 0.72f
+                            )
+                        )
+                    }
+            )
         }
         }
             if (count > 0) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 3.dp, end = 3.dp)
+                        .padding(top = 8.dp, end = 8.dp)
                         .requiredHeight(11.dp)
                         .widthIn(min = 11.dp)
                         .clip(CircleShape)

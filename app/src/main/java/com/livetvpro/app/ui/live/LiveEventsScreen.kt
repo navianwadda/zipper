@@ -436,9 +436,9 @@ private fun CategoryChip(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 8.dp, end = 8.dp)
-                        .requiredHeight(11.dp)
-                        .widthIn(min = 11.dp)
+                        .padding(top = 5.dp, end = 5.dp)
+                        .requiredHeight(18.dp)
+                        .widthIn(min = 18.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFF0000), CircleShape)
                         .padding(horizontal = 3.dp),
@@ -447,8 +447,8 @@ private fun CategoryChip(
                     Text(
                         text = if (count > 99) "99+" else count.toString(),
                         color = Color.White,
-                        fontSize = 7.5.sp,
-                        lineHeight = 7.5.sp,
+                        fontSize = 10.sp,
+                        lineHeight = 10.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
                         maxLines = 1

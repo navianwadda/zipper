@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -415,8 +417,9 @@ private fun CategoryChip(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(top = 3.dp, end = 3.dp)
-                        .height(11.dp)
-                        .defaultMinSize(minWidth = 11.dp)
+                        .requiredHeight(11.dp)
+                        .widthIn(min = 11.dp)
+                        .clip(CircleShape)
                         .background(Color(0xFFFF0000), CircleShape)
                         .padding(horizontal = 3.dp),
                     contentAlignment = Alignment.Center

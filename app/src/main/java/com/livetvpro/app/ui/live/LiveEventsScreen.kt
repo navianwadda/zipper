@@ -116,7 +116,6 @@ fun LiveEventsScreen(
     messageBannerText: String = "",
     messageBannerUrl: String = "",
     spanCount: Int = 2,
-    categoryCounts: Map<String, Int> = emptyMap(),
     isTvDevice: Boolean = false,
     onEventClick: (LiveEvent, Int) -> Unit,
     onEventInteraction: ((LiveEvent, () -> Unit) -> Boolean)? = null
@@ -125,6 +124,7 @@ fun LiveEventsScreen(
     val filteredEvents by viewModel.filteredEvents.observeAsState(emptyList())
     val eventCategories by viewModel.eventCategories.observeAsState(emptyList())
     val statusCounts by viewModel.statusCounts.observeAsState(StatusCounts())
+    val categoryCounts by viewModel.categoryCounts.observeAsState(emptyMap())
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isEmpty by viewModel.isEmpty.observeAsState(false)
     val primaryColor by viewModel.primaryColorFlow.collectAsState()

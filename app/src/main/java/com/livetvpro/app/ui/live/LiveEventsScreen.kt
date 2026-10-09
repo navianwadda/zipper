@@ -15,6 +15,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -300,9 +302,7 @@ private fun CategoryRow(
     }
 }
 
-// CHIP_V7: 34dp tile, 8dp corners, image inset by only 2dp with rounded corners (no square corners).
-// If you cannot find this line in your project, the old file is still in use.
-private val CategoryTileSize = 34.dp
+private val CategoryTileSize = 48.dp
 private val CategoryImagePadding = 2.dp
 
 @Composable
@@ -314,9 +314,10 @@ private fun CategoryChip(
     val liveRed = MaterialTheme.colorScheme.error
     val tileColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     val focusBorder = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    val tileShape = RoundedCornerShape(8.dp)
+    val tileShape = RoundedCornerShape(12.dp)
     val interactionSource = remember { MutableInteractionSource() }
     val hasFocus by interactionSource.collectIsFocusedAsState()
+    val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (hasFocus) 1.08f else 1f,
         animationSpec = tween(120),
@@ -351,7 +352,9 @@ private fun CategoryChip(
                     } else Modifier
                 )
                 // Ripple (touch) and focus/press feedback, clipped to the tile
-                .indication(interactionSource, LocalIndication.current)
+                // White ripple: the default ripple color is dark in light theme and is invisible
+                // on top of the black icon images.
+                .indication(interactionSource, ripple(color = Color.White))
         ) {
             val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
                 androidx.compose.ui.platform.LocalContext.current
@@ -366,7 +369,7 @@ private fun CategoryChip(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(CategoryImagePadding)
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(10.dp))
             ) {
                 it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                     .override(160, 160)
@@ -374,6 +377,12 @@ private fun CategoryChip(
                     .error(appIconRes)
                     .fallback(appIconRes)
             }
+            // Light highlight while pressed, so touch feedback is visible even on black icons
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.White.copy(alpha = if (isPressed) 0.2f else 0f))
+            )
         }
         Spacer(modifier = Modifier.height(2.dp))
         Text(
@@ -386,7 +395,7 @@ private fun CategoryChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .width(46.dp)
+                .width(56.dp)
                 .basicMarquee()
         )
     }

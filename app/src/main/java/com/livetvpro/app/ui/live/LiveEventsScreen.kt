@@ -34,6 +34,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -84,6 +86,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -113,6 +116,7 @@ fun LiveEventsScreen(
     messageBannerText: String = "",
     messageBannerUrl: String = "",
     spanCount: Int = 2,
+    categoryCounts: Map<String, Int> = emptyMap(),
     isTvDevice: Boolean = false,
     onEventClick: (LiveEvent, Int) -> Unit,
     onEventInteraction: ((LiveEvent, () -> Unit) -> Boolean)? = null
@@ -199,6 +203,7 @@ fun LiveEventsScreen(
         if (eventCategories.isNotEmpty()) {
             CategoryRow(
                 categories = eventCategories,
+                categoryCounts = categoryCounts,
                 selectedCategoryId = selectedCategoryId,
                 onCategorySelected = { category ->
                     selectedCategoryId = category.id
@@ -290,6 +295,7 @@ fun LiveEventsScreen(
 @Composable
 private fun CategoryRow(
     categories: List<EventCategory>,
+    categoryCounts: Map<String, Int>,
     selectedCategoryId: String,
     onCategorySelected: (EventCategory) -> Unit
 ) {
@@ -300,6 +306,7 @@ private fun CategoryRow(
         itemsIndexed(categories, key = { _, c -> c.id }) { _, category ->
             CategoryChip(
                 category = category,
+                count = categoryCounts[category.id] ?: 0,
                 isSelected = category.id == selectedCategoryId,
                 onClick = { onCategorySelected(category) }
             )
@@ -326,6 +333,7 @@ private val StrongWhiteRipple = RippleConfiguration(
 @Composable
 private fun CategoryChip(
     category: EventCategory,
+    count: Int,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -358,6 +366,7 @@ private fun CategoryChip(
             ) { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Box {
         CompositionLocalProvider(LocalRippleConfiguration provides StrongWhiteRipple) {
         Box(
             modifier = Modifier
@@ -400,6 +409,27 @@ private fun CategoryChip(
                     .background(Color.White.copy(alpha = pressAlpha))
             )
         }
+        }
+            if (count > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 5.dp, y = (-5).dp)
+                        .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+                        .background(Color(0xFFFF0000), CircleShape)
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (count > 99) "99+" else count.toString(),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = BergenSans,
+                        maxLines = 1
+                    )
+                }
+            }
         }
         Spacer(modifier = Modifier.height(2.dp))
         Text(

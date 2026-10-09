@@ -17,6 +17,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.ripple
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.material3.RippleConfiguration
+import androidx.compose.material3.RippleDefaults
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.RippleAlpha
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -302,9 +308,22 @@ private fun CategoryRow(
     }
 }
 
-private val CategoryTileSize = 48.dp
+private val CategoryTileSize = 64.dp
 private val CategoryImagePadding = 2.dp
+private val CategoryTileRadius = 16.dp
 
+@OptIn(ExperimentalMaterial3Api::class)
+private val StrongWhiteRipple = RippleConfiguration(
+    color = Color.White,
+    rippleAlpha = RippleAlpha(
+        pressedAlpha = 0.45f,
+        focusedAlpha = 0.35f,
+        draggedAlpha = 0.35f,
+        hoveredAlpha = 0.25f
+    )
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryChip(
     category: EventCategory,
@@ -314,7 +333,7 @@ private fun CategoryChip(
     val liveRed = MaterialTheme.colorScheme.error
     val tileColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     val focusBorder = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    val tileShape = RoundedCornerShape(12.dp)
+    val tileShape = RoundedCornerShape(CategoryTileRadius)
     val interactionSource = remember { MutableInteractionSource() }
     val hasFocus by interactionSource.collectIsFocusedAsState()
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -324,24 +343,28 @@ private fun CategoryChip(
         label = "catScale"
     )
 
+    val pressAlpha by animateFloatAsState(
+        targetValue = if (isPressed) 0.35f else 0f,
+        animationSpec = tween(if (isPressed) 60 else 350),
+        label = "catPress"
+    )
+
     Column(
         modifier = Modifier
             .scale(scale)
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-            // Click + focus live on the whole chip (tile + label), but the ripple
-            // is drawn only inside the tile below, so indication is null here.
+            .padding(horizontal = 6.dp, vertical = 2.dp)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
             ) { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        CompositionLocalProvider(LocalRippleConfiguration provides StrongWhiteRipple) {
         Box(
             modifier = Modifier
                 .size(CategoryTileSize)
                 .clip(tileShape)
                 .background(tileColor)
-                // Thin outline like the reference: none when idle, 1.5dp when selected/focused
                 .then(
                     if (isSelected || hasFocus) {
                         Modifier.border(
@@ -351,9 +374,6 @@ private fun CategoryChip(
                         )
                     } else Modifier
                 )
-                // Ripple (touch) and focus/press feedback, clipped to the tile
-                // White ripple: the default ripple color is dark in light theme and is invisible
-                // on top of the black icon images.
                 .indication(interactionSource, ripple(color = Color.White))
         ) {
             val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
@@ -363,26 +383,24 @@ private fun CategoryChip(
             GlideImage(
                 model = category.logoUrl.takeIf { it.isNotBlank() },
                 contentDescription = category.name,
-                // Almost full: only a 2dp inset, and the image gets its own rounded
-                // corners (tile radius minus inset) so no square corners show.
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(CategoryImagePadding)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(CategoryTileRadius - CategoryImagePadding))
             ) {
                 it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
-                    .override(160, 160)
+                    .override(256, 256)
                     .placeholder(appIconRes)
                     .error(appIconRes)
                     .fallback(appIconRes)
             }
-            // Light highlight while pressed, so touch feedback is visible even on black icons
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(Color.White.copy(alpha = if (isPressed) 0.2f else 0f))
+                    .background(Color.White.copy(alpha = pressAlpha))
             )
+        }
         }
         Spacer(modifier = Modifier.height(2.dp))
         Text(
@@ -395,7 +413,7 @@ private fun CategoryChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .width(56.dp)
+                .width(72.dp)
                 .basicMarquee()
         )
     }

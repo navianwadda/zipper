@@ -307,8 +307,8 @@ private fun CategoryRow(
     }
 }
 
-private val CategoryTileSize = 64.dp
-private val CategoryImagePadding = 2.dp
+private val CategoryTileSize = 52.dp
+private val CategoryImagePadding = 0.dp
 private val CategoryTileRadius = 16.dp
 
 @OptIn(ExperimentalMaterial3Api::class)

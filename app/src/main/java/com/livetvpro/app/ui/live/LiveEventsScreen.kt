@@ -78,7 +78,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.ContentScale
@@ -416,15 +419,14 @@ private fun CategoryChip(
                 modifier = Modifier
                     .matchParentSize()
                     .drawBehind {
-                        drawRect(
-                            brush = Brush.radialGradient(
-                                colorStops = arrayOf(
-                                    0.6f to Color.Transparent,
-                                    1f to Color.White.copy(alpha = 0.28f)
-                                ),
-                                center = center,
-                                radius = size.minDimension * 0.72f
-                            )
+                        drawRect(Color.White.copy(alpha = 0.09f))
+                        val w = 1.dp.toPx()
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = 0.16f),
+                            topLeft = Offset(w / 2, w / 2),
+                            size = Size(size.width - w, size.height - w),
+                            cornerRadius = CornerRadius(CategoryTileRadius.toPx() - w / 2),
+                            style = Stroke(width = w)
                         )
                     }
             )

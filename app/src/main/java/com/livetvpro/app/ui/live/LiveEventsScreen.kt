@@ -20,9 +20,8 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.RippleConfiguration
-import androidx.compose.material3.RippleDefaults
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.material3.RippleAlpha
+import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

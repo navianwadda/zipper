@@ -12,6 +12,7 @@ import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -306,7 +307,9 @@ private fun CategoryChip(
     onClick: () -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
-    val outlineColor = MaterialTheme.colorScheme.outline
+    val tileColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    val focusBorder = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    val tileShape = RoundedCornerShape(16.dp)
     val interactionSource = remember { MutableInteractionSource() }
     val hasFocus by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
@@ -319,22 +322,31 @@ private fun CategoryChip(
         modifier = Modifier
             .scale(scale)
             .padding(horizontal = 6.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            // Click + focus live on the whole chip (tile + label), but the ripple
+            // is drawn only inside the tile below, so indication is null here.
             .clickable(
                 interactionSource = interactionSource,
-                indication = LocalIndication.current,
+                indication = null,
             ) { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .clip(CircleShape)
-                .border(
-                    width = 3.dp,
-                    color = if (isSelected) liveRed else outlineColor,
-                    shape = CircleShape
+                .clip(tileShape)
+                .background(tileColor)
+                // Thin outline like the reference: none when idle, 1.5dp when selected/focused
+                .then(
+                    if (isSelected || hasFocus) {
+                        Modifier.border(
+                            width = 1.5.dp,
+                            color = if (isSelected) liveRed else focusBorder,
+                            shape = tileShape
+                        )
+                    } else Modifier
                 )
+                // Ripple (touch) and focus/press feedback, clipped to the tile
+                .indication(interactionSource, LocalIndication.current)
         ) {
             val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
                 androidx.compose.ui.platform.LocalContext.current
@@ -343,8 +355,12 @@ private fun CategoryChip(
             GlideImage(
                 model = category.logoUrl.takeIf { it.isNotBlank() },
                 contentDescription = category.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                // Fit + padding keeps the icon inside the tile so thin line
+                // icons read as thin instead of being cropped or oversized.
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp)
             ) {
                 it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                     .override(160, 160)

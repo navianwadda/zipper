@@ -412,7 +412,7 @@ private fun CategoryChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .width(56.dp)
+                .width(52.dp)
                 .basicMarquee()
         )
     }

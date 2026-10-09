@@ -315,10 +315,10 @@ private val CategoryTileRadius = 16.dp
 private val StrongWhiteRipple = RippleConfiguration(
     color = Color.White,
     rippleAlpha = RippleAlpha(
-        pressedAlpha = 0.45f,
-        focusedAlpha = 0.35f,
-        draggedAlpha = 0.35f,
-        hoveredAlpha = 0.25f
+        pressedAlpha = 0.18f,
+        focusedAlpha = 0.18f,
+        draggedAlpha = 0.18f,
+        hoveredAlpha = 0.12f
     )
 )
 
@@ -343,15 +343,15 @@ private fun CategoryChip(
     )
 
     val pressAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.35f else 0f,
-        animationSpec = tween(if (isPressed) 60 else 350),
+        targetValue = if (isPressed) 0.12f else 0f,
+        animationSpec = tween(if (isPressed) 60 else 250),
         label = "catPress"
     )
 
     Column(
         modifier = Modifier
             .scale(scale)
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .padding(horizontal = 2.dp, vertical = 2.dp)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -412,7 +412,7 @@ private fun CategoryChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .width(72.dp)
+                .width(56.dp)
                 .basicMarquee()
         )
     }

@@ -40,6 +40,9 @@ class LiveEventsViewModel @Inject constructor(
     private val _statusCounts = MutableLiveData(StatusCounts())
     val statusCounts: LiveData<StatusCounts> = _statusCounts
 
+    private val _categoryCounts = MutableLiveData<Map<String, Int>>(emptyMap())
+    val categoryCounts: LiveData<Map<String, Int>> = _categoryCounts
+
     val primaryColorFlow: StateFlow<Int> = themeManager.primaryColorFlow
 
     var pendingStatusFilter: EventStatus? = null
@@ -157,6 +160,22 @@ class LiveEventsViewModel @Inject constructor(
             upcoming = categoryScoped.count { matchesUpcoming(it, currentTime) },
             recent = categoryScoped.count { matchesRecent(it, currentTime) },
         )
+
+        val statusScoped = when (pendingStatusFilter) {
+            EventStatus.LIVE -> searched.filter { matchesLive(it, currentTime) }
+            EventStatus.UPCOMING -> searched.filter { matchesUpcoming(it, currentTime) }
+            EventStatus.RECENT -> searched.filter { matchesRecent(it, currentTime) }
+            null -> searched
+        }
+        val counts = mutableMapOf<String, Int>()
+        counts["evt_cat_all"] = statusScoped.size
+        for (event in statusScoped) {
+            val id = event.eventCategoryId
+            if (!id.isNullOrEmpty()) counts[id] = (counts[id] ?: 0) + 1
+        }
+        if (counts != _categoryCounts.value) {
+            _categoryCounts.value = counts
+        }
 
         var filtered = searched
 

@@ -300,6 +300,10 @@ private fun CategoryRow(
     }
 }
 
+// CHIP_V4: tile size below, image fills the tile (Crop, no padding).
+// If you cannot find this line in your project, the old file is still in use.
+private val CategoryTileSize = 44.dp
+
 @Composable
 private fun CategoryChip(
     category: EventCategory,
@@ -332,7 +336,7 @@ private fun CategoryChip(
     ) {
         Box(
             modifier = Modifier
-                .size(50.dp)
+                .size(CategoryTileSize)
                 .clip(tileShape)
                 .background(tileColor)
                 // Thin outline like the reference: none when idle, 1.5dp when selected/focused
@@ -378,7 +382,7 @@ private fun CategoryChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .width(62.dp)
+                .width(56.dp)
                 .basicMarquee()
         )
     }

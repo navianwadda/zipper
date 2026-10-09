@@ -300,9 +300,10 @@ private fun CategoryRow(
     }
 }
 
-// CHIP_V4: tile size below, image fills the tile (Crop, no padding).
+// CHIP_V7: 34dp tile, 8dp corners, image inset by only 2dp with rounded corners (no square corners).
 // If you cannot find this line in your project, the old file is still in use.
-private val CategoryTileSize = 44.dp
+private val CategoryTileSize = 34.dp
+private val CategoryImagePadding = 2.dp
 
 @Composable
 private fun CategoryChip(
@@ -313,7 +314,7 @@ private fun CategoryChip(
     val liveRed = MaterialTheme.colorScheme.error
     val tileColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     val focusBorder = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    val tileShape = RoundedCornerShape(14.dp)
+    val tileShape = RoundedCornerShape(8.dp)
     val interactionSource = remember { MutableInteractionSource() }
     val hasFocus by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
@@ -325,7 +326,7 @@ private fun CategoryChip(
     Column(
         modifier = Modifier
             .scale(scale)
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .padding(horizontal = 4.dp, vertical = 2.dp)
             // Click + focus live on the whole chip (tile + label), but the ripple
             // is drawn only inside the tile below, so indication is null here.
             .clickable(
@@ -359,10 +360,13 @@ private fun CategoryChip(
             GlideImage(
                 model = category.logoUrl.takeIf { it.isNotBlank() },
                 contentDescription = category.name,
-                // Fill the whole tile: the rounded clip trims the corners, so no
-                // square image edges show inside the tile.
+                // Almost full: only a 2dp inset, and the image gets its own rounded
+                // corners (tile radius minus inset) so no square corners show.
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(CategoryImagePadding)
+                    .clip(RoundedCornerShape(6.dp))
             ) {
                 it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                     .override(160, 160)
@@ -371,7 +375,7 @@ private fun CategoryChip(
                     .fallback(appIconRes)
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = category.name,
             style = MaterialTheme.typography.labelSmall,
@@ -382,7 +386,7 @@ private fun CategoryChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .width(56.dp)
+                .width(46.dp)
                 .basicMarquee()
         )
     }

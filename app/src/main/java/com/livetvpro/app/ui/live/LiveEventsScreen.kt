@@ -309,7 +309,7 @@ private fun CategoryChip(
     val liveRed = MaterialTheme.colorScheme.error
     val tileColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     val focusBorder = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    val tileShape = RoundedCornerShape(16.dp)
+    val tileShape = RoundedCornerShape(14.dp)
     val interactionSource = remember { MutableInteractionSource() }
     val hasFocus by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
@@ -332,7 +332,7 @@ private fun CategoryChip(
     ) {
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(50.dp)
                 .clip(tileShape)
                 .background(tileColor)
                 // Thin outline like the reference: none when idle, 1.5dp when selected/focused
@@ -355,12 +355,10 @@ private fun CategoryChip(
             GlideImage(
                 model = category.logoUrl.takeIf { it.isNotBlank() },
                 contentDescription = category.name,
-                // Fit + padding keeps the icon inside the tile so thin line
-                // icons read as thin instead of being cropped or oversized.
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(14.dp)
+                // Fill the whole tile: the rounded clip trims the corners, so no
+                // square image edges show inside the tile.
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             ) {
                 it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                     .override(160, 160)
@@ -380,7 +378,7 @@ private fun CategoryChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .width(70.dp)
+                .width(62.dp)
                 .basicMarquee()
         )
     }

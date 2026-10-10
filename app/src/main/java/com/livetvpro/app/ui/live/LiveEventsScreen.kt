@@ -72,6 +72,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -139,6 +141,7 @@ fun LiveEventsScreen(
     var selectedCategoryId by remember { mutableStateOf("evt_cat_all") }
     var linkDialogEvent by remember { mutableStateOf<LiveEvent?>(null) }
     val gridState = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
 
@@ -213,8 +216,10 @@ fun LiveEventsScreen(
                 categoryCounts = categoryCounts,
                 selectedCategoryId = selectedCategoryId,
                 onCategorySelected = { category ->
+                    val changed = category.id != selectedCategoryId
                     selectedCategoryId = category.id
                     viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
+                    if (changed) scope.launch { gridState.scrollToItem(0) }
                 }
             )
         }
@@ -226,6 +231,7 @@ fun LiveEventsScreen(
             onFilterSelected = { status ->
                 selectedStatusFilter = status
                 viewModel.filterEvents(selectedStatusFilter, selectedCategoryId)
+                scope.launch { gridState.scrollToItem(0) }
             }
         )
 

@@ -12,9 +12,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.livetvpro.app.data.local.PreferencesManager
-import com.livetvpro.app.ui.appearance.PreferenceCard
 import com.livetvpro.app.ui.appearance.PreferenceSectionHeader
-import com.livetvpro.app.ui.appearance.SwitchPreferenceRow
+import com.livetvpro.app.ui.appearance.SwitchPreferenceCard
 
 @Composable
 fun PlaybackScreen(preferencesManager: PreferencesManager) {
@@ -27,8 +26,7 @@ fun PlaybackScreen(preferencesManager: PreferencesManager) {
         item { PreferenceSectionHeader(title = "Volume") }
 
         item {
-            PreferenceCard {
-                SwitchPreferenceRow(
+            SwitchPreferenceCard(
                     title   = "Allow volume boosting",
                     summary = "Boost playback volume beyond the device's normal maximum",
                     checked = volumeBoosting,
@@ -36,8 +34,7 @@ fun PlaybackScreen(preferencesManager: PreferencesManager) {
                         volumeBoosting = it
                         preferencesManager.setVolumeBoostingEnabled(it)
                     },
-                )
-            }
+            )
         }
 
         item { Spacer(modifier = Modifier.height(24.dp)) }
@@ -45,8 +42,7 @@ fun PlaybackScreen(preferencesManager: PreferencesManager) {
         item { PreferenceSectionHeader(title = "Streaming") }
 
         item {
-            PreferenceCard {
-                SwitchPreferenceRow(
+            SwitchPreferenceCard(
                     title   = "Enable auto switching to next stream when any stream fails",
                     summary = "Automatically try the next available link if the current one fails to play",
                     checked = autoSwitchStream,
@@ -54,8 +50,7 @@ fun PlaybackScreen(preferencesManager: PreferencesManager) {
                         autoSwitchStream = it
                         preferencesManager.setAutoSwitchStreamEnabled(it)
                     },
-                )
-            }
+            )
         }
 
         item { Spacer(modifier = Modifier.height(24.dp)) }

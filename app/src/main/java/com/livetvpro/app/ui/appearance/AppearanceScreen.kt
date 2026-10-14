@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.livetvpro.app.R
 import com.livetvpro.app.data.local.ThemeManager
@@ -68,7 +69,11 @@ private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppearanceScreen(themeManager: ThemeManager) {
+fun AppearanceScreen(
+    themeManager: ThemeManager,
+    preferencesManager: com.livetvpro.app.data.local.PreferencesManager,
+) {
+    var showCategoryCounts by remember { mutableStateOf(preferencesManager.isShowCategoryCountsEnabled()) }
     val themeMode  by themeManager.themeModeFlow.collectAsState()
     val colorTheme by themeManager.colorThemeFlow.collectAsState()
     val amoledMode by themeManager.amoledFlow.collectAsState()
@@ -127,6 +132,22 @@ fun AppearanceScreen(themeManager: ThemeManager) {
                     )
                 }
             }
+
+        item { PreferenceSectionHeader(title = "Live Events") }
+
+        item {
+            PreferenceCard {
+                SwitchPreferenceRow(
+                    title   = "Show category counts",
+                    summary = "Show the number of events on each category tile",
+                    checked = showCategoryCounts,
+                    onCheckedChange = {
+                        showCategoryCounts = it
+                        preferencesManager.setShowCategoryCountsEnabled(it)
+                    },
+                )
+            }
+        }
 
         item { PreferenceSectionHeader(title = "App Icon") }
 

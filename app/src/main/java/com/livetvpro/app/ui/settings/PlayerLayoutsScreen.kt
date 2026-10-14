@@ -40,6 +40,7 @@ import com.livetvpro.app.ui.appearance.MultiChoiceSegmentedButton
 import com.livetvpro.app.ui.appearance.PreferenceCard
 import com.livetvpro.app.ui.appearance.PreferenceDivider
 import com.livetvpro.app.ui.appearance.PreferenceSectionHeader
+import com.livetvpro.app.ui.appearance.SwitchPreferenceCard
 import com.livetvpro.app.ui.appearance.SwitchPreferenceRow
 import com.livetvpro.app.ui.player.compose.PlayerControlsContent
 
@@ -228,8 +229,7 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
         item { PreferenceSectionHeader(title = "Quality") }
 
         item {
-            PreferenceCard {
-                SwitchPreferenceRow(
+            SwitchPreferenceCard(
                     title   = "Force Lowest Quality",
                     summary = "Always play the lowest available quality to save data",
                     checked = forceLowestQuality,
@@ -238,7 +238,6 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
                         preferencesManager.setForceLowestQualityEnabled(it)
                     },
                 )
-            }
         }
 
         item { Spacer(modifier = Modifier.height(24.dp)) }

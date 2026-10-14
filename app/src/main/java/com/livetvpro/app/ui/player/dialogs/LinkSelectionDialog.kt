@@ -70,19 +70,20 @@ fun LinkSelectionDialog(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            val compact = maxHeight < 420.dp || maxWidth < 360.dp
-            val outerMargin = if (compact) 12.dp else 24.dp
-            val innerPadding = if (compact) 16.dp else 24.dp
-            val rowPadding = if (compact) 10.dp else 14.dp
-            val titleSize = if (compact) 17.sp else 20.sp
+            val compact = maxHeight < 500.dp || maxWidth < 360.dp
+            val vMargin = (maxHeight * 0.12f).coerceAtLeast(16.dp)
+            val hMargin = (maxWidth * 0.06f).coerceIn(10.dp, 24.dp)
+            val innerPadding = if (compact) 14.dp else 24.dp
+            val rowPadding = if (compact) 8.dp else 14.dp
+            val titleSize = if (compact) 16.sp else 20.sp
             val itemSize = if (compact) 14.sp else 15.sp
 
             Surface(
                 modifier = Modifier
                     .widthIn(max = 560.dp)
                     .fillMaxWidth()
-                    .padding(horizontal = outerMargin, vertical = outerMargin)
-                    .heightIn(max = maxHeight - outerMargin * 2)
+                    .padding(horizontal = hMargin, vertical = vMargin)
+                    .heightIn(max = maxHeight - vMargin * 2)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -137,7 +138,7 @@ fun LinkSelectionDialog(
                             .fillMaxWidth()
                             .padding(horizontal = innerPadding)
                             .padding(top = 8.dp, bottom = 8.dp)
-                            .height(if (compact) 44.dp else 52.dp)
+                            .height(if (compact) 40.dp else 52.dp)
                             .clip(glassShape)
                             .background(
                                 Brush.verticalGradient(
@@ -164,7 +165,7 @@ fun LinkSelectionDialog(
                             text = "Cancel",
                             fontFamily = BergenSans,
                             fontWeight = FontWeight.Bold,
-                            fontSize = if (compact) 15.sp else 17.sp,
+                            fontSize = if (compact) 14.sp else 17.sp,
                             textAlign = TextAlign.Center,
                             color = ColorAccent,
                         )

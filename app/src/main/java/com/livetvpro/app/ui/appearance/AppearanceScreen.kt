@@ -84,7 +84,7 @@ fun AppearanceScreen(
             item { PreferenceSectionHeader(title = "Theme") }
 
             item {
-                PreferenceCard {
+                PreferenceCard(contentBottomPadding = 0.dp) {
                     Column(modifier = Modifier.padding(vertical = 8.dp)) {
                         MultiChoiceSegmentedButton(
                             choices = listOf("Dark", "Light", "System"),
@@ -126,6 +126,7 @@ fun AppearanceScreen(
                         summary = "Use pure black background for dark themes",
                         checked = amoledMode,
                         enabled = isDarkMode,
+                        bottomExtra = 8.dp,
                         onCheckedChange = { newValue ->
                             themeManager.setAmoledMode(newValue)
                         },
@@ -418,6 +419,8 @@ fun ThemePreviewCard(
 @Composable
 fun PreferenceCard(
     modifier: Modifier = Modifier,
+    contentTopPadding: androidx.compose.ui.unit.Dp = 8.dp,
+    contentBottomPadding: androidx.compose.ui.unit.Dp = 8.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
@@ -427,7 +430,7 @@ fun PreferenceCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
-            modifier            = Modifier.padding(vertical = 8.dp),
+            modifier            = Modifier.padding(top = contentTopPadding, bottom = contentBottomPadding),
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
             content()
@@ -489,12 +492,19 @@ fun SwitchPreferenceRow(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     verticalPadding: androidx.compose.ui.unit.Dp = 12.dp,
+    topExtra: androidx.compose.ui.unit.Dp = 0.dp,
+    bottomExtra: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     Row(
         modifier          = modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = verticalPadding),
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = verticalPadding + topExtra,
+                bottom = verticalPadding + bottomExtra,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {

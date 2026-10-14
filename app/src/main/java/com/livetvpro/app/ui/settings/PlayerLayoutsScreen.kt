@@ -168,9 +168,10 @@ fun PlayerLayoutsScreen(preferencesManager: PreferencesManager) {
         item { PreferenceSectionHeader(title = "Aspect Ratio") }
 
         item {
-            PreferenceCard {
+            PreferenceCard(contentTopPadding = 0.dp) {
                 SwitchPreferenceRow(
                     title   = "Remember Aspect Ratio",
+                    topExtra = 8.dp,
                     summary = "Keep the aspect ratio you pick during playback for next time",
                     checked = rememberAspectRatio,
                     onCheckedChange = {

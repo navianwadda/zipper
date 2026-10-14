@@ -6,6 +6,8 @@ import com.livetvpro.app.utils.DeviceUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 @Singleton
 class PreferencesManager @Inject constructor(
@@ -32,6 +34,7 @@ class PreferencesManager @Inject constructor(
         private const val KEY_LAYOUT_MODE = "layout_mode"
         private const val KEY_VOLUME_BOOSTING_ENABLED = "volume_boosting_enabled"
         private const val KEY_AUTO_SWITCH_STREAM_ENABLED = "auto_switch_stream_enabled"
+        private const val KEY_SHOW_CATEGORY_COUNTS = "show_category_counts"
 
         const val LAYOUT_MODE_SEEKS_ONLY       = 0
         const val LAYOUT_MODE_SEEKS_AND_NAV    = 1
@@ -91,6 +94,15 @@ class PreferencesManager @Inject constructor(
 
     fun isAutoSwitchStreamEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_SWITCH_STREAM_ENABLED, true)
     fun setAutoSwitchStreamEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_AUTO_SWITCH_STREAM_ENABLED, enabled).apply()
+
+    private val _showCategoryCounts = MutableStateFlow(prefs.getBoolean(KEY_SHOW_CATEGORY_COUNTS, true))
+    val showCategoryCountsFlow: StateFlow<Boolean> = _showCategoryCounts
+
+    fun isShowCategoryCountsEnabled(): Boolean = _showCategoryCounts.value
+    fun setShowCategoryCountsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_CATEGORY_COUNTS, enabled).apply()
+        _showCategoryCounts.value = enabled
+    }
 
     fun getLayoutMode(): Int {
         val fallback = if (DeviceUtils.isBigScreenLayout) LAYOUT_MODE_SEEKS_EDGE_NAV else LAYOUT_MODE_SEEKS_ONLY

@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -120,6 +121,8 @@ fun LiveEventsRoute(
         }
     }
 
+    val showCategoryCounts by preferencesManager.showCategoryCountsFlow.collectAsState()
+
     val configuration = LocalConfiguration.current
     val spanCount = remember(configuration) {
         context.resources.getInteger(R.integer.event_span_count)
@@ -131,6 +134,7 @@ fun LiveEventsRoute(
         messageBannerUrl = listenerManager.getMessageUrl(),
         spanCount = spanCount,
         isTvDevice = DeviceUtils.isBigScreenLayout || DeviceUtils.isTablet,
+        showCategoryCounts = showCategoryCounts,
         onEventClick = { event, linkIndex ->
             proceedWithPlayer(event, linkIndex)
         },

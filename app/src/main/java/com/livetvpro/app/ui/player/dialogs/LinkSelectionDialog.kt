@@ -142,17 +142,17 @@ fun LinkSelectionDialog(
                             .background(
                                 Brush.verticalGradient(
                                     listOf(
-                                        Color.White.copy(alpha = 0.20f),
-                                        Color.White.copy(alpha = 0.06f),
+                                        ColorAccent.copy(alpha = 0.20f),
+                                        ColorAccent.copy(alpha = 0.08f),
                                     )
                                 )
                             )
                             .border(
-                                width = 1.dp,
+                                width = 1.5.dp,
                                 brush = Brush.verticalGradient(
                                     listOf(
-                                        Color.White.copy(alpha = 0.55f),
-                                        Color.White.copy(alpha = 0.10f),
+                                        ColorAccent.copy(alpha = 0.65f),
+                                        ColorAccent.copy(alpha = 0.25f),
                                     )
                                 ),
                                 shape = glassShape,

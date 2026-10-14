@@ -126,6 +126,7 @@ fun LiveEventsScreen(
     messageBannerUrl: String = "",
     spanCount: Int = 2,
     isTvDevice: Boolean = false,
+    showCategoryCounts: Boolean = true,
     onEventClick: (LiveEvent, Int) -> Unit,
     onEventInteraction: ((LiveEvent, () -> Unit) -> Boolean)? = null
 ) {
@@ -213,7 +214,7 @@ fun LiveEventsScreen(
         if (eventCategories.isNotEmpty()) {
             CategoryRow(
                 categories = eventCategories,
-                categoryCounts = categoryCounts,
+                categoryCounts = if (showCategoryCounts) categoryCounts else emptyMap(),
                 selectedCategoryId = selectedCategoryId,
                 onCategorySelected = { category ->
                     val changed = category.id != selectedCategoryId

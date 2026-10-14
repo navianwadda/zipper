@@ -136,8 +136,7 @@ fun AppearanceScreen(
         item { PreferenceSectionHeader(title = "Live Events") }
 
         item {
-            PreferenceCard {
-                SwitchPreferenceRow(
+            SwitchPreferenceCard(
                     title   = "Show category counts",
                     summary = "Show the number of events on each category tile",
                     checked = showCategoryCounts,
@@ -146,7 +145,6 @@ fun AppearanceScreen(
                         preferencesManager.setShowCategoryCountsEnabled(it)
                     },
                 )
-            }
         }
 
         item { PreferenceSectionHeader(title = "App Icon") }
@@ -490,12 +488,13 @@ fun SwitchPreferenceRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    verticalPadding: androidx.compose.ui.unit.Dp = 12.dp,
 ) {
     Row(
         modifier          = modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = verticalPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -514,5 +513,32 @@ fun SwitchPreferenceRow(
             )
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+    }
+}
+
+
+@Composable
+fun SwitchPreferenceCard(
+    title: String,
+    summary: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Card(
+        modifier  = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape     = RoundedCornerShape(28.dp),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        SwitchPreferenceRow(
+            title           = title,
+            summary         = summary,
+            checked         = checked,
+            onCheckedChange = onCheckedChange,
+            enabled         = enabled,
+            verticalPadding = 20.dp,
+        )
     }
 }

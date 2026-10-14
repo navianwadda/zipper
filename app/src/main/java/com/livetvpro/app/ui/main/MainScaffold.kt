@@ -403,7 +403,10 @@ fun MainScaffold(
                     DeviceIdScreen()
                 }
                 composable(Routes.APPEARANCE) {
-                    AppearanceScreen(themeManager = themeManager)
+                    AppearanceScreen(
+                        themeManager = themeManager,
+                        preferencesManager = preferencesManager,
+                    )
                 }
                 composable(Routes.PLAYER_LAYOUTS) {
                     PlayerLayoutsScreen(preferencesManager = preferencesManager)

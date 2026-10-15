@@ -1,6 +1,8 @@
 package com.livetvpro.app.ui.player.dialogs
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
@@ -70,6 +72,7 @@ fun LinkSelectionDialog(
                 ),
             contentAlignment = Alignment.Center,
         ) {
+            val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
             val compact = maxHeight < 500.dp || maxWidth < 360.dp
             val vMargin = (maxHeight * 0.12f).coerceAtLeast(16.dp)
             val hMargin = (maxWidth * 0.06f).coerceIn(10.dp, 24.dp)
@@ -90,8 +93,12 @@ fun LinkSelectionDialog(
                         onClick = {},
                     ),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = if (isDark) Color(0xFF2B2B2B) else MaterialTheme.colorScheme.surfaceContainerHigh,
                 tonalElevation = 6.dp,
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDark) 0.14f else 0.08f)
+                ),
             ) {
                 Column(modifier = Modifier.padding(top = innerPadding, bottom = 8.dp)) {
                     Text(
@@ -143,8 +150,8 @@ fun LinkSelectionDialog(
                             .background(
                                 Brush.verticalGradient(
                                     listOf(
-                                        ColorAccent.copy(alpha = 0.20f),
-                                        ColorAccent.copy(alpha = 0.08f),
+                                        if (isDark) Color.White.copy(alpha = 0.12f) else ColorAccent.copy(alpha = 0.20f),
+                                        if (isDark) Color.White.copy(alpha = 0.04f) else ColorAccent.copy(alpha = 0.08f),
                                     )
                                 )
                             )
@@ -152,8 +159,8 @@ fun LinkSelectionDialog(
                                 width = 1.5.dp,
                                 brush = Brush.verticalGradient(
                                     listOf(
-                                        ColorAccent.copy(alpha = 0.65f),
-                                        ColorAccent.copy(alpha = 0.25f),
+                                        if (isDark) Color.White.copy(alpha = 0.40f) else ColorAccent.copy(alpha = 0.65f),
+                                        if (isDark) Color.White.copy(alpha = 0.10f) else ColorAccent.copy(alpha = 0.25f),
                                     )
                                 ),
                                 shape = glassShape,

@@ -150,8 +150,8 @@ fun LinkSelectionDialog(
                             .background(
                                 Brush.verticalGradient(
                                     listOf(
-                                        if (isDark) Color.White.copy(alpha = 0.12f) else ColorAccent.copy(alpha = 0.20f),
-                                        if (isDark) Color.White.copy(alpha = 0.04f) else ColorAccent.copy(alpha = 0.08f),
+                                        if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.10f),
+                                        if (isDark) Color.White.copy(alpha = 0.04f) else Color.Black.copy(alpha = 0.03f),
                                     )
                                 )
                             )
@@ -159,8 +159,8 @@ fun LinkSelectionDialog(
                                 width = 1.5.dp,
                                 brush = Brush.verticalGradient(
                                     listOf(
-                                        if (isDark) Color.White.copy(alpha = 0.40f) else ColorAccent.copy(alpha = 0.65f),
-                                        if (isDark) Color.White.copy(alpha = 0.10f) else ColorAccent.copy(alpha = 0.25f),
+                                        if (isDark) Color.White.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.28f),
+                                        if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.08f),
                                     )
                                 ),
                                 shape = glassShape,

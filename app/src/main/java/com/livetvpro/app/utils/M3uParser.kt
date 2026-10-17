@@ -12,6 +12,41 @@ import java.security.MessageDigest
 
 object M3uParser {
 
+    private fun parseClearKeyPairs(raw: String): List<Pair<String, String>> =
+        raw.split(",")
+            .map { it.trim() }
+            .filter { it.contains(":") }
+            .mapNotNull {
+                val kid = it.substringBefore(":").trim()
+                val key = it.substringAfter(":").trim()
+                if (kid.isNotEmpty() && key.isNotEmpty()) kid to key else null
+            }
+            .distinct()
+
+    private fun hexToBase64Url(hex: String): String {
+        val clean = hex.trim()
+        val bytes = ByteArray(clean.length / 2) { i ->
+            clean.substring(i * 2, i * 2 + 2).toInt(16).toByte()
+        }
+        return android.util.Base64.encodeToString(
+            bytes,
+            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+        )
+    }
+
+    private fun pairsToJwk(pairs: List<Pair<String, String>>): String {
+        val keys = org.json.JSONArray()
+        pairs.forEach { (kid, key) ->
+            keys.put(
+                org.json.JSONObject()
+                    .put("kty", "oct")
+                    .put("k", hexToBase64Url(key))
+                    .put("kid", hexToBase64Url(kid))
+            )
+        }
+        return org.json.JSONObject().put("keys", keys).put("type", "temporary").toString()
+    }
+
     data class M3uChannel(
         val name: String,
         val logoUrl: String,
@@ -299,10 +334,9 @@ object M3uParser {
                         drmKeyId = drmLicense
                         drmKey   = "LICENSE_URL"
                     } else if (drmLicense.contains(":")) {
-                        val parts = drmLicense.split(":", limit = 2)
-                        if (parts.size == 2) {
-                            drmKeyId = parts[0].trim()
-                            drmKey   = parts[1].trim()
+                        parseClearKeyPairs(drmLicense).firstOrNull()?.let {
+                            drmKeyId = it.first
+                            drmKey   = it.second
                         }
                     }
                 }
@@ -389,10 +423,17 @@ object M3uParser {
                             }
                         }
                         keyValue.contains(":") -> {
-                            val parts = keyValue.split(":", limit = 2)
-                            if (parts.size == 2) {
-                                currentDrmKeyId = parts[0].trim()
-                                currentDrmKey   = parts[1].trim()
+                            val pairs = parseClearKeyPairs(keyValue)
+                            when {
+                                pairs.size == 1 -> {
+                                    currentDrmKeyId = pairs[0].first
+                                    currentDrmKey   = pairs[0].second
+                                }
+                                pairs.size > 1 -> {
+                                    currentDrmKeyId      = null
+                                    currentDrmKey        = null
+                                    currentDrmLicenseUrl = pairsToJwk(pairs)
+                                }
                             }
                         }
                     }
@@ -685,10 +726,9 @@ object M3uParser {
                                 drmKeyId = value
                                 drmKey   = "LICENSE_URL"
                             } else {
-                                val colonIndex = value.indexOf(':')
-                                if (colonIndex != -1) {
-                                    drmKeyId = value.substring(0, colonIndex).trim()
-                                    drmKey   = value.substring(colonIndex + 1).trim()
+                                parseClearKeyPairs(value).firstOrNull()?.let {
+                                    drmKeyId = it.first
+                                    drmKey   = it.second
                                 }
                             }
                         }

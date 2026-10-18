@@ -70,6 +70,7 @@ data class LiveEvent(
     val category: String = "",
     val league: String = "",
     val leagueLogo: String = "",
+    val banner: String = "",
     val team1Name: String = "",
     val team1Logo: String = "",
     val team2Name: String = "",

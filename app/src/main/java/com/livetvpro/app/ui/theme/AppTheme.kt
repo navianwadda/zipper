@@ -39,14 +39,16 @@ fun LiveTVProTheme(
         when {
             colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
                 isDark && amoled -> dynamicDarkColorScheme(context).copy(
+                    error                  = AppRed,
+                    onError                = Color.White,
                     background             = Color.Black,
                     surface                = Color.Black,
                     surfaceContainerLowest = Color.Black,
                     surfaceContainerLow    = Color(0xFF050505),
                     surfaceContainer       = Color(0xFF0D0D0D),
                 )
-                isDark -> dynamicDarkColorScheme(context)
-                else   -> dynamicLightColorScheme(context)
+                isDark -> dynamicDarkColorScheme(context).copy(error = AppRed, onError = Color.White)
+                else   -> dynamicLightColorScheme(context).copy(error = AppRed, onError = Color.White)
             }
             isDark && amoled -> colorTheme.getAmoledColorScheme()
             isDark           -> colorTheme.getDarkColorScheme()
@@ -89,14 +91,16 @@ fun AppThemeContent(
         when {
             colorTheme == AppColorTheme.Dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
                 isDark && amoled -> dynamicDarkColorScheme(context).copy(
+                    error                  = AppRed,
+                    onError                = Color.White,
                     background             = Color.Black,
                     surface                = Color.Black,
                     surfaceContainerLowest = Color.Black,
                     surfaceContainerLow    = Color(0xFF050505),
                     surfaceContainer       = Color(0xFF0D0D0D),
                 )
-                isDark -> dynamicDarkColorScheme(context)
-                else   -> dynamicLightColorScheme(context)
+                isDark -> dynamicDarkColorScheme(context).copy(error = AppRed, onError = Color.White)
+                else   -> dynamicLightColorScheme(context).copy(error = AppRed, onError = Color.White)
             }
             isDark && amoled -> colorTheme.getAmoledColorScheme()
             isDark           -> colorTheme.getDarkColorScheme()

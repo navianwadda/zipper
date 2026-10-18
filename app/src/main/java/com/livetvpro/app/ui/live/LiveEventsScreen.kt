@@ -926,7 +926,6 @@ fun BannerEventCard(
     onClick: () -> Unit
 ) {
     val liveRed = MaterialTheme.colorScheme.error
-    val endedColor = Color(0xFF6B7280)
     val interactionSource = remember { MutableInteractionSource() }
     val hasFocus by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
@@ -981,7 +980,16 @@ fun BannerEventCard(
         }
         EventStatus.RECENT -> "Ended"
     }
-    val ribbonColor = if (status == EventStatus.RECENT) endedColor else liveRed
+    val ribbonColor = when (status) {
+        EventStatus.LIVE -> MaterialTheme.colorScheme.error
+        EventStatus.UPCOMING -> MaterialTheme.colorScheme.primary
+        EventStatus.RECENT -> MaterialTheme.colorScheme.inverseSurface
+    }
+    val ribbonTextColor = when (status) {
+        EventStatus.LIVE -> MaterialTheme.colorScheme.onError
+        EventStatus.UPCOMING -> MaterialTheme.colorScheme.onPrimary
+        EventStatus.RECENT -> MaterialTheme.colorScheme.inverseOnSurface
+    }
 
     val categoryLabel = event.category.ifEmpty {
         event.eventCategoryName.ifEmpty { "Sports" }
@@ -1036,7 +1044,7 @@ fun BannerEventCard(
                     lineHeight = (13f * s).sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
-                    color = Color.White,
+                    color = ribbonTextColor,
                     maxLines = 1,
                     modifier = Modifier
                         .align(Alignment.TopStart)

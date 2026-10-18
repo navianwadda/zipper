@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.BorderStroke
@@ -964,7 +965,7 @@ fun BannerEventCard(
             val h = (elapsed / 1000 / 3600).toInt()
             val m = ((elapsed / 1000 / 60) % 60).toInt()
             val s = ((elapsed / 1000) % 60).toInt()
-            String.format("LIVE \u2022 %02d:%02d:%02d", h, m, s)
+            String.format("%02d:%02d:%02d", h, m, s)
         }
         EventStatus.UPCOMING -> {
             val diff = startMillis - currentTime
@@ -1121,11 +1122,16 @@ fun BannerEventCard(
                 )
                 if (status == EventStatus.LIVE) {
                     Spacer(modifier = Modifier.width(8.dp))
-                    LottieAnimation(
-                        composition = lottieComposition,
-                        progress = { lottieProgress },
-                        modifier = Modifier.size(width = (32f * s).dp, height = (20f * s).dp)
-                    )
+                    Box(
+                        modifier = Modifier.size(width = (48f * s).dp, height = (20f * s).dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LottieAnimation(
+                            composition = lottieComposition,
+                            progress = { lottieProgress },
+                            modifier = Modifier.requiredSize(width = (96f * s).dp, height = (72f * s).dp)
+                        )
+                    }
                 }
             }
         }

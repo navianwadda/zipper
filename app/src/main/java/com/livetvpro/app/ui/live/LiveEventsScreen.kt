@@ -43,7 +43,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -266,19 +269,21 @@ fun LiveEventsScreen(
                             ),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(filteredEvents, key = { it.id }) { event ->
-                                LiveEventCard(
-                                    event = event,
-                                    primaryColor = Color(primaryColor),
-                                    onClick = {
-                                        if (event.links.isEmpty()) {
-                                            android.widget.Toast.makeText(
-                                                context,
-                                                "No streams available for this event",
-                                                android.widget.Toast.LENGTH_SHORT
-                                            ).show()
-                                            return@LiveEventCard
-                                        }
+                            items(
+                                filteredEvents,
+                                key = { it.id },
+                                span = { event ->
+                                    GridItemSpan(if (event.banner.isNotBlank()) minOf(2, maxLineSpan) else 1)
+                                }
+                            ) { event ->
+                                val onCardClick: () -> Unit = {
+                                    if (event.links.isEmpty()) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "No streams available for this event",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
                                         val playerAction: () -> Unit = {
                                             if (event.links.size > 1) {
                                                 linkDialogEvent = event
@@ -289,7 +294,16 @@ fun LiveEventsScreen(
                                         val redirected = onEventInteraction?.invoke(event, playerAction) ?: false
                                         if (!redirected) playerAction()
                                     }
-                                )
+                                }
+                                if (event.banner.isNotBlank()) {
+                                    BannerEventCard(event = event, onClick = onCardClick)
+                                } else {
+                                    LiveEventCard(
+                                        event = event,
+                                        primaryColor = Color(primaryColor),
+                                        onClick = onCardClick
+                                    )
+                                }
                             }
                         }
                     }
@@ -908,5 +922,205 @@ private fun WrapperBadge(text: String, modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onTertiary,
             maxLines = 1
         )
+    }
+}
+
+
+@Composable
+fun BannerEventCard(
+    event: LiveEvent,
+    onClick: () -> Unit
+) {
+    val liveRed = MaterialTheme.colorScheme.error
+    val endedColor = Color(0xFF6B7280)
+    val cornerRadius = 18.dp
+    val interactionSource = remember { MutableInteractionSource() }
+    val hasFocus by interactionSource.collectIsFocusedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (hasFocus) 1.03f else 1f,
+        animationSpec = tween(120),
+        label = "bannerScale"
+    )
+
+    val apiDateFormat = remember {
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+    }
+    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.US) }
+
+    var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    val bannerLifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(bannerLifecycleOwner) {
+        bannerLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                currentTime = System.currentTimeMillis()
+                delay(1000)
+            }
+        }
+    }
+
+    val startDate = remember(event.startTime) {
+        try { apiDateFormat.parse(event.startTime) } catch (e: Exception) { null }
+    }
+    val startMillis = startDate?.time ?: 0L
+    val status = event.getStatus(currentTime)
+
+    val ribbonText = when (status) {
+        EventStatus.LIVE -> {
+            val elapsed = (currentTime - startMillis).coerceAtLeast(0L)
+            val h = (elapsed / 1000 / 3600).toInt()
+            val m = ((elapsed / 1000 / 60) % 60).toInt()
+            val s = ((elapsed / 1000) % 60).toInt()
+            String.format("LIVE \u2022 %02d:%02d:%02d", h, m, s)
+        }
+        EventStatus.UPCOMING -> {
+            val diff = startMillis - currentTime
+            when {
+                startDate == null -> "Upcoming"
+                diff in 0..3_600_000L -> {
+                    val m = (diff / 60_000).toInt()
+                    val s = ((diff / 1000) % 60).toInt()
+                    if (m > 0) String.format("Starts in %dm %02ds", m, s) else String.format("Starts in %ds", s)
+                }
+                else -> dateFormat.format(startDate)
+            }
+        }
+        EventStatus.RECENT -> "Ended"
+    }
+    val ribbonColor = if (status == EventStatus.RECENT) endedColor else liveRed
+
+    val categoryLabel = event.category.ifEmpty {
+        event.eventCategoryName.ifEmpty { "Sports" }
+    }
+    val titleText = event.title.trim().takeIf { it.isNotBlank() && it != "vs" }
+        ?: event.league.ifBlank { event.eventCategoryName }
+
+    val lottieComposition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.live_animation))
+    val lottieProgress by animateLottieCompositionAsState(
+        composition = lottieComposition,
+        iterations = LottieConstants.IterateForever,
+        isPlaying = status == EventStatus.LIVE
+    )
+
+    Card(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        modifier = Modifier
+            .padding(horizontal = 6.dp, vertical = 5.dp)
+            .scale(scale)
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(cornerRadius),
+        colors = CardDefaults.cardColors(),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (hasFocus) 8.dp else 2.dp
+        )
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(3.6f)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                @OptIn(ExperimentalGlideComposeApi::class)
+                GlideImage(
+                    model = event.banner.takeIf { it.isNotBlank() },
+                    contentDescription = titleText,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                }
+
+                Text(
+                    text = ribbonText,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = BergenSans,
+                    color = Color.White,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .background(
+                            ribbonColor,
+                            RoundedCornerShape(
+                                topStart = cornerRadius,
+                                topEnd = 0.dp,
+                                bottomEnd = cornerRadius,
+                                bottomStart = 0.dp
+                            )
+                        )
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                )
+
+                if (event.wrapper.isNotEmpty()) {
+                    Text(
+                        text = event.wrapper,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = BergenSans,
+                        color = MaterialTheme.colorScheme.onTertiary,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .background(
+                                MaterialTheme.colorScheme.tertiary,
+                                RoundedCornerShape(
+                                    topStart = 0.dp,
+                                    topEnd = cornerRadius,
+                                    bottomEnd = 0.dp,
+                                    bottomStart = cornerRadius
+                                )
+                            )
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (event.leagueLogo.isNotBlank()) {
+                    @OptIn(ExperimentalGlideComposeApi::class)
+                    GlideImage(
+                        model = event.leagueLogo,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                    ) {
+                        it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                            .override(96, 96)
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                }
+                Text(
+                    text = "$categoryLabel | $titleText",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = BergenSans,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .basicMarquee(iterations = Int.MAX_VALUE)
+                )
+                if (status == EventStatus.LIVE) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    LottieAnimation(
+                        composition = lottieComposition,
+                        progress = { lottieProgress },
+                        modifier = Modifier.size(width = 44.dp, height = 28.dp)
+                    )
+                }
+            }
+        }
     }
 }

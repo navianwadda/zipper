@@ -384,6 +384,8 @@ enum class AppColorTheme(
             onTertiary              = Color.White,
             tertiaryContainer       = tertiaryLight.copy(alpha = 0.15f).over(Color.White),
             onTertiaryContainer     = tertiaryLight.darken(0.3f),
+            error                   = AppRed,
+            onError                 = Color.White,
             background              = backgroundLight,
             onBackground            = Color(0xFF1C1B1F),
             surface                 = backgroundLight,
@@ -418,6 +420,8 @@ enum class AppColorTheme(
             onTertiary              = tertiaryLight.darken(0.5f),
             tertiaryContainer       = tertiaryLight.darken(0.3f),
             onTertiaryContainer     = tertiaryDark.lighten(0.1f),
+            error                   = AppRed,
+            onError                 = Color.White,
             background              = backgroundDark,
             onBackground            = Color(0xFFE6E1E5),
             surface                 = backgroundDark,
@@ -479,3 +483,5 @@ private fun Color.over(background: Color): Color {
         alpha = a,
     )
 }
+
+val AppRed = Color(0xFFEF4444)

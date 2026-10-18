@@ -46,7 +46,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -269,13 +269,7 @@ fun LiveEventsScreen(
                             ),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(
-                                filteredEvents,
-                                key = { it.id },
-                                span = { event ->
-                                    GridItemSpan(if (event.banner.isNotBlank()) minOf(2, maxLineSpan) else 1)
-                                }
-                            ) { event ->
+                            items(filteredEvents, key = { it.id }) { event ->
                                 val onCardClick: () -> Unit = {
                                     if (event.links.isEmpty()) {
                                         android.widget.Toast.makeText(
@@ -295,7 +289,7 @@ fun LiveEventsScreen(
                                         if (!redirected) playerAction()
                                     }
                                 }
-                                if (event.banner.isNotBlank()) {
+                                if (event.eventType.equals("banner", ignoreCase = true)) {
                                     BannerEventCard(event = event, onClick = onCardClick)
                                 } else {
                                     LiveEventCard(
@@ -933,7 +927,6 @@ fun BannerEventCard(
 ) {
     val liveRed = MaterialTheme.colorScheme.error
     val endedColor = Color(0xFF6B7280)
-    val cornerRadius = 18.dp
     val interactionSource = remember { MutableInteractionSource() }
     val hasFocus by interactionSource.collectIsFocusedAsState()
     val scale by animateFloatAsState(
@@ -1003,6 +996,9 @@ fun BannerEventCard(
         isPlaying = status == EventStatus.LIVE
     )
 
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+    val s = (maxWidth.value / 360f).coerceIn(0.8f, 1f)
+    val cornerRadius = (18f * s).dp
     Card(
         onClick = onClick,
         interactionSource = interactionSource,
@@ -1036,7 +1032,7 @@ fun BannerEventCard(
 
                 Text(
                     text = ribbonText,
-                    style = MaterialTheme.typography.labelLarge,
+                    fontSize = (13f * s).sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
                     color = Color.White,
@@ -1052,13 +1048,13 @@ fun BannerEventCard(
                                 bottomStart = 0.dp
                             )
                         )
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                        .padding(horizontal = (14f * s).dp, vertical = (6f * s).dp)
                 )
 
                 if (event.wrapper.isNotEmpty()) {
                     Text(
                         text = event.wrapper,
-                        style = MaterialTheme.typography.labelLarge,
+                        fontSize = (13f * s).sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onTertiary,
@@ -1074,7 +1070,7 @@ fun BannerEventCard(
                                     bottomStart = cornerRadius
                                 )
                             )
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                            .padding(horizontal = (14f * s).dp, vertical = (6f * s).dp)
                     )
                 }
             }
@@ -1082,7 +1078,7 @@ fun BannerEventCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = (12f * s).dp, vertical = (6f * s).dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (event.leagueLogo.isNotBlank()) {
@@ -1092,17 +1088,17 @@ fun BannerEventCard(
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
-                            .size(24.dp)
+                            .size((24f * s).dp)
                             .clip(RoundedCornerShape(6.dp))
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                             .override(96, 96)
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width((10f * s).dp))
                 }
                 Text(
                     text = "$categoryLabel | $titleText",
-                    style = MaterialTheme.typography.labelLarge,
+                    fontSize = (14f * s).sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1117,10 +1113,11 @@ fun BannerEventCard(
                     LottieAnimation(
                         composition = lottieComposition,
                         progress = { lottieProgress },
-                        modifier = Modifier.size(width = 44.dp, height = 28.dp)
+                        modifier = Modifier.size(width = (44f * s).dp, height = (28f * s).dp)
                     )
                 }
             }
         }
+    }
     }
 }

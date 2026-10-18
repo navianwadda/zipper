@@ -1017,7 +1017,6 @@ fun BannerEventCard(
             .fillMaxWidth(),
         shape = RoundedCornerShape(cornerRadius),
         colors = CardDefaults.cardColors(),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (hasFocus) 8.dp else 2.dp
         )
@@ -1129,7 +1128,7 @@ fun BannerEventCard(
                         LottieAnimation(
                             composition = lottieComposition,
                             progress = { lottieProgress },
-                            modifier = Modifier.requiredSize(width = (64f * s).dp, height = (48f * s).dp)
+                            modifier = Modifier.requiredSize(width = (46f * s).dp, height = (34f * s).dp)
                         )
                     }
                 }

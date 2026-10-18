@@ -1032,7 +1032,7 @@ fun BannerEventCard(
 
                 Text(
                     text = ribbonText,
-                    fontSize = (13f * s).sp,
+                    fontSize = (11f * s).sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
                     color = Color.White,
@@ -1044,17 +1044,17 @@ fun BannerEventCard(
                             RoundedCornerShape(
                                 topStart = cornerRadius,
                                 topEnd = 0.dp,
-                                bottomEnd = cornerRadius,
+                                bottomEnd = (12f * s).dp,
                                 bottomStart = 0.dp
                             )
                         )
-                        .padding(horizontal = (14f * s).dp, vertical = (6f * s).dp)
+                        .padding(horizontal = (10f * s).dp, vertical = (4f * s).dp)
                 )
 
                 if (event.wrapper.isNotEmpty()) {
                     Text(
                         text = event.wrapper,
-                        fontSize = (13f * s).sp,
+                        fontSize = (11f * s).sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onTertiary,
@@ -1067,10 +1067,10 @@ fun BannerEventCard(
                                     topStart = 0.dp,
                                     topEnd = cornerRadius,
                                     bottomEnd = 0.dp,
-                                    bottomStart = cornerRadius
+                                    bottomStart = (12f * s).dp
                                 )
                             )
-                            .padding(horizontal = (14f * s).dp, vertical = (6f * s).dp)
+                            .padding(horizontal = (10f * s).dp, vertical = (4f * s).dp)
                     )
                 }
             }
@@ -1078,7 +1078,7 @@ fun BannerEventCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = (12f * s).dp, vertical = (6f * s).dp),
+                    .padding(horizontal = (10f * s).dp, vertical = (4f * s).dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (event.leagueLogo.isNotBlank()) {
@@ -1088,17 +1088,17 @@ fun BannerEventCard(
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
-                            .size((24f * s).dp)
+                            .size((20f * s).dp)
                             .clip(RoundedCornerShape(6.dp))
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                             .override(96, 96)
                     }
-                    Spacer(modifier = Modifier.width((10f * s).dp))
+                    Spacer(modifier = Modifier.width((8f * s).dp))
                 }
                 Text(
                     text = "$categoryLabel | $titleText",
-                    fontSize = (14f * s).sp,
+                    fontSize = (12f * s).sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1113,7 +1113,7 @@ fun BannerEventCard(
                     LottieAnimation(
                         composition = lottieComposition,
                         progress = { lottieProgress },
-                        modifier = Modifier.size(width = (44f * s).dp, height = (28f * s).dp)
+                        modifier = Modifier.size(width = (36f * s).dp, height = (22f * s).dp)
                     )
                 }
             }

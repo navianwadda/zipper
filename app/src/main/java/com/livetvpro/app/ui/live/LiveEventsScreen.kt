@@ -1123,13 +1123,13 @@ fun BannerEventCard(
                 if (status == EventStatus.LIVE) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
-                        modifier = Modifier.size(width = (48f * s).dp, height = (20f * s).dp),
+                        modifier = Modifier.size(width = (44f * s).dp, height = (22f * s).dp),
                         contentAlignment = Alignment.Center
                     ) {
                         LottieAnimation(
                             composition = lottieComposition,
                             progress = { lottieProgress },
-                            modifier = Modifier.requiredSize(width = (96f * s).dp, height = (72f * s).dp)
+                            modifier = Modifier.requiredSize(width = (64f * s).dp, height = (48f * s).dp)
                         )
                     }
                 }

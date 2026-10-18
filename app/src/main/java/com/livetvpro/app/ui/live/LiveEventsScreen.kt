@@ -1033,6 +1033,7 @@ fun BannerEventCard(
                 Text(
                     text = ribbonText,
                     fontSize = (11f * s).sp,
+                    lineHeight = (13f * s).sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
                     color = Color.White,
@@ -1048,13 +1049,14 @@ fun BannerEventCard(
                                 bottomStart = 0.dp
                             )
                         )
-                        .padding(horizontal = (10f * s).dp, vertical = (4f * s).dp)
+                        .padding(horizontal = (10f * s).dp, vertical = (3f * s).dp)
                 )
 
                 if (event.wrapper.isNotEmpty()) {
                     Text(
                         text = event.wrapper,
                         fontSize = (11f * s).sp,
+                    lineHeight = (13f * s).sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onTertiary,
@@ -1070,7 +1072,7 @@ fun BannerEventCard(
                                     bottomStart = (12f * s).dp
                                 )
                             )
-                            .padding(horizontal = (10f * s).dp, vertical = (4f * s).dp)
+                            .padding(horizontal = (10f * s).dp, vertical = (3f * s).dp)
                     )
                 }
             }
@@ -1078,7 +1080,7 @@ fun BannerEventCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = (10f * s).dp, vertical = (4f * s).dp),
+                    .padding(horizontal = (10f * s).dp, vertical = (3f * s).dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (event.leagueLogo.isNotBlank()) {
@@ -1088,7 +1090,7 @@ fun BannerEventCard(
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
-                            .size((20f * s).dp)
+                            .size((18f * s).dp)
                             .clip(RoundedCornerShape(6.dp))
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
@@ -1099,6 +1101,7 @@ fun BannerEventCard(
                 Text(
                     text = "$categoryLabel | $titleText",
                     fontSize = (12f * s).sp,
+                    lineHeight = (14f * s).sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1113,7 +1116,7 @@ fun BannerEventCard(
                     LottieAnimation(
                         composition = lottieComposition,
                         progress = { lottieProgress },
-                        modifier = Modifier.size(width = (36f * s).dp, height = (22f * s).dp)
+                        modifier = Modifier.size(width = (32f * s).dp, height = (20f * s).dp)
                     )
                 }
             }

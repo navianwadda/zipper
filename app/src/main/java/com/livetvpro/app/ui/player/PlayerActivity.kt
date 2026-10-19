@@ -1737,7 +1737,7 @@ class PlayerActivity : ComponentActivity() {
                 ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
             if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
+                headers["User-Agent"] = PlayerStreamHelper.DEFAULT_USER_AGENT
             }
             val mimeType = PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
                 ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -1865,7 +1865,7 @@ class PlayerActivity : ComponentActivity() {
                             return
                         }
                     }
-                    errorMessage.value = error.localizedMessage ?: "Playback error"
+                    errorMessage.value = PlayerStreamHelper.describeError(error)
                     refreshPipParamsIfNeeded()
                 }
             }

@@ -22,6 +22,34 @@ data class StreamInfo(
 
 object PlayerStreamHelper {
 
+    const val DEFAULT_USER_AGENT = "VLC/3.0.20 LibVLC/3.0.20"
+
+    fun describeError(error: androidx.media3.common.PlaybackException): String {
+        val base = error.localizedMessage ?: "Playback error"
+        var cause: Throwable? = error.cause
+        var depth = 0
+        while (cause != null && depth < 6) {
+            when (cause) {
+                is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException ->
+                    return "$base (HTTP ${cause.responseCode})"
+                is androidx.media3.datasource.HttpDataSource.CleartextNotPermittedException ->
+                    return "$base (cleartext HTTP not permitted)"
+                is androidx.media3.exoplayer.source.UnrecognizedInputFormatException ->
+                    return "$base (unsupported or unrecognised stream format)"
+                is java.net.UnknownHostException ->
+                    return "$base (host not found)"
+                is java.net.SocketTimeoutException ->
+                    return "$base (timed out)"
+                is javax.net.ssl.SSLException ->
+                    return "$base (SSL error)"
+            }
+            cause = cause.cause
+            depth++
+        }
+        val root = error.cause?.javaClass?.simpleName
+        return if (root != null) "$base ($root)" else base
+    }
+
     fun parseStreamUrl(streamUrl: String): StreamInfo {
         val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
         val pipeIndex = normalizedUrl.indexOf('|')
@@ -87,7 +115,7 @@ object PlayerStreamHelper {
                 "drmkeyid" -> drmKeyId = value
                 "drmkey" -> drmKey = value
                 "referer", "referrer" -> headers["Referer"] = value
-                "user-agent", "useragent" -> headers["User-Agent"] = value
+                "user-agent", "useragent" -> headers["User-Agent"] = value.replace("%20", " ")
                 "origin" -> headers["Origin"] = value
                 "cookie" -> headers["Cookie"] = value
                 "x-forwarded-for" -> headers["X-Forwarded-For"] = value

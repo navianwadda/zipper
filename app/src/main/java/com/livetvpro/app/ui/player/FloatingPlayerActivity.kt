@@ -1589,7 +1589,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                             return
                         }
                     }
-                    errorMessage.value = error.localizedMessage ?: "Playback error"
+                    errorMessage.value = PlayerStreamHelper.describeError(error)
                 }
             }
             playerListener = listener
@@ -1604,7 +1604,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
             val headers = parsed.headers.toMutableMap()
             if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
+                headers["User-Agent"] = PlayerStreamHelper.DEFAULT_USER_AGENT
             }
 
             val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(parsed.url)
@@ -1738,7 +1738,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                             return
                         }
                     }
-                    errorMessage.value = error.localizedMessage ?: "Playback error"
+                    errorMessage.value = PlayerStreamHelper.describeError(error)
                 }
             }
             playerListener = listener

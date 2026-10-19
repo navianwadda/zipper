@@ -855,6 +855,12 @@ private fun CenterSection(event: LiveEvent, primaryColor: Color = MaterialTheme.
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
+                        text = "Starts in",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = BergenSans,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
                         text = countdownText,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
@@ -984,7 +990,7 @@ fun BannerEventCard(
                 ?.takeIf { it.isNotEmpty() }
                 ?.let { try { apiDateFormat.parse(it) } catch (e: Exception) { null } }
                 ?: startDate
-            if (endDate != null) "Ended \u2022 ${dateFormat.format(endDate)}" else "Ended"
+            if (endDate != null) "Ended, ${dateFormat.format(endDate)}" else "Ended"
         }
     }
     val ribbonColor = when (status) {

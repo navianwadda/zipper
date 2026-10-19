@@ -979,7 +979,13 @@ fun BannerEventCard(
                 else -> dateFormat.format(startDate)
             }
         }
-        EventStatus.RECENT -> "Ended"
+        EventStatus.RECENT -> {
+            val endDate = event.endTime
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { try { apiDateFormat.parse(it) } catch (e: Exception) { null } }
+                ?: startDate
+            if (endDate != null) "Ended \u2022 ${dateFormat.format(endDate)}" else "Ended"
+        }
     }
     val ribbonColor = when (status) {
         EventStatus.LIVE -> MaterialTheme.colorScheme.error

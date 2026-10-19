@@ -554,7 +554,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             val headers = parsedStream.headers.toMutableMap()
             val ua = headers["User-Agent"]
             if (ua.isNullOrBlank() || ua == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
+                headers["User-Agent"] = PlayerStreamHelper.DEFAULT_USER_AGENT
             }
             val effectiveStreamInfo = parsedStream
             val dataSourceFactory = DefaultHttpDataSource.Factory()
@@ -935,7 +935,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
                 userAgent
             else
-                headers["User-Agent"] ?: "okhttp/4.12.0"
+                headers["User-Agent"] ?: PlayerStreamHelper.DEFAULT_USER_AGENT
             headers["User-Agent"] = effectiveUserAgent
 
             val resolvedDrmScheme = parsedPipe.drmScheme ?: normalizeDrmScheme(drmScheme).takeIf { it.isNotEmpty() }
@@ -1079,7 +1079,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             val headers = parsedStream.headers.toMutableMap()
             val ua = headers["User-Agent"]
             if (ua.isNullOrBlank() || ua == "Default") {
-                headers["User-Agent"] = "okhttp/4.12.0"
+                headers["User-Agent"] = PlayerStreamHelper.DEFAULT_USER_AGENT
             }
 
             val dataSourceFactory = DefaultHttpDataSource.Factory()
@@ -1186,7 +1186,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 } catch (_: Exception) {}
             }
             val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                userAgent else "okhttp/4.12.0"
+                userAgent else PlayerStreamHelper.DEFAULT_USER_AGENT
             headers["User-Agent"] = effectiveUserAgent
 
             val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)
@@ -1782,7 +1782,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                     } catch (_: Exception) {}
                 }
                 val effectiveUserAgent = if (userAgent.isNotEmpty() && userAgent != "Default")
-                    userAgent else "okhttp/4.12.0"
+                    userAgent else PlayerStreamHelper.DEFAULT_USER_AGENT
                 headers["User-Agent"] = effectiveUserAgent
 
                 val nsStreamInfo = resolveNetworkStreamInfo(streamUrl, headers, drmScheme, drmLicense)

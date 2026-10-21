@@ -599,8 +599,9 @@ private fun NowPlayingEventCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     fontFamily = BergenSans,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    maxLines = 1,
+                    fontSize = 12.sp,
+                    lineHeight = 14.sp,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
@@ -611,7 +612,7 @@ private fun NowPlayingEventCard(
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
-                modifier = Modifier.padding(horizontal = 6.dp),
+                modifier = Modifier.padding(horizontal = 4.dp),
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -623,8 +624,9 @@ private fun NowPlayingEventCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     fontFamily = BergenSans,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    maxLines = 1,
+                    fontSize = 12.sp,
+                    lineHeight = 14.sp,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.End,
                     modifier = Modifier.weight(1f),
@@ -638,7 +640,7 @@ private fun NowPlayingEventCard(
                         .height(34.dp),
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                 )
-                NowPlayingEventStatus(info = info)
+                NowPlayingEventStatus(info = info, modifier = Modifier.width(100.dp))
             }
         }
     }
@@ -709,7 +711,7 @@ private fun NowPlayingBannerCard(
                     .height(34.dp),
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
             )
-            NowPlayingEventStatus(info = info)
+            NowPlayingEventStatus(info = info, modifier = Modifier.width(100.dp))
         }
     }
 }
@@ -751,8 +753,12 @@ private fun NowPlayingEventStatus(
             fontFamily = BergenSans,
             fontWeight = FontWeight.Medium,
             fontSize = 11.sp,
+            textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .basicMarquee(iterations = Int.MAX_VALUE),
         )
         Spacer(modifier = Modifier.height(1.dp))
         Text(

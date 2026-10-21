@@ -1981,8 +1981,9 @@ class PlayerActivity : ComponentActivity() {
                     contentLogoUrl = ev.leagueLogo.ifBlank { ev.team1Logo.ifBlank { ev.team2Logo } }
                     loadMediaNotificationIcon(contentLogoUrl)
                     val sourceName = allEventLinks.getOrNull(currentLinkIndex)?.quality.orEmpty()
+                    val isBanner = ev.eventType.equals("banner", ignoreCase = true)
                     nowPlayingState.value = NowPlayingState.EventInfo(
-                        title      = ev.league,
+                        title      = if (isBanner) ev.title else ev.league,
                         team1Name  = ev.team1Name,
                         team1Logo  = ev.team1Logo,
                         team2Name  = ev.team2Name,
@@ -1991,6 +1992,9 @@ class PlayerActivity : ComponentActivity() {
                         startTime  = ev.startTime,
                         endTime    = ev.endTime,
                         isLive     = ev.isLive,
+                        isBanner   = isBanner,
+                        category   = ev.category.ifEmpty { ev.eventCategoryName },
+                        iconUrl    = ev.leagueLogo,
                     )
                 }
             }

@@ -590,10 +590,10 @@ private fun NowPlayingEventCard(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f),
             ) {
-                NowPlayingTeamLogo(url = info.team1Logo, modifier = Modifier.size(26.dp))
+                NowPlayingTeamLogo(url = info.team1Logo, modifier = Modifier.size(22.dp))
                 Text(
                     text = info.team1Name,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -616,7 +616,7 @@ private fun NowPlayingEventCard(
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
@@ -631,16 +631,16 @@ private fun NowPlayingEventCard(
                     textAlign = TextAlign.End,
                     modifier = Modifier.weight(1f),
                 )
-                NowPlayingTeamLogo(url = info.team2Logo, modifier = Modifier.size(26.dp))
+                NowPlayingTeamLogo(url = info.team2Logo, modifier = Modifier.size(22.dp))
             }
             if (info.sourceName.isNotBlank()) {
                 VerticalDivider(
                     modifier = Modifier
-                        .padding(horizontal = 10.dp)
+                        .padding(horizontal = 6.dp)
                         .height(34.dp),
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                 )
-                NowPlayingEventStatus(info = info, modifier = Modifier.width(100.dp))
+                NowPlayingEventStatus(info = info, modifier = Modifier.width(84.dp))
             }
         }
     }
@@ -707,11 +707,11 @@ private fun NowPlayingBannerCard(
             }
             VerticalDivider(
                 modifier = Modifier
-                    .padding(horizontal = 10.dp)
+                    .padding(horizontal = 6.dp)
                     .height(34.dp),
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
             )
-            NowPlayingEventStatus(info = info, modifier = Modifier.width(100.dp))
+            NowPlayingEventStatus(info = info, modifier = Modifier.width(84.dp))
         }
     }
 }

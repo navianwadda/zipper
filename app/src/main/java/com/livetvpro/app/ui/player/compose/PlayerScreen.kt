@@ -75,6 +75,9 @@ sealed class NowPlayingState {
         val startTime: String = "",
         val endTime: String? = null,
         val isLive: Boolean = false,
+        val isBanner: Boolean = false,
+        val category: String = "",
+        val iconUrl: String = "",
     ) : NowPlayingState()
 }
 
@@ -551,6 +554,10 @@ private fun NowPlayingEventCard(
     info: NowPlayingState.EventInfo,
     modifier: Modifier = Modifier,
 ) {
+    if (info.isBanner) {
+        NowPlayingBannerCard(info = info, modifier = modifier)
+        return
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -633,6 +640,76 @@ private fun NowPlayingEventCard(
                 )
                 NowPlayingEventStatus(info = info)
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+private fun NowPlayingBannerCard(
+    info: NowPlayingState.EventInfo,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = "NOW PLAYING",
+            color = MaterialTheme.colorScheme.primary,
+            fontFamily = BergenSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            letterSpacing = 1.sp,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (info.iconUrl.isNotBlank()) {
+                GlideImage(
+                    model = info.iconUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                ) {
+                    it.diskCacheStrategy(DiskCacheStrategy.RESOURCE).override(96, 96)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = info.title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = BergenSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (info.category.isNotBlank()) {
+                    Text(
+                        text = info.category,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = BergenSans,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            VerticalDivider(
+                modifier = Modifier
+                    .padding(horizontal = 10.dp)
+                    .height(34.dp),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+            )
+            NowPlayingEventStatus(info = info)
         }
     }
 }
@@ -768,10 +845,17 @@ private fun RelatedEventsGrid(
         modifier       = modifier.fillMaxSize(),
     ) {
         items(events, key = { it.id }) { event ->
-            com.livetvpro.app.ui.live.LiveEventCard(
-                event   = event,
-                onClick = { onEventClick(event) },
-            )
+            if (event.eventType.equals("banner", ignoreCase = true)) {
+                com.livetvpro.app.ui.live.BannerEventCard(
+                    event   = event,
+                    onClick = { onEventClick(event) },
+                )
+            } else {
+                com.livetvpro.app.ui.live.LiveEventCard(
+                    event   = event,
+                    onClick = { onEventClick(event) },
+                )
+            }
         }
     }
 }

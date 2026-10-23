@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -420,6 +421,7 @@ private fun TrackRow(
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val rowFocused by interactionSource.collectIsFocusedAsState()
     val colorOnSurface = MaterialTheme.colorScheme.onSurface
     val colorOutline = MaterialTheme.colorScheme.outline
 
@@ -455,6 +457,10 @@ private fun TrackRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
+            .background(
+                if (rowFocused) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
+                else Color.Transparent
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

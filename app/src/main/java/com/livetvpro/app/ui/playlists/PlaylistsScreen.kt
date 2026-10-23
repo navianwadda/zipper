@@ -16,6 +16,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -162,6 +163,7 @@ fun PlaylistsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .focusProperties { canFocus = false }   // scrim: touch-only, not a D-pad stop
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,

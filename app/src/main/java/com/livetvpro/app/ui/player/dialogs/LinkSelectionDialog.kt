@@ -11,6 +11,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,7 @@ fun LinkSelectionDialog(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
+                .focusProperties { canFocus = false }   // scrim: touch-only, not a D-pad stop
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -87,6 +89,7 @@ fun LinkSelectionDialog(
                     .fillMaxWidth()
                     .padding(horizontal = hMargin, vertical = vMargin)
                     .heightIn(max = maxHeight - vMargin * 2)
+                    .focusProperties { canFocus = false }   // only swallows taps; never a D-pad stop
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

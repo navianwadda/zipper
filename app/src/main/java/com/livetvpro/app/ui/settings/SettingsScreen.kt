@@ -3,6 +3,12 @@ package com.livetvpro.app.ui.settings
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -196,11 +202,20 @@ fun SettingsScreen(
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
         item {
+            val exitInteraction = remember { MutableInteractionSource() }
+            val exitFocused by exitInteraction.collectIsFocusedAsState()
             Card(
                 modifier  = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
-                    .clickable { (context as? android.app.Activity)?.finishAffinity() },
+                    .border(
+                        width = if (exitFocused) 3.dp else 0.dp,
+                        color = if (exitFocused) Color.White else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                    .clickable(interactionSource = exitInteraction, indication = LocalIndication.current) {
+                        (context as? android.app.Activity)?.finishAffinity()
+                    },
                 shape     = RoundedCornerShape(12.dp),
                 colors    = CardDefaults.cardColors(containerColor = Color(0xFFFF4444)),
             ) {
@@ -303,11 +318,18 @@ private fun SettingsCard(
     bottomMargin: androidx.compose.ui.unit.Dp = 8.dp,
     onClick: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
     Card(
         modifier  = Modifier
             .fillMaxWidth()
             .padding(bottom = bottomMargin)
-            .clickable { onClick() },
+            .border(
+                width = if (isFocused) 3.dp else 0.dp,
+                color = if (isFocused) MaterialTheme.colorScheme.primary else Color.Transparent,
+                shape = RoundedCornerShape(12.dp),
+            )
+            .clickable(interactionSource = interactionSource, indication = LocalIndication.current) { onClick() },
         shape     = RoundedCornerShape(12.dp),
         colors    = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,

@@ -4,7 +4,8 @@ import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -308,14 +308,27 @@ fun ThemePreviewCard(
 ) {
     val colorScheme    = if (isDarkMode) theme.getDarkColorScheme() else theme.getLightColorScheme()
     val selectionColor = MaterialTheme.colorScheme.primary
-    val borderWidth    = if (isSelected) 3.dp else 1.dp
-    val borderColor    = if (isSelected) selectionColor else Color.Transparent
-    val elevation      = if (isSelected) 8.dp else 2.dp
+    // D-pad / remote support: the card must be focusable + clickable
+    // (pointerInput tap detection is touch-only, so TV remotes could never select it).
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val borderWidth    = if (isSelected || isFocused) 3.dp else 1.dp
+    val borderColor    = when {
+        isFocused  -> MaterialTheme.colorScheme.onSurface
+        isSelected -> selectionColor
+        else       -> Color.Transparent
+    }
+    val elevation      = if (isSelected || isFocused) 8.dp else 2.dp
 
     Column(
         modifier            = modifier
             .width(100.dp)
-            .pointerInput(Unit) { detectTapGestures { onClick() } },
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication        = null,
+                onClick           = onClick,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(

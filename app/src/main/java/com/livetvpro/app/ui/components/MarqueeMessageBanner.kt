@@ -40,7 +40,7 @@ fun MarqueeMessageBanner(
 ) {
     val bannerShape = RoundedCornerShape(20.dp)
     val bannerHeight = 30.dp
-    val gapWidth = 4.dp
+    val fadeWidth = 22.dp
     val bannerColor = MaterialTheme.colorScheme.surfaceVariant
         .copy(alpha = 0.55f)
         .compositeOver(MaterialTheme.colorScheme.background)
@@ -65,7 +65,7 @@ fun MarqueeMessageBanner(
                 contentDescription = "Announcement",
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
-                    .padding(start = 10.dp, end = 6.dp)
+                    .padding(start = 10.dp, end = 0.dp)
                     .size(18.dp),
             )
             Box(
@@ -78,8 +78,8 @@ fun MarqueeMessageBanner(
                     text = text,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = gapWidth)
-                        .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp),
+                        .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp)
+                        .padding(start = 8.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     fontFamily = BergenSans,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -90,15 +90,29 @@ fun MarqueeMessageBanner(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .fillMaxHeight()
-                        .width(gapWidth)
-                        .background(Brush.horizontalGradient(listOf(bannerColor, bannerColor.copy(alpha = 0f))))
+                        .width(fadeWidth)
+                        .background(
+                            Brush.horizontalGradient(
+                                0f to bannerColor,
+                                0.3f to bannerColor.copy(alpha = 0.85f),
+                                0.65f to bannerColor.copy(alpha = 0.35f),
+                                1f to bannerColor.copy(alpha = 0f),
+                            )
+                        )
                 )
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
-                        .width(gapWidth)
-                        .background(Brush.horizontalGradient(listOf(bannerColor.copy(alpha = 0f), bannerColor)))
+                        .width(fadeWidth)
+                        .background(
+                            Brush.horizontalGradient(
+                                0f to bannerColor.copy(alpha = 0f),
+                                0.35f to bannerColor.copy(alpha = 0.35f),
+                                0.7f to bannerColor.copy(alpha = 0.85f),
+                                1f to bannerColor,
+                            )
+                        )
                 )
             }
         }

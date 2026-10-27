@@ -26,7 +26,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
@@ -357,18 +360,28 @@ private fun PlayerSettingsContent(
 
             Divider()
             Row(
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel", fontFamily = BergenSans)
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, ColorPrimary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ColorPrimary),
+                ) {
+                    Text("Cancel", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.width(8.dp))
-                TextButton(
+                Button(
                     onClick = onApply,
-                    colors = ButtonDefaults.textButtonColors(contentColor = ColorPrimary),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ColorPrimary,
+                        contentColor = Color.White,
+                    ),
                 ) {
                     Text("Apply", fontFamily = BergenSans, fontWeight = FontWeight.Bold)
                 }

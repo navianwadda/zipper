@@ -1,6 +1,8 @@
 package com.livetvpro.app.ui.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,6 +57,11 @@ private fun SupportDialogContent(
         tonalElevation = 6.dp,
     ) {
         Column {
+          Column(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState()),
+          ) {
             Text(
                 text = "We Need Your Support",
                 fontFamily = BergenSans,
@@ -95,6 +102,7 @@ private fun SupportDialogContent(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 color = MaterialTheme.colorScheme.outlineVariant,
             )
+          }
 
             Row(
                 horizontalArrangement = Arrangement.End,

@@ -1,6 +1,7 @@
 package com.livetvpro.app
 
 import android.content.Intent
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
@@ -132,6 +133,9 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                             )
                         },
                         text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
                             Text(
                                 text = "Live TV Pro does not stream any of the channels included in this application, " +
                                     "all the streaming links are from third party websites available freely on the internet. " +
@@ -139,7 +143,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                 fontFamily = bergenSans,
                                 fontSize = 14.sp,
                             )
-                        },
+                        }
+        },
                         confirmButton = {
                             OutlinedButton(
                                 onClick = { showCopyrightDialog = false },
@@ -166,6 +171,9 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                             )
                         },
                         text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
                             Text(
                                 text = "We do not support gambling. If you see gambling ads on our app or website, " +
                                     "they come from the ad network, not us.\n\n" +
@@ -174,7 +182,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                 fontFamily = bergenSans,
                                 fontSize = 14.sp,
                             )
-                        },
+                        }
+        },
                         confirmButton = {
                             OutlinedButton(
                                 onClick = { showNoticeDialog = false },
@@ -201,12 +210,16 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                             )
                         },
                         text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
                             Text(
                                 text = "Floating Player requires permission to draw over other apps. Please enable it in the next screen.",
                                 fontFamily = bergenSans,
                                 fontSize = 14.sp,
                             )
-                        },
+                        }
+        },
                         confirmButton = {
                             TextButton(onClick = {
                                 showOverlayPermDialog = false

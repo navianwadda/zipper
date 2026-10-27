@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.favorites
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -100,6 +101,10 @@ fun FavoritesScreen(
     if (removeConfirmFavorite != null) {
         val favorite = removeConfirmFavorite!!
         AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
             onDismissRequest = { removeConfirmFavorite = null },
             title = {
                 Text(
@@ -141,6 +146,10 @@ fun FavoritesScreen(
 
     if (showClearAllDialog) {
         AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
             onDismissRequest = { showClearAllDialog = false },
             title = {
                 Text(

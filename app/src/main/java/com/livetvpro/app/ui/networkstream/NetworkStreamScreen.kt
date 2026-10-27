@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.networkstream
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -519,6 +520,10 @@ private fun AddHeaderDialog(
     var keyError by remember { mutableStateOf(false) }
 
     AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
         onDismissRequest = onDismiss,
         title = {
             Text(

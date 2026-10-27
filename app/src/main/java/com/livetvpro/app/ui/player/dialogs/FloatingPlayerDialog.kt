@@ -1,6 +1,14 @@
 package com.livetvpro.app.ui.player.dialogs
 
 import android.os.Bundle
+import androidx.compose.ui.res.painterResource
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.BorderStroke
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -221,13 +229,19 @@ internal fun FloatingPlayerDialogContent(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = "Close",
-                    fontFamily = BergenSans,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary,
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_close),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
                 )
+                Spacer(Modifier.width(6.dp))
+                Text(text = "Close", fontFamily = BergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
     )

@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,9 @@ private fun SupportDialogContent(
     onCancel: () -> Unit,
 ) {
     Surface(
+        modifier = Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 6.dp,

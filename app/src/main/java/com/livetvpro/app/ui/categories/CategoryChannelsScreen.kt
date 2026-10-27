@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.categories
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.LocalIndication
@@ -137,12 +138,16 @@ fun CategoryChannelsScreen(
                 )
             },
             text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
                 Text(
                     text = if (isFav) "Remove \"${channel.name}\" from favorites?"
                            else "Add \"${channel.name}\" to favorites?",
                     fontFamily = BergenSans
                 )
-            },
+            }
+        },
             confirmButton = {
                 Button(
                     onClick = {

@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.player.dialogs
 
 import android.os.Bundle
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
@@ -122,6 +123,9 @@ internal fun FloatingPlayerDialogContent(
             )
         },
         text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Enable this option to use directly floating player for playing streams. " +
@@ -226,6 +230,7 @@ internal fun FloatingPlayerDialogContent(
                     }
                 }
             }
+        }
         },
         confirmButton = {},
         dismissButton = {

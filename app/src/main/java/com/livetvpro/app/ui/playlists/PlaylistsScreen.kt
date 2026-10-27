@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.playlists
 
 import android.content.Context
+import androidx.compose.foundation.verticalScroll
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.animation.AnimatedVisibility
@@ -545,6 +546,9 @@ private fun AddPlaylistDialog(
             )
         },
         text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PlaylistTextField(
                     value        = title,
@@ -562,6 +566,7 @@ private fun AddPlaylistDialog(
                     keyboardType = KeyboardType.Uri
                 )
             }
+        }
         },
         confirmButton = {
             Row(
@@ -621,6 +626,9 @@ private fun EditPlaylistDialog(
             )
         },
         text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PlaylistTextField(
                     value        = title,
@@ -638,6 +646,7 @@ private fun EditPlaylistDialog(
                     keyboardType = KeyboardType.Uri
                 )
             }
+        }
         },
         confirmButton = {
             Row(
@@ -703,10 +712,14 @@ private fun DeletePlaylistDialog(
             )
         },
         text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
             Text(
                 text       = "Are you sure you want to delete \"${playlist.title}\"?",
                 fontFamily = BergenSans
             )
+        }
         },
         confirmButton = {
             Row(

@@ -161,15 +161,10 @@ class LiveEventsViewModel @Inject constructor(
             recent = categoryScoped.count { matchesRecent(it, currentTime) },
         )
 
-        val statusScoped = when (pendingStatusFilter) {
-            EventStatus.LIVE -> searched.filter { matchesLive(it, currentTime) }
-            EventStatus.UPCOMING -> searched.filter { matchesUpcoming(it, currentTime) }
-            EventStatus.RECENT -> searched.filter { matchesRecent(it, currentTime) }
-            null -> searched
-        }
         val counts = mutableMapOf<String, Int>()
-        counts["evt_cat_all"] = statusScoped.size
-        for (event in statusScoped) {
+        // Category badges show total events per category, independent of the status chip.
+        counts["evt_cat_all"] = searched.size
+        for (event in searched) {
             val id = event.eventCategoryId
             if (!id.isNullOrEmpty()) counts[id] = (counts[id] ?: 0) + 1
         }

@@ -528,6 +528,9 @@ private fun AddHeaderDialog(
             )
         },
         text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 HeaderDialogTextField(
                     value = key,
@@ -544,6 +547,7 @@ private fun AddHeaderDialog(
                     primaryColor = primaryColor
                 )
             }
+        }
         },
         confirmButton = {
             Row(

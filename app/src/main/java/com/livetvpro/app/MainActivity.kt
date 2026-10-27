@@ -1,6 +1,7 @@
 package com.livetvpro.app
 
 import android.content.Intent
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.painterResource
@@ -123,6 +124,10 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 if (showCopyrightDialog) {
                     val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
                         onDismissRequest = { showCopyrightDialog = false },
                         title = {
                             Text(
@@ -161,6 +166,10 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 if (showNoticeDialog) {
                     val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
                         onDismissRequest = { showNoticeDialog = false },
                         title = {
                             Text(
@@ -200,6 +209,10 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 if (showOverlayPermDialog) {
                     val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
                         onDismissRequest = { showOverlayPermDialog = false },
                         title = {
                             Text(

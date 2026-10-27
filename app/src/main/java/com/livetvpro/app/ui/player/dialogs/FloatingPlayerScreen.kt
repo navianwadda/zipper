@@ -1,6 +1,12 @@
 package com.livetvpro.app.ui.player.dialogs
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -219,11 +225,19 @@ private fun FloatingPlayerContent(
                 horizontalArrangement = Arrangement.End,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                TextButton(
+                OutlinedButton(
                     onClick = onClose,
-                    colors = ButtonDefaults.textButtonColors(contentColor = ColorAccent),
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ColorAccent),
+                    border = BorderStroke(1.dp, ColorAccent.copy(alpha = 0.6f)),
                 ) {
-                    Text("Close", fontFamily = BergenSans, fontWeight = FontWeight.Medium)
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(text = "Close", fontFamily = BergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }

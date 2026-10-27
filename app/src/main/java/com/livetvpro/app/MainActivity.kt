@@ -1,6 +1,18 @@
 package com.livetvpro.app
 
 import android.content.Intent
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.Modifier
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.BorderStroke
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -129,12 +141,13 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                             )
                         },
                         confirmButton = {
-                            TextButton(onClick = { showCopyrightDialog = false }) {
-                                Text(
-                                    text = "OK",
-                                    fontFamily = bergenSans,
-                                    fontWeight = FontWeight.Medium,
-                                )
+                            OutlinedButton(
+                                onClick = { showCopyrightDialog = false },
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                            ) {
+                                Text(text = "OK", fontFamily = bergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         },
                     )
@@ -163,12 +176,13 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                             )
                         },
                         confirmButton = {
-                            TextButton(onClick = { showNoticeDialog = false }) {
-                                Text(
-                                    text = "OK",
-                                    fontFamily = bergenSans,
-                                    fontWeight = FontWeight.Medium,
-                                )
+                            OutlinedButton(
+                                onClick = { showNoticeDialog = false },
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                            ) {
+                                Text(text = "OK", fontFamily = bergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         },
                     )
@@ -208,12 +222,19 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                             }
                         },
                         dismissButton = {
-                            TextButton(onClick = { showOverlayPermDialog = false }) {
-                                Text(
-                                    text = "Cancel",
-                                    fontFamily = bergenSans,
-                                    fontWeight = FontWeight.Medium,
+                            OutlinedButton(
+                                onClick = { showOverlayPermDialog = false },
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_close),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
                                 )
+                                Spacer(Modifier.width(6.dp))
+                                Text(text = "Cancel", fontFamily = bergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         },
                     )

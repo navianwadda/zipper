@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.favorites
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -108,11 +109,15 @@ fun FavoritesScreen(
                 )
             },
             text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
                 Text(
                     text = "Remove \"${favorite.name}\" from your favorites list?",
                     fontFamily = BergenSans
                 )
-            },
+            }
+        },
             confirmButton = {
                 Button(
                     onClick = {
@@ -145,11 +150,15 @@ fun FavoritesScreen(
                 )
             },
             text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
                 Text(
                     text = "This will remove all channels from your list.",
                     fontFamily = BergenSans
                 )
-            },
+            }
+        },
             confirmButton = {
                 Button(
                     onClick = {

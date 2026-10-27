@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.main
 
 import androidx.compose.animation.AnimatedVisibility as ComposeAnimatedVisibility
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -493,7 +494,11 @@ fun MainScaffold(
                     Text("Clear History")
                 }
             },
-            text             = { Text("Are you sure, all your watch history will be deleted.") },
+            text             = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) { Text("Are you sure, all your watch history will be deleted.") }
+        },
             confirmButton    = {
                 TextButton(onClick = {
                     historyViewModel.clearAll()

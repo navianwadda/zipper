@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.categories
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.combinedClickable
@@ -129,6 +130,10 @@ fun CategoryChannelsScreen(
     favoriteDialogChannel?.let { channel ->
         val isFav = channel.id in favoriteIds
         AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
             onDismissRequest = { favoriteDialogChannel = null },
             title = {
                 Text(

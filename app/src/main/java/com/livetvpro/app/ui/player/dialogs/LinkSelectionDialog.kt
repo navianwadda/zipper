@@ -30,6 +30,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -171,14 +174,25 @@ fun LinkSelectionDialog(
                             .clickable(onClick = onDismiss),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = "Cancel",
-                            fontFamily = BergenSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = if (compact) 14.sp else 17.sp,
-                            textAlign = TextAlign.Center,
-                            color = ColorAccent,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_close),
+                                contentDescription = null,
+                                tint = ColorAccent,
+                                modifier = Modifier.size(if (compact) 16.dp else 20.dp),
+                            )
+                            Text(
+                                text = "Cancel",
+                                fontFamily = BergenSans,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = if (compact) 14.sp else 17.sp,
+                                textAlign = TextAlign.Center,
+                                color = ColorAccent,
+                            )
+                        }
                     }
                 }
             }

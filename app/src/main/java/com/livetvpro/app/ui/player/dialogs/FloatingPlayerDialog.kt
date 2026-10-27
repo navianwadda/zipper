@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.player.dialogs
 
 import android.os.Bundle
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.OutlinedButton
@@ -113,6 +114,10 @@ internal fun FloatingPlayerDialogContent(
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
         onDismissRequest = onDismiss,
         title = {
             Text(

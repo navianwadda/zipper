@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.main
 
 import androidx.compose.animation.AnimatedVisibility as ComposeAnimatedVisibility
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -478,6 +479,10 @@ fun MainScaffold(
 
     if (showHistoryClearDialog && historyViewModel != null) {
         AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
             onDismissRequest = { showHistoryClearDialog = false },
             title            = {
                 Row(

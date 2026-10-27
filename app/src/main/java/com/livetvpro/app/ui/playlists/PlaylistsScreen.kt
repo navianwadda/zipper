@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.playlists
 
 import android.content.Context
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -537,6 +538,10 @@ private fun AddPlaylistDialog(
     }
 
     AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -617,6 +622,10 @@ private fun EditPlaylistDialog(
     var urlError   by remember { mutableStateOf(false) }
 
     AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -703,6 +712,10 @@ private fun DeletePlaylistDialog(
     onConfirm: () -> Unit,
 ) {
     AlertDialog(
+        modifier = androidx.compose.ui.Modifier.heightIn(
+            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
+        ),
+        
         onDismissRequest = onDismiss,
         title = {
             Text(

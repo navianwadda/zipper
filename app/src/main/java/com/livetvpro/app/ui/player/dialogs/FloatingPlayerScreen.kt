@@ -1,6 +1,8 @@
 package com.livetvpro.app.ui.player.dialogs
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
@@ -118,7 +120,7 @@ private fun FloatingPlayerContent(
             .background(MaterialTheme.colorScheme.surface)
             .padding(24.dp),
     ) {
-        Column {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
             Text(
                 text = "Floating Player",
                 fontFamily = BergenSans,

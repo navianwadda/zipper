@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.favorites
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.tween
@@ -101,9 +102,12 @@ fun FavoritesScreen(
     if (removeConfirmFavorite != null) {
         val favorite = removeConfirmFavorite!!
         AlertDialog(
-        modifier = androidx.compose.ui.Modifier.heightIn(
-            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
-        ),
+        modifier = androidx.compose.ui.Modifier.layout { measurable, constraints ->
+            val maxH = if (constraints.maxHeight == androidx.compose.ui.unit.Constraints.Infinity) constraints.maxHeight
+                       else (constraints.maxHeight * 0.9f).toInt()
+            val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = maxH))
+            layout(p.width, p.height) { p.placeRelative(0, 0) }
+        },
         
             onDismissRequest = { removeConfirmFavorite = null },
             title = {
@@ -146,9 +150,12 @@ fun FavoritesScreen(
 
     if (showClearAllDialog) {
         AlertDialog(
-        modifier = androidx.compose.ui.Modifier.heightIn(
-            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
-        ),
+        modifier = androidx.compose.ui.Modifier.layout { measurable, constraints ->
+            val maxH = if (constraints.maxHeight == androidx.compose.ui.unit.Constraints.Infinity) constraints.maxHeight
+                       else (constraints.maxHeight * 0.9f).toInt()
+            val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = maxH))
+            layout(p.width, p.height) { p.placeRelative(0, 0) }
+        },
         
             onDismissRequest = { showClearAllDialog = false },
             title = {

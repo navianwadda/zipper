@@ -299,12 +299,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
                             ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_close),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(Modifier.width(6.dp))
                                 Text(text = "Cancel", fontFamily = bergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         },

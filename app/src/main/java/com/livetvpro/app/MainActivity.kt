@@ -1,6 +1,12 @@
 package com.livetvpro.app
 
 import android.content.Intent
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.unit.dp
@@ -124,9 +130,12 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 if (showCopyrightDialog) {
                     val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
-        modifier = androidx.compose.ui.Modifier.heightIn(
-            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
-        ),
+        modifier = androidx.compose.ui.Modifier.layout { measurable, constraints ->
+            val maxH = if (constraints.maxHeight == androidx.compose.ui.unit.Constraints.Infinity) constraints.maxHeight
+                       else (constraints.maxHeight * 0.9f).toInt()
+            val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = maxH))
+            layout(p.width, p.height) { p.placeRelative(0, 0) }
+        },
         
                         onDismissRequest = { showCopyrightDialog = false },
                         title = {
@@ -148,27 +157,45 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                 fontFamily = bergenSans,
                                 fontSize = 14.sp,
                             )
+
+                            Spacer(Modifier.height(20.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                OutlinedButton(
+                                    onClick = { showCopyrightDialog = false },
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.6f)
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(50),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_close),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(text = "Close", fontFamily = bergenSans, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                            }
                         }
         },
-                        confirmButton = {
-                            OutlinedButton(
-                                onClick = { showCopyrightDialog = false },
-                                shape = RoundedCornerShape(50),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
-                            ) {
-                                Text(text = "OK", fontFamily = bergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                        },
+                        confirmButton = {},
                     )
                 }
 
                 if (showNoticeDialog) {
                     val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
-        modifier = androidx.compose.ui.Modifier.heightIn(
-            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
-        ),
+        modifier = androidx.compose.ui.Modifier.layout { measurable, constraints ->
+            val maxH = if (constraints.maxHeight == androidx.compose.ui.unit.Constraints.Infinity) constraints.maxHeight
+                       else (constraints.maxHeight * 0.9f).toInt()
+            val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = maxH))
+            layout(p.width, p.height) { p.placeRelative(0, 0) }
+        },
         
                         onDismissRequest = { showNoticeDialog = false },
                         title = {
@@ -191,27 +218,45 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                                 fontFamily = bergenSans,
                                 fontSize = 14.sp,
                             )
+
+                            Spacer(Modifier.height(20.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                OutlinedButton(
+                                    onClick = { showNoticeDialog = false },
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.6f)
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(50),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_close),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(text = "Close", fontFamily = bergenSans, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                            }
                         }
         },
-                        confirmButton = {
-                            OutlinedButton(
-                                onClick = { showNoticeDialog = false },
-                                shape = RoundedCornerShape(50),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
-                            ) {
-                                Text(text = "OK", fontFamily = bergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                        },
+                        confirmButton = {},
                     )
                 }
 
                 if (showOverlayPermDialog) {
                     val bergenSans = FontFamily(Font(R.font.bergen_sans))
                     AlertDialog(
-        modifier = androidx.compose.ui.Modifier.heightIn(
-            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
-        ),
+        modifier = androidx.compose.ui.Modifier.layout { measurable, constraints ->
+            val maxH = if (constraints.maxHeight == androidx.compose.ui.unit.Constraints.Infinity) constraints.maxHeight
+                       else (constraints.maxHeight * 0.9f).toInt()
+            val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = maxH))
+            layout(p.width, p.height) { p.placeRelative(0, 0) }
+        },
         
                         onDismissRequest = { showOverlayPermDialog = false },
                         title = {

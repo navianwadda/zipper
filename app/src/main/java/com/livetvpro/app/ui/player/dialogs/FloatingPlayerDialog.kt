@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -112,12 +113,14 @@ internal fun FloatingPlayerDialogContent(
     var isEnabled by remember { mutableStateOf(preferencesManager.isFloatingPlayerEnabled()) }
     var selectedIndex by remember { mutableStateOf(maxWindowsToIndex(preferencesManager.getMaxFloatingWindows())) }
     var dropdownExpanded by remember { mutableStateOf(false) }
+    val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 480
 
     AlertDialog(
-        modifier = androidx.compose.ui.Modifier.heightIn(
-            max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp,
-        ),
-        
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .widthIn(max = 560.dp)
+            .heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.92f).dp),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -141,7 +144,7 @@ internal fun FloatingPlayerDialogContent(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(if (compact) 12.dp else 20.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -175,22 +178,23 @@ internal fun FloatingPlayerDialogContent(
                 }
 
                 if (isEnabled) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
 
-                    Text(
-                        text = "Multi Floating Window",
-                        fontFamily = BergenSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    ExposedDropdownMenuBox(
+                    val label: @androidx.compose.runtime.Composable (Modifier) -> Unit = { m ->
+                        Text(
+                            text = "Multi Floating Window",
+                            fontFamily = BergenSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = m,
+                        )
+                    }
+                    val dropdown: @androidx.compose.runtime.Composable (Modifier) -> Unit = { m ->
+                        ExposedDropdownMenuBox(
                         expanded = dropdownExpanded,
                         onExpandedChange = { dropdownExpanded = !dropdownExpanded },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = m,
                     ) {
                         TextField(
                             value = windowOptions[selectedIndex],
@@ -232,6 +236,21 @@ internal fun FloatingPlayerDialogContent(
                                 )
                             }
                         }
+                    }
+                    }
+
+                    if (compact) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            label(Modifier.weight(1f))
+                            dropdown(Modifier.width(230.dp))
+                        }
+                    } else {
+                        label(Modifier)
+                        Spacer(Modifier.height(8.dp))
+                        dropdown(Modifier.fillMaxWidth())
                     }
                 }
             }

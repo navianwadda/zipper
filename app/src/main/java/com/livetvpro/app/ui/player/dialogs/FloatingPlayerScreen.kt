@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.player.dialogs
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -117,7 +118,12 @@ private fun FloatingPlayerContent(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.85f).dp)
+            .layout { measurable, constraints ->
+            val maxH = if (constraints.maxHeight == androidx.compose.ui.unit.Constraints.Infinity) constraints.maxHeight
+                       else (constraints.maxHeight * 0.9f).toInt()
+            val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = maxH))
+            layout(p.width, p.height) { p.placeRelative(0, 0) }
+        }
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)
             .padding(24.dp),

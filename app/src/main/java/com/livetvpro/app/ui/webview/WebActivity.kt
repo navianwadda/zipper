@@ -225,19 +225,18 @@ class WebActivity : AppCompatActivity() {
 
         timerLabel = TextView(this).apply {
             textSize = 12f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            includeFontPadding = false
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(Color.TRANSPARENT)
-                setStroke((2 * dp).toInt(), Color.WHITE)
+            setBackgroundColor(Color.parseColor("#AA000000"))
+            setPadding((8 * dp).toInt(), (4 * dp).toInt(), (8 * dp).toInt(), (4 * dp).toInt())
+            text = "Waiting for page..."
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.gravity = Gravity.TOP or Gravity.END
+                it.topMargin = (44 * dp).toInt()
+                it.marginEnd = (8 * dp).toInt()
             }
-            text = "…"
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                (32 * dp).toInt(), (32 * dp).toInt()
-            ).also { it.marginEnd = (4 * dp).toInt() }
         }
 
         val topBar = View(this).apply {
@@ -247,64 +246,19 @@ class WebActivity : AppCompatActivity() {
             )
         }
 
-        val ripple = android.util.TypedValue().also {
-            theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, it, true)
-        }
-        fun headerButton(iconRes: Int, description: String, onClick: () -> Unit) = ImageButton(this).apply {
-            setImageResource(iconRes)
-            scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-            setBackgroundResource(ripple.resourceId)
-            val pad = (10 * dp).toInt()
-            setPadding(pad, pad, pad, pad)
+        val closeBtn = ImageButton(this).apply {
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            val outValue = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+            setBackgroundResource(outValue.resourceId)
             setColorFilter(Color.WHITE)
-            contentDescription = description
             isFocusable = true
             isFocusableInTouchMode = true
-            layoutParams = android.widget.LinearLayout.LayoutParams((40 * dp).toInt(), (40 * dp).toInt())
-            setOnClickListener { onClick() }
-        }
-
-        val backBtn = headerButton(com.livetvpro.app.R.drawable.ic_arrow_back, "Back") {
-            if (webView?.canGoBack() == true) webView?.goBack()
-        }
-        val reloadBtn = headerButton(com.livetvpro.app.R.drawable.ic_refresh, "Reload") {
-            webView?.reload()
-        }
-        val copyBtn = headerButton(com.livetvpro.app.R.drawable.ic_link, "Copy link") {
-            val link = webView?.url ?: url
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Link", link))
-            Toast.makeText(this, "Link copied", Toast.LENGTH_SHORT).show()
-        }
-        val shareBtn = headerButton(com.livetvpro.app.R.drawable.ic_share, "Share") {
-            val link = webView?.url ?: url
-            startActivity(Intent.createChooser(
-                Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, link)
-                }, "Share link"
-            ))
-        }
-        val closeBtn = headerButton(com.livetvpro.app.R.drawable.ic_close, "Close") {
-            setResult(RESULT_CANCELED); finish()
-        }.apply { post { requestFocus() } }
-
-        val headerRow = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
             layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, (40 * dp).toInt()
-            ).also { it.gravity = Gravity.TOP }
-            setPadding((4 * dp).toInt(), 0, (4 * dp).toInt(), 0)
-            addView(backBtn)
-            addView(reloadBtn)
-            addView(copyBtn)
-            addView(shareBtn)
-            addView(View(this@WebActivity).apply {
-                layoutParams = android.widget.LinearLayout.LayoutParams(0, 1, 1f)
-            })
-            addView(timerLabel)
-            addView(closeBtn)
+                (48 * dp).toInt(), (48 * dp).toInt()
+            ).also { it.gravity = Gravity.TOP or Gravity.END }
+            setOnClickListener { setResult(RESULT_CANCELED); finish() }
+            post { requestFocus() }
         }
 
         val cookieManager = CookieManager.getInstance()
@@ -422,7 +376,8 @@ class WebActivity : AppCompatActivity() {
         root.addView(blurMessage)
         root.addView(topBar)
         root.addView(progressBar)
-        root.addView(headerRow)
+        root.addView(timerLabel)
+        root.addView(closeBtn)
         setContentView(root)
 
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
@@ -431,8 +386,10 @@ class WebActivity : AppCompatActivity() {
             topBar.requestLayout()
             (progressBar.layoutParams as FrameLayout.LayoutParams).topMargin = (40 * dp).toInt() + statusBarTop
             progressBar.requestLayout()
-            (headerRow.layoutParams as FrameLayout.LayoutParams).topMargin = statusBarTop
-            headerRow.requestLayout()
+            (timerLabel.layoutParams as FrameLayout.LayoutParams).topMargin = (44 * dp).toInt() + statusBarTop
+            timerLabel.requestLayout()
+            (closeBtn.layoutParams as FrameLayout.LayoutParams).topMargin = statusBarTop
+            closeBtn.requestLayout()
             insets
         }
     }
@@ -441,12 +398,10 @@ class WebActivity : AppCompatActivity() {
         countDownTimer?.cancel()
         countDownTimer = object : CountDownTimer(durationSeconds * 1000L, 1000L) {
             override fun onTick(millisUntilFinished: Long) {
-                val secs = (millisUntilFinished / 1000).toString()
-                timerLabel.textSize = if (secs.length > 2) 10f else 12f
-                timerLabel.text = secs
+                timerLabel.text = "Closing in ${millisUntilFinished / 1000}s"
             }
             override fun onFinish() {
-                timerLabel.text = "✓"
+                timerLabel.text = "Done!"
                 Toast.makeText(this@WebActivity, "Thank you for your support!", Toast.LENGTH_SHORT).show()
                 setResult(RESULT_VALIDATED)
                 finish()

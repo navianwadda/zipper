@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.player.dialogs
 
 import android.os.Bundle
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
@@ -17,6 +18,7 @@ import android.view.ViewGroup
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -113,13 +115,18 @@ internal fun FloatingPlayerDialogContent(
     var isEnabled by remember { mutableStateOf(preferencesManager.isFloatingPlayerEnabled()) }
     var selectedIndex by remember { mutableStateOf(maxWindowsToIndex(preferencesManager.getMaxFloatingWindows())) }
     var dropdownExpanded by remember { mutableStateOf(false) }
-    val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 480
+    val compact = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 520
 
     AlertDialog(
         modifier = Modifier
             .fillMaxWidth(0.9f)
             .widthIn(max = 560.dp)
-            .heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.92f).dp),
+            .layout { measurable, constraints ->
+            val maxH = if (constraints.maxHeight == androidx.compose.ui.unit.Constraints.Infinity) constraints.maxHeight
+                       else (constraints.maxHeight * 0.9f).toInt()
+            val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = maxH))
+            layout(p.width, p.height) { p.placeRelative(0, 0) }
+        },
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         onDismissRequest = onDismiss,
         title = {
@@ -177,7 +184,7 @@ internal fun FloatingPlayerDialogContent(
                     )
                 }
 
-                if (isEnabled) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
 
                     val label: @androidx.compose.runtime.Composable (Modifier) -> Unit = { m ->
@@ -186,22 +193,24 @@ internal fun FloatingPlayerDialogContent(
                             fontFamily = BergenSans,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isEnabled) 1f else 0.38f),
                             modifier = m,
                         )
                     }
                     val dropdown: @androidx.compose.runtime.Composable (Modifier) -> Unit = { m ->
                         ExposedDropdownMenuBox(
-                        expanded = dropdownExpanded,
-                        onExpandedChange = { dropdownExpanded = !dropdownExpanded },
+                        expanded = dropdownExpanded && isEnabled,
+                        onExpandedChange = { if (isEnabled) dropdownExpanded = !dropdownExpanded },
                         modifier = m,
                     ) {
                         TextField(
                             value = windowOptions[selectedIndex],
                             onValueChange = {},
                             readOnly = true,
+                            enabled = isEnabled,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(dropdownExpanded) },
                             colors = TextFieldDefaults.colors(
+                                disabledContainerColor  = androidx.compose.ui.graphics.Color.Transparent,
                                 focusedContainerColor   = androidx.compose.ui.graphics.Color.Transparent,
                                 unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
                                 focusedIndicatorColor   = MaterialTheme.colorScheme.primary,
@@ -215,7 +224,7 @@ internal fun FloatingPlayerDialogContent(
                                 .fillMaxWidth(),
                         )
                         ExposedDropdownMenu(
-                            expanded = dropdownExpanded,
+                            expanded = dropdownExpanded && isEnabled,
                             onDismissRequest = { dropdownExpanded = false },
                         ) {
                             windowOptions.forEachIndexed { idx, option ->
@@ -253,25 +262,34 @@ internal fun FloatingPlayerDialogContent(
                         dropdown(Modifier.fillMaxWidth())
                     }
                 }
+
+                Spacer(Modifier.height(if (compact) 12.dp else 20.dp))
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .fillMaxWidth(0.75f)
+                            .height(if (compact) 48.dp else 52.dp),
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_close),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(text = "Close", fontFamily = BergenSans, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                }
             }
         }
         },
         confirmButton = {},
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_close),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(text = "Close", fontFamily = BergenSans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
-        },
     )
 }

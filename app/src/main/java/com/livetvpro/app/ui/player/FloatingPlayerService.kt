@@ -311,11 +311,17 @@ var isBoosted: Boolean = false
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = createNotification("Floating Player")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        // startForeground must be called within 5s of startForegroundService on Android 8+.
+        // Always call it here unconditionally before any other work.
+        try {
+            val notification = createNotification("Floating Player")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (t: Throwable) {
+            // Swallow in case of RemoteException or similar; service will still try to continue
         }
         if (intent == null) return START_STICKY
         return try {
@@ -629,14 +635,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
 
             activeInstances[instanceId] = instance
 
-            if (activeInstances.size == 1) {
-                val notification = createNotification(title)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                } else {
-                    startForeground(NOTIFICATION_ID, notification)
-                }
-            }
+            updateNotification()
 
         } catch (e: Throwable) {
         }
@@ -733,14 +732,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             val contentType = if (channel != null) "channel" else "event"
             com.livetvpro.app.utils.FloatingPlayerManager.addPlayer(instanceId, contentName, contentType)
 
-            if (activeInstances.size == 1) {
-                val notification = createNotification(contentName)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                } else {
-                    startForeground(NOTIFICATION_ID, notification)
-                }
-            }
+            updateNotification()
 
         } catch (e: Exception) {
         }
@@ -850,14 +842,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
 
             com.livetvpro.app.utils.FloatingPlayerManager.addPlayer(instanceId, streamName, "network_stream")
 
-            if (activeInstances.size == 1) {
-                val notification = createNotification(streamName)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                } else {
-                    startForeground(NOTIFICATION_ID, notification)
-                }
-            }
+            updateNotification()
 
         } catch (e: Exception) {
         }
@@ -1032,14 +1017,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             )
             activeInstances[instanceId] = instance
 
-            if (activeInstances.size == 1) {
-                val notification = createNotification(streamName)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                } else {
-                    startForeground(NOTIFICATION_ID, notification)
-                }
-            }
+            updateNotification()
 
         } catch (e: Throwable) {
         }
@@ -1109,9 +1087,10 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             titleText.text = channel?.name ?: event?.title ?: "Unknown"
 
             val wasMuted = instance.isMuted
-            instance.player.stop()
+            try { instance.playerView.player = null } catch (_: Exception) {}
+            try { instance.player.stop() } catch (_: Exception) {}
             com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
-            instance.player.release()
+            try { instance.player.release() } catch (_: Exception) {}
 
             val renderersFactory2 = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
@@ -1203,9 +1182,10 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             titleText.text = streamName
 
             val wasMuted = instance.isMuted
-            instance.player.stop()
+            try { instance.playerView.player = null } catch (_: Exception) {}
+            try { instance.player.stop() } catch (_: Exception) {}
             com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
-            instance.player.release()
+            try { instance.player.release() } catch (_: Exception) {}
 
             val renderersFactory = DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
@@ -1795,9 +1775,10 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                     .setKeepPostFor302Redirects(true)
                 val mediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, dataSourceFactory, headers)
 
-                instance.player.stop()
+                try { instance.playerView.player = null } catch (_: Exception) {}
+                try { instance.player.stop() } catch (_: Exception) {}
                 com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
-                instance.player.release()
+                try { instance.player.release() } catch (_: Exception) {}
 
                 val renderersFactory3 = DefaultRenderersFactory(this)
                     .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
@@ -1848,12 +1829,22 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         hideControlsHandlers[instanceId]?.removeCallbacksAndMessages(null)
         hideControlsHandlers.remove(instanceId)
 
+        try {
+            instance.player.stop()
+        } catch (_: Exception) {}
         com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
-        instance.player.release()
+        try {
+            instance.player.release()
+        } catch (_: Exception) {}
+
+        try {
+            // clearSurfaceOnStop prevents black frame when view is removed
+            instance.playerView.player = null
+        } catch (_: Exception) {}
 
         try {
             windowManager?.removeView(instance.floatingView)
-        } catch (e: Exception) { }
+        } catch (_: Exception) {}
 
         activeInstances.remove(instanceId)
         com.livetvpro.app.utils.FloatingPlayerManager.removePlayer(instanceId)
@@ -1879,14 +1870,17 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         val count = activeInstances.size
         val title = if (count == 1) {
             val instance = activeInstances.values.first()
-            instance.currentChannel?.name ?: instance.currentEvent?.title ?: "Unknown"
+            instance.currentChannel?.name ?: instance.currentEvent?.title
+                ?: instance.networkStreamName ?: "Unknown"
         } else {
             "$count Floating Players Active"
         }
 
         val notification = createNotification(title)
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        try {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.notify(NOTIFICATION_ID, notification)
+        } catch (_: Exception) {}
     }
 
     private fun createNotificationChannel() {
@@ -1971,6 +1965,10 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+        // Detach all PlayerViews from their players first to avoid surface use-after-free
+        activeInstances.values.forEach { instance ->
+            try { instance.playerView.player = null } catch (_: Exception) {}
+        }
         stopAllInstances()
     }
 
@@ -2300,7 +2298,9 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(streamInfo.url)
             ?: try {
                 kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-                    PlayerStreamHelper.resolveContentType(streamInfo.url, headers)
+                    kotlinx.coroutines.withTimeout(3_000) {
+                        PlayerStreamHelper.resolveContentType(streamInfo.url, headers)
+                    }
                 }
             } catch (e: Exception) { null }
         mimeType?.let { builder.setMimeType(it) }

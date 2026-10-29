@@ -226,9 +226,13 @@ object M3uParser {
                 return parseJsonPlaylist(trimmedContent)
             }
 
-            if (trimmedContent.startsWith("<!DOCTYPE", ignoreCase = true) ||
-                trimmedContent.startsWith("<html", ignoreCase = true) ||
-                trimmedContent.startsWith("<?xml", ignoreCase = true)) {
+            val hasM3uMarkers = trimmedContent.contains("#EXTM3U", ignoreCase = true) ||
+                    trimmedContent.contains("#EXTINF", ignoreCase = true)
+
+            if (!hasM3uMarkers &&
+                (trimmedContent.startsWith("<!DOCTYPE", ignoreCase = true) ||
+                 trimmedContent.startsWith("<html", ignoreCase = true) ||
+                 trimmedContent.startsWith("<?xml", ignoreCase = true))) {
                 android.util.Log.e("M3uParser", "Server returned HTML/XML instead of M3U playlist")
                 android.util.Log.e("M3uParser", "Response preview: ${content.take(500)}")
                 return emptyList()
@@ -241,7 +245,7 @@ object M3uParser {
                 android.util.Log.w("M3uParser", "Content preview: ${content.take(300)}")
             }
 
-            val channels = parseM3uContent(content)
+            val channels = parseM3uContent(stripLeadingJunk(content))
             android.util.Log.d("M3uParser", "Successfully parsed ${channels.size} channels (UA: $userAgent)")
 
             if (channels.isEmpty()) {
@@ -266,6 +270,21 @@ object M3uParser {
             android.util.Log.e("M3uParser", "HTTP error: $responseCode")
             throw java.io.IOException("HTTP $responseCode: ${connection.responseMessage ?: "Request failed"}")
         }
+    }
+
+    /** Removes anything (HTML redirect pages, banners, notes) that comes before the first M3U marker. */
+    private fun stripLeadingJunk(content: String): String {
+        val extm3u = content.indexOf("#EXTM3U", ignoreCase = true)
+        val extinf = content.indexOf("#EXTINF", ignoreCase = true)
+        val start = listOf(extm3u, extinf).filter { it >= 0 }.minOrNull() ?: return content
+        return if (start > 0) content.substring(start) else content
+    }
+
+    /** Accepts `{kid:key}` or `{"kid":"key"}` (hex pairs) license keys. */
+    private fun parseBraceKeyPairs(raw: String): List<Pair<String, String>> {
+        val hex = Regex("^[0-9a-fA-F]{32}$")
+        val inner = raw.trim().removePrefix("{").removeSuffix("}").replace("\"", "").trim()
+        return parseClearKeyPairs(inner).filter { hex.matches(it.first) && hex.matches(it.second) }
     }
 
     fun parseJsonPlaylist(jsonContent: String): List<M3uChannel> {
@@ -381,8 +400,16 @@ object M3uParser {
         var currentDrmLicenseUrl: String? = null
 
         content.reader().forEachLine { line ->
-            val trimmedLine = line.trim()
+            var trimmedLine = line.trim()
             if (trimmedLine.isEmpty() || trimmedLine.startsWith("#EXTM3U")) return@forEachLine
+
+            // Some playlists forget the leading '#' on tag lines (e.g. "KODIPROP:...")
+            if (trimmedLine.startsWith("KODIPROP:") ||
+                trimmedLine.startsWith("EXTVLCOPT:") ||
+                trimmedLine.startsWith("EXTINF:") ||
+                trimmedLine.startsWith("EXTHTTP:")) {
+                trimmedLine = "#$trimmedLine"
+            }
 
             when {
                 trimmedLine.startsWith("#KODIPROP:inputstream.adaptive.license_type=") -> {
@@ -397,6 +424,18 @@ object M3uParser {
                         keyValue.startsWith("https://", ignoreCase = true) -> {
                             currentDrmKeyId = keyValue
                             currentDrmKey   = "LICENSE_URL"
+                        }
+                        keyValue.startsWith("{") && parseBraceKeyPairs(keyValue).isNotEmpty() -> {
+                            val pairs = parseBraceKeyPairs(keyValue)
+                            if (pairs.size == 1) {
+                                currentDrmKeyId      = pairs[0].first
+                                currentDrmKey        = pairs[0].second
+                                currentDrmLicenseUrl = null
+                            } else {
+                                currentDrmKeyId      = null
+                                currentDrmKey        = null
+                                currentDrmLicenseUrl = pairsToJwk(pairs)
+                            }
                         }
                         keyValue.startsWith("{") -> {
                             try {
@@ -443,8 +482,16 @@ object M3uParser {
                 }
 
                 trimmedLine.startsWith("#EXTINF:") -> {
-                    currentUserAgent     = null
-                    currentHeaders       = mutableMapOf()
+                    // If the previous #EXTINF never got a URL, drop whatever tags followed it so they
+                    // don't leak into this channel. Tags written *before* this line are kept.
+                    if (currentName.isNotEmpty()) {
+                        currentUserAgent     = null
+                        currentHeaders       = mutableMapOf()
+                        currentDrmScheme     = null
+                        currentDrmKeyId      = null
+                        currentDrmKey        = null
+                        currentDrmLicenseUrl = null
+                    }
                     currentName          = extractChannelName(trimmedLine)
                     currentLogo          = extractAttribute(trimmedLine, "tvg-logo")
                     currentGroup         = extractAttribute(trimmedLine, "group-title")
@@ -496,7 +543,8 @@ object M3uParser {
                 }
 
                 !trimmedLine.startsWith("#") -> {
-                    if (currentName.isNotEmpty()) {
+                    // Ignore section titles / notes like "=== JIOTV ===" or "LIVEBOX": a stream line must be a URL
+                    if (currentName.isNotEmpty() && trimmedLine.contains("://")) {
                         val (streamUrl, inlineHeaders, inlineDrmInfo) = parseInlineMetadata(trimmedLine)
 
                         val finalHeaders = currentHeaders.toMutableMap()
@@ -519,6 +567,11 @@ object M3uParser {
                         currentDrmKeyId      = null
                         currentDrmKey        = null
                         currentDrmLicenseUrl = null
+                        currentUserAgent     = null
+                        currentHeaders       = mutableMapOf()
+                        currentName          = ""
+                        currentLogo          = ""
+                        currentGroup         = ""
                     }
                 }
             }

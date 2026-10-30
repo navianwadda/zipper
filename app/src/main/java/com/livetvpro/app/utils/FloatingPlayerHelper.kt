@@ -149,7 +149,10 @@ object FloatingPlayerHelper {
         }
 
         val instanceId = UUID.randomUUID().toString()
-        FloatingPlayerManager.addPlayer(instanceId, streamName, "network_stream")
+        // NOTE: Do NOT call FloatingPlayerManager.addPlayer() here yet.
+        // The service adds itself once it actually starts (createFloatingPlayerInstanceForNetworkStream).
+        // Adding here before the service confirms startup causes the count to be permanently wrong
+        // if the service fails to start (no overlay permission, OOM, IllegalStateException, etc.).
 
         return try {
             val started = FloatingPlayerService.startFloatingPlayerWithNetworkStream(
@@ -170,11 +173,9 @@ object FloatingPlayerHelper {
                 createdInstances.add(instanceId)
                 instanceId
             } else {
-                FloatingPlayerManager.removePlayer(instanceId)
                 null
             }
         } catch (e: Exception) {
-            FloatingPlayerManager.removePlayer(instanceId)
             null
         }
     }

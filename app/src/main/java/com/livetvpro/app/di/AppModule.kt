@@ -1,4 +1,3 @@
-// app/src/main/java/com/livetvpro/di/AppModule.kt
 package com.livetvpro.app.di
 
 import android.content.Context

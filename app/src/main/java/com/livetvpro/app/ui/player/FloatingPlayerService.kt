@@ -1806,6 +1806,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                     .build()
                 com.livetvpro.app.utils.VolumeBoostHelper.attach(newPlayer, preferencesManager)
                 com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(newPlayer, if (instance.isBoosted) 100 else 0)
+                newPlayer.volume = if (instance.isMuted) 0f else 1f
 
                 instance.playerView.player = newPlayer
                 newPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
@@ -1829,18 +1830,11 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         hideControlsHandlers[instanceId]?.removeCallbacksAndMessages(null)
         hideControlsHandlers.remove(instanceId)
 
-        try {
-            instance.player.stop()
-        } catch (_: Exception) {}
+        // Detach PlayerView BEFORE stopping/releasing to avoid surface use-after-free
+        try { instance.playerView.player = null } catch (_: Exception) {}
+        try { instance.player.stop() } catch (_: Exception) {}
         com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
-        try {
-            instance.player.release()
-        } catch (_: Exception) {}
-
-        try {
-            // clearSurfaceOnStop prevents black frame when view is removed
-            instance.playerView.player = null
-        } catch (_: Exception) {}
+        try { instance.player.release() } catch (_: Exception) {}
 
         try {
             windowManager?.removeView(instance.floatingView)

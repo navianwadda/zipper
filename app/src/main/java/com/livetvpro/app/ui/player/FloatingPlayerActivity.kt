@@ -1527,8 +1527,6 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     private fun releasePlayer() {
         val p = player ?: return
-        // Null out `player` state FIRST so Compose recomposes VideoSurface with
-        // player=null (detaching the surface) before we call release() on it.
         player = null
         playerListener = null
         playerSetupInProgress = false
@@ -1569,7 +1567,6 @@ class FloatingPlayerActivity : ComponentActivity() {
         if (isTransferredFromFloating && PlayerHolder.player != null) {
             val (transferredPlayer, _, _) = PlayerHolder.retrievePlayer()
             PlayerHolder.clearReferences()
-            // Remove any stale listener from a previous session before attaching the new one
             playerListener?.let { transferredPlayer?.removeListener(it) }
             playerListener = null
             player = transferredPlayer
@@ -2007,7 +2004,6 @@ class FloatingPlayerActivity : ComponentActivity() {
     private fun retryPlayback() {
         errorMessage.value = ""
         val p = player
-        // Null out state first so Compose detaches the surface before we release
         player = null
         playerSetupInProgress = false
         if (p != null) {

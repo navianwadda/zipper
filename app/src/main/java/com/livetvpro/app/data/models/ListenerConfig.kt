@@ -2,10 +2,6 @@ package com.livetvpro.app.data.models
 
 import com.google.gson.annotations.SerializedName
 
-/**
- * Minimal data class - actual logic is in native code
- * This is just for JSON parsing
- */
 data class ListenerConfig(
     @SerializedName("enable_direct_link")
     val enableDirectLink: Boolean = false,
@@ -17,7 +13,6 @@ data class ListenerConfig(
     val allowedPages: List<String> = emptyList()
 ) {
     companion object {
-        // Page identifiers (only for reference)
         const val PAGE_HOME = "home"
         const val PAGE_CATEGORIES = "categories"
         const val PAGE_CHANNELS = "channels"

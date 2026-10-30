@@ -52,9 +52,13 @@ class LiveEventsViewModel @Inject constructor(
     var pendingSearchQuery: String = ""
         private set
 
-    private val sdf = java.text.SimpleDateFormat(
-        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault()
-    ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+    // SimpleDateFormat is NOT thread-safe; use ThreadLocal to prevent concurrent
+    // access corruption when filterEventsSilent and searchEvents run simultaneously.
+    private val sdf = ThreadLocal.withInitial {
+        java.text.SimpleDateFormat(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault()
+        ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+    }
 
     init {
         loadData()
@@ -252,7 +256,7 @@ class LiveEventsViewModel @Inject constructor(
 
     private fun parseTimestamp(timeString: String): Long {
         return try {
-            sdf.parse(timeString)?.time ?: 0L
+            sdf.get()!!.parse(timeString)?.time ?: 0L
         } catch (e: Exception) {
             0L
         }

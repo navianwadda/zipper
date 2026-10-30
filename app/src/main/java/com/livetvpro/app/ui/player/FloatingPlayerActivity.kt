@@ -1526,18 +1526,18 @@ class FloatingPlayerActivity : ComponentActivity() {
     }
 
     private fun releasePlayer() {
-        player?.let {
-            try {
-                playerListener?.let { listener -> it.removeListener(listener) }
-                com.livetvpro.app.utils.VolumeBoostHelper.release(it)
-                it.stop()
-                it.release()
-            } catch (t: Throwable) {
-            }
-        }
+        val p = player ?: return
+        // Null out `player` state FIRST so Compose recomposes VideoSurface with
+        // player=null (detaching the surface) before we call release() on it.
         player = null
         playerListener = null
         playerSetupInProgress = false
+        try {
+            playerListener?.let { p.removeListener(it) }
+            com.livetvpro.app.utils.VolumeBoostHelper.release(p)
+            p.stop()
+            p.release()
+        } catch (_: Throwable) {}
     }
 
     private fun applyRememberedAspectRatioIfEnabled() {
@@ -1569,6 +1569,9 @@ class FloatingPlayerActivity : ComponentActivity() {
         if (isTransferredFromFloating && PlayerHolder.player != null) {
             val (transferredPlayer, _, _) = PlayerHolder.retrievePlayer()
             PlayerHolder.clearReferences()
+            // Remove any stale listener from a previous session before attaching the new one
+            playerListener?.let { transferredPlayer?.removeListener(it) }
+            playerListener = null
             player = transferredPlayer
             errorMessage.value = ""
             val listener = object : Player.Listener {
@@ -2003,10 +2006,15 @@ class FloatingPlayerActivity : ComponentActivity() {
 
     private fun retryPlayback() {
         errorMessage.value = ""
-        player?.let { com.livetvpro.app.utils.VolumeBoostHelper.release(it) }
-        player?.release()
+        val p = player
+        // Null out state first so Compose detaches the surface before we release
         player = null
         playerSetupInProgress = false
+        if (p != null) {
+            try { com.livetvpro.app.utils.VolumeBoostHelper.release(p) } catch (_: Throwable) {}
+            try { p.stop() } catch (_: Throwable) {}
+            try { p.release() } catch (_: Throwable) {}
+        }
         setupPlayer()
     }
 

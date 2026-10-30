@@ -311,8 +311,6 @@ var isBoosted: Boolean = false
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // startForeground must be called within 5s of startForegroundService on Android 8+.
-        // Always call it here unconditionally before any other work.
         try {
             val notification = createNotification("Floating Player")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -321,7 +319,6 @@ var isBoosted: Boolean = false
                 startForeground(NOTIFICATION_ID, notification)
             }
         } catch (t: Throwable) {
-            // Swallow in case of RemoteException or similar; service will still try to continue
         }
         if (intent == null) return START_STICKY
         return try {
@@ -1309,8 +1306,6 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     else -> ""
                 }
                 val contentName = currentChannel?.name ?: currentEvent?.title ?: "Unknown"
-                // Detach playerView BEFORE transferring so the activity's VideoSurface
-                // can attach to the player cleanly with no surface conflict
                 try { activeInstances[instanceId]?.playerView?.player = null } catch (_: Exception) {}
 
                 PlayerHolder.transferPlayer(currentPlayer, streamUrl, contentName)
@@ -1361,10 +1356,6 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 activeInstances.remove(instanceId)
                 com.livetvpro.app.utils.FloatingPlayerManager.removePlayer(instanceId)
 
-                // Do NOT stopSelf() here — FloatingPlayerActivity.onDestroy() calls
-                // FloatingPlayerService.showAll() which sends an intent back to this service.
-                // If we stopSelf() now, that intent arrives at a dead service and is dropped.
-                // Let the service stay alive; it will stop itself when truly empty later.
                 if (activeInstances.isNotEmpty()) {
                     updateNotification()
                 }
@@ -1836,7 +1827,6 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         hideControlsHandlers[instanceId]?.removeCallbacksAndMessages(null)
         hideControlsHandlers.remove(instanceId)
 
-        // Detach PlayerView BEFORE stopping/releasing to avoid surface use-after-free
         try { instance.playerView.player = null } catch (_: Exception) {}
         try { instance.player.stop() } catch (_: Exception) {}
         com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
@@ -1965,7 +1955,6 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
-        // Detach all PlayerViews from their players first to avoid surface use-after-free
         activeInstances.values.forEach { instance ->
             try { instance.playerView.player = null } catch (_: Exception) {}
         }

@@ -13,19 +13,11 @@ object FloatingPlayerManager {
         val createdAt: Long = System.currentTimeMillis()
     )
     
-    /**
-     * Initialize with PreferencesManager
-     * Call this from Application class or before first use
-     */
     fun initialize(prefsManager: com.livetvpro.app.data.local.PreferencesManager) {
         this.preferencesManager = prefsManager
         android.util.Log.d("FloatingPlayerManager", "Initialized with max players: ${getMaxPlayerCount()}")
     }
     
-    /**
-     * Get the maximum allowed players from user settings.
-     * Disable (old value=0, new value=1) both map to 1.
-     */
     private fun getMaxAllowedPlayers(): Int {
         val maxPlayers = preferencesManager?.getMaxFloatingWindows() ?: 1
         val effective = if (maxPlayers <= 0) 1 else maxPlayers
@@ -91,7 +83,6 @@ object FloatingPlayerManager {
         return activeFloatingPlayers.isNotEmpty()
     }
 
-    /** Returns the most recently created floating player's instanceId, or null if none active. */
     fun getLastPlayerId(): String? {
         return activeFloatingPlayers.keys.lastOrNull()
     }

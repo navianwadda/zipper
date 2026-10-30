@@ -3,6 +3,8 @@ package com.livetvpro.app.ui.favorites
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -63,7 +65,11 @@ fun FavoritesRoute(
     
     val favorites by viewModel.favorites.observeAsState()
     LaunchedEffect(favorites) {
-        refreshFavoritesCache(viewModel, favorites)
+        // Refresh channel cache on IO to avoid blocking the main thread while the
+        // floating player service is also running (causes ANR / crash on navigation)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            refreshFavoritesCache(viewModel, favorites)
+        }
         viewModel.onFavoritesChanged(favorites ?: emptyList())
     }
 

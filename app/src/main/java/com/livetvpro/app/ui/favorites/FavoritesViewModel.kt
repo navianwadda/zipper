@@ -36,14 +36,29 @@ class FavoritesViewModel @Inject constructor(
         else all.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
+    // Cached channels list to avoid repeated heavy Gson parsing on the main thread
+    // (getChannels() calls a native method + Gson deserialization which is expensive
+    //  and causes ANR / crashes when the floating player service is also running)
+    private var cachedChannels: List<Channel>? = null
+
     fun getLiveChannel(channelId: String): Channel? {
         return try {
-            nativeDataRepository.getChannels().find { it.id == channelId }
+            val channels = cachedChannels ?: nativeDataRepository.getChannels().also { cachedChannels = it }
+            channels.find { it.id == channelId }
         } catch (e: OutOfMemoryError) {
             System.gc()
+            cachedChannels = null
             null
         } catch (e: Exception) {
             null
+        }
+    }
+
+    fun refreshChannelCache() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                cachedChannels = nativeDataRepository.getChannels()
+            } catch (_: Exception) {}
         }
     }
 

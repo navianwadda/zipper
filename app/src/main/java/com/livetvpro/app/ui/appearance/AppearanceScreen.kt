@@ -308,8 +308,6 @@ fun ThemePreviewCard(
 ) {
     val colorScheme    = if (isDarkMode) theme.getDarkColorScheme() else theme.getLightColorScheme()
     val selectionColor = MaterialTheme.colorScheme.primary
-    // D-pad / remote support: the card must be focusable + clickable
-    // (pointerInput tap detection is touch-only, so TV remotes could never select it).
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val borderWidth    = if (isSelected || isFocused) 3.dp else 1.dp

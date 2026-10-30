@@ -241,13 +241,6 @@ object PlayerStreamHelper {
         }
     }
 
-    /**
-     * HttpURLConnection's `instanceFollowRedirects` only follows redirects within the same
-     * protocol (http->http or https->https) — it silently refuses to follow a redirect that
-     * crosses http<->https (this is a long-standing JDK limitation, not a bug in this code).
-     * Many stream redirector endpoints (e.g. play.php?id=... style links) 302 across protocols,
-     * so we have to follow Location headers ourselves to reach the real resource before sniffing it.
-     */
     private fun openFollowingRedirects(
         url: String,
         headers: Map<String, String>,
@@ -262,7 +255,7 @@ object PlayerStreamHelper {
             connection.requestMethod = method
             connection.connectTimeout = 5000
             connection.readTimeout = 5000
-            connection.instanceFollowRedirects = false // we handle redirects manually below
+            connection.instanceFollowRedirects = false
             if (method == "GET") {
                 connection.setRequestProperty("Range", "bytes=0-4095")
             }
@@ -274,7 +267,7 @@ object PlayerStreamHelper {
             if (isRedirect && redirects < maxRedirects) {
                 val location = connection.getHeaderField("Location")
                 connection.disconnect()
-                if (location.isNullOrBlank()) return connection // nowhere to go, give up as-is
+                if (location.isNullOrBlank()) return connection
                 currentUrl = java.net.URI(currentUrl).resolve(location).toString()
                 redirects++
                 continue

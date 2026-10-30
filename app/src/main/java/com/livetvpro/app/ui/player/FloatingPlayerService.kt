@@ -1309,6 +1309,10 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     else -> ""
                 }
                 val contentName = currentChannel?.name ?: currentEvent?.title ?: "Unknown"
+                // Detach playerView BEFORE transferring so the activity's VideoSurface
+                // can attach to the player cleanly with no surface conflict
+                try { activeInstances[instanceId]?.playerView?.player = null } catch (_: Exception) {}
+
                 PlayerHolder.transferPlayer(currentPlayer, streamUrl, contentName)
 
                 activeInstances.forEach { (id, inst) ->
@@ -1353,13 +1357,15 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 hideControlsHandlers.remove(instanceId)
                 try {
                     windowManager?.removeView(activeInstances[instanceId]?.floatingView)
-                } catch (e: Exception) { }
+                } catch (_: Exception) {}
                 activeInstances.remove(instanceId)
                 com.livetvpro.app.utils.FloatingPlayerManager.removePlayer(instanceId)
 
-                if (activeInstances.isEmpty()) {
-                    stopSelf()
-                } else {
+                // Do NOT stopSelf() here — FloatingPlayerActivity.onDestroy() calls
+                // FloatingPlayerService.showAll() which sends an intent back to this service.
+                // If we stopSelf() now, that intent arrives at a dead service and is dropped.
+                // Let the service stay alive; it will stop itself when truly empty later.
+                if (activeInstances.isNotEmpty()) {
                     updateNotification()
                 }
             }

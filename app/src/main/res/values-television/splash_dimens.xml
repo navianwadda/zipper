@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Splash screen dimensions — Android TV / Fire TV overrides -->
+
     <dimen name="splash_icon_size">120dp</dimen>
     <dimen name="splash_title_text_size">32sp</dimen>
     <dimen name="splash_update_title_text_size">26sp</dimen>

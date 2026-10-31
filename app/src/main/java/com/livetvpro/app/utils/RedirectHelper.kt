@@ -128,6 +128,7 @@ object RedirectHelper {
                     putExtra("extra_url", url)
                     putExtra("extra_duration", listenerMgr.getAdDurationSeconds())
                     putExtra("extra_hide_ad_content", listenerMgr.isAdContentHidden())
+                    putExtra("extra_external_browser", listenerMgr.isExternalBrowserEnabled())
                 }
                 pendingPostDialogAction = onAfterDialog
                 launcher.launch(intent)

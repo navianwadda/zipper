@@ -87,7 +87,7 @@
         android:paddingStart="8dp"
         android:paddingEnd="8dp">
 
-        <!-- Time bar row -->
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -135,13 +135,13 @@
 
         </LinearLayout>
 
-        
+
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/bottom_buttons_container"
             android:layout_width="match_parent"
             android:layout_height="40dp">
 
-            <!-- Resize pinned to end; chain runs between parent-start and resize-start -->
+
             <ImageButton
                 android:id="@+id/btn_resize"
                 android:layout_width="28dp"
@@ -156,7 +156,7 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
-            <!-- Packed chain: prev → seek_back → play_pause → seek_forward → next -->
+
             <ImageButton
                 android:id="@+id/btn_prev_channel"
                 android:layout_width="26dp"

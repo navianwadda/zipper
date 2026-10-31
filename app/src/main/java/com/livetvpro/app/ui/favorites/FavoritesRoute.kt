@@ -62,11 +62,11 @@ fun FavoritesRoute(
         uniqueIdProvider = { lastUniqueId },
     )
 
-    
+
     val favorites by viewModel.favorites.observeAsState()
     LaunchedEffect(favorites) {
-        // Refresh channel cache on IO to avoid blocking the main thread while the
-        // floating player service is also running (causes ANR / crash on navigation)
+
+
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             refreshFavoritesCache(viewModel, favorites)
         }
@@ -171,7 +171,7 @@ fun FavoritesRoute(
     }
     val isTvOrTablet = DeviceUtils.isBigScreenLayout || DeviceUtils.isTablet
 
-    
+
     var numpadBuffer by remember { mutableStateOf("") }
     val numpadHandler = remember { Handler(Looper.getMainLooper()) }
     val numpadResetRunnable = remember {

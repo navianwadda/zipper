@@ -52,8 +52,8 @@ class LiveEventsViewModel @Inject constructor(
     var pendingSearchQuery: String = ""
         private set
 
-    // SimpleDateFormat is NOT thread-safe; use ThreadLocal to prevent concurrent
-    // access corruption when filterEventsSilent and searchEvents run simultaneously.
+
+
     private val sdf = ThreadLocal.withInitial {
         java.text.SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault()
@@ -154,7 +154,7 @@ class LiveEventsViewModel @Inject constructor(
         val currentTime = System.currentTimeMillis()
         val searched = applySearch(allEvents)
 
-        // Status counts (All/Live/Upcoming/Recent) scoped to the currently selected category.
+
         val categoryScoped = if (pendingCategoryId != "evt_cat_all") {
             searched.filter { it.eventCategoryId == pendingCategoryId }
         } else searched
@@ -166,7 +166,7 @@ class LiveEventsViewModel @Inject constructor(
         )
 
         val counts = mutableMapOf<String, Int>()
-        // Category badges show total events per category, independent of the status chip.
+
         counts["evt_cat_all"] = searched.size
         for (event in searched) {
             val id = event.eventCategoryId

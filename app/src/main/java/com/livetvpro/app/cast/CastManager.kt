@@ -114,10 +114,11 @@ object CastManager {
 
     fun init(context: Context) {
         if (castContext != null) return
-        castContext = runCatching { CastContext.getSharedInstance(context.applicationContext) }.getOrNull()
-        castContext?.sessionManager?.addSessionManagerListener(sessionListener, CastSession::class.java)
-        castContext?.addCastStateListener(castStateListener)
-        castContext?.sessionManager?.currentCastSession?.takeIf { it.isConnected }?.let { onConnected(it) }
+        val ctx = runCatching { CastContext.getSharedInstance(context.applicationContext) }.getOrNull() ?: return
+        castContext = ctx
+        ctx.sessionManager.addSessionManagerListener(sessionListener, CastSession::class.java)
+        ctx.addCastStateListener(castStateListener)
+        ctx.sessionManager.currentCastSession?.takeIf { it.isConnected }?.let { onConnected(it) }
     }
 
     fun isAvailable(): Boolean = castContext != null

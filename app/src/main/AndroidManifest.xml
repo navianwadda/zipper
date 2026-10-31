@@ -169,7 +169,6 @@
         </provider>
 
 
-        <!-- ===== App Icon Aliases ===== -->
         <activity-alias
             android:name=".RedIcon"
             android:enabled="true"

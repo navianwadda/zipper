@@ -182,8 +182,8 @@ fun CategoryChannelsScreen(
     }
 
     if (isTvDevice) {
-        LaunchedEffect(channels.itemCount) {
-            if (channels.itemCount > 0) gridState.scrollToItem(0)
+        LaunchedEffect(currentGroup) {
+            gridState.scrollToItem(0)
         }
     }
 
@@ -191,8 +191,10 @@ fun CategoryChannelsScreen(
         channels.loadState.refresh is LoadState.NotLoading
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        if (hasGroups) {
-            val selectedIndex = categoryGroups.indexOf(currentGroup).coerceAtLeast(0)
+        if (hasGroups && categoryGroups.isNotEmpty()) {
+            val selectedIndex = remember(categoryGroups, currentGroup) {
+                categoryGroups.indexOf(currentGroup).coerceAtLeast(0).coerceAtMost(categoryGroups.size - 1)
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()

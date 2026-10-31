@@ -231,7 +231,6 @@ class FloatingPlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        com.livetvpro.app.cast.CastManager.init(this)
         themeManager.registerActivityContext(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -382,7 +381,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 com.livetvpro.app.cast.CastConnectionState.CONNECTED -> {
                     wasCasting = true
                     val mimeType = PlayerStreamHelper.detectMimeTypeFromUrl(streamUrl)
-                    val isLive   = contentType == ContentType.CHANNEL || contentType == ContentType.EVENT
+                    val isLive   = contentType == ContentType.CHANNEL || contentType == ContentType.EVENT || contentType == ContentType.NETWORK_STREAM
                     com.livetvpro.app.cast.CastManager.requestLoad(
                         url             = streamUrl,
                         title           = contentName,
@@ -512,8 +511,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                 layoutMode     = preferencesManager.getLayoutMode(),
                 isNetworkStream        = contentType == ContentType.NETWORK_STREAM,
                 isChannelListAvailable = isChannelListAvailable,
-                showCastButton         = com.livetvpro.app.cast.CastManager.isAvailable() &&
-                    contentType != ContentType.NETWORK_STREAM,
+                showCastButton         = com.livetvpro.app.cast.CastManager.isAvailable(),
                 isCastConnected        = isCasting,
                 player                 = player,
                 onCastClick            = {

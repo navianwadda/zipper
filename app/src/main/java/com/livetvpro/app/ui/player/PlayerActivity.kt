@@ -254,7 +254,6 @@ class PlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        com.livetvpro.app.cast.CastManager.init(this)
         createMediaNotificationChannel()
         themeManager.registerActivityContext(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -409,7 +408,7 @@ class PlayerActivity : ComponentActivity() {
                 com.livetvpro.app.cast.CastConnectionState.CONNECTED -> {
                     wasCasting = true
                     val mimeType = PlayerStreamHelper.detectMimeTypeFromUrl(streamUrl)
-                    val isLive   = contentType == ContentType.CHANNEL || contentType == ContentType.EVENT
+                    val isLive   = contentType == ContentType.CHANNEL || contentType == ContentType.EVENT || contentType == ContentType.NETWORK_STREAM
                     com.livetvpro.app.cast.CastManager.requestLoad(
                         url             = streamUrl,
                         title           = contentName,
@@ -567,8 +566,7 @@ class PlayerActivity : ComponentActivity() {
                 initialVolume          = gestureVolume,
                 initialBrightness      = gestureBrightness,
                 volumeBoostEnabled     = preferencesManager.isVolumeBoostingEnabled(),
-                showCastButton         = com.livetvpro.app.cast.CastManager.isAvailable() &&
-                    contentType != ContentType.NETWORK_STREAM,
+                showCastButton         = com.livetvpro.app.cast.CastManager.isAvailable(),
                 isCastConnected        = isCasting,
                 player                 = player,
                 onCastClick            = {

@@ -36,9 +36,9 @@ class FavoritesViewModel @Inject constructor(
         else all.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    // Cached channels list to avoid repeated heavy Gson parsing on the main thread
-    // (getChannels() calls a native method + Gson deserialization which is expensive
-    //  and causes ANR / crashes when the floating player service is also running)
+
+
+
     private var cachedChannels: List<Channel>? = null
 
     fun getLiveChannel(channelId: String): Channel? {
@@ -75,7 +75,7 @@ class FavoritesViewModel @Inject constructor(
                     }
                     else -> ""
                 }
-                
+
                 val fav = FavoriteChannel(
                     id = channel.id,
                     name = channel.name,
@@ -89,18 +89,18 @@ class FavoritesViewModel @Inject constructor(
             }
         }
     }
-    
+
     private fun buildStreamUrlFromLink(link: com.livetvpro.app.data.models.ChannelLink): String {
         val parts = mutableListOf<String>()
         parts.add(link.url)
-        
+
         link.referer?.let { if (it.isNotEmpty()) parts.add("referer=$it") }
         link.cookie?.let { if (it.isNotEmpty()) parts.add("cookie=$it") }
         link.origin?.let { if (it.isNotEmpty()) parts.add("origin=$it") }
         link.userAgent?.let { if (it.isNotEmpty()) parts.add("User-Agent=$it") }
         link.drmScheme?.let { if (it.isNotEmpty()) parts.add("drmScheme=$it") }
         link.drmLicenseUrl?.let { if (it.isNotEmpty()) parts.add("drmLicense=$it") }
-        
+
         return if (parts.size > 1) {
             parts.joinToString("|")
         } else {

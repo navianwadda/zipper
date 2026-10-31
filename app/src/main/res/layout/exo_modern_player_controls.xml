@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:clipToPadding="false">
 
-    <!-- Gradient overlays -->
+
     <View
         android:layout_width="match_parent"
         android:layout_height="120dp"
@@ -18,14 +18,14 @@
         android:layout_gravity="bottom"
         android:background="@drawable/gradient_overlay_bottom" />
 
-    <!-- Top container -->
+
     <LinearLayout
         android:id="@+id/exo_top_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_gravity="top">
-        
+
         <LinearLayout
             android:id="@+id/exo_top_bar"
             android:layout_width="match_parent"
@@ -108,7 +108,7 @@
                 android:focusable="true" />
         </LinearLayout>
 
-        <!-- Links RecyclerView for landscape mode -->
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/exo_links_recycler"
             android:layout_width="match_parent"
@@ -122,7 +122,7 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <!-- Bottom bar with controls -->
+
     <LinearLayout
         android:id="@+id/exo_bottom_bar"
         android:layout_width="match_parent"
@@ -133,7 +133,7 @@
         android:paddingBottom="0dp"
         android:layout_gravity="bottom">
 
-        <!-- Progress bar section -->
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -169,7 +169,7 @@
                 android:gravity="center" />
         </LinearLayout>
 
-        <!-- Playback control buttons -->
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -177,7 +177,7 @@
             android:gravity="center"
             android:paddingBottom="8dp">
 
-            <!-- Aspect Ratio Button -->
+
             <ImageButton
                 android:id="@+id/exo_aspect_ratio"
                 android:layout_width="40dp"
@@ -192,7 +192,7 @@
                 android:focusable="true"
                 android:enabled="true" />
 
-            <!-- Rewind Button -->
+
             <ImageButton
                 android:id="@+id/exo_rewind"
                 android:layout_width="48dp"
@@ -206,7 +206,7 @@
                 android:focusable="true"
                 android:enabled="true" />
 
-            <!-- Play/Pause Button -->
+
             <ImageButton
                 android:id="@+id/exo_play_pause"
                 android:layout_width="64dp"
@@ -220,7 +220,7 @@
                 android:focusable="true"
                 android:enabled="true" />
 
-            <!-- Forward Button -->
+
             <ImageButton
                 android:id="@+id/exo_forward"
                 android:layout_width="48dp"
@@ -234,7 +234,7 @@
                 android:focusable="true"
                 android:enabled="true" />
 
-            <!-- Fullscreen Button - THIS IS THE KEY BUTTON -->
+
             <ImageButton
                 android:id="@+id/exo_fullscreen"
                 android:layout_width="40dp"

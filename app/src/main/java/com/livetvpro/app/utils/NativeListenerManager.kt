@@ -24,19 +24,17 @@ class NativeListenerManager @Inject constructor(
 
         private val k1 = intArrayOf(0xc6,0xc3,0xf8,0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xce,0xc9,0xf8,0xc6,0xd7,0xd7).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
         private val k2 = intArrayOf(0xc6,0xc3,0xf8,0xc3,0xd2,0xd5,0xc6,0xd3,0xce,0xc8,0xc9,0xf8,0xd4,0xc2,0xc4,0xc8,0xc9,0xc3,0xd4).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
+        private val k3 = intArrayOf(0xcf,0xce,0xc3,0xc2,0xf8,0xc6,0xc3,0xf8,0xc4,0xc8,0xc9,0xd3,0xc2,0xc9,0xd3).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
+        private val k4 = intArrayOf(0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd7,0xcf,0xc8,0xc9,0xc2).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
+        private val k5 = intArrayOf(0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd3,0xc6,0xc5,0xcb,0xc2,0xd3).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
+        private val k6 = intArrayOf(0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd3,0xd1).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
+        private val k7 = intArrayOf(0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xc8,0xd3,0xcf,0xc2,0xd5).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
+        private val k8 = intArrayOf(0xc2,0xdf,0xd3,0xc2,0xd5,0xc9,0xc6,0xcb,0xf8,0xc5,0xd5,0xc8,0xd0,0xd4,0xc2,0xd5).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
         val DEFAULT_AD_DURATION_SECONDS = 10L
-
-        const val REMOTE_CONFIG_REDIRECT_MODE_PHONE  = "redirect_mode_phone"
-        const val REMOTE_CONFIG_REDIRECT_MODE_TABLET = "redirect_mode_tablet"
-        const val REMOTE_CONFIG_REDIRECT_MODE_TV     = "redirect_mode_tv"
-        const val REMOTE_CONFIG_REDIRECT_MODE_OTHER  = "redirect_mode_other"
 
         const val REDIRECT_MODE_DIALOG   = "dialog"
         const val REDIRECT_MODE_DIRECT   = "direct"
         const val REDIRECT_MODE_DISABLED = "disabled"
-
-        const val REMOTE_CONFIG_HIDE_AD_CONTENT    = "hide_ad_content"
-        const val REMOTE_CONFIG_EXTERNAL_BROWSER   = "external_browser"
     }
 
     private external fun nativeShouldShowLink(pageType: String, uniqueId: String?, maxPerPage: Long, maxTotal: Long): Boolean
@@ -99,10 +97,10 @@ class NativeListenerManager @Inject constructor(
 
     fun getRedirectMode(): String {
         val key = when {
-            DeviceUtils.isTvDevice                        -> REMOTE_CONFIG_REDIRECT_MODE_TV
-            DeviceUtils.isPhone || DeviceUtils.isFoldable -> REMOTE_CONFIG_REDIRECT_MODE_PHONE
-            DeviceUtils.isTablet                          -> REMOTE_CONFIG_REDIRECT_MODE_TABLET
-            else                                          -> REMOTE_CONFIG_REDIRECT_MODE_OTHER
+            DeviceUtils.isTvDevice                        -> k6
+            DeviceUtils.isPhone || DeviceUtils.isFoldable -> k4
+            DeviceUtils.isTablet                          -> k5
+            else                                          -> k7
         }
         return try {
             val mode = Firebase.remoteConfig.getString(key).trim().lowercase()
@@ -124,7 +122,7 @@ class NativeListenerManager @Inject constructor(
 
     fun isAdContentHidden(): Boolean {
         return try {
-            Firebase.remoteConfig.getBoolean(REMOTE_CONFIG_HIDE_AD_CONTENT)
+            Firebase.remoteConfig.getBoolean(k3)
         } catch (e: Exception) {
             true
         }
@@ -132,7 +130,7 @@ class NativeListenerManager @Inject constructor(
 
     fun isExternalBrowserEnabled(): Boolean {
         return try {
-            Firebase.remoteConfig.getBoolean(REMOTE_CONFIG_EXTERNAL_BROWSER)
+            Firebase.remoteConfig.getBoolean(k8)
         } catch (e: Exception) {
             false
         }

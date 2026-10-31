@@ -35,7 +35,8 @@ class NativeListenerManager @Inject constructor(
         const val REDIRECT_MODE_DIRECT   = "direct"
         const val REDIRECT_MODE_DISABLED = "disabled"
 
-        const val REMOTE_CONFIG_HIDE_AD_CONTENT = "hide_ad_content"
+        const val REMOTE_CONFIG_HIDE_AD_CONTENT    = "hide_ad_content"
+        const val REMOTE_CONFIG_EXTERNAL_BROWSER   = "external_browser"
     }
 
     private external fun nativeShouldShowLink(pageType: String, uniqueId: String?, maxPerPage: Long, maxTotal: Long): Boolean
@@ -126,6 +127,14 @@ class NativeListenerManager @Inject constructor(
             Firebase.remoteConfig.getBoolean(REMOTE_CONFIG_HIDE_AD_CONTENT)
         } catch (e: Exception) {
             true
+        }
+    }
+
+    fun isExternalBrowserEnabled(): Boolean {
+        return try {
+            Firebase.remoteConfig.getBoolean(REMOTE_CONFIG_EXTERNAL_BROWSER)
+        } catch (e: Exception) {
+            false
         }
     }
 

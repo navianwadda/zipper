@@ -22,14 +22,6 @@ class NativeListenerManager @Inject constructor(
             System.loadLibrary("native-lib")
         }
 
-        private val k1 = intArrayOf(0xc6,0xc3,0xf8,0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xce,0xc9,0xf8,0xc6,0xd7,0xd7).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
-        private val k2 = intArrayOf(0xc6,0xc3,0xf8,0xc3,0xd2,0xd5,0xc6,0xd3,0xce,0xc8,0xc9,0xf8,0xd4,0xc2,0xc4,0xc8,0xc9,0xc3,0xd4).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
-        private val k3 = intArrayOf(0xcf,0xce,0xc3,0xc2,0xf8,0xc6,0xc3,0xf8,0xc4,0xc8,0xc9,0xd3,0xc2,0xc9,0xd3).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
-        private val k4 = intArrayOf(0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd7,0xcf,0xc8,0xc9,0xc2).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
-        private val k5 = intArrayOf(0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd3,0xc6,0xc5,0xcb,0xc2,0xd3).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
-        private val k6 = intArrayOf(0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd3,0xd1).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
-        private val k7 = intArrayOf(0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xc8,0xd3,0xcf,0xc2,0xd5).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
-        private val k8 = intArrayOf(0xc2,0xdf,0xd3,0xc2,0xd5,0xc9,0xc6,0xcb,0xf8,0xc5,0xd5,0xc8,0xd0,0xd4,0xc2,0xd5).map{(it and 0xFF xor 0xA7).toChar()}.joinToString("")
         val DEFAULT_AD_DURATION_SECONDS = 10L
 
         const val REDIRECT_MODE_DIALOG   = "dialog"
@@ -50,6 +42,14 @@ class NativeListenerManager @Inject constructor(
     private external fun nativeGetMessageUrl(): String
     private external fun nativeGetAppVersion(): String
     private external fun nativeGetDownloadUrl(): String
+    private external fun nativeGetRcKeyAdRedirectInApp(): String
+    private external fun nativeGetRcKeyAdDurationSeconds(): String
+    private external fun nativeGetRcKeyHideAdContent(): String
+    private external fun nativeGetRcKeyRedirectModePhone(): String
+    private external fun nativeGetRcKeyRedirectModeTablet(): String
+    private external fun nativeGetRcKeyRedirectModeTv(): String
+    private external fun nativeGetRcKeyRedirectModeOther(): String
+    private external fun nativeGetRcKeyExternalBrowser(): String
 
     @Volatile private var directLinkDisabled: Boolean? = null
 
@@ -97,16 +97,16 @@ class NativeListenerManager @Inject constructor(
 
     fun getRedirectMode(): String {
         val key = when {
-            DeviceUtils.isTvDevice                        -> k6
-            DeviceUtils.isPhone || DeviceUtils.isFoldable -> k4
-            DeviceUtils.isTablet                          -> k5
-            else                                          -> k7
+            DeviceUtils.isTvDevice                        -> nativeGetRcKeyRedirectModeTv()
+            DeviceUtils.isPhone || DeviceUtils.isFoldable -> nativeGetRcKeyRedirectModePhone()
+            DeviceUtils.isTablet                          -> nativeGetRcKeyRedirectModeTablet()
+            else                                          -> nativeGetRcKeyRedirectModeOther()
         }
         return try {
             val mode = Firebase.remoteConfig.getString(key).trim().lowercase()
             if (mode.isEmpty()) {
                 if (DeviceUtils.isTvDevice) REDIRECT_MODE_DISABLED
-                else if (Firebase.remoteConfig.getBoolean(k1)) REDIRECT_MODE_DIALOG
+                else if (Firebase.remoteConfig.getBoolean(nativeGetRcKeyAdRedirectInApp())) REDIRECT_MODE_DIALOG
                 else REDIRECT_MODE_DIRECT
             } else {
                 mode
@@ -122,7 +122,7 @@ class NativeListenerManager @Inject constructor(
 
     fun isAdContentHidden(): Boolean {
         return try {
-            Firebase.remoteConfig.getBoolean(k3)
+            Firebase.remoteConfig.getBoolean(nativeGetRcKeyHideAdContent())
         } catch (e: Exception) {
             true
         }
@@ -130,7 +130,7 @@ class NativeListenerManager @Inject constructor(
 
     fun isExternalBrowserEnabled(): Boolean {
         return try {
-            Firebase.remoteConfig.getBoolean(k8)
+            Firebase.remoteConfig.getBoolean(nativeGetRcKeyExternalBrowser())
         } catch (e: Exception) {
             false
         }
@@ -138,7 +138,7 @@ class NativeListenerManager @Inject constructor(
 
     fun getAdDurationSeconds(): Long {
         return try {
-            val v = Firebase.remoteConfig.getLong(k2)
+            val v = Firebase.remoteConfig.getLong(nativeGetRcKeyAdDurationSeconds())
             if (v <= 0L) DEFAULT_AD_DURATION_SECONDS else v
         } catch (e: Exception) {
             DEFAULT_AD_DURATION_SECONDS

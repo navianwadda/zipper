@@ -272,7 +272,7 @@ object M3uParser {
         }
     }
 
-    /** Removes anything (HTML redirect pages, banners, notes) that comes before the first M3U marker. */
+
     private fun stripLeadingJunk(content: String): String {
         val extm3u = content.indexOf("#EXTM3U", ignoreCase = true)
         val extinf = content.indexOf("#EXTINF", ignoreCase = true)
@@ -280,7 +280,7 @@ object M3uParser {
         return if (start > 0) content.substring(start) else content
     }
 
-    /** Accepts `{kid:key}` or `{"kid":"key"}` (hex pairs) license keys. */
+
     private fun parseBraceKeyPairs(raw: String): List<Pair<String, String>> {
         val hex = Regex("^[0-9a-fA-F]{32}$")
         val inner = raw.trim().removePrefix("{").removeSuffix("}").replace("\"", "").trim()
@@ -335,7 +335,6 @@ object M3uParser {
                 referer?.let { headers["Referer"] = it }
                 origin?.let  { headers["Origin"]  = it }
 
-
                 var drmScheme = item.optString("drmScheme", null)
                     ?: item.optString("drm_scheme", null)
                     ?: item.optString("drm", null)
@@ -385,7 +384,6 @@ object M3uParser {
         return channels
     }
 
-
     fun parseM3uContent(content: String): List<M3uChannel> {
         val channels = ArrayList<M3uChannel>(1024)
 
@@ -403,7 +401,7 @@ object M3uParser {
             var trimmedLine = line.trim()
             if (trimmedLine.isEmpty() || trimmedLine.startsWith("#EXTM3U")) return@forEachLine
 
-            // Some playlists forget the leading '#' on tag lines (e.g. "KODIPROP:...")
+
             if (trimmedLine.startsWith("KODIPROP:") ||
                 trimmedLine.startsWith("EXTVLCOPT:") ||
                 trimmedLine.startsWith("EXTINF:") ||
@@ -482,8 +480,8 @@ object M3uParser {
                 }
 
                 trimmedLine.startsWith("#EXTINF:") -> {
-                    // If the previous #EXTINF never got a URL, drop whatever tags followed it so they
-                    // don't leak into this channel. Tags written *before* this line are kept.
+
+
                     if (currentName.isNotEmpty()) {
                         currentUserAgent     = null
                         currentHeaders       = mutableMapOf()
@@ -543,7 +541,7 @@ object M3uParser {
                 }
 
                 !trimmedLine.startsWith("#") -> {
-                    // Ignore section titles / notes like "=== JIOTV ===" or "LIVEBOX": a stream line must be a URL
+
                     if (currentName.isNotEmpty() && trimmedLine.contains("://")) {
                         val (streamUrl, inlineHeaders, inlineDrmInfo) = parseInlineMetadata(trimmedLine)
 

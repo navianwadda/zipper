@@ -61,10 +61,11 @@ class WebActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val EXTRA_URL             = "extra_url"
-        private const val EXTRA_DURATION        = "extra_duration"
-        private const val EXTRA_HIDE_AD_CONTENT = "extra_hide_ad_content"
-        const val RESULT_VALIDATED              = 100
+        private const val EXTRA_URL              = "extra_url"
+        private const val EXTRA_DURATION         = "extra_duration"
+        private const val EXTRA_HIDE_AD_CONTENT  = "extra_hide_ad_content"
+        private const val EXTRA_EXTERNAL_BROWSER = "extra_external_browser"
+        const val RESULT_VALIDATED               = 100
 
         private val CUSTOM_TABS_BROWSERS = listOf(
             "com.android.chrome", "com.chrome.beta", "com.chrome.dev",
@@ -98,9 +99,10 @@ class WebActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val url             = intent.getStringExtra(EXTRA_URL) ?: ""
-        val durationSeconds = intent.getLongExtra(EXTRA_DURATION, 10L)
-        val hideAdContent   = intent.getBooleanExtra(EXTRA_HIDE_AD_CONTENT, true)
+        val url              = intent.getStringExtra(EXTRA_URL) ?: ""
+        val durationSeconds  = intent.getLongExtra(EXTRA_DURATION, 10L)
+        val hideAdContent    = intent.getBooleanExtra(EXTRA_HIDE_AD_CONTENT, true)
+        val externalBrowser  = intent.getBooleanExtra(EXTRA_EXTERNAL_BROWSER, false)
 
         if (isVpnOrProxyActive()) {
             Toast.makeText(this, "Please disable VPN/Proxy to continue", Toast.LENGTH_LONG).show()
@@ -117,11 +119,21 @@ class WebActivity : AppCompatActivity() {
             registerReceiver(timerDoneReceiver, IntentFilter(TimerService.ACTION_TIMER_DONE))
         }
 
-        if (!hideAdContent && isCustomTabsSupported(this)) {
-            usingCustomTabs = true
-            startCustomTabFlow(url, durationSeconds)
-        } else {
-            launchWebView(url, durationSeconds)
+        when {
+            externalBrowser && isCustomTabsSupported(this) -> {
+                // External Custom Tabs — hideAdContent ignored, content always visible
+                usingCustomTabs = true
+                startCustomTabFlow(url, durationSeconds, inApp = false)
+            }
+            !hideAdContent && isCustomTabsSupported(this) -> {
+                // In-app Custom Tabs — content visible, stays in app stack
+                usingCustomTabs = true
+                startCustomTabFlow(url, durationSeconds, inApp = true)
+            }
+            else -> {
+                // In-app WebView — blur applied when hideAdContent = true
+                launchWebView(url, durationSeconds, hideAdContent)
+            }
         }
     }
 
@@ -168,14 +180,14 @@ class WebActivity : AppCompatActivity() {
             }
         }
     }
-    private fun startCustomTabFlow(url: String, durationSeconds: Long) {
+    private fun startCustomTabFlow(url: String, durationSeconds: Long, inApp: Boolean = false) {
         customTabDurationSeconds = durationSeconds
         customTabStartTimeMs     = System.currentTimeMillis()
         setContentView(View(this))
 
         customTabLaunched = true
         customTabLaunchTimeMs = System.currentTimeMillis()
-        launchCustomTab(url)
+        launchCustomTab(url, inApp)
 
         Handler(Looper.getMainLooper()).postDelayed({
             TimerService.start(this, durationSeconds)
@@ -183,7 +195,7 @@ class WebActivity : AppCompatActivity() {
         }, 3000L)
     }
 
-    private fun launchCustomTab(url: String) {
+    private fun launchCustomTab(url: String, inApp: Boolean = false) {
         val colorSchemeParams = CustomTabColorSchemeParams.Builder()
             .setToolbarColor(Color.parseColor("#CC000000"))
             .build()
@@ -195,6 +207,9 @@ class WebActivity : AppCompatActivity() {
             .build()
         val pkg = getCustomTabsPackage(this)
         if (pkg != null) customTabsIntent.intent.setPackage(pkg)
+        if (!inApp) {
+            customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
         customTabsIntent.launchUrl(this, Uri.parse(url))
     }
 
@@ -211,7 +226,7 @@ class WebActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun launchWebView(url: String, durationSeconds: Long) {
+    private fun launchWebView(url: String, durationSeconds: Long, hideAdContent: Boolean = true) {
         val dp   = resources.displayMetrics.density
         val root = FrameLayout(this)
 
@@ -342,38 +357,41 @@ class WebActivity : AppCompatActivity() {
             loadUrl(url.ifEmpty { "about:blank" })
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            webView?.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(
-                    40f, 40f, android.graphics.Shader.TileMode.CLAMP
-                )
-            )
-        }
-
-        val blurScrim = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#D9000000"))
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            isClickable = !isTvDevice()
-            isFocusable = !isTvDevice()
-        }
-
-        val blurMessage = TextView(this).apply {
-            text = "Ad content hidden\nPlease wait for the timer to finish"
-            textSize = 14f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.gravity = Gravity.CENTER }
-        }
-
         root.addView(webView)
-        root.addView(blurScrim)
-        root.addView(blurMessage)
+
+        if (hideAdContent) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                webView?.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(
+                        40f, 40f, android.graphics.Shader.TileMode.CLAMP
+                    )
+                )
+            }
+
+            val blurScrim = FrameLayout(this).apply {
+                setBackgroundColor(Color.parseColor("#D9000000"))
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                isClickable = !isTvDevice()
+                isFocusable = !isTvDevice()
+            }
+
+            val blurMessage = TextView(this).apply {
+                text = "Ad content hidden\nPlease wait for the timer to finish"
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.gravity = Gravity.CENTER }
+            }
+
+            root.addView(blurScrim)
+            root.addView(blurMessage)
+        }
         root.addView(topBar)
         root.addView(progressBar)
         root.addView(timerLabel)

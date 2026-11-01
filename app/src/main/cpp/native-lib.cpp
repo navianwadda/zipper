@@ -8,28 +8,9 @@
 #include <cstring>
 #include <cstdlib>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <sys/stat.h>
 
 static std::mutex g_mutex;
-
-static bool isFridaPortOpen() {
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) return false;
-    struct timeval tv; tv.tv_sec = 0; tv.tv_usec = 200000;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-    struct sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(27042);
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    int r = connect(sock, (struct sockaddr*)&addr, sizeof(addr));
-    close(sock);
-    return r == 0;
-}
 
 static bool isFridaInMaps() {
     FILE* f = fopen("/proc/self/maps", "r");

@@ -118,7 +118,7 @@ class SplashActivity : AppCompatActivity() {
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { }
+    ) { startFetch() }
 
     private val installPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -183,7 +183,13 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun requestNotificationPermission() {
-        startFetch()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else startFetch()
+        } else startFetch()
     }
 
     private fun startFetch() {
@@ -192,7 +198,7 @@ class SplashActivity : AppCompatActivity() {
             val success = fetchData()
             if (success) {
                 val remoteSignatures = dataRepository.getAppSignature()
-                val localSignature   = dataRepository.getApkSignature()
+                val localSignature   = getApkSignature()
                 val allowed          = remoteSignatures.split(",").map { it.trim() }
                 if (localSignature.isEmpty() || allowed.none { it.equals(localSignature, ignoreCase = true) }) {
                     uiState = SplashState.Error("Connection error")
@@ -240,7 +246,20 @@ class SplashActivity : AppCompatActivity() {
         }
     }
 
-
+    private fun getApkSignature(): String {
+        return try {
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                    .signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures
+            }
+            val cert   = signatures?.firstOrNull()?.toByteArray() ?: return ""
+            val digest = java.security.MessageDigest.getInstance("SHA-256").digest(cert)
+            digest.joinToString(":") { "%02X".format(it) }
+        } catch (e: Exception) { "" }
+    }
 
     private suspend fun fetchData(): Boolean = try {
         dataRepository.fetchRemoteConfig()
@@ -323,6 +342,15 @@ class SplashActivity : AppCompatActivity() {
 
     private fun installApk(apkFile: File) {
         try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+                installPermissionLauncher.launch(
+                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:$packageName")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                )
+                return
+            }
             launchInstaller(apkFile)
         } catch (e: Exception) { }
     }

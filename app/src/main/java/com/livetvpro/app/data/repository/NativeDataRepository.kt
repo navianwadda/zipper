@@ -65,6 +65,7 @@ class NativeDataRepository @Inject constructor(
     private external fun nativeGetEventCategories(): String
     private external fun nativeGetSports(): String
     private external fun nativeGetExternalLiveEvents(): String
+    private external fun nativeGetApkSignature(): String
 
     private val k_dfu = byteArrayOf(0xc3.toByte(),0xc6.toByte(),0xd3.toByte(),0xc6.toByte(),0xf8.toByte(),0xc8.toByte(),0xc5.toByte(),0xcd.toByte(),0xc2.toByte(),0xc4.toByte(),0xd3.toByte(),0xf8.toByte(),0xd2.toByte(),0xd5.toByte(),0xcb.toByte()).map{(it.toInt() and 0xFF xor 0xA7).toChar()}.joinToString("")
     private val k_rch = byteArrayOf(0xd5.toByte(),0xc2.toByte(),0xc3.toByte(),0xce.toByte(),0xd5.toByte(),0xc2.toByte(),0xc4.toByte(),0xd3.toByte(),0xf8.toByte(),0xc4.toByte(),0xc8.toByte(),0xc8.toByte(),0xcb.toByte(),0xc3.toByte(),0xc8.toByte(),0xd0.toByte(),0xc9.toByte(),0xf8.toByte(),0xcf.toByte(),0xc8.toByte(),0xd2.toByte(),0xd5.toByte(),0xd4.toByte()).map{(it.toInt() and 0xFF xor 0xA7).toChar()}.joinToString("")
@@ -129,6 +130,10 @@ class NativeDataRepository @Inject constructor(
 
     fun getAppSignature(): String {
         return try { remoteConfig.getString(REMOTE_CONFIG_APP_SIGNATURE).trim() } catch (e: Exception) { "" }
+    }
+
+    fun getApkSignature(): String {
+        return try { if (q1) nativeGetApkSignature() else "" } catch (e: Throwable) { "" }
     }
 
     suspend fun refreshData(): Boolean = withContext(Dispatchers.IO) {

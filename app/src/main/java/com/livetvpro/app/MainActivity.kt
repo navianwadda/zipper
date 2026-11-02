@@ -426,10 +426,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
     override fun onSettingsFloatingPlayer() {
         if (DeviceUtils.isTvDevice) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            showOverlayPermDialog = true
-        } else {
-            showFloatingPlayerDialog = true
-        }
+        showFloatingPlayerDialog = true
     }
 }

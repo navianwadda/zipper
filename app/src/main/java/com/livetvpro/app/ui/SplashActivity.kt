@@ -323,15 +323,6 @@ class SplashActivity : AppCompatActivity() {
 
     private fun installApk(apkFile: File) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
-                installPermissionLauncher.launch(
-                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                        data = Uri.parse("package:$packageName")
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                )
-                return
-            }
             launchInstaller(apkFile)
         } catch (e: Exception) { }
     }

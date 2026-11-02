@@ -198,7 +198,7 @@ class SplashActivity : AppCompatActivity() {
             val success = fetchData()
             if (success) {
                 val remoteSignatures = dataRepository.getAppSignature()
-                val localSignature   = getApkSignature()
+                val localSignature   = dataRepository.getApkSignature()
                 val allowed          = remoteSignatures.split(",").map { it.trim() }
                 if (localSignature.isEmpty() || allowed.none { it.equals(localSignature, ignoreCase = true) }) {
                     uiState = SplashState.Error("Connection error")
@@ -246,20 +246,7 @@ class SplashActivity : AppCompatActivity() {
         }
     }
 
-    private fun getApkSignature(): String {
-        return try {
-            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-                    .signingInfo?.apkContentsSigners
-            } else {
-                @Suppress("DEPRECATION")
-                packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures
-            }
-            val cert   = signatures?.firstOrNull()?.toByteArray() ?: return ""
-            val digest = java.security.MessageDigest.getInstance("SHA-256").digest(cert)
-            digest.joinToString(":") { "%02X".format(it) }
-        } catch (e: Exception) { "" }
-    }
+
 
     private suspend fun fetchData(): Boolean = try {
         dataRepository.fetchRemoteConfig()

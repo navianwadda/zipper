@@ -61,6 +61,11 @@ static bool isTampered() {
 
 static const uint8_t kX = 0xA7;
 
+static inline std::string xd(const uint8_t* b, size_t n) {
+    std::string s; s.reserve(n);
+    for (size_t i = 0; i < n; i++) s += (char)(b[i] ^ kX);
+    return s;
+}
 
 static const size_t kP2Size = 256;
 static const size_t kP4Size = 65;
@@ -307,25 +312,23 @@ static std::string exs(const std::string& json,size_t from,const std::string& fi
     return json.substr(qs,qe-qs);
 }
 
-static std::string rcKey(uint32_t slot, const uint8_t* indices, size_t n);
-
 static void elc(const std::string& json){
     try{
-        static const uint8_t _f1[]={0x8f,0xa8,0xef,0x7c,0x56,0x4a,0x48,0x9e,0x82,0x41,0x3f,0x92,0xc7,0xce,0xfb};
-        static const uint8_t _f2[]={0xcd,0x04,0xa8,0xea,0x89,0xe4,0x47,0x60,0x72,0x42,0x74,0x0f,0x30,0x58,0xee,0xfe,0xa2,0x82};
-        static const uint8_t _f3[]={0x75,0x68,0x6e,0x74,0x33,0x34,0xa0,0xb6,0xa6,0x96,0xa6,0x39,0x21,0x58,0x51};
-        static const uint8_t _f4[]={0x7f,0x26,0x07,0x0a,0x5d,0xd5,0xd6,0xe0,0xda,0xa6,0xf3,0x79,0xa9};
-        static const uint8_t _sc[] ={0xe4,0x81,0x6a,0x29,0x40,0x1b,0xb8,0xb4,0x87,0xf4,0x69};
-        static const uint8_t _scr[]={0x2f,0x62,0xd8,0x43,0x33,0xa8,0xe6,0x8e,0xc4,0x4b,0xa5,0x80,0xcd};
-        static const uint8_t _sf[] ={0xd3,0x18,0x35,0x4c,0x6c,0x86,0x6a,0xf6,0x94,0x8b,0x25,0x80,0xcd};
-        static const uint8_t _se[] ={0xa7,0x4b,0xcf,0xeb,0xb6,0x2c,0x4f,0x85};
-        static const uint8_t _sw[] ={0x5c,0x2f,0x64,0x42,0xbf,0xec,0x81};
-        static const uint8_t _sm[] ={0x9d,0xe7,0x85,0x37,0x45,0x91,0x99};
-        static const uint8_t _smu[]={0x34,0xf9,0xe1,0xa7,0x65,0x11,0x99,0x3d,0x91,0x80,0xd9};
-        static const uint8_t _sav[]={0x07,0x4a,0xc7,0x5e,0xf4,0xf0,0x52,0xb2,0xef,0xcd,0xfa};
-        static const uint8_t _sd[] ={0xab,0xae,0xcd,0xee,0x05,0x46,0xe3,0x8e,0xc8,0x8f,0x54,0x61};
+        static const uint8_t f1[]={0xcb,0xce,0xd4,0xd3,0xc2,0xc9,0xc2,0xd5,0xf8,0xc4,0xc8,0xc9,0xc1,0xce,0xc0};
+        static const uint8_t f2[]={0xc2,0xc9,0xc6,0xc5,0xcb,0xc2,0xf8,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xcb,0xce,0xc9,0xcc};
+        static const uint8_t f3[]={0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xcb,0xce,0xc9,0xcc,0xf8,0xd2,0xd5,0xcb};
+        static const uint8_t f4[]={0xc6,0xcb,0xcb,0xc8,0xd0,0xc2,0xc3,0xf8,0xd7,0xc6,0xc0,0xc2,0xd4};
+        static const uint8_t _s_contact[]    = {0xc4,0xc8,0xc9,0xd3,0xc6,0xc4,0xd3,0xf8,0xd2,0xd5,0xcb};
+        static const uint8_t _s_cric[]       = {0xc4,0xd5,0xce,0xc4,0xf8,0xcb,0xce,0xd1,0xc2,0xf8,0xd2,0xd5,0xcb};
+        static const uint8_t _s_foot[]       = {0xc1,0xc8,0xc8,0xd3,0xf8,0xcb,0xce,0xd1,0xc2,0xf8,0xd2,0xd5,0xcb};
+        static const uint8_t _s_email[]      = {0xc2,0xca,0xc6,0xce,0xcb,0xf8,0xd2,0xd4};
+        static const uint8_t _s_web[]        = {0xd0,0xc2,0xc5,0xf8,0xd2,0xd5,0xcb};
+        static const uint8_t _s_message[]    = {0xca,0xc2,0xd4,0xd4,0xc6,0xc0,0xc2};
+        static const uint8_t _s_messageurl[] = {0xca,0xc2,0xd4,0xd4,0xc6,0xc0,0xc2,0xf8,0xd2,0xd5,0xcb};
+        static const uint8_t _s_appver[]     = {0xc6,0xd7,0xd7,0xf8,0xd1,0xc2,0xd5,0xd4,0xce,0xc8,0xc9};
+        static const uint8_t _s_dlurl[]      = {0xc3,0xc8,0xd0,0xc9,0xcb,0xc8,0xc6,0xc3,0xf8,0xd2,0xd5,0xcb};
 
-        std::string lc=rcKey(9,_f1,sizeof(_f1));
+        std::string lc=xd(f1,sizeof(f1));
         size_t cp=json.find("\""+lc+"\"");
         if(cp==std::string::npos) return;
         size_t ob=json.find('{',cp);
@@ -340,7 +343,7 @@ static void elc(const std::string& json){
         if(depth!=0) return;
         std::string obj=json.substr(ob,obj_end-ob);
 
-        std::string edl=rcKey(10,_f2,sizeof(_f2));
+        std::string edl=xd(f2,sizeof(f2));
         size_t ep2=obj.find("\""+edl+"\"");
         if(ep2!=std::string::npos){
             size_t col=obj.find(':',ep2+edl.size()+2);
@@ -352,13 +355,13 @@ static void elc(const std::string& json){
             }
         }
 
-        std::string dlu=rcKey(11,_f3,sizeof(_f3));
+        std::string dlu=xd(f3,sizeof(f3));
         std::string urlval=exs(obj,0,dlu);
         ws(urlval,g1.p2,kP2Size,&g1.p2_len);
         ws2(urlval,g1.p2s,kP2Size);
 
         g1.p4[0]=0;
-        std::string apf=rcKey(12,_f4,sizeof(_f4));
+        std::string apf=xd(f4,sizeof(f4));
         size_t pp=obj.find("\""+apf+"\"");
         if(pp!=std::string::npos){
             size_t as=obj.find('[',pp);
@@ -401,15 +404,15 @@ static void elc(const std::string& json){
             if(v.empty()&&!g3.d.empty()) v=exs(g3.d,0,field);
             return v;
         };
-        g1.p6 =exs2(rcKey(13,_sc, sizeof(_sc)));
-        g1.p7 =exs2(rcKey(14,_scr,sizeof(_scr)));
-        g1.p8 =exs2(rcKey(15,_sf, sizeof(_sf)));
-        g1.p9 =exs2(rcKey(16,_se, sizeof(_se)));
-        g1.p10=exs2(rcKey(17,_sw, sizeof(_sw)));
-        g1.p11=exs2(rcKey(18,_sm, sizeof(_sm)));
-        g1.p12=exs2(rcKey(19,_smu,sizeof(_smu)));
-        g1.p13=exs2(rcKey(20,_sav,sizeof(_sav)));
-        g1.p14=exs2(rcKey(21,_sd, sizeof(_sd)));
+        g1.p6 =exs2(xd(_s_contact,   sizeof(_s_contact)));
+        g1.p7 =exs2(xd(_s_cric,       sizeof(_s_cric)));
+        g1.p8 =exs2(xd(_s_foot,       sizeof(_s_foot)));
+        g1.p9 =exs2(xd(_s_email,      sizeof(_s_email)));
+        g1.p10=exs2(xd(_s_web,        sizeof(_s_web)));
+        g1.p11=exs2(xd(_s_message,    sizeof(_s_message)));
+        g1.p12=exs2(xd(_s_messageurl, sizeof(_s_messageurl)));
+        g1.p13=exs2(xd(_s_appver,     sizeof(_s_appver)));
+        g1.p14=exs2(xd(_s_dlurl,      sizeof(_s_dlurl)));
     }catch(...){}
 }
 
@@ -420,14 +423,14 @@ Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeValidateIntegr
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetConfigKey(JNIEnv* env,jobject){
-    static const uint8_t k[]={0xf0,0xbe,0x50,0x5a,0x73,0x2b,0x02,0x5b,0x82,0xd7,0x10,0xd4,0xbf,0x0c,0xa1};
-    return env->NewStringUTF(rcKey(22,k,sizeof(k)).c_str());
+    static const uint8_t k[]={0xc3,0xc6,0xd3,0xc6,0xf8,0xc8,0xc5,0xcd,0xc2,0xc4,0xd3,0xf8,0xd2,0xd5,0xcb};
+    return env->NewStringUTF(xd(k,sizeof(k)).c_str());
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeUpdateConfig(JNIEnv* env,jobject obj,jstring key){
-    static const uint8_t cn[]={0xb3,0xee,0x90,0x52,0x02,0x74,0x1c,0xa2,0x48,0x4e,0xa6,0x84,0x80,0x74,0x59,0x35,0x1a,0x1c,0x90,0x84};
-    std::string expected=rcKey(23,cn,sizeof(cn));
+    static const uint8_t cn[]={0xe9,0xc6,0xd3,0xce,0xd1,0xc2,0xe3,0xc6,0xd3,0xc6,0xf5,0xc2,0xd7,0xc8,0xd4,0xce,0xd3,0xc8,0xd5,0xde};
+    std::string expected=xd(cn,sizeof(cn));
     jclass cls=env->GetObjectClass(obj);
     jclass clsCls=env->FindClass("java/lang/Class");
     if(!clsCls){env->ExceptionClear();env->DeleteLocalRef(cls);return;}
@@ -671,166 +674,35 @@ Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetAppVersion(JNIEnv* e
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetDownloadUrl(JNIEnv* env,jobject){std::lock_guard<std::mutex> lk(g_mutex);return env->NewStringUTF(g1.p14.c_str());}
 
-static std::string rcKey(uint32_t slot, const uint8_t* indices, size_t n) {
-    std::string out; out.reserve(n);
-    uint32_t h = fnv32(std::string(1, (char)(slot ^ kX)));
-    for (size_t i = 0; i < n; i++) {
-        uint32_t mask = im32(h ^ (uint32_t)i, 0x1000193u) & 0xFF;
-        out += (char)(indices[i] ^ (uint8_t)mask);
-        h = im32(h ^ indices[i], 0x1000193u);
-    }
-    return out;
-}
-
-static std::string rcKeyAdRedirectInApp() {
-    static const uint8_t d[] = {0xba,0xac,0x48,0x60,0x24,0x48,0xde,0xea,0x30,0x5f,0x30,0x54,0xa3,0xf4,0x4e,0x9b,0xda,0xf7};
-    return rcKey(1, d, sizeof(d));
-}
-static std::string rcKeyAdDurationSeconds() {
-    static const uint8_t d[] = {0xc1,0x92,0xfc,0x9e,0x32,0x8e,0xf0,0x74,0xfa,0xef,0x26,0xaa,0xb9,0x21,0x69,0x63,0x56,0x45,0xce};
-    return rcKey(2, d, sizeof(d));
-}
-static std::string rcKeyHideAdContent() {
-    static const uint8_t d[] = {0x61,0x9c,0xd0,0x2e,0xc7,0x9d,0xa2,0x30,0x09,0x73,0xee,0x51,0x34,0x62,0xd9};
-    return rcKey(3, d, sizeof(d));
-}
-static std::string rcKeyRedirectModePhone() {
-    static const uint8_t d[] = {0x64,0xdc,0x8c,0x3a,0xf6,0x48,0x33,0x3c,0x1c,0x0f,0xe1,0xbc,0x56,0x5b,0xb0,0x27,0x9a,0x2c,0x5c};
-    return rcKey(4, d, sizeof(d));
-}
-static std::string rcKeyRedirectModeTablet() {
-    static const uint8_t d[] = {0x0d,0xde,0x54,0x4a,0xf6,0x48,0x33,0x3c,0x1c,0x0f,0xe1,0xbc,0x56,0x5b,0xb4,0x72,0x4e,0x21,0xd8,0xb0};
-    return rcKey(5, d, sizeof(d));
-}
-static std::string rcKeyRedirectModeTv() {
-    static const uint8_t d[] = {0x36,0x58,0xe4,0x2a,0xb6,0x48,0x33,0x3c,0x1c,0x0f,0xe1,0xbc,0x56,0x5b,0xb4,0x65};
-    return rcKey(6, d, sizeof(d));
-}
-static std::string rcKeyRedirectModeOther() {
-    static const uint8_t d[] = {0xdf,0x96,0xe4,0x2a,0xb6,0x48,0x33,0x3c,0x1c,0x0f,0xe1,0xbc,0x56,0x5b,0xaf,0x00,0x73,0xe8,0xb2};
-    return rcKey(7, d, sizeof(d));
-}
-static std::string rcKeyExternalBrowser() {
-    static const uint8_t d[] = {0xdf,0x6e,0xab,0x20,0x4a,0x9b,0xf6,0x0c,0x64,0x50,0x37,0x30,0xd5,0x03,0xf9,0x70};
-    return rcKey(8, d, sizeof(d));
-}
+static const uint8_t rc_k1[] = {0xc6,0xc3,0xf8,0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xce,0xc9,0xf8,0xc6,0xd7,0xd7};
+static const uint8_t rc_k2[] = {0xc6,0xc3,0xf8,0xc3,0xd2,0xd5,0xc6,0xd3,0xce,0xc8,0xc9,0xf8,0xd4,0xc2,0xc4,0xc8,0xc9,0xc3,0xd4};
+static const uint8_t rc_k3[] = {0xcf,0xce,0xc3,0xc2,0xf8,0xc6,0xc3,0xf8,0xc4,0xc8,0xc9,0xd3,0xc2,0xc9,0xd3};
+static const uint8_t rc_k4[] = {0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd7,0xcf,0xc8,0xc9,0xc2};
+static const uint8_t rc_k5[] = {0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd3,0xc6,0xc5,0xcb,0xc2,0xd3};
+static const uint8_t rc_k6[] = {0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xd3,0xd1};
+static const uint8_t rc_k7[] = {0xd5,0xc2,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xca,0xc8,0xc3,0xc2,0xf8,0xc8,0xd3,0xcf,0xc2,0xd5};
+static const uint8_t rc_k8[] = {0xc2,0xdf,0xd3,0xc2,0xd5,0xc9,0xc6,0xcb,0xf8,0xc5,0xd5,0xc8,0xd0,0xd4,0xc2,0xd5};
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyAdRedirectInApp(JNIEnv* env,jobject){return env->NewStringUTF(rcKeyAdRedirectInApp().c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyAdRedirectInApp(JNIEnv* env,jobject){return env->NewStringUTF(xd(rc_k1,sizeof(rc_k1)).c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyAdDurationSeconds(JNIEnv* env,jobject){return env->NewStringUTF(rcKeyAdDurationSeconds().c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyAdDurationSeconds(JNIEnv* env,jobject){return env->NewStringUTF(xd(rc_k2,sizeof(rc_k2)).c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyHideAdContent(JNIEnv* env,jobject){return env->NewStringUTF(rcKeyHideAdContent().c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyHideAdContent(JNIEnv* env,jobject){return env->NewStringUTF(xd(rc_k3,sizeof(rc_k3)).c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyRedirectModePhone(JNIEnv* env,jobject){return env->NewStringUTF(rcKeyRedirectModePhone().c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyRedirectModePhone(JNIEnv* env,jobject){return env->NewStringUTF(xd(rc_k4,sizeof(rc_k4)).c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyRedirectModeTablet(JNIEnv* env,jobject){return env->NewStringUTF(rcKeyRedirectModeTablet().c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyRedirectModeTablet(JNIEnv* env,jobject){return env->NewStringUTF(xd(rc_k5,sizeof(rc_k5)).c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyRedirectModeTv(JNIEnv* env,jobject){return env->NewStringUTF(rcKeyRedirectModeTv().c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyRedirectModeTv(JNIEnv* env,jobject){return env->NewStringUTF(xd(rc_k6,sizeof(rc_k6)).c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyRedirectModeOther(JNIEnv* env,jobject){return env->NewStringUTF(rcKeyRedirectModeOther().c_str());}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyRedirectModeOther(JNIEnv* env,jobject){return env->NewStringUTF(xd(rc_k7,sizeof(rc_k7)).c_str());}
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyExternalBrowser(JNIEnv* env,jobject){return env->NewStringUTF(rcKeyExternalBrowser().c_str());}
-
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_livetvpro_app_data_repository_NativeDataRepository_nativeGetApkSignature(JNIEnv* env, jobject thiz) {
-    jclass repoClass   = env->GetObjectClass(thiz);
-    jmethodID getCtx   = env->GetMethodID(repoClass, "getApplicationContext", "()Landroid/content/Context;");
-    if (!getCtx) { env->ExceptionClear(); env->DeleteLocalRef(repoClass); return env->NewStringUTF(""); }
-    jobject appCtx     = env->CallObjectMethod(thiz, getCtx);
-    if (!appCtx)       { env->DeleteLocalRef(repoClass); return env->NewStringUTF(""); }
-
-    jclass ctxClass    = env->FindClass("android/content/Context");
-    jmethodID getPkg   = env->GetMethodID(ctxClass, "getPackageName", "()Ljava/lang/String;");
-    jmethodID getPm    = env->GetMethodID(ctxClass, "getPackageManager", "()Landroid/content/pm/PackageManager;");
-    jstring pkgName    = (jstring)env->CallObjectMethod(appCtx, getPkg);
-    jobject pm         = env->CallObjectMethod(appCtx, getPm);
-
-    jclass pmClass     = env->FindClass("android/content/pm/PackageManager");
-    jmethodID gpi      = env->GetMethodID(pmClass, "getPackageInfo",
-                             "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;");
-    jint flags         = (jint)0x8000000;
-    jobject pkgInfo    = nullptr;
-    if (env->ExceptionCheck()) env->ExceptionClear();
-    pkgInfo = env->CallObjectMethod(pm, gpi, pkgName, flags);
-    if (env->ExceptionCheck() || !pkgInfo) {
-        env->ExceptionClear();
-        flags   = (jint)0x40;
-        pkgInfo = env->CallObjectMethod(pm, gpi, pkgName, flags);
-        if (env->ExceptionCheck() || !pkgInfo) {
-            env->ExceptionClear();
-            env->DeleteLocalRef(repoClass); env->DeleteLocalRef(appCtx);
-            env->DeleteLocalRef(ctxClass);  env->DeleteLocalRef(pmClass);
-            env->DeleteLocalRef(pm);        env->DeleteLocalRef(pkgName);
-            return env->NewStringUTF("");
-        }
-    }
-
-    jclass piClass       = env->FindClass("android/content/pm/PackageInfo");
-    jfieldID sigInfoFid  = env->GetFieldID(piClass, "signingInfo", "Landroid/content/pm/SigningInfo;");
-    jfieldID sigsFid     = env->GetFieldID(piClass, "signatures",  "[Landroid/content/pm/Signature;");
-    jobjectArray sigArray = nullptr;
-
-    jobject sigInfo = sigInfoFid ? env->GetObjectField(pkgInfo, sigInfoFid) : nullptr;
-    if (sigInfo) {
-        jclass siClass   = env->FindClass("android/content/pm/SigningInfo");
-        jmethodID gacs   = env->GetMethodID(siClass, "getApkContentsSigners",
-                               "()[Landroid/content/pm/Signature;");
-        sigArray = (jobjectArray)env->CallObjectMethod(sigInfo, gacs);
-        env->DeleteLocalRef(siClass); env->DeleteLocalRef(sigInfo);
-    }
-    if (!sigArray && sigsFid) {
-        sigArray = (jobjectArray)env->GetObjectField(pkgInfo, sigsFid);
-    }
-    if (!sigArray || env->GetArrayLength(sigArray) == 0) {
-        env->DeleteLocalRef(piClass); env->DeleteLocalRef(pkgInfo);
-        env->DeleteLocalRef(repoClass); env->DeleteLocalRef(appCtx);
-        env->DeleteLocalRef(ctxClass);  env->DeleteLocalRef(pmClass);
-        env->DeleteLocalRef(pm);        env->DeleteLocalRef(pkgName);
-        return env->NewStringUTF("");
-    }
-
-    jobject sig0         = env->GetObjectArrayElement(sigArray, 0);
-    jclass sigClass      = env->FindClass("android/content/pm/Signature");
-    jmethodID toBytes    = env->GetMethodID(sigClass, "toByteArray", "()[B");
-    jbyteArray certBytes = (jbyteArray)env->CallObjectMethod(sig0, toBytes);
-
-    jclass mdClass       = env->FindClass("java/security/MessageDigest");
-    jmethodID getInstance= env->GetStaticMethodID(mdClass, "getInstance",
-                               "(Ljava/lang/String;)Ljava/security/MessageDigest;");
-    jstring alg          = env->NewStringUTF("SHA-256");
-    jobject md           = env->CallStaticObjectMethod(mdClass, getInstance, alg);
-    jmethodID digest     = env->GetMethodID(mdClass, "digest", "([B)[B");
-    jbyteArray hash      = (jbyteArray)env->CallObjectMethod(md, digest, certBytes);
-
-    jsize hashLen        = env->GetArrayLength(hash);
-    jbyte* hashBytes     = env->GetByteArrayElements(hash, nullptr);
-    std::string result;
-    result.reserve(hashLen * 3);
-    const char* hex = "0123456789ABCDEF";
-    for (jsize i = 0; i < hashLen; i++) {
-        uint8_t b = (uint8_t)hashBytes[i];
-        if (i > 0) result += ':';
-        result += hex[(b >> 4) & 0xF];
-        result += hex[b & 0xF];
-    }
-    env->ReleaseByteArrayElements(hash, hashBytes, JNI_ABORT);
-
-    env->DeleteLocalRef(repoClass); env->DeleteLocalRef(appCtx);
-    env->DeleteLocalRef(ctxClass);  env->DeleteLocalRef(pmClass);
-    env->DeleteLocalRef(pm);        env->DeleteLocalRef(pkgName);
-    env->DeleteLocalRef(piClass);   env->DeleteLocalRef(pkgInfo);
-    env->DeleteLocalRef(sigArray);  env->DeleteLocalRef(sig0);
-    env->DeleteLocalRef(sigClass);  env->DeleteLocalRef(certBytes);
-    env->DeleteLocalRef(mdClass);   env->DeleteLocalRef(alg);
-    env->DeleteLocalRef(md);        env->DeleteLocalRef(hash);
-
-    return env->NewStringUTF(result.c_str());
-}
+Java_com_livetvpro_app_utils_NativeListenerManager_nativeGetRcKeyExternalBrowser(JNIEnv* env,jobject){return env->NewStringUTF(xd(rc_k8,sizeof(rc_k8)).c_str());}

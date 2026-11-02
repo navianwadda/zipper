@@ -55,6 +55,10 @@ import androidx.activity.enableEdgeToEdge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import android.Manifest
+import android.os.Handler
+import android.os.Looper
+import androidx.core.content.ContextCompat
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), SettingsActions {
@@ -84,6 +88,22 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         }
     }
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
+    private fun requestNotificationPermissionLazy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                Handler(Looper.getMainLooper()).postDelayed({
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }, 3000)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val appContext = applicationContext
@@ -107,6 +127,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
 
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         enableEdgeToEdge()
+
+        requestNotificationPermissionLazy()
 
         themeManager.registerActivityContext(this)
 

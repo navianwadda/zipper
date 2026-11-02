@@ -12,51 +12,8 @@
 
 static std::mutex g_mutex;
 
-static bool isFridaInMaps() {
-    FILE* f = fopen("/proc/self/maps", "r");
-    if (!f) return false;
-    char line[512]; bool found = false;
-    const char* m[] = {"frida","gum-js-loop","linjector","frida-agent","frida-gadget",
-                       "re.frida","frida-helper","frida-node",nullptr};
-    while (fgets(line, sizeof(line), f)) {
-        for (int i = 0; m[i]; i++) if (strstr(line, m[i])) { found = true; break; }
-        if (found) break;
-    }
-    fclose(f); return found;
-}
-
-static bool isFridaPipePresent() {
-    const char* pipes[] = {"/data/local/tmp/frida-server","/data/local/tmp/re.frida.server","/proc/net/unix"};
-    for (const char* p : pipes) {
-        if (access(p, F_OK) == 0) {
-            if (strstr(p, "/proc/net/unix")) {
-                FILE* f = fopen(p, "r"); if (!f) continue;
-                char line[256]; bool found = false;
-                while (fgets(line, sizeof(line), f))
-                    if (strstr(line, "frida") || strstr(line, "linjector")) { found = true; break; }
-                fclose(f); if (found) return true;
-            } else return true;
-        }
-    }
-    return false;
-}
-
-static bool isTracerPidNonZero() {
-    FILE* f = fopen("/proc/self/status", "r"); if (!f) return false;
-    char line[128]; bool t = false;
-    while (fgets(line, sizeof(line), f)) {
-        if (strncmp(line, "TracerPid:", 10) == 0) {
-            char* end = nullptr;
-            long val = strtol(line + 10, &end, 10);
-            t = (end != line + 10 && val != 0);
-            break;
-        }
-    }
-    fclose(f); return t;
-}
-
 static bool isTampered() {
-    return isFridaInMaps() || isFridaPipePresent();
+    return false;
 }
 
 static const uint8_t kX = 0xA7;
@@ -314,7 +271,7 @@ static std::string exs(const std::string& json,size_t from,const std::string& fi
 
 static void elc(const std::string& json){
     try{
-        static const uint8_t f1[]={0xcb,0xce,0xd4,0xd3,0xc2,0xc9,0xc2,0xd5,0xf8,0xc4,0xc8,0xc9,0xc1,0xce,0xc0};
+        static const uint8_t f1[]={0xcb,0xce,0xd4,0xd3,0xc2,0xc9,0xd4,0xc2,0xd4,0xcb,0xc8,0xc9,0xc6,0xc5,0xd2};
         static const uint8_t f2[]={0xc2,0xc9,0xc6,0xc5,0xcb,0xc2,0xf8,0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xcb,0xce,0xc9,0xcc};
         static const uint8_t f3[]={0xc3,0xce,0xd5,0xc2,0xc4,0xd3,0xf8,0xcb,0xce,0xc9,0xcc,0xf8,0xd2,0xd5,0xcb};
         static const uint8_t f4[]={0xc6,0xcb,0xcb,0xc8,0xd0,0xc2,0xc3,0xf8,0xd7,0xc6,0xc0,0xc2,0xd4};
@@ -614,8 +571,6 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_livetvpro_app_utils_NativeListenerManager_nativeResetSessions(JNIEnv* env,jobject){
     std::lock_guard<std::mutex> lk(g_mutex);
     g2.clear(); g2_total=0;
-
-
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

@@ -307,6 +307,8 @@ static std::string exs(const std::string& json,size_t from,const std::string& fi
     return json.substr(qs,qe-qs);
 }
 
+static std::string rcKey(uint32_t slot, const uint8_t* indices, size_t n);
+
 static void elc(const std::string& json){
     try{
         static const uint8_t _f1[]={0x8f,0xa8,0xef,0x7c,0x56,0x4a,0x48,0x9e,0x82,0x41,0x3f,0x92,0xc7,0xce,0xfb};

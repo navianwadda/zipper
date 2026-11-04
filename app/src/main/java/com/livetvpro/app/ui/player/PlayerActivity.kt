@@ -14,7 +14,6 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.provider.Settings
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -1014,7 +1013,7 @@ class PlayerActivity : ComponentActivity() {
             ) == android.app.AppOpsManager.MODE_ALLOWED
             if (!pipAllowed) {
                 val intent = Intent(
-                    Settings.ACTION_PICTURE_IN_PICTURE_SETTINGS,
+                    "android.settings.PICTURE_IN_PICTURE_SETTINGS",
                     Uri.parse("package:$packageName")
                 )
                 startActivity(intent)

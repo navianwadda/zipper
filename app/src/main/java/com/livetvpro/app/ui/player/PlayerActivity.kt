@@ -13,6 +13,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -1001,6 +1003,24 @@ class PlayerActivity : ComponentActivity() {
     @SuppressLint("NewApi")
     internal fun enterPipMode() {
         if (!isPipSupported) return
+        // On Android 12+, check if the user has granted PiP permission.
+        // If not, open the app's PiP settings page so they can enable it.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val appOpsManager = getSystemService(APP_OPS_SERVICE) as android.app.AppOpsManager
+            val pipAllowed = appOpsManager.unsafeCheckOpNoThrow(
+                android.app.AppOpsManager.OPSTR_PICTURE_IN_PICTURE,
+                android.os.Process.myUid(),
+                packageName
+            ) == android.app.AppOpsManager.MODE_ALLOWED
+            if (!pipAllowed) {
+                val intent = Intent(
+                    Settings.ACTION_PICTURE_IN_PICTURE_SETTINGS,
+                    Uri.parse("package:$packageName")
+                )
+                startActivity(intent)
+                return
+            }
+        }
         isEnteringPip      = true
         wasLockedBeforePip = controlsState.isLocked
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

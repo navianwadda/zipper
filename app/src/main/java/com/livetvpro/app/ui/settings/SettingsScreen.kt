@@ -45,7 +45,6 @@ import androidx.navigation.NavController
 import com.livetvpro.app.R
 import com.livetvpro.app.ui.navigation.Routes
 import com.livetvpro.app.utils.NativeListenerManager
-import com.livetvpro.app.debug.TestCrash
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 
@@ -54,6 +53,7 @@ interface SettingsActions {
     fun onSettingsNotice()
     fun onSettingsShareApp()
     fun onSettingsFloatingPlayer()
+    fun onTestCrash()
 }
 
 @Composable
@@ -204,7 +204,7 @@ fun SettingsScreen(
 
         item {
             SettingsCard(icon = R.drawable.ic_info, label = "Test Crash") {
-                TestCrash.trigger()
+                settingsActions.onTestCrash()
             }
         }
 

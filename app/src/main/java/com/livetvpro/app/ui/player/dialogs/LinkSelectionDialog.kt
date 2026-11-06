@@ -1,56 +1,45 @@
 package com.livetvpro.app.ui.player.dialogs
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.Key
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.livetvpro.app.R
 import com.livetvpro.app.data.models.ChannelLink
 import com.livetvpro.app.data.models.LiveEventLink
@@ -61,7 +50,6 @@ fun LiveEventLink.toLinkItem() = LinkItem(quality = quality, url = url)
 fun ChannelLink.toLinkItem() = LinkItem(quality = quality, url = url)
 
 private val BergenSans = FontFamily(Font(R.font.bergen_sans))
-private val ColorAccent = Color(0xFFE53935)
 
 @Composable
 fun LinkSelectionDialog(
@@ -76,7 +64,7 @@ fun LinkSelectionDialog(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .focusProperties { canFocus = false }   // scrim: touch-only, not a D-pad stop
+                .focusProperties { canFocus = false }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -84,12 +72,11 @@ fun LinkSelectionDialog(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
             val compact = maxHeight < 500.dp || maxWidth < 360.dp
             val vMargin = (maxHeight * 0.12f).coerceAtLeast(16.dp)
             val hMargin = (maxWidth * 0.06f).coerceIn(10.dp, 24.dp)
             val innerPadding = if (compact) 14.dp else 24.dp
-            val rowPadding = if (compact) 8.dp else 14.dp
+            val rowPadding = if (compact) 10.dp else 14.dp
             val titleSize = if (compact) 16.sp else 20.sp
             val itemSize = if (compact) 14.sp else 15.sp
 
@@ -99,57 +86,42 @@ fun LinkSelectionDialog(
                     .fillMaxWidth()
                     .padding(horizontal = hMargin, vertical = vMargin)
                     .heightIn(max = maxHeight - vMargin * 2)
-                    .focusProperties { canFocus = false }   // only swallows taps; never a D-pad stop
+                    .focusProperties { canFocus = false }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {},
                     ),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
-                color = if (isDark) Color(0xFF2B2B2B) else MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = 6.dp,
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDark) 0.14f else 0.08f)
-                ),
             ) {
-                Column(modifier = Modifier.padding(top = innerPadding, bottom = 8.dp)) {
+                Column(modifier = Modifier.padding(top = innerPadding, bottom = 16.dp)) {
                     Text(
                         text = "Multiple Links Available",
                         fontFamily = BergenSans,
                         fontWeight = FontWeight.Bold,
                         fontSize = titleSize,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = innerPadding),
+                        modifier = Modifier.padding(horizontal = innerPadding, vertical = 4.dp),
                     )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+
                     Column(
                         modifier = Modifier
                             .weight(1f, fill = false)
-                            .padding(top = 12.dp)
-                            .padding(horizontal = innerPadding)
                             .verticalScroll(rememberScrollState()),
                     ) {
                         links.forEachIndexed { index, link ->
-                            if (index > 0) {
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                    thickness = 0.5.dp,
-                                )
-                            }
                             val linkInteraction = remember { MutableInteractionSource() }
                             val linkFocused by linkInteraction.collectIsFocusedAsState()
-                            Text(
-                                text = link.quality.ifBlank { "Link ${index + 1}" },
-                                fontFamily = BergenSans,
-                                fontSize = itemSize,
-                                fontWeight = FontWeight.Bold,
-                                color = if (linkFocused) ColorAccent else MaterialTheme.colorScheme.onSurface,
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(
-                                        if (linkFocused) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-                                        else Color.Transparent
-                                    )
                                     .onKeyEvent { e ->
                                         if ((e.key == Key.Enter || e.key == Key.NumPadEnter || e.key == Key.DirectionCenter)
                                             && e.type == KeyEventType.KeyUp) {
@@ -158,83 +130,57 @@ fun LinkSelectionDialog(
                                             true
                                         } else false
                                     }
-                                    .clickable(
-                                        interactionSource = linkInteraction,
-                                        indication = null,
-                                    ) {
+                                    .clickable(interactionSource = linkInteraction) {
                                         onLinkSelected(link, index)
                                         onDismiss()
                                     }
-                                    .padding(vertical = rowPadding),
-                            )
+                                    .padding(horizontal = innerPadding, vertical = rowPadding),
+                            ) {
+                                Text(
+                                    text = link.quality.ifBlank { "Link ${index + 1}" },
+                                    fontFamily = BergenSans,
+                                    fontSize = itemSize,
+                                    fontWeight = if (linkFocused) FontWeight.ExtraBold else FontWeight.Bold,
+                                    color = if (linkFocused) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            if (index < links.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                                    thickness = 0.5.dp,
+                                )
+                            }
                         }
                     }
-                    val glassShape = RoundedCornerShape(16.dp)
-                    val cancelInteraction = remember { MutableInteractionSource() }
-                    val cancelFocused by cancelInteraction.collectIsFocusedAsState()
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = innerPadding)
-                            .padding(top = 8.dp, bottom = 8.dp)
-                            .height(if (compact) 40.dp else 52.dp)
-                            .clip(glassShape)
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        if (cancelFocused)
-                                            ColorAccent.copy(alpha = 0.18f)
-                                        else if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.10f),
-                                        if (cancelFocused)
-                                            ColorAccent.copy(alpha = 0.08f)
-                                        else if (isDark) Color.White.copy(alpha = 0.04f) else Color.Black.copy(alpha = 0.03f),
-                                    )
-                                )
-                            )
-                            .border(
-                                width = if (cancelFocused) 2.dp else 1.5.dp,
-                                brush = Brush.verticalGradient(
-                                    listOf(
-                                        if (cancelFocused) ColorAccent.copy(alpha = 0.80f)
-                                        else if (isDark) Color.White.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.28f),
-                                        if (cancelFocused) ColorAccent.copy(alpha = 0.40f)
-                                        else if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.08f),
-                                    )
-                                ),
-                                shape = glassShape,
-                            )
-                            .onKeyEvent { e ->
-                                if ((e.key == Key.Enter || e.key == Key.NumPadEnter || e.key == Key.DirectionCenter)
-                                    && e.type == KeyEventType.KeyUp) {
-                                    onDismiss()
-                                    true
-                                } else false
-                            }
-                            .clickable(
-                                interactionSource = cancelInteraction,
-                                indication = null,
-                                onClick = onDismiss,
-                            ),
+                            .padding(horizontal = innerPadding),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        val cancelInteraction = remember { MutableInteractionSource() }
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(50.dp),
+                            interactionSource = cancelInteraction,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline,
+                            ),
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_close),
-                                contentDescription = null,
-                                tint = ColorAccent,
-                                modifier = Modifier.size(if (compact) 16.dp else 20.dp),
-                            )
-                            Text(
-                                text = "Cancel",
-                                fontFamily = BergenSans,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = if (compact) 14.sp else 17.sp,
-                                textAlign = TextAlign.Center,
-                                color = ColorAccent,
-                            )
+                            Text(text = "Cancel", fontFamily = BergenSans, fontSize = 14.sp)
                         }
                     }
                 }

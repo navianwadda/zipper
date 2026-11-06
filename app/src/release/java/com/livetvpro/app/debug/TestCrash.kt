@@ -6,7 +6,7 @@ import android.os.Looper
 object TestCrash {
     fun trigger() {
         Handler(Looper.getMainLooper()).post {
-            throw RuntimeException("Test crash triggered")
+            throw RuntimeException("Test crash triggered manually")
         }
     }
 }

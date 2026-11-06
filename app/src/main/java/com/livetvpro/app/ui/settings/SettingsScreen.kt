@@ -51,9 +51,9 @@ private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 interface SettingsActions {
     fun onSettingsCopyright()
     fun onSettingsNotice()
+    fun onTestCrash()
     fun onSettingsShareApp()
     fun onSettingsFloatingPlayer()
-    fun onTestCrash()
 }
 
 @Composable
@@ -200,13 +200,13 @@ fun SettingsScreen(
             }
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-
         item {
             SettingsCard(icon = R.drawable.ic_info, label = "Test Crash") {
                 settingsActions.onTestCrash()
             }
         }
+
+        item { Spacer(modifier = Modifier.height(16.dp)) }
 
         item {
             val exitInteraction = remember { MutableInteractionSource() }

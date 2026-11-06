@@ -97,6 +97,7 @@ import com.livetvpro.app.ui.appearance.AppearanceScreen
 import com.livetvpro.app.ui.categories.CategoryChannelsRoute
 import com.livetvpro.app.ui.components.ComposeFloatingNav
 import com.livetvpro.app.ui.deviceid.DeviceIdScreen
+import com.livetvpro.app.ui.dialogs.CrashLoggerDialogHost
 import com.livetvpro.app.ui.dialogs.SupportDialogHost
 import com.livetvpro.app.ui.favorites.FavoritesRoute
 import com.livetvpro.app.ui.home.HomeRoute
@@ -293,6 +294,7 @@ fun MainScaffold(
 
         Box(modifier = Modifier.weight(1f)) {
             SupportDialogHost()
+            CrashLoggerDialogHost(listenerManager = listenerManager)
 
             NavHost(
                 navController = navController,

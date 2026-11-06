@@ -239,23 +239,14 @@ private fun saveReport(context: Context, report: String) {
 
 private fun mailReport(context: Context, report: String, supportEmail: String) {
     try {
-        val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse(if (supportEmail.isNotBlank()) "mailto:$supportEmail" else "mailto:")
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "message/rfc822"
+            if (supportEmail.isNotBlank()) putExtra(Intent.EXTRA_EMAIL, arrayOf(supportEmail))
             putExtra(Intent.EXTRA_SUBJECT, "Crash Report")
             putExtra(Intent.EXTRA_TEXT, report)
         }
-        context.startActivity(intent)
+        context.startActivity(Intent.createChooser(intent, "Send crash report via"))
     } catch (_: Exception) {
-        try {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "message/rfc822"
-                if (supportEmail.isNotBlank()) putExtra(Intent.EXTRA_EMAIL, arrayOf(supportEmail))
-                putExtra(Intent.EXTRA_SUBJECT, "Crash Report")
-                putExtra(Intent.EXTRA_TEXT, report)
-            }
-            context.startActivity(Intent.createChooser(intent, "Send crash report via"))
-        } catch (_: Exception) {
-            Toast.makeText(context, "No mail app found", Toast.LENGTH_SHORT).show()
-        }
+        Toast.makeText(context, "No mail app found", Toast.LENGTH_SHORT).show()
     }
 }

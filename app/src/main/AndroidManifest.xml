@@ -134,6 +134,11 @@
             android:foregroundServiceType="dataSync" />
 
         <activity
+            android:name=".debug.CrashActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LiveTVPro" />
+
+        <activity
             android:name=".ui.player.FloatingPlayerActivity"
             android:exported="false"
             android:theme="@style/Theme.LiveTVPro.Fullscreen"

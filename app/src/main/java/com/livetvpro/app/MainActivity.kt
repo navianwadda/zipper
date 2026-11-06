@@ -89,7 +89,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         CrashHandler.init(this)
-        TestCrash.trigger()
         val appContext = applicationContext
         android.os.Looper.myQueue().addIdleHandler {
             try { android.webkit.WebView(appContext).destroy() } catch (_: Throwable) {}

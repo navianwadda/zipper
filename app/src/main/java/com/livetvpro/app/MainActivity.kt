@@ -49,7 +49,6 @@ import com.livetvpro.app.ui.settings.SettingsActions
 import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
-import com.livetvpro.app.debug.TestCrash
 import com.livetvpro.app.utils.RedirectCooldownManager
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.activity.enableEdgeToEdge
@@ -401,10 +400,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 Toast.makeText(this@MainActivity, "Unable to share APK", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    override fun onTestCrash() {
-        TestCrash.trigger()
     }
 
     override fun onSettingsFloatingPlayer() {

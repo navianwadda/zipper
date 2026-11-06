@@ -8,6 +8,7 @@ import com.livetvpro.app.data.local.PreferencesManager
 import com.livetvpro.app.data.local.ThemeManager
 import com.livetvpro.app.data.repository.NativeDataRepository
 import com.livetvpro.app.cast.CastManager
+import com.livetvpro.app.utils.CrashLogger
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.FloatingPlayerManager
 import dagger.hilt.android.HiltAndroidApp
@@ -52,6 +53,7 @@ class LiveTVProApplication : Application() {
             ProviderInstaller.installIfNeeded(this)
         } catch (e: Exception) {
         }
+        CrashLogger.install(this)
         DeviceUtils.init(this)
         CastManager.init(this)
         FloatingPlayerManager.initialize(preferencesManager)

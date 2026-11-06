@@ -12,6 +12,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -129,15 +134,32 @@ fun LinkSelectionDialog(
                                     thickness = 0.5.dp,
                                 )
                             }
+                            val linkInteraction = remember { MutableInteractionSource() }
+                            val linkFocused by linkInteraction.collectIsFocusedAsState()
                             Text(
                                 text = link.quality.ifBlank { "Link ${index + 1}" },
                                 fontFamily = BergenSans,
                                 fontSize = itemSize,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = if (linkFocused) ColorAccent else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
+                                    .background(
+                                        if (linkFocused) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+                                        else Color.Transparent
+                                    )
+                                    .onKeyEvent { e ->
+                                        if ((e.key == Key.Enter || e.key == Key.NumPadEnter || e.key == Key.DirectionCenter)
+                                            && e.type == KeyEventType.KeyUp) {
+                                            onLinkSelected(link, index)
+                                            onDismiss()
+                                            true
+                                        } else false
+                                    }
+                                    .clickable(
+                                        interactionSource = linkInteraction,
+                                        indication = null,
+                                    ) {
                                         onLinkSelected(link, index)
                                         onDismiss()
                                     }
@@ -146,6 +168,8 @@ fun LinkSelectionDialog(
                         }
                     }
                     val glassShape = RoundedCornerShape(16.dp)
+                    val cancelInteraction = remember { MutableInteractionSource() }
+                    val cancelFocused by cancelInteraction.collectIsFocusedAsState()
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -156,22 +180,39 @@ fun LinkSelectionDialog(
                             .background(
                                 Brush.verticalGradient(
                                     listOf(
-                                        if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.10f),
-                                        if (isDark) Color.White.copy(alpha = 0.04f) else Color.Black.copy(alpha = 0.03f),
+                                        if (cancelFocused)
+                                            ColorAccent.copy(alpha = 0.18f)
+                                        else if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.10f),
+                                        if (cancelFocused)
+                                            ColorAccent.copy(alpha = 0.08f)
+                                        else if (isDark) Color.White.copy(alpha = 0.04f) else Color.Black.copy(alpha = 0.03f),
                                     )
                                 )
                             )
                             .border(
-                                width = 1.5.dp,
+                                width = if (cancelFocused) 2.dp else 1.5.dp,
                                 brush = Brush.verticalGradient(
                                     listOf(
-                                        if (isDark) Color.White.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.28f),
-                                        if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.08f),
+                                        if (cancelFocused) ColorAccent.copy(alpha = 0.80f)
+                                        else if (isDark) Color.White.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.28f),
+                                        if (cancelFocused) ColorAccent.copy(alpha = 0.40f)
+                                        else if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.08f),
                                     )
                                 ),
                                 shape = glassShape,
                             )
-                            .clickable(onClick = onDismiss),
+                            .onKeyEvent { e ->
+                                if ((e.key == Key.Enter || e.key == Key.NumPadEnter || e.key == Key.DirectionCenter)
+                                    && e.type == KeyEventType.KeyUp) {
+                                    onDismiss()
+                                    true
+                                } else false
+                            }
+                            .clickable(
+                                interactionSource = cancelInteraction,
+                                indication = null,
+                                onClick = onDismiss,
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Row(

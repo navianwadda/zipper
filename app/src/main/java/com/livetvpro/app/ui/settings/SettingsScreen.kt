@@ -51,7 +51,6 @@ private val BergenSans = FontFamily(Font(R.font.bergen_sans))
 interface SettingsActions {
     fun onSettingsCopyright()
     fun onSettingsNotice()
-    fun onTestCrash()
     fun onSettingsShareApp()
     fun onSettingsFloatingPlayer()
 }
@@ -197,12 +196,6 @@ fun SettingsScreen(
         item {
             SettingsCard(icon = R.drawable.ic_info, label = "Notice") {
                 settingsActions.onSettingsNotice()
-            }
-        }
-
-        item {
-            SettingsCard(icon = R.drawable.ic_info, label = "Test Crash") {
-                settingsActions.onTestCrash()
             }
         }
 

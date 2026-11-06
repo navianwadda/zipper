@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -36,6 +37,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -103,7 +105,10 @@ fun LinkSelectionDialog(
                         fontWeight = FontWeight.Bold,
                         fontSize = titleSize,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = innerPadding, vertical = 4.dp),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = innerPadding, vertical = 4.dp),
                     )
 
                     HorizontalDivider(
@@ -169,18 +174,20 @@ fun LinkSelectionDialog(
                         val cancelInteraction = remember { MutableInteractionSource() }
                         OutlinedButton(
                             onClick = onDismiss,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(50.dp),
+                            modifier = Modifier
+                                .fillMaxWidth(0.85f)
+                                .height(if (compact) 48.dp else 52.dp),
+                            shape = RoundedCornerShape(50),
                             interactionSource = cancelInteraction,
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.primary,
                             ),
                             border = BorderStroke(
                                 1.dp,
-                                MaterialTheme.colorScheme.outline,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                             ),
                         ) {
-                            Text(text = "Cancel", fontFamily = BergenSans, fontSize = 14.sp)
+                            Text(text = "Cancel", fontFamily = BergenSans, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                     }
                 }

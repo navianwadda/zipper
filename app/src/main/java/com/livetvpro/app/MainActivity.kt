@@ -406,6 +406,10 @@ class MainActivity : AppCompatActivity(), SettingsActions {
         }
     }
 
+    override fun onTestCrash() {
+        TestCrash.trigger()
+    }
+
     override fun onSettingsFloatingPlayer() {
         if (DeviceUtils.isTvDevice) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {

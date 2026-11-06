@@ -49,6 +49,7 @@ import com.livetvpro.app.ui.settings.SettingsActions
 import com.livetvpro.app.ui.theme.LiveTVProTheme
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.NativeListenerManager
+import com.livetvpro.app.debug.TestCrash
 import com.livetvpro.app.utils.RedirectCooldownManager
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.activity.enableEdgeToEdge
@@ -313,6 +314,8 @@ class MainActivity : AppCompatActivity(), SettingsActions {
                 }
             }
         }
+
+        TestCrash.trigger()
 
         window.decorView.post { handleNotificationIntent(intent) }
     }

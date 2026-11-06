@@ -238,24 +238,24 @@ private fun saveReport(context: Context, report: String) {
 }
 
 private fun mailReport(context: Context, report: String, supportEmail: String) {
-    val sendTo = Intent(Intent.ACTION_SENDTO).apply {
-        data = Uri.parse(if (supportEmail.isNotBlank()) "mailto:$supportEmail" else "mailto:")
-        putExtra(Intent.EXTRA_SUBJECT, "Crash Report")
-        putExtra(Intent.EXTRA_TEXT, report)
-    }
-    if (sendTo.resolveActivity(context.packageManager) != null) {
-        context.startActivity(sendTo)
-        return
-    }
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = "message/rfc822"
-        if (supportEmail.isNotBlank()) putExtra(Intent.EXTRA_EMAIL, arrayOf(supportEmail))
-        putExtra(Intent.EXTRA_SUBJECT, "Crash Report")
-        putExtra(Intent.EXTRA_TEXT, report)
-    }
-    if (send.resolveActivity(context.packageManager) != null) {
-        context.startActivity(Intent.createChooser(send, "Send crash report via"))
-    } else {
-        Toast.makeText(context, "No mail app found", Toast.LENGTH_SHORT).show()
+    try {
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse(if (supportEmail.isNotBlank()) "mailto:$supportEmail" else "mailto:")
+            putExtra(Intent.EXTRA_SUBJECT, "Crash Report")
+            putExtra(Intent.EXTRA_TEXT, report)
+        }
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "message/rfc822"
+                if (supportEmail.isNotBlank()) putExtra(Intent.EXTRA_EMAIL, arrayOf(supportEmail))
+                putExtra(Intent.EXTRA_SUBJECT, "Crash Report")
+                putExtra(Intent.EXTRA_TEXT, report)
+            }
+            context.startActivity(Intent.createChooser(intent, "Send crash report via"))
+        } catch (_: Exception) {
+            Toast.makeText(context, "No mail app found", Toast.LENGTH_SHORT).show()
+        }
     }
 }

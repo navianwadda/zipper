@@ -191,7 +191,7 @@ private fun CrashLoggerDialogContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.Center,
             ) {
                 OutlinedButton(
                     onClick = onDismiss,

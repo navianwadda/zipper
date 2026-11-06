@@ -130,7 +130,7 @@ fun LinkSelectionDialog(
                                             true
                                         } else false
                                     }
-                                    .clickable(interactionSource = linkInteraction) {
+                                    .clickable(interactionSource = linkInteraction, indication = null) {
                                         onLinkSelected(link, index)
                                         onDismiss()
                                     }

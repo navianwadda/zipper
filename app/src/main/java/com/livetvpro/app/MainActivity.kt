@@ -315,6 +315,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             }
         }
 
+
         TestCrash.trigger()
 
         window.decorView.post { handleNotificationIntent(intent) }

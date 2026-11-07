@@ -8,7 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import com.livetvpro.app.ui.components.safeMarquee
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -422,7 +422,7 @@ private fun ChannelCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
-                    .basicMarquee(iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0)
+                    .safeMarquee(iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0)
             )
         }
     }

@@ -3,7 +3,7 @@ package com.livetvpro.app.ui.home
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import com.livetvpro.app.ui.components.safeMarquee
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -263,7 +263,7 @@ private fun CategoryCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
-                    .basicMarquee(iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0)
+                    .safeMarquee(iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0)
             )
         }
     }

@@ -1,7 +1,6 @@
 package com.livetvpro.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -78,7 +77,7 @@ fun MarqueeMessageBanner(
                     text = text,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .basicMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp)
+                        .safeMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp)
                         .padding(start = 8.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     fontFamily = BergenSans,

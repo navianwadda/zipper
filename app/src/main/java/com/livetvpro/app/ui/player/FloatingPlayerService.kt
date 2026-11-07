@@ -2040,7 +2040,14 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         )
     }
 
-    private fun parseStreamUrl(streamUrl: String): StreamInfo {
+    private fun parseStreamUrl(rawStreamUrl: String): StreamInfo {
+        val streamUrl = if (com.livetvpro.app.utils.StalkerClient.isStalkerUrl(rawStreamUrl)) {
+            try {
+                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                    com.livetvpro.app.utils.StalkerClient.resolve(rawStreamUrl)
+                }
+            } catch (e: Exception) { rawStreamUrl }
+        } else rawStreamUrl
         val normalizedUrl = streamUrl.replace("%7c", "|", ignoreCase = true)
         val pipeIndex = normalizedUrl.indexOf('|')
         if (pipeIndex == -1) return StreamInfo(normalizedUrl, mapOf(), null, null, null, null)

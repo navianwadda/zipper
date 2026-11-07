@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -122,8 +121,6 @@ fun LinkSelectionDialog(
                             .verticalScroll(rememberScrollState()),
                     ) {
                         links.forEachIndexed { index, link ->
-                            val linkInteraction = remember { MutableInteractionSource() }
-                            val linkFocused by linkInteraction.collectIsFocusedAsState()
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -135,7 +132,7 @@ fun LinkSelectionDialog(
                                             true
                                         } else false
                                     }
-                                    .clickable(interactionSource = linkInteraction, indication = null) {
+                                    .clickable {
                                         onLinkSelected(link, index)
                                         onDismiss()
                                     }
@@ -145,9 +142,8 @@ fun LinkSelectionDialog(
                                     text = link.quality.ifBlank { "Link ${index + 1}" },
                                     fontFamily = BergenSans,
                                     fontSize = itemSize,
-                                    fontWeight = if (linkFocused) FontWeight.ExtraBold else FontWeight.Bold,
-                                    color = if (linkFocused) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                             if (index < links.lastIndex) {

@@ -1749,9 +1749,10 @@ class PlayerActivity : ComponentActivity() {
         aspectRatioAppliedForCurrentLoad = false
         playerSetupInProgress = true
         lifecycleScope.launch {
-            val parsed = allEventLinks.getOrNull(currentLinkIndex)
+            val parsed = (allEventLinks.getOrNull(currentLinkIndex)
                 ?.let { PlayerStreamHelper.buildStreamInfoFromLink(it) }
                 ?: PlayerStreamHelper.parseStreamUrl(streamUrl)
+            ).let { PlayerStreamHelper.resolveStalker(it) }
             val headers = parsed.headers.toMutableMap()
             if (headers["User-Agent"].isNullOrBlank() || headers["User-Agent"] == "Default") {
                 headers["User-Agent"] = PlayerStreamHelper.DEFAULT_USER_AGENT

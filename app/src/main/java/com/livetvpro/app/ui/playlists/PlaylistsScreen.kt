@@ -531,6 +531,18 @@ private fun AddPlaylistDialog(
     var titleError by remember { mutableStateOf(false) }
     var urlError   by remember { mutableStateOf(false) }
 
+    var mode by remember { mutableStateOf(0) }
+    var xUser by remember { mutableStateOf("") }
+    var xPass by remember { mutableStateOf("") }
+    var mac   by remember { mutableStateOf("") }
+    var sn    by remember { mutableStateOf("") }
+    var id1   by remember { mutableStateOf("") }
+    var id2   by remember { mutableStateOf("") }
+    var model by remember { mutableStateOf("MAG250") }
+    var stUser by remember { mutableStateOf("") }
+    var stPass by remember { mutableStateOf("") }
+    var extraError by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     LaunchedEffect(fileUri) {
         if (isFile && fileUri != null) {
@@ -566,14 +578,52 @@ private fun AddPlaylistDialog(
                     isError      = titleError,
                     primaryColor = primaryColor
                 )
+                if (!isFile) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("M3U", "Xtream", "Stalker").forEachIndexed { i, label ->
+                            androidx.compose.material3.FilterChip(
+                                selected = mode == i,
+                                onClick  = { mode = i; urlError = false; extraError = false },
+                                label    = { Text(label, fontFamily = BergenSans) }
+                            )
+                        }
+                    }
+                }
                 PlaylistTextField(
                     value        = url,
                     onValueChange = { url = it; urlError = false },
-                    label        = if (isFile) "File Path" else "URL",
+                    label        = when {
+                        isFile -> "File Path"
+                        mode == 1 -> "Server URL (http://host:port)"
+                        mode == 2 -> "Portal URL (http://host/c/)"
+                        else -> "URL"
+                    },
                     isError      = urlError,
                     primaryColor = primaryColor,
                     keyboardType = KeyboardType.Uri
                 )
+                if (!isFile && mode == 1) {
+                    PlaylistTextField(
+                        value = xUser, onValueChange = { xUser = it; extraError = false },
+                        label = "Username", isError = extraError && xUser.isBlank(), primaryColor = primaryColor
+                    )
+                    PlaylistTextField(
+                        value = xPass, onValueChange = { xPass = it; extraError = false },
+                        label = "Password", isError = extraError && xPass.isBlank(), primaryColor = primaryColor
+                    )
+                }
+                if (!isFile && mode == 2) {
+                    PlaylistTextField(
+                        value = mac, onValueChange = { mac = it; extraError = false },
+                        label = "MAC (00:1A:79:XX:XX:XX)", isError = extraError && mac.isBlank(), primaryColor = primaryColor
+                    )
+                    PlaylistTextField(value = sn, onValueChange = { sn = it }, label = "Serial Number (SN)", isError = false, primaryColor = primaryColor)
+                    PlaylistTextField(value = id1, onValueChange = { id1 = it }, label = "Device ID 1", isError = false, primaryColor = primaryColor)
+                    PlaylistTextField(value = id2, onValueChange = { id2 = it }, label = "Device ID 2", isError = false, primaryColor = primaryColor)
+                    PlaylistTextField(value = model, onValueChange = { model = it }, label = "Model (MAG250, MAG254, MAG322…)", isError = false, primaryColor = primaryColor)
+                    PlaylistTextField(value = stUser, onValueChange = { stUser = it }, label = "Username (optional)", isError = false, primaryColor = primaryColor)
+                    PlaylistTextField(value = stPass, onValueChange = { stPass = it }, label = "Password (optional)", isError = false, primaryColor = primaryColor)
+                }
             }
         }
         },
@@ -595,8 +645,21 @@ private fun AddPlaylistDialog(
                     onClick = {
                         titleError = title.isBlank()
                         urlError   = url.isBlank()
-                        if (!titleError && !urlError) {
-                            onConfirm(title.trim(), url.trim(), isFile, url.trim())
+                        extraError = !isFile && ((mode == 1 && (xUser.isBlank() || xPass.isBlank())) || (mode == 2 && mac.isBlank()))
+                        if (!titleError && !urlError && !extraError) {
+                            val finalUrl = when {
+                                isFile -> url.trim()
+                                mode == 1 -> {
+                                    val server = url.trim().let { if (it.startsWith("http", true)) it else "http://$it" }
+                                        .let { u -> val i = u.indexOf('/', u.indexOf("//") + 2); if (i == -1) u else u.substring(0, i) }
+                                    "$server/get.php?username=${xUser.trim()}&password=${xPass.trim()}&type=m3u_plus&output=m3u8"
+                                }
+                                mode == 2 -> com.livetvpro.app.utils.StalkerClient.buildPlaylistUrl(
+                                    com.livetvpro.app.utils.StalkerClient.Config(url.trim(), mac, sn, id1, id2, model, stUser, stPass)
+                                )
+                                else -> url.trim()
+                            }
+                            onConfirm(title.trim(), finalUrl, isFile, finalUrl)
                         }
                     },
                     primaryColor = primaryColor,

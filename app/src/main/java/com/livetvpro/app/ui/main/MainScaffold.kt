@@ -16,7 +16,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import com.livetvpro.app.ui.components.safeMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -601,7 +601,7 @@ private fun PhoneTopBar(
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
                     maxLines   = 1,
-                    modifier   = Modifier.basicMarquee(),
+                    modifier   = Modifier.safeMarquee(),
                 )
             }
 

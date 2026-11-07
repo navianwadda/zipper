@@ -133,6 +133,76 @@ object M3uParser {
     )
 
     suspend fun parseM3uFromUrl(m3uUrl: String): List<M3uChannel> {
+        val raw = m3uUrl.trim()
+
+        if (StalkerClient.isStalkerUrl(raw)) {
+            return StalkerClient.fetchChannels(raw)
+        }
+
+        if (isXtreamUrl(raw)) {
+            val viaM3u = try {
+                parseM3uFromUrlInternal(raw)
+            } catch (e: java.io.IOException) {
+                if (e.message?.contains("401") == true) throw e
+                emptyList()
+            }
+            if (viaM3u.isNotEmpty()) return viaM3u
+            return fetchXtreamViaApi(raw)
+        }
+
+        return parseM3uFromUrlInternal(raw)
+    }
+
+    private fun fetchXtreamViaApi(url: String): List<M3uChannel> {
+        val decoded = try { java.net.URLDecoder.decode(url, "UTF-8") } catch (_: Exception) { url }
+        val q = decoded.substringAfter('?', "").split('&').filter { it.contains('=') }
+            .associate { it.substringBefore('=') to it.substringAfter('=') }
+        val user = q["username"] ?: throw java.io.IOException("Xtream: missing username")
+        val pass = q["password"] ?: throw java.io.IOException("Xtream: missing password")
+        val schemeEnd = decoded.indexOf("//") + 2
+        val pathStart = decoded.indexOf('/', schemeEnd).takeIf { it != -1 } ?: decoded.indexOf('?').takeIf { it != -1 } ?: decoded.length
+        val base = decoded.substring(0, pathStart).trimEnd('/')
+        val enc = { v: String -> java.net.URLEncoder.encode(v, "UTF-8") }
+        val api = "$base/player_api.php?username=${enc(user)}&password=${enc(pass)}"
+
+        fun getText(u: String): String {
+            val c = URL(u).openConnection() as HttpURLConnection
+            c.connectTimeout = 10_000; c.readTimeout = 20_000
+            c.setRequestProperty("User-Agent", "okhttp/4.12.0")
+            try {
+                if (c.responseCode == 401 || c.responseCode == 403) throw java.io.IOException("HTTP 401: Authentication failed")
+                if (c.responseCode != 200) throw java.io.IOException("HTTP ${c.responseCode}")
+                val stream = if (c.contentEncoding.equals("gzip", true)) java.util.zip.GZIPInputStream(c.inputStream) else c.inputStream
+                return stream.bufferedReader().use { it.readText() }
+            } finally { c.disconnect() }
+        }
+
+        val info = JSONObject(getText(api))
+        val auth = info.optJSONObject("user_info")?.opt("auth")?.toString()
+        if (auth == "0") throw java.io.IOException("HTTP 401: Authentication failed (wrong username/password or expired)")
+
+        val cats = HashMap<String, String>()
+        runCatching {
+            val a = JSONArray(getText("$api&action=get_live_categories"))
+            for (i in 0 until a.length()) a.getJSONObject(i).let { cats[it.optString("category_id")] = it.optString("category_name") }
+        }
+        val streams = JSONArray(getText("$api&action=get_live_streams"))
+        val out = ArrayList<M3uChannel>(streams.length())
+        for (i in 0 until streams.length()) {
+            val o = streams.getJSONObject(i)
+            val id = o.optString("stream_id")
+            if (id.isBlank()) continue
+            out.add(M3uChannel(
+                name = o.optString("name"),
+                logoUrl = o.optString("stream_icon"),
+                streamUrl = "$base/live/${enc(user)}/${enc(pass)}/$id.m3u8",
+                groupTitle = cats[o.optString("category_id")].orEmpty()
+            ))
+        }
+        return out
+    }
+
+    private suspend fun parseM3uFromUrlInternal(m3uUrl: String): List<M3uChannel> {
         val trimmedUrl = if (isXtreamUrl(m3uUrl.trim())) {
             normalizeXtreamUrl(m3uUrl.trim())
         } else {

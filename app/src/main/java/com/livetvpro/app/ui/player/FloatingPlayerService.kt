@@ -64,7 +64,6 @@ class FloatingPlayerService : Service() {
         var isMuted: Boolean = false,
         val lockOverlay: View?,
         val unlockButton: ImageButton?,
-        var playerListener: Player.Listener? = null,
         var isNetworkStream: Boolean = false,
         var networkStreamUrl: String? = null,
         var networkStreamName: String? = null,
@@ -362,7 +361,7 @@ var isBoosted: Boolean = false
                     if (updatedCacheKey != null) {
                         ChannelListCache.get(updatedCacheKey)?.let { activeInstances[instanceId]?.channelList = it }
                     }
-                    serviceScope.launch { updateInstanceStream(instanceId, channel, event, linkIndex) }
+                    updateInstanceStream(instanceId, channel, event, linkIndex)
                 }
                 return START_STICKY
             }
@@ -393,7 +392,7 @@ var isBoosted: Boolean = false
                 val xForwardedFor = intent.getStringExtra("X_FORWARDED_FOR") ?: ""
                 val customHeaders = intent.getStringExtra("CUSTOM_HEADERS") ?: ""
                 if (instanceId != null && streamUrl.isNotBlank()) {
-                    serviceScope.launch { updateInstanceStreamWithNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders) }
+                    updateInstanceStreamWithNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders)
                 }
                 return START_STICKY
             }
@@ -420,14 +419,13 @@ var isBoosted: Boolean = false
             val customHeaders = intent?.getStringExtra("CUSTOM_HEADERS") ?: ""
 
             val restorePosition = intent?.getBooleanExtra(EXTRA_RESTORE_POSITION, false) ?: false
-            serviceScope.launch {
-                if (isRestoredFromFullscreen && PlayerHolder.player != null) {
-                    createFloatingPlayerInstanceFromNetworkStreamTransfer(
-                        instanceId, streamName, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, xForwardedFor, customHeaders = customHeaders, restorePosition = restorePosition
-                    )
-                } else if (streamUrl.isNotBlank()) {
-                    createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders = customHeaders, restorePosition = restorePosition)
-                }
+            if (isRestoredFromFullscreen && PlayerHolder.player != null) {
+                createFloatingPlayerInstanceFromNetworkStreamTransfer(
+                    instanceId, streamName, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, xForwardedFor, customHeaders = customHeaders, restorePosition = restorePosition
+                )
+                updateNotification()
+            } else if (streamUrl.isNotBlank()) {
+                createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders = customHeaders, restorePosition = restorePosition)
                 updateNotification()
             }
             return START_STICKY
@@ -457,21 +455,19 @@ var isBoosted: Boolean = false
         val isSports = intent?.getBooleanExtra("EXTRA_IS_SPORTS", false) ?: false
 
         if (channel != null || event != null) {
-            serviceScope.launch {
-                if (useTransferredPlayer) {
-                    createFloatingPlayerInstanceFromTransfer(instanceId, channel, event, restorePosition, parsedChannelList, isSports)
-                } else {
-                    createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition, parsedChannelList, isSports)
-                }
-                activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
-                updateNotification()
-            }
+            if (useTransferredPlayer) {
+    createFloatingPlayerInstanceFromTransfer(instanceId, channel, event, restorePosition, parsedChannelList, isSports)
+} else {
+    createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition, parsedChannelList, isSports)
+}
+activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
+            updateNotification()
         }
 
         return START_STICKY
     }
 
-    private suspend fun createFloatingPlayerInstance(
+    private fun createFloatingPlayerInstance(
         instanceId: String,
         channel: Channel? = null,
         event: com.livetvpro.app.data.models.LiveEvent? = null,
@@ -642,7 +638,7 @@ var isBoosted: Boolean = false
         }
     }
 
-    private suspend fun createFloatingPlayerInstanceFromTransfer(
+    private fun createFloatingPlayerInstanceFromTransfer(
         instanceId: String,
         channel: Channel? = null,
         event: com.livetvpro.app.data.models.LiveEvent? = null,
@@ -739,7 +735,7 @@ var isBoosted: Boolean = false
         }
     }
 
-    private suspend fun createFloatingPlayerInstanceFromNetworkStreamTransfer(
+    private fun createFloatingPlayerInstanceFromNetworkStreamTransfer(
         instanceId: String,
         streamName: String,
         streamUrl: String,
@@ -849,7 +845,7 @@ var isBoosted: Boolean = false
         }
     }
 
-    private suspend fun createFloatingPlayerInstanceForNetworkStream(
+    private fun createFloatingPlayerInstanceForNetworkStream(
         instanceId: String,
         streamUrl: String,
         cookie: String,
@@ -1024,7 +1020,7 @@ var isBoosted: Boolean = false
         }
     }
 
-    private suspend fun updateInstanceStream(
+    private fun updateInstanceStream(
         instanceId: String,
         channel: Channel? = null,
         event: com.livetvpro.app.data.models.LiveEvent? = null,
@@ -1087,21 +1083,50 @@ var isBoosted: Boolean = false
             val titleText = instance.floatingView.findViewById<TextView>(R.id.tv_title)
             titleText.text = channel?.name ?: event?.title ?: "Unknown"
 
-            val existingPlayer = instance.player
-            existingPlayer.stop()
-            existingPlayer.clearMediaItems()
-            existingPlayer.setMediaSourceFactory(mediaSourceFactory)
-            existingPlayer.setMediaItem(buildDrmMediaItem(parsedStream, headers))
-            existingPlayer.volume = if (instance.isMuted) 0f else 1f
-            com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(existingPlayer, if (instance.isBoosted) 100 else 0)
-            existingPlayer.clearVideoSurface()
-            instance.playerView.player = existingPlayer
+            val wasMuted = instance.isMuted
+            try { instance.playerView.player = null } catch (_: Exception) {}
+            try { instance.player.stop() } catch (_: Exception) {}
+            com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
+            try { instance.player.release() } catch (_: Exception) {}
 
+            val renderersFactory2 = DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                .setEnableDecoderFallback(true)
+            val trackSelector2 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
+                parameters = buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedChannelCountAdaptiveness(true)
+                    .build()
+            }
+            val newPlayer = ExoPlayer.Builder(this)
+                .setRenderersFactory(renderersFactory2)
+                .setTrackSelector(trackSelector2)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(false)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    false
+                )
+                .build()
+            com.livetvpro.app.utils.VolumeBoostHelper.attach(newPlayer, preferencesManager)
+            com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(newPlayer, if (instance.isBoosted) 100 else 0)
+            newPlayer.volume = if (wasMuted) 0f else 1f
+            instance.playerView.player = newPlayer
+
+            val mediaItem = buildDrmMediaItem(parsedStream, headers)
+            newPlayer.setMediaItem(mediaItem)
+
+            activeInstances[instanceId] = instance.copy(player = newPlayer)
             val btnPlayPause1 = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
-            attachPlayerListener(existingPlayer, btnPlayPause1, instanceId)
+            attachPlayerListener(newPlayer, btnPlayPause1, instanceId)
 
-            existingPlayer.prepare()
-            existingPlayer.playWhenReady = true
+            newPlayer.prepare()
+            newPlayer.playWhenReady = true
 
             updateNotification()
 
@@ -1109,7 +1134,7 @@ var isBoosted: Boolean = false
         }
     }
 
-    private suspend fun updateInstanceStreamWithNetworkStream(
+    private fun updateInstanceStreamWithNetworkStream(
         instanceId: String,
         streamUrl: String,
         cookie: String,
@@ -1153,17 +1178,45 @@ var isBoosted: Boolean = false
             val titleText = instance.floatingView.findViewById<TextView>(R.id.tv_title)
             titleText.text = streamName
 
-            val existingPlayer = instance.player
-            existingPlayer.stop()
-            existingPlayer.clearMediaItems()
-            existingPlayer.setMediaSourceFactory(mediaSourceFactory)
-            existingPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
-            existingPlayer.volume = if (instance.isMuted) 0f else 1f
-            com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(existingPlayer, if (instance.isBoosted) 100 else 0)
-            existingPlayer.clearVideoSurface()
-            instance.playerView.player = existingPlayer
+            val wasMuted = instance.isMuted
+            try { instance.playerView.player = null } catch (_: Exception) {}
+            try { instance.player.stop() } catch (_: Exception) {}
+            com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
+            try { instance.player.release() } catch (_: Exception) {}
+
+            val renderersFactory = DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                .setEnableDecoderFallback(true)
+            val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
+                parameters = buildUponParameters()
+                    .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                    .setAllowAudioMixedChannelCountAdaptiveness(true)
+                    .build()
+            }
+            val newPlayer = ExoPlayer.Builder(this)
+                .setRenderersFactory(renderersFactory)
+                .setTrackSelector(trackSelector)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+                .setHandleAudioBecomingNoisy(false)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setUsage(C.USAGE_MEDIA)
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .build(),
+                    false
+                )
+                .build()
+            com.livetvpro.app.utils.VolumeBoostHelper.attach(newPlayer, preferencesManager)
+            com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(newPlayer, if (instance.isBoosted) 100 else 0)
+            newPlayer.volume = if (wasMuted) 0f else 1f
+            instance.playerView.player = newPlayer
+
+            newPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
 
             activeInstances[instanceId] = instance.copy(
+                player = newPlayer,
                 currentChannel = null,
                 currentEvent = null,
                 isNetworkStream = true,
@@ -1179,10 +1232,10 @@ var isBoosted: Boolean = false
                 networkCustomHeaders = customHeaders,
             )
             val btnPlayPause = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
-            attachPlayerListener(existingPlayer, btnPlayPause, instanceId)
+            attachPlayerListener(newPlayer, btnPlayPause, instanceId)
 
-            existingPlayer.prepare()
-            existingPlayer.playWhenReady = true
+            newPlayer.prepare()
+            newPlayer.playWhenReady = true
 
             updateNotification()
 
@@ -1343,7 +1396,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
             val hasEnded = p.playbackState == Player.STATE_ENDED
 
             if (hasError || hasEnded) {
-                serviceScope.launch { retryInstance(instanceId) }
+                retryInstance(instanceId)
             } else {
                 if (p.isPlaying) {
                     p.pause()
@@ -1432,8 +1485,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
     }
 
     private fun attachPlayerListener(player: ExoPlayer, btnPlayPause: ImageButton?, instanceId: String) {
-        activeInstances[instanceId]?.playerListener?.let { player.removeListener(it) }
-        val listener = object : Player.Listener {
+        player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 val instance = activeInstances[instanceId] ?: return
                 if (instance.player !== player) return
@@ -1471,9 +1523,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
 
                 btnPlayPause?.setImageResource(R.drawable.ic_error_outline)
             }
-        }
-        player.addListener(listener)
-        activeInstances[instanceId]?.playerListener = listener
+        })
     }
 
     private fun setupResizeFunctionality(
@@ -1535,7 +1585,6 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         var initialTouchY = 0f
         var isDragging = false
         var hasMoved = false
-        var lastDragUpdateMs = 0L
 
         playerView.setOnTouchListener { _, event ->
             val instance = activeInstances[instanceId] ?: return@setOnTouchListener false
@@ -1559,16 +1608,12 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                             if (abs(dx) > 10 || abs(dy) > 10) {
                                 isDragging = true
                                 hasMoved = true
-                                val now = android.os.SystemClock.uptimeMillis()
-                                if (now - lastDragUpdateMs >= 16L) {
-                                    lastDragUpdateMs = now
-                                    val minVisible = p.width / 4
-                                    val screenW = getScreenWidth()
-                                    val screenH = getScreenHeight() - getNavBarHeight()
-                                    p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
-                                    p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
-                                    windowManager?.updateViewLayout(floatingView, p)
-                                }
+                                val minVisible = p.width / 4
+                                val screenW = getScreenWidth()
+                                val screenH = getScreenHeight() - getNavBarHeight()
+                                p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
+                                p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
+                                windowManager?.updateViewLayout(floatingView, p)
                             }
                             true
                         }
@@ -1611,16 +1656,12 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                             if (abs(dx) > 10 || abs(dy) > 10) {
                                 isDragging = true
                                 hasMoved = true
-                                val now = android.os.SystemClock.uptimeMillis()
-                                if (now - lastDragUpdateMs >= 16L) {
-                                    lastDragUpdateMs = now
-                                    val minVisible = p.width / 4
-                                    val screenW = getScreenWidth()
-                                    val screenH = getScreenHeight() - getNavBarHeight()
-                                    p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
-                                    p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
-                                    windowManager?.updateViewLayout(floatingView, p)
-                                }
+                                val minVisible = p.width / 4
+                                val screenW = getScreenWidth()
+                                val screenH = getScreenHeight() - getNavBarHeight()
+                                p.x = (initialX + dx).coerceIn(-(p.width - minVisible), screenW - minVisible)
+                                p.y = (initialY + dy).coerceIn(-(p.height - minVisible), screenH - minVisible)
+                                windowManager?.updateViewLayout(floatingView, p)
                             }
                             isDragging
                         }
@@ -1692,7 +1733,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         instance.unlockButton?.visibility = View.GONE
     }
 
-    private suspend fun retryInstance(instanceId: String) {
+    private fun retryInstance(instanceId: String) {
         val instance = activeInstances[instanceId] ?: return
         try {
             if (instance.isNetworkStream) {
@@ -1731,21 +1772,48 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                     .setKeepPostFor302Redirects(true)
                 val mediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, dataSourceFactory, headers)
 
-                val existingPlayer = instance.player
-                existingPlayer.stop()
-                existingPlayer.clearMediaItems()
-                existingPlayer.setMediaSourceFactory(mediaSourceFactory)
-                existingPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
-                existingPlayer.volume = if (instance.isMuted) 0f else 1f
-                com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(existingPlayer, if (instance.isBoosted) 100 else 0)
-                existingPlayer.clearVideoSurface()
-                instance.playerView.player = existingPlayer
+                try { instance.playerView.player = null } catch (_: Exception) {}
+                try { instance.player.stop() } catch (_: Exception) {}
+                com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
+                try { instance.player.release() } catch (_: Exception) {}
 
+                val renderersFactory3 = DefaultRenderersFactory(this)
+                    .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                    .setEnableDecoderFallback(true)
+                val trackSelector3 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
+                    parameters = buildUponParameters()
+                        .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                        .setAllowAudioMixedMimeTypeAdaptiveness(true)
+                        .setAllowAudioMixedChannelCountAdaptiveness(true)
+                        .build()
+                }
+                val newPlayer = ExoPlayer.Builder(this)
+                    .setRenderersFactory(renderersFactory3)
+                    .setTrackSelector(trackSelector3)
+                    .setMediaSourceFactory(mediaSourceFactory)
+                    .setWakeMode(C.WAKE_MODE_NETWORK)
+                    .setHandleAudioBecomingNoisy(false)
+                    .setAudioAttributes(
+                        androidx.media3.common.AudioAttributes.Builder()
+                            .setUsage(C.USAGE_MEDIA)
+                            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                            .build(),
+                        false
+                    )
+                    .build()
+                com.livetvpro.app.utils.VolumeBoostHelper.attach(newPlayer, preferencesManager)
+                com.livetvpro.app.utils.VolumeBoostHelper.setBoostLevel(newPlayer, if (instance.isBoosted) 100 else 0)
+                newPlayer.volume = if (instance.isMuted) 0f else 1f
+
+                instance.playerView.player = newPlayer
+                newPlayer.setMediaItem(buildDrmMediaItem(nsStreamInfo, headers))
+
+                activeInstances[instanceId] = instance.copy(player = newPlayer)
                 val btnPlayPause2 = instance.playerView.findViewById<ImageButton>(R.id.btn_play_pause)
-                attachPlayerListener(existingPlayer, btnPlayPause2, instanceId)
+                attachPlayerListener(newPlayer, btnPlayPause2, instanceId)
 
-                existingPlayer.prepare()
-                existingPlayer.playWhenReady = true
+                newPlayer.prepare()
+                newPlayer.playWhenReady = true
             } else {
                 updateInstanceStream(instanceId, instance.currentChannel, instance.currentEvent, 0)
             }
@@ -1759,7 +1827,6 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         hideControlsHandlers[instanceId]?.removeCallbacksAndMessages(null)
         hideControlsHandlers.remove(instanceId)
 
-        try { instance.playerListener?.let { instance.player.removeListener(it) } } catch (_: Exception) {}
         try { instance.playerView.player = null } catch (_: Exception) {}
         try { instance.player.stop() } catch (_: Exception) {}
         com.livetvpro.app.utils.VolumeBoostHelper.release(instance.player)
@@ -1871,19 +1938,16 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (activeInstances.isEmpty()) return
         val newScreenW = getScreenWidth()
         val newScreenH = getScreenHeight() - getNavBarHeight()
         val ratioX = preferencesManager.getFloatingPlayerXRatio()
         val ratioY = preferencesManager.getFloatingPlayerYRatio()
         if (ratioX < 0f || ratioY < 0f) return
-        val newX = (ratioX * newScreenW).toInt()
-        val newY = (ratioY * newScreenH).toInt()
         activeInstances.values.forEach { instance ->
             val p = instance.params
             val minVisible = p.width / 4
-            p.x = newX.coerceIn(-(p.width - minVisible), newScreenW - minVisible)
-            p.y = newY.coerceIn(-(p.height - minVisible), newScreenH - minVisible)
+            p.x = (ratioX * newScreenW).toInt().coerceIn(-(p.width - minVisible), newScreenW - minVisible)
+            p.y = (ratioY * newScreenH).toInt().coerceIn(-(p.height - minVisible), newScreenH - minVisible)
             try { windowManager?.updateViewLayout(instance.floatingView, p) } catch (_: Exception) {}
         }
     }
@@ -1891,10 +1955,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
-        hideControlsHandlers.values.forEach { it.removeCallbacksAndMessages(null) }
-        hideControlsHandlers.clear()
         activeInstances.values.forEach { instance ->
-            try { instance.playerListener?.let { l -> instance.player.removeListener(l) } } catch (_: Exception) {}
             try { instance.playerView.player = null } catch (_: Exception) {}
         }
         stopAllInstances()
@@ -1913,7 +1974,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         val drmJwk: String? = null,
     )
 
-    private suspend fun buildStreamInfoFromLink(
+    private fun buildStreamInfoFromLink(
         url: String,
         cookie: String?,
         referer: String?,
@@ -1979,10 +2040,10 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         )
     }
 
-    private suspend fun parseStreamUrl(rawStreamUrl: String): StreamInfo {
+    private fun parseStreamUrl(rawStreamUrl: String): StreamInfo {
         val streamUrl = if (com.livetvpro.app.utils.StalkerClient.isStalkerUrl(rawStreamUrl)) {
             try {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                     com.livetvpro.app.utils.StalkerClient.resolve(rawStreamUrl)
                 }
             } catch (e: Exception) { rawStreamUrl }
@@ -2228,11 +2289,11 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         }
     }
 
-    private suspend fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
+    private fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
         val builder = MediaItem.Builder().setUri(streamInfo.url)
         val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(streamInfo.url)
             ?: try {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                     kotlinx.coroutines.withTimeout(3_000) {
                         PlayerStreamHelper.resolveContentType(streamInfo.url, headers)
                     }

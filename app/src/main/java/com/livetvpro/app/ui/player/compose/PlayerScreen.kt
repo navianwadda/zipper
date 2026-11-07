@@ -5,7 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import com.livetvpro.app.ui.components.safeMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
@@ -436,7 +436,7 @@ private fun RelatedChannelCard(
                 modifier   = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
-                    .basicMarquee(iterations = Int.MAX_VALUE),
+                    .safeMarquee(iterations = Int.MAX_VALUE),
             )
         }
     }
@@ -532,7 +532,7 @@ private fun NowPlayingChannelCard(
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 10.dp)
-                    .basicMarquee(iterations = Int.MAX_VALUE),
+                    .safeMarquee(iterations = Int.MAX_VALUE),
             )
             IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
                 Icon(
@@ -758,7 +758,7 @@ private fun NowPlayingEventStatus(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .fillMaxWidth()
-                .basicMarquee(iterations = Int.MAX_VALUE),
+                .safeMarquee(iterations = Int.MAX_VALUE),
         )
         Spacer(modifier = Modifier.height(1.dp))
         Text(

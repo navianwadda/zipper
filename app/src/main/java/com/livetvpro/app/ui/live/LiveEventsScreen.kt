@@ -8,7 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.basicMarquee
+import com.livetvpro.app.ui.components.safeMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
@@ -484,7 +484,7 @@ private fun CategoryChip(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .width(52.dp)
-                .basicMarquee(iterations = Int.MAX_VALUE)
+                .safeMarquee(iterations = Int.MAX_VALUE)
         )
     }
 }
@@ -635,7 +635,7 @@ fun LiveEventCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .weight(1f)
-                            .basicMarquee()
+                            .safeMarquee()
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     val categoryLabel = event.category.ifEmpty {
@@ -1129,7 +1129,7 @@ fun BannerEventCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .weight(1f)
-                        .basicMarquee(iterations = Int.MAX_VALUE)
+                        .safeMarquee(iterations = Int.MAX_VALUE)
                 )
                 if (status == EventStatus.LIVE) {
                     Spacer(modifier = Modifier.width(8.dp))

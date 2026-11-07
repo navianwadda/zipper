@@ -477,6 +477,13 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         channelList: List<Channel>? = null,
         isSports: Boolean = false
     ) {
+        val prefetchUrls = linkUrls(channel, event)
+        if (needsPrefetch(prefetchUrls)) {
+            prefetchThen(prefetchUrls) {
+                createFloatingPlayerInstance(instanceId, channel, event, linkIndex, playbackPosition, restorePosition, channelList, isSports)
+            }
+            return
+        }
         try {
             val streamUrl = when {
                 channel != null -> {
@@ -859,6 +866,12 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         customHeaders: String = "",
         restorePosition: Boolean = false
     ) {
+        if (needsPrefetch(listOf(streamUrl))) {
+            prefetchThen(listOf(streamUrl)) {
+                createFloatingPlayerInstanceForNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders, restorePosition)
+            }
+            return
+        }
         try {
             val floatingView = LayoutInflater.from(this).inflate(R.layout.floating_player_window, null)
 
@@ -1028,6 +1041,12 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
     ) {
         val instance = activeInstances[instanceId] ?: return
 
+        val prefetchUrls = linkUrls(channel, event)
+        if (needsPrefetch(prefetchUrls)) {
+            prefetchThen(prefetchUrls) { updateInstanceStream(instanceId, channel, event, linkIndex) }
+            return
+        }
+
         try {
             val parsedStream: StreamInfo = when {
                 channel != null -> {
@@ -1148,6 +1167,13 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
         customHeaders: String = ""
     ) {
         val instance = activeInstances[instanceId] ?: return
+
+        if (needsPrefetch(listOf(streamUrl))) {
+            prefetchThen(listOf(streamUrl)) {
+                updateInstanceStreamWithNetworkStream(instanceId, streamUrl, cookie, referer, origin, drmLicense, userAgent, drmScheme, streamName, xForwardedFor, customHeaders)
+            }
+            return
+        }
 
         try {
             val headers = mutableMapOf<String, String>()
@@ -1738,6 +1764,10 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         try {
             if (instance.isNetworkStream) {
                 val streamUrl = instance.networkStreamUrl ?: return
+                if (needsPrefetch(listOf(streamUrl))) {
+                    prefetchThen(listOf(streamUrl)) { retryInstance(instanceId) }
+                    return
+                }
                 val cookie = instance.networkCookie ?: ""
                 val referer = instance.networkReferer ?: ""
                 val origin = instance.networkOrigin ?: ""
@@ -2040,9 +2070,61 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         )
     }
 
+    private val stalkerCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val mimeCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val warmedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private fun isMainThread() = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+
+    private fun needsPrefetch(urls: List<String>): Boolean {
+        val now = System.currentTimeMillis()
+        return urls.any { it.isNotBlank() && now - (warmedAt[it] ?: 0L) > 30_000L }
+    }
+
+    private fun prefetchThen(urls: List<String>, block: () -> Unit) {
+        serviceScope.launch {
+            withContext(Dispatchers.IO) { urls.forEach { warmUrl(it) } }
+            block()
+        }
+    }
+
+    private fun warmUrl(raw: String) {
+        if (raw.isBlank()) return
+        try {
+            if (com.livetvpro.app.utils.StalkerClient.isStalkerUrl(raw)) {
+                stalkerCache[raw] = try {
+                    com.livetvpro.app.utils.StalkerClient.resolve(raw)
+                } catch (e: Exception) { raw }
+            }
+            val info = parseStreamUrl(raw)
+            if (PlayerStreamHelper.detectMimeTypeFromUrl(info.url) == null) {
+                val detected = try {
+                    kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                        kotlinx.coroutines.withTimeout(3_000) {
+                            PlayerStreamHelper.resolveContentType(info.url, info.headers)
+                        }
+                    }
+                } catch (e: Exception) { null }
+                mimeCache[info.url] = detected ?: ""
+            }
+        } catch (e: Exception) {
+        }
+        warmedAt[raw] = System.currentTimeMillis()
+    }
+
+    private fun linkUrls(channel: Channel?, event: com.livetvpro.app.data.models.LiveEvent?): List<String> {
+        val list = mutableListOf<String>()
+        channel?.let { c ->
+            c.links?.forEach { list.add(it.url) }
+            list.add(c.streamUrl)
+        }
+        event?.links?.forEach { list.add(it.url) }
+        return list.filter { it.isNotBlank() }.distinct()
+    }
+
     private fun parseStreamUrl(rawStreamUrl: String): StreamInfo {
         val streamUrl = if (com.livetvpro.app.utils.StalkerClient.isStalkerUrl(rawStreamUrl)) {
-            try {
+            stalkerCache[rawStreamUrl] ?: if (isMainThread()) rawStreamUrl else try {
                 kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                     com.livetvpro.app.utils.StalkerClient.resolve(rawStreamUrl)
                 }
@@ -2292,7 +2374,8 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
     private fun buildDrmMediaItem(streamInfo: StreamInfo, headers: Map<String, String>): MediaItem {
         val builder = MediaItem.Builder().setUri(streamInfo.url)
         val mimeType: String? = PlayerStreamHelper.detectMimeTypeFromUrl(streamInfo.url)
-            ?: try {
+            ?: mimeCache[streamInfo.url]?.takeIf { it.isNotEmpty() }
+            ?: if (mimeCache.containsKey(streamInfo.url) || isMainThread()) null else try {
                 kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                     kotlinx.coroutines.withTimeout(3_000) {
                         PlayerStreamHelper.resolveContentType(streamInfo.url, headers)

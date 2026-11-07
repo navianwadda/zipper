@@ -8,6 +8,9 @@ import androidx.media3.exoplayer.drm.FrameworkMediaDrm
 import androidx.media3.exoplayer.drm.HttpMediaDrmCallback
 import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
 import com.livetvpro.app.data.models.LiveEventLink
+import com.livetvpro.app.utils.StalkerClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class StreamInfo(
     val url: String,
@@ -48,6 +51,16 @@ object PlayerStreamHelper {
         }
         val root = error.cause?.javaClass?.simpleName
         return if (root != null) "$base ($root)" else base
+    }
+
+    suspend fun resolveStalker(info: StreamInfo): StreamInfo {
+        if (!StalkerClient.isStalkerUrl(info.url)) return info
+        return try {
+            withContext(Dispatchers.IO) { info.copy(url = StalkerClient.resolve(info.url)) }
+        } catch (e: Exception) {
+            android.util.Log.e("PlayerStreamHelper", "Stalker link resolve failed: ${e.message}")
+            info
+        }
     }
 
     fun parseStreamUrl(streamUrl: String): StreamInfo {

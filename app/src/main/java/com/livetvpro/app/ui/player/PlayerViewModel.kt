@@ -346,12 +346,11 @@ class PlayerViewModel @Inject constructor(
     ): List<Channel> {
         return withContext(Dispatchers.IO) {
             try {
-                val m3uContent = if (playlist.isFile) {
-                    readFileContent(playlist.filePath)
+                val m3uChannels = if (playlist.isFile) {
+                    M3uParser.parseM3uContent(readFileContent(playlist.filePath))
                 } else {
-                    fetchUrlContent(playlist.url)
+                    M3uParser.parseM3uFromUrl(playlist.url)
                 }
-                val m3uChannels = M3uParser.parseM3uContent(m3uContent)
                 M3uParser.convertToChannels(
                     m3uChannels = m3uChannels,
                     categoryId = playlist.id,

@@ -5,7 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import com.livetvpro.app.ui.components.safeMarquee
+import com.livetvpro.app.ui.components.SafeMarqueeText
 import androidx.compose.foundation.border
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
@@ -424,19 +424,18 @@ private fun RelatedChannelCard(
                     }
                 }
             }
-            Text(
+            SafeMarqueeText(
                 text       = channel.name,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
                 fontSize   = 13.sp,
                 color      = MaterialTheme.colorScheme.onSurface,
                 textAlign  = TextAlign.Center,
-                maxLines   = 1,
                 overflow   = TextOverflow.Clip,
+                iterations = Int.MAX_VALUE,
                 modifier   = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .safeMarquee(iterations = Int.MAX_VALUE),
+                    .padding(top = 6.dp),
             )
         }
     }
@@ -521,18 +520,17 @@ private fun NowPlayingChannelCard(
             modifier = Modifier.fillMaxWidth(),
         ) {
             NowPlayingTeamLogo(url = channel.logoUrl, modifier = Modifier.size(30.dp))
-            Text(
+            SafeMarqueeText(
                 text = channel.name,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
-                maxLines = 1,
                 overflow = TextOverflow.Clip,
+                iterations = Int.MAX_VALUE,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 10.dp)
-                    .safeMarquee(iterations = Int.MAX_VALUE),
+                    .padding(horizontal = 10.dp),
             )
             IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
                 Icon(
@@ -747,18 +745,17 @@ private fun NowPlayingEventStatus(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier,
     ) {
-        Text(
+        SafeMarqueeText(
             text = info.sourceName,
             color = MaterialTheme.colorScheme.onSurface,
             fontFamily = BergenSans,
             fontWeight = FontWeight.Medium,
             fontSize = 11.sp,
             textAlign = TextAlign.Center,
-            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            iterations = Int.MAX_VALUE,
             modifier = Modifier
-                .fillMaxWidth()
-                .safeMarquee(iterations = Int.MAX_VALUE),
+                .fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(1.dp))
         Text(

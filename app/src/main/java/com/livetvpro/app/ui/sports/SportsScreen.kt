@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import com.livetvpro.app.ui.components.safeMarquee
+import com.livetvpro.app.ui.components.SafeMarqueeText
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.LocalIndication
@@ -339,19 +339,18 @@ private fun SportChannelCard(
                 }
             }
 
-            Text(
+            SafeMarqueeText(
                 text = channel.name,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
-                maxLines = 1,
                 overflow = TextOverflow.Clip,
+                iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .safeMarquee(iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0)
+                    .padding(top = 6.dp),
             )
         }
     }

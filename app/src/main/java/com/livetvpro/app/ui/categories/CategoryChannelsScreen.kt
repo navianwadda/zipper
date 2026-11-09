@@ -40,7 +40,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -208,12 +209,12 @@ fun CategoryChannelsScreen(
                         )
                     }
                 }
-                ScrollableTabRow(
-                    selectedTabIndex = selectedIndex,
-                    edgePadding = 0.dp,
-                    modifier = Modifier.weight(1f),
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                val tabScrollState = rememberScrollState()
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(tabScrollState),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     categoryGroups.forEachIndexed { index, group ->
                         Tab(

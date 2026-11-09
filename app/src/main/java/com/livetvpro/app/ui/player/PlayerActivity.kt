@@ -880,7 +880,7 @@ class PlayerActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isPipSupported) {
-            setPictureInPictureParams(buildPipParams())
+            try { setPictureInPictureParams(buildPipParams()) } catch (_: Exception) {}
         }
 
         screenOffReceiver = object : BroadcastReceiver() {
@@ -970,7 +970,7 @@ class PlayerActivity : ComponentActivity() {
         isInPip       = true
         window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         updateLinksState()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) setPictureInPictureParams(buildPipParams(enter = true))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) try { setPictureInPictureParams(buildPipParams(enter = true)) } catch (_: Exception) {}
         controlsState.hide()
         setupPipReceiver()
         showMediaNotification()
@@ -1172,9 +1172,7 @@ class PlayerActivity : ComponentActivity() {
     }
     private fun createMediaSession(exo: ExoPlayer) {
         mediaSession?.release()
-        mediaSession = null
-        val sessionId = "${packageName}_${System.currentTimeMillis()}"
-        mediaSession = MediaSession.Builder(this, exo).setId(sessionId).build()
+        mediaSession = MediaSession.Builder(this, exo).build()
     }
     private fun releaseMediaSession() {
         mediaSession?.release()
@@ -1909,7 +1907,6 @@ class PlayerActivity : ComponentActivity() {
     }
     internal fun retryPlayback() {
         errorMessage.value = ""
-        releaseMediaSession()
         player?.let { com.livetvpro.app.utils.VolumeBoostHelper.release(it) }
         player?.release()
         player = null

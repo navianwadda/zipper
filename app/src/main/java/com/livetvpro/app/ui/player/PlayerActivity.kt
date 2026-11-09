@@ -1172,7 +1172,9 @@ class PlayerActivity : ComponentActivity() {
     }
     private fun createMediaSession(exo: ExoPlayer) {
         mediaSession?.release()
-        mediaSession = MediaSession.Builder(this, exo).build()
+        mediaSession = null
+        val sessionId = "${packageName}_${System.currentTimeMillis()}"
+        mediaSession = MediaSession.Builder(this, exo).setId(sessionId).build()
     }
     private fun releaseMediaSession() {
         mediaSession?.release()
@@ -1907,6 +1909,7 @@ class PlayerActivity : ComponentActivity() {
     }
     internal fun retryPlayback() {
         errorMessage.value = ""
+        releaseMediaSession()
         player?.let { com.livetvpro.app.utils.VolumeBoostHelper.release(it) }
         player?.release()
         player = null

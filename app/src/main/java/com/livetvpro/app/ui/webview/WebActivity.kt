@@ -342,13 +342,28 @@ class WebActivity : AppCompatActivity() {
                     request.grant(request.resources)
                 }
                 override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
-                    val newWebView = WebView(view.context)
-                    newWebView.webViewClient = object : WebViewClient() {
-                        override fun onPageStarted(v: WebView, url: String, favicon: Bitmap?) {
-                            view.loadUrl(url)
+                    val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
+                    val newWebView = WebView(view.context).apply {
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
+                                view.loadUrl(request.url.toString())
+                                (v.parent as? android.view.ViewGroup)?.removeView(v)
+                                v.destroy()
+                                return true
+                            }
+                            override fun onPageStarted(v: WebView, url: String, favicon: Bitmap?) {
+                                if (url != "about:blank") {
+                                    view.loadUrl(url)
+                                    (v.parent as? android.view.ViewGroup)?.removeView(v)
+                                    v.destroy()
+                                }
+                            }
                         }
                     }
-                    val transport = resultMsg.obj as WebView.WebViewTransport
+                    (view.parent as? android.view.ViewGroup)?.addView(
+                        newWebView,
+                        android.view.ViewGroup.LayoutParams(0, 0)
+                    )
                     transport.webView = newWebView
                     resultMsg.sendToTarget()
                     return true

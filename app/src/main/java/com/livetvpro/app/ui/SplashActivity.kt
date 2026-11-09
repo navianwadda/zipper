@@ -39,7 +39,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -753,10 +752,9 @@ private fun AppIcon() {
             .background(bgColor),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        Image(
             painter            = painterResource(R.drawable.ic_launcher_foreground),
             contentDescription = "App Icon",
-            tint               = Color.Unspecified,
             modifier           = Modifier.size(72.dp),
         )
     }

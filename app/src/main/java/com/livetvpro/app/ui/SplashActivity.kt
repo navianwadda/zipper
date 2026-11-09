@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -134,10 +135,6 @@ class SplashActivity : AppCompatActivity() {
 
         themeManager.registerActivityContext(this)
 
-        if (DeviceUtils.isBigScreenLayout) {
-            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        }
-
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         enableEdgeToEdge()
 
@@ -177,7 +174,15 @@ class SplashActivity : AppCompatActivity() {
             }
         })
 
-        FirebaseMessaging.getInstance().subscribeToTopic("all")
+        if (DeviceUtils.isBigScreenLayout) {
+            window.decorView.post {
+                requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            }
+        }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            FirebaseMessaging.getInstance().subscribeToTopic("all")
+        }
         requestNotificationPermission()
     }
 
@@ -752,9 +757,10 @@ private fun AppIcon() {
             .background(bgColor),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
+        Icon(
             painter            = painterResource(R.drawable.ic_launcher_foreground),
             contentDescription = "App Icon",
+            tint               = Color.Unspecified,
             modifier           = Modifier.size(72.dp),
         )
     }

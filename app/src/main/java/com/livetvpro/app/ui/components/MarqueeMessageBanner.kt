@@ -73,17 +73,17 @@ fun MarqueeMessageBanner(
                     .fillMaxHeight(),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Text(
+                SafeMarqueeText(
                     text = text,
+                    iterations = Int.MAX_VALUE,
+                    velocity = 60.dp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .safeMarquee(iterations = Int.MAX_VALUE, velocity = 60.dp)
                         .padding(start = 8.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     fontFamily = BergenSans,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip
+                    overflow = TextOverflow.Clip,
                 )
                 Box(
                     modifier = Modifier

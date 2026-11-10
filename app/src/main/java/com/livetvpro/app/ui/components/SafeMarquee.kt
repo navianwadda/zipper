@@ -43,6 +43,7 @@ fun SafeMarqueeText(
     iterations: Int = Int.MAX_VALUE,
     velocity: Dp = 30.dp,
     initialDelayMillis: Int = 1200,
+    repeatDelayMillis: Int = 1200,
 ) {
     var cyclePx by remember { mutableIntStateOf(0) }
     val offset = remember { Animatable(0f) }
@@ -57,7 +58,9 @@ fun SafeMarqueeText(
         while (count < iterations) {
             offset.snapTo(0f)
             offset.animateTo(-cyclePx.toFloat(), tween(duration, easing = LinearEasing))
+            offset.snapTo(0f)
             count++
+            if (count < iterations) delay(repeatDelayMillis.toLong())
         }
         offset.snapTo(0f)
     }

@@ -98,7 +98,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             return
         }
 
-        if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop) {
+        if ((DeviceUtils.isTvDevice || DeviceUtils.isDesktop) && !isInMultiWindowMode) {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
             insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())

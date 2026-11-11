@@ -174,7 +174,7 @@ class SplashActivity : AppCompatActivity() {
             }
         })
 
-        if (DeviceUtils.isBigScreenLayout) {
+        if (DeviceUtils.isBigScreenLayout && !isInMultiWindowMode) {
             window.decorView.post {
                 requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }

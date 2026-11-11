@@ -3,7 +3,7 @@ package com.livetvpro.app.ui.home
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import com.livetvpro.app.ui.components.SafeMarqueeText
+import com.livetvpro.app.ui.components.marqueeIf
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -251,17 +251,18 @@ private fun CategoryCard(
                 }
             }
 
-            SafeMarqueeText(
+            Text(
                 text = category.name,
+                maxLines = 1,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 overflow = TextOverflow.Clip,
-                iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .marqueeIf(!isTvDevice || hasFocus)
                     .padding(top = 6.dp),
             )
         }

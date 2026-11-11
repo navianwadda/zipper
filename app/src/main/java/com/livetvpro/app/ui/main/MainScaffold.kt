@@ -16,7 +16,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import com.livetvpro.app.ui.components.SafeMarqueeText
+import com.livetvpro.app.ui.components.marqueeIf
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -594,8 +594,10 @@ private fun PhoneTopBar(
                 enter    = fadeIn(tween(120)),
                 exit     = fadeOut(tween(80)),
             ) {
-                SafeMarqueeText(
+                Text(
                     text       = title,
+                    maxLines = 1,
+                    modifier = Modifier.marqueeIf(true),
                     color      = onSurface,
                     fontSize   = 19.sp,
                     fontWeight = FontWeight.Bold,

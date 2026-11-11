@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import com.livetvpro.app.ui.components.SafeMarqueeText
+import com.livetvpro.app.ui.components.marqueeIf
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.LocalIndication
@@ -359,17 +359,18 @@ private fun FavoriteCard(
                 }
             }
 
-            SafeMarqueeText(
+            Text(
                 text = favorite.name,
+                maxLines = 1,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 overflow = TextOverflow.Clip,
-                iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .marqueeIf(!isTvDevice || hasFocus)
                     .padding(top = 6.dp),
             )
         }

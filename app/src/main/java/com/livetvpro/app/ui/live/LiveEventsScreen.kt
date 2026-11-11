@@ -8,7 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import com.livetvpro.app.ui.components.SafeMarqueeText
+import com.livetvpro.app.ui.components.marqueeIf
 import androidx.compose.foundation.border
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
@@ -473,17 +473,18 @@ private fun CategoryChip(
             }
         }
         Spacer(modifier = Modifier.height(2.dp))
-        SafeMarqueeText(
+        Text(
             text = category.name,
+            maxLines = 1,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             fontFamily = BergenSans,
             color = if (isSelected) liveRed else MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
-            iterations = Int.MAX_VALUE,
             modifier = Modifier
-                .width(52.dp),
+                .width(52.dp)
+                .marqueeIf(true),
         )
     }
 }
@@ -624,15 +625,17 @@ fun LiveEventCard(
                             .fallback(appIconRes)
                     }
                     Spacer(modifier = Modifier.width(6.dp))
-                    SafeMarqueeText(
+                    Text(
                         text = event.league ?: "Unknown League",
+                        maxLines = 1,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         fontFamily = BergenSans,
                         color = MaterialTheme.colorScheme.onSurface,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
-                            .weight(1f),
+                            .weight(1f)
+                            .marqueeIf(true),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     val categoryLabel = event.category.ifEmpty {
@@ -1115,17 +1118,18 @@ fun BannerEventCard(
                     }
                     Spacer(modifier = Modifier.width((8f * s).dp))
                 }
-                SafeMarqueeText(
+                Text(
                     text = "$categoryLabel | $titleText",
+                    maxLines = 1,
                     fontSize = (12f * s).sp,
                     lineHeight = (14f * s).sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = BergenSans,
                     color = MaterialTheme.colorScheme.onSurface,
                     overflow = TextOverflow.Ellipsis,
-                    iterations = Int.MAX_VALUE,
                     modifier = Modifier
-                        .weight(1f),
+                        .weight(1f)
+                        .marqueeIf(true),
                 )
                 if (status == EventStatus.LIVE) {
                     Spacer(modifier = Modifier.width(8.dp))

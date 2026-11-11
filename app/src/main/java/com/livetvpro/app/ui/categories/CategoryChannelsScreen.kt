@@ -8,7 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import com.livetvpro.app.ui.components.SafeMarqueeText
+import com.livetvpro.app.ui.components.marqueeIf
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -40,8 +41,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -209,12 +209,12 @@ fun CategoryChannelsScreen(
                         )
                     }
                 }
-                val tabScrollState = rememberScrollState()
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .horizontalScroll(tabScrollState),
-                    verticalAlignment = Alignment.CenterVertically,
+                ScrollableTabRow(
+                    selectedTabIndex = selectedIndex,
+                    edgePadding = 0.dp,
+                    modifier = Modifier.weight(1f),
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 ) {
                     categoryGroups.forEachIndexed { index, group ->
                         Tab(
@@ -227,6 +227,9 @@ fun CategoryChannelsScreen(
                                     text = group,
                                     fontFamily = BergenSans,
                                     fontSize = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.widthIn(max = 220.dp),
                                     color = if (index == selectedIndex)
                                         MaterialTheme.colorScheme.onSurface
                                     else
@@ -411,17 +414,18 @@ private fun ChannelCard(
                 }
             }
 
-            SafeMarqueeText(
+            Text(
                 text = channel.name,
+                maxLines = 1,
                 fontFamily = BergenSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 overflow = TextOverflow.Clip,
-                iterations = if (!isTvDevice || hasFocus) Int.MAX_VALUE else 0,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .marqueeIf(!isTvDevice || hasFocus)
                     .padding(top = 6.dp),
             )
         }

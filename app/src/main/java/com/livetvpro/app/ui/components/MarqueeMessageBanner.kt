@@ -73,12 +73,12 @@ fun MarqueeMessageBanner(
                     .fillMaxHeight(),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                SafeMarqueeText(
+                Text(
                     text = text,
-                    iterations = Int.MAX_VALUE,
-                    velocity = 60.dp,
+                    maxLines = 1,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .marqueeIf(true, velocity = 60.dp)
                         .padding(start = 8.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     fontFamily = BergenSans,

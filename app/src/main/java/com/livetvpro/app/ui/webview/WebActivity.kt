@@ -187,7 +187,12 @@ class WebActivity : AppCompatActivity() {
 
         customTabLaunched = true
         customTabLaunchTimeMs = System.currentTimeMillis()
-        launchCustomTab(url, inApp)
+        val launched = launchCustomTab(url, inApp)
+        if (!launched) {
+            usingCustomTabs = false
+            launchWebView(url, durationSeconds, hideAdContent = false)
+            return
+        }
 
         Handler(Looper.getMainLooper()).postDelayed({
             TimerService.start(this, durationSeconds)
@@ -195,7 +200,7 @@ class WebActivity : AppCompatActivity() {
         }, 3000L)
     }
 
-    private fun launchCustomTab(url: String, inApp: Boolean = false) {
+    private fun launchCustomTab(url: String, inApp: Boolean = false): Boolean {
         val colorSchemeParams = CustomTabColorSchemeParams.Builder()
             .setToolbarColor(Color.parseColor("#CC000000"))
             .build()
@@ -210,7 +215,12 @@ class WebActivity : AppCompatActivity() {
         if (!inApp) {
             customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        customTabsIntent.launchUrl(this, Uri.parse(url))
+        return try {
+            customTabsIntent.launchUrl(this, Uri.parse(url))
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun onCustomTabTimerFinished() {

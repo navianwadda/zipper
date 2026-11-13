@@ -49,16 +49,16 @@ class LiveTVProApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        try {
-            ProviderInstaller.installIfNeeded(this)
-        } catch (e: Exception) {
-        }
         CrashLogger.install(this)
         DeviceUtils.init(this)
         CastManager.init(this)
         FloatingPlayerManager.initialize(preferencesManager)
 
         applicationScope.launch {
+            try {
+                ProviderInstaller.installIfNeeded(this@LiveTVProApplication)
+            } catch (e: Exception) {
+            }
             try {
                 dataRepository.fetchRemoteConfig()
             } catch (e: Exception) {

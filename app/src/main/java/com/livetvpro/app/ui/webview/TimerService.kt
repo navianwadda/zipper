@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -52,7 +53,11 @@ class TimerService : Service() {
         fun start(context: Context, durationSeconds: Long) {
             val intent = Intent(context, TimerService::class.java)
                 .putExtra(EXTRA_DURATION, durationSeconds)
-            context.startForegroundService(intent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
         }
 
         fun pause(context: Context) {
@@ -72,8 +77,10 @@ class TimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
-        startForeground(NOTIF_ID, buildNotification("Starting…"))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createNotificationChannel()
+            startForeground(NOTIF_ID, buildNotification("Starting…"))
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -111,11 +118,14 @@ class TimerService : Service() {
     override fun onDestroy() {
         stopped = true
         handler.removeCallbacks(tickRunnable)
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        }
         super.onDestroy()
     }
 
     private fun updateNotification(remaining: Long, paused: Boolean = false) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val text = when {
             paused          -> "Timer paused (${remaining}s remaining)"
             remaining > 0   -> "Please wait ${remaining}s…"
@@ -143,6 +153,7 @@ class TimerService : Service() {
     }
 
     private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             CHANNEL_ID,
             "Ad Timer",

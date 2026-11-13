@@ -68,6 +68,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
@@ -209,10 +210,11 @@ fun CategoryChannelsScreen(
                         )
                     }
                 }
+                val screenWidth = LocalConfiguration.current.screenWidthDp.dp
                 ScrollableTabRow(
                     selectedTabIndex = selectedIndex,
                     edgePadding = 0.dp,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).widthIn(max = screenWidth),
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 ) {

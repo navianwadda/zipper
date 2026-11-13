@@ -131,7 +131,12 @@ object RedirectHelper {
                     putExtra("extra_external_browser", listenerMgr.isExternalBrowserEnabled())
                 }
                 pendingPostDialogAction = onAfterDialog
-                launcher.launch(intent)
+                try {
+                    launcher.launch(intent)
+                } catch (_: IllegalStateException) {
+                    dialogShowing = false
+                    pendingPostDialogAction = null
+                }
             },
             onCancel = {
                 dialogShowing = false

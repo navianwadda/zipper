@@ -168,13 +168,13 @@ fun SettingsScreen(
         item {
             SettingsCard(icon = R.drawable.ic_contact, label = "Contact") {
                 val url = listenerManager.getContactUrl().takeIf { it.isNotBlank() }
-                if (url != null) context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                if (url != null) try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (_: Exception) { }
             }
         }
         item {
             SettingsCard(icon = R.drawable.ic_website, label = "Website") {
                 val url = listenerManager.getWebUrl().takeIf { it.isNotBlank() }
-                if (url != null) context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                if (url != null) try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (_: Exception) { }
             }
         }
         item {

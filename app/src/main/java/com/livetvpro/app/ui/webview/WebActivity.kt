@@ -194,8 +194,8 @@ class WebActivity : AppCompatActivity() {
             return
         }
 
+        TimerService.start(this, durationSeconds)
         Handler(Looper.getMainLooper()).postDelayed({
-            TimerService.start(this, durationSeconds)
             Toast.makeText(this, "Ad started. Please wait ${durationSeconds}s…", Toast.LENGTH_LONG).show()
         }, 3000L)
     }

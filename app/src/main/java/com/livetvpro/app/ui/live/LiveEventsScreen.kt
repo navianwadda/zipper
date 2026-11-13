@@ -209,7 +209,9 @@ fun LiveEventsScreen(
                 enabled = messageBannerUrl.isNotBlank(),
                 onClick = {
                     if (messageBannerUrl.isNotBlank()) {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(messageBannerUrl)))
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(messageBannerUrl)))
+                        } catch (_: Exception) { }
                     }
                 },
             )

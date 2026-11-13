@@ -239,6 +239,7 @@ class WebActivity : AppCompatActivity() {
     private fun launchWebView(url: String, durationSeconds: Long, hideAdContent: Boolean = true) {
         val dp   = resources.displayMetrics.density
         val root = FrameLayout(this)
+        setContentView(root)
 
         val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false
@@ -286,6 +287,7 @@ class WebActivity : AppCompatActivity() {
             post { requestFocus() }
         }
 
+        Handler(Looper.getMainLooper()).post {
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
 
@@ -421,7 +423,6 @@ class WebActivity : AppCompatActivity() {
         root.addView(progressBar)
         root.addView(timerLabel)
         root.addView(closeBtn)
-        setContentView(root)
 
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val statusBarTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
@@ -434,6 +435,7 @@ class WebActivity : AppCompatActivity() {
             (closeBtn.layoutParams as FrameLayout.LayoutParams).topMargin = statusBarTop
             closeBtn.requestLayout()
             insets
+        }
         }
     }
 

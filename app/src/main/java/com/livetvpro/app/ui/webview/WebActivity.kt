@@ -121,17 +121,14 @@ class WebActivity : AppCompatActivity() {
 
         when {
             externalBrowser && isCustomTabsSupported(this) -> {
-                // External Custom Tabs — hideAdContent ignored, content always visible
                 usingCustomTabs = true
                 startCustomTabFlow(url, durationSeconds, inApp = false)
             }
             !hideAdContent && isCustomTabsSupported(this) -> {
-                // In-app Custom Tabs — content visible, stays in app stack
                 usingCustomTabs = true
                 startCustomTabFlow(url, durationSeconds, inApp = true)
             }
             else -> {
-                // In-app WebView — blur applied when hideAdContent = true
                 launchWebView(url, durationSeconds, hideAdContent)
             }
         }
@@ -180,6 +177,7 @@ class WebActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun startCustomTabFlow(url: String, durationSeconds: Long, inApp: Boolean = false) {
         customTabDurationSeconds = durationSeconds
         customTabStartTimeMs     = System.currentTimeMillis()
@@ -287,7 +285,6 @@ class WebActivity : AppCompatActivity() {
             post { requestFocus() }
         }
 
-        Handler(Looper.getMainLooper()).post {
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
 
@@ -359,15 +356,19 @@ class WebActivity : AppCompatActivity() {
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
                                 view.loadUrl(request.url.toString())
-                                (v.parent as? android.view.ViewGroup)?.removeView(v)
-                                v.destroy()
+                                v.post {
+                                    (v.parent as? android.view.ViewGroup)?.removeView(v)
+                                    v.destroy()
+                                }
                                 return true
                             }
                             override fun onPageStarted(v: WebView, url: String, favicon: Bitmap?) {
                                 if (url != "about:blank") {
                                     view.loadUrl(url)
-                                    (v.parent as? android.view.ViewGroup)?.removeView(v)
-                                    v.destroy()
+                                    v.post {
+                                        (v.parent as? android.view.ViewGroup)?.removeView(v)
+                                        v.destroy()
+                                    }
                                 }
                             }
                         }
@@ -435,7 +436,6 @@ class WebActivity : AppCompatActivity() {
             (closeBtn.layoutParams as FrameLayout.LayoutParams).topMargin = statusBarTop
             closeBtn.requestLayout()
             insets
-        }
         }
     }
 

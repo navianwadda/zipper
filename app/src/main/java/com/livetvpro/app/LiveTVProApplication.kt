@@ -11,6 +11,8 @@ import com.livetvpro.app.cast.CastManager
 import com.livetvpro.app.utils.CrashLogger
 import com.livetvpro.app.utils.DeviceUtils
 import com.livetvpro.app.utils.FloatingPlayerManager
+import android.os.Handler
+import android.os.Looper
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,8 +53,8 @@ class LiveTVProApplication : Application() {
         super.onCreate()
         CrashLogger.install(this)
         DeviceUtils.init(this)
-        CastManager.init(this)
         FloatingPlayerManager.initialize(preferencesManager)
+        Handler(Looper.getMainLooper()).post { CastManager.init(this) }
 
         applicationScope.launch {
             try {

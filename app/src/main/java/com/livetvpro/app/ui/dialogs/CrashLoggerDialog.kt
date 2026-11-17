@@ -222,7 +222,7 @@ private fun shareReport(context: Context, report: String) {
 
 private fun saveReport(context: Context, report: String) {
     try {
-        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
         val file = File(dir, "crash_report_${System.currentTimeMillis()}.txt")
         file.writeText(report)
         Toast.makeText(context, "Saved to Downloads/${file.name}", Toast.LENGTH_LONG).show()

@@ -738,21 +738,37 @@ class PlayerActivity : ComponentActivity() {
         resizeMode: Int,
         modifier: Modifier = Modifier,
     ) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    useController = false
-                    setBackgroundColor(android.graphics.Color.BLACK)
-
-                    setShutterBackgroundColor(android.graphics.Color.BLACK)
-                }
-            },
-            update = { view ->
-                view.player     = player
-                view.resizeMode = resizeMode
-            },
-            modifier = modifier,
-        )
+        // Use `key(player)` so Compose recreates the PlayerView when the player
+        // instance changes instead of calling update() on the live view.  On
+        // Fire TV / Android 8.x the ThreadedRenderer may be mid-traversal when
+        // update() tries to swap the player, which detaches the inner
+        // SurfaceView and causes a NullPointerException in
+        // ViewGroup.dispatchGetDisplayList (mViewFlags read on null View).
+        // Recreating the host view avoids that race entirely.
+        key(player) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        useController = false
+                        setBackgroundColor(android.graphics.Color.BLACK)
+                        setShutterBackgroundColor(android.graphics.Color.BLACK)
+                        this.player = player
+                        this.resizeMode = resizeMode
+                    }
+                },
+                update = { view ->
+                    // resizeMode can change without a player swap; keep synced.
+                    view.resizeMode = resizeMode
+                },
+                onReset = { view ->
+                    // Null the player before Compose removes the view from the
+                    // hierarchy; prevents the render thread from traversing a
+                    // detached SurfaceView on Android 8.x (Fire TV).
+                    view.player = null
+                },
+                modifier = modifier,
+            )
+        }
     }
     @Composable
     private fun ErrorOverlay(message: String) {

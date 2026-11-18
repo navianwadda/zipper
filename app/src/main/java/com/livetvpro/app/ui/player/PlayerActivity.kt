@@ -785,6 +785,7 @@ class PlayerActivity : ComponentActivity() {
         }
     }
     private fun setupWindowFlags(isLandscape: Boolean) {
+        if (isFinishing || isDestroyed) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes = window.attributes.apply {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -809,6 +810,7 @@ class PlayerActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
     private fun setupSystemUI() {
+        if (isFinishing || isDestroyed) return
         val isLandscape = DeviceUtils.isBigScreenLayout ||
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         windowInsetsController.apply {

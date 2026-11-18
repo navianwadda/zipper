@@ -314,7 +314,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             }
         }
 
-        window.decorView.post { handleNotificationIntent(intent) }
+        window.decorView.post { if (!isFinishing && !isDestroyed) handleNotificationIntent(intent) }
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -338,6 +338,7 @@ class MainActivity : AppCompatActivity(), SettingsActions {
     }
 
     private fun restoreSystemBars() {
+        if (isFinishing || isDestroyed) return
         val controller = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
         if (DeviceUtils.isTvDevice || DeviceUtils.isDesktop) {
             controller.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
@@ -345,7 +346,6 @@ class MainActivity : AppCompatActivity(), SettingsActions {
             controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
         androidx.core.view.ViewCompat.requestApplyInsets(window.decorView)
-        window.decorView.post { androidx.core.view.ViewCompat.requestApplyInsets(window.decorView) }
     }
 
     override fun onNewIntent(intent: Intent) {

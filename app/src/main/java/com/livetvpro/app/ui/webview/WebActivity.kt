@@ -129,6 +129,17 @@ class WebActivity : AppCompatActivity() {
                 startCustomTabFlow(url, durationSeconds, inApp = true)
             }
             else -> {
+                if (!isWebViewAvailable()) {
+                    if (isCustomTabsSupported(this)) {
+                        usingCustomTabs = true
+                        startCustomTabFlow(url, durationSeconds, inApp = true)
+                    } else {
+                        Toast.makeText(this, "WebView is not available on this device", Toast.LENGTH_LONG).show()
+                        setResult(RESULT_CANCELED)
+                        finish()
+                    }
+                    return
+                }
                 launchWebView(url, durationSeconds, hideAdContent)
             }
         }
@@ -288,6 +299,7 @@ class WebActivity : AppCompatActivity() {
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
 
+        val userAgent = buildUserAgent()
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -316,7 +328,7 @@ class WebActivity : AppCompatActivity() {
                 mediaPlaybackRequiresUserGesture = false
                 javaScriptCanOpenWindowsAutomatically = true
                 setGeolocationEnabled(true)
-                userAgentString = buildUserAgent()
+                userAgentString = userAgent
             }
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -472,6 +484,15 @@ class WebActivity : AppCompatActivity() {
         if (!System.getProperty("http.proxyHost").isNullOrEmpty()) return true
         if (!System.getProperty("https.proxyHost").isNullOrEmpty()) return true
         return false
+    }
+
+    private fun isWebViewAvailable(): Boolean {
+        return try {
+            android.webkit.WebView(this).destroy()
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun hasInternet(): Boolean {

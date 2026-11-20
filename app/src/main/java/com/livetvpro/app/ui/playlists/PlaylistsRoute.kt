@@ -1,6 +1,7 @@
 package com.livetvpro.app.ui.playlists
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -50,7 +51,11 @@ fun PlaylistsRoute(navController: NavController) {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "*/*"
             }
-            filePickerLauncher.launch(intent)
+            try {
+                filePickerLauncher.launch(intent)
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(context, "No file manager app found on this device", Toast.LENGTH_SHORT).show()
+            }
         },
         pendingFileUri = if (showFileDialog) pendingFileUri else null,
         onFileDialogDismissed = {

@@ -43,6 +43,7 @@ import com.livetvpro.app.MainActivity
 class WebActivity : AppCompatActivity() {
 
     private var webView: WebView? = null
+    private val popupWebViews = mutableListOf<WebView>()
     private var countDownTimer: CountDownTimer? = null
     private var pageLoaded = false
     private var timerStarted = false
@@ -169,6 +170,8 @@ class WebActivity : AppCompatActivity() {
         webView?.stopLoading()
         webView?.destroy()
         webView = null
+        popupWebViews.forEach { it.stopLoading(); it.destroy() }
+        popupWebViews.clear()
     }
 
     override fun onBackPressed() {
@@ -368,27 +371,23 @@ class WebActivity : AppCompatActivity() {
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
                                 view.loadUrl(request.url.toString())
-                                v.post {
-                                    (v.parent as? android.view.ViewGroup)?.removeView(v)
-                                    v.destroy()
-                                }
                                 return true
                             }
                             override fun onPageStarted(v: WebView, url: String, favicon: Bitmap?) {
                                 if (url != "about:blank") {
                                     view.loadUrl(url)
-                                    v.post {
-                                        (v.parent as? android.view.ViewGroup)?.removeView(v)
-                                        v.destroy()
-                                    }
                                 }
                             }
                         }
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onCloseWindow(window: WebView) {
+                                window.stopLoading()
+                                window.destroy()
+                                popupWebViews.remove(window)
+                            }
+                        }
                     }
-                    (view.parent as? android.view.ViewGroup)?.addView(
-                        newWebView,
-                        android.view.ViewGroup.LayoutParams(0, 0)
-                    )
+                    popupWebViews.add(newWebView)
                     transport.webView = newWebView
                     resultMsg.sendToTarget()
                     return true

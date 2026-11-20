@@ -275,47 +275,36 @@ object M3uParser {
                 connection.inputStream
             }
             val reader = BufferedReader(InputStreamReader(inputStream))
-            val content = reader.readText()
-            reader.close()
-            connection.disconnect()
 
-            android.util.Log.d("M3uParser", "Content length: ${content.length} bytes")
-            if (content.isNotEmpty()) {
-                android.util.Log.d("M3uParser", "First 200 chars: ${content.take(200)}")
-            }
-
-            if (content.isBlank()) {
+            val firstLine = reader.readLine()?.trim()
+            if (firstLine == null) {
+                reader.close()
+                connection.disconnect()
                 android.util.Log.e("M3uParser", "Empty response from server")
                 return emptyList()
             }
 
-            val trimmedContent = content.trim()
-
-            if (trimmedContent.startsWith("[") || trimmedContent.startsWith("{")) {
+            if (firstLine.startsWith("[") || firstLine.startsWith("{")) {
                 android.util.Log.d("M3uParser", "Detected JSON format")
-                return parseJsonPlaylist(trimmedContent)
+                val sb = StringBuilder(firstLine)
+                reader.forEachLine { sb.append('\n').append(it) }
+                reader.close()
+                connection.disconnect()
+                return parseJsonPlaylist(sb.toString())
             }
 
-            val hasM3uMarkers = trimmedContent.contains("#EXTM3U", ignoreCase = true) ||
-                    trimmedContent.contains("#EXTINF", ignoreCase = true)
-
-            if (!hasM3uMarkers &&
-                (trimmedContent.startsWith("<!DOCTYPE", ignoreCase = true) ||
-                 trimmedContent.startsWith("<html", ignoreCase = true) ||
-                 trimmedContent.startsWith("<?xml", ignoreCase = true))) {
+            if (firstLine.startsWith("<!DOCTYPE", ignoreCase = true) ||
+                firstLine.startsWith("<html", ignoreCase = true) ||
+                firstLine.startsWith("<?xml", ignoreCase = true)) {
                 android.util.Log.e("M3uParser", "Server returned HTML/XML instead of M3U playlist")
-                android.util.Log.e("M3uParser", "Response preview: ${content.take(500)}")
+                reader.close()
+                connection.disconnect()
                 return emptyList()
             }
 
-            if (!trimmedContent.contains("#EXTM3U", ignoreCase = true) &&
-                !trimmedContent.contains("#EXTINF", ignoreCase = true) &&
-                !trimmedContent.startsWith("http", ignoreCase = true)) {
-                android.util.Log.w("M3uParser", "Content doesn't look like standard M3U format")
-                android.util.Log.w("M3uParser", "Content preview: ${content.take(300)}")
-            }
-
-            val channels = parseM3uContent(stripLeadingJunk(content))
+            val channels = parseM3uFromReader(reader, firstLine)
+            reader.close()
+            connection.disconnect()
             android.util.Log.d("M3uParser", "Successfully parsed ${channels.size} channels (UA: $userAgent)")
 
             if (channels.isEmpty()) {
@@ -451,6 +440,196 @@ object M3uParser {
         } catch (e: Exception) {
             android.util.Log.e("M3uParser", "Failed to parse JSON playlist: ${e.message}", e)
         }
+        return channels
+    }
+
+    private fun parseM3uFromReader(reader: BufferedReader, firstLine: String): List<M3uChannel> {
+        val channels = ArrayList<M3uChannel>(1024)
+
+        var currentName      = ""
+        var currentLogo      = ""
+        var currentGroup     = ""
+        var currentUserAgent: String? = null
+        var currentHeaders   = mutableMapOf<String, String>()
+        var currentDrmScheme: String? = null
+        var currentDrmKeyId: String?  = null
+        var currentDrmKey: String?    = null
+        var currentDrmLicenseUrl: String? = null
+
+        var foundStart = false
+
+        fun processLine(raw: String) {
+            var trimmedLine = raw.trim()
+            if (trimmedLine.isEmpty()) return
+
+            if (!foundStart) {
+                if (trimmedLine.startsWith("#EXTM3U", ignoreCase = true) ||
+                    trimmedLine.startsWith("#EXTINF", ignoreCase = true) ||
+                    trimmedLine.startsWith("http", ignoreCase = true)) {
+                    foundStart = true
+                } else {
+                    return
+                }
+            }
+
+            if (trimmedLine.startsWith("#EXTM3U")) return
+
+            if (trimmedLine.startsWith("KODIPROP:") ||
+                trimmedLine.startsWith("EXTVLCOPT:") ||
+                trimmedLine.startsWith("EXTINF:") ||
+                trimmedLine.startsWith("EXTHTTP:")) {
+                trimmedLine = "#$trimmedLine"
+            }
+
+            when {
+                trimmedLine.startsWith("#KODIPROP:inputstream.adaptive.license_type=") -> {
+                    val rawScheme = trimmedLine.substringAfter("=").trim().lowercase()
+                    currentDrmScheme = normalizeDrmScheme(rawScheme)
+                }
+                trimmedLine.startsWith("#KODIPROP:inputstream.adaptive.license_key=") -> {
+                    val keyValue = trimmedLine.substringAfter("=").trim()
+                    when {
+                        keyValue.startsWith("http://", ignoreCase = true) ||
+                        keyValue.startsWith("https://", ignoreCase = true) -> {
+                            currentDrmKeyId = keyValue
+                            currentDrmKey   = "LICENSE_URL"
+                        }
+                        keyValue.startsWith("{") && parseBraceKeyPairs(keyValue).isNotEmpty() -> {
+                            val pairs = parseBraceKeyPairs(keyValue)
+                            if (pairs.size == 1) {
+                                currentDrmKeyId      = pairs[0].first
+                                currentDrmKey        = pairs[0].second
+                                currentDrmLicenseUrl = null
+                            } else {
+                                currentDrmKeyId      = null
+                                currentDrmKey        = null
+                                currentDrmLicenseUrl = pairsToJwk(pairs)
+                            }
+                        }
+                        keyValue.startsWith("{") -> {
+                            try {
+                                val json = org.json.JSONObject(keyValue)
+                                val keysArray = json.optJSONArray("keys")
+                                if (keysArray != null && keysArray.length() > 1) {
+                                    currentDrmKeyId = null
+                                    currentDrmKey   = null
+                                    currentDrmLicenseUrl = keyValue
+                                } else {
+                                    val (keyId, key) = parseJWKToKeyIdPair(keyValue)
+                                    if (keyId != null && key != null) {
+                                        currentDrmKeyId      = keyId
+                                        currentDrmKey        = key
+                                        currentDrmLicenseUrl = null
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                val (keyId, key) = parseJWKToKeyIdPair(keyValue)
+                                if (keyId != null && key != null) {
+                                    currentDrmKeyId = keyId
+                                    currentDrmKey   = key
+                                }
+                            }
+                        }
+                        keyValue.contains(":") -> {
+                            val pairs = parseClearKeyPairs(keyValue)
+                            when {
+                                pairs.size == 1 -> {
+                                    currentDrmKeyId = pairs[0].first
+                                    currentDrmKey   = pairs[0].second
+                                }
+                                pairs.size > 1 -> {
+                                    currentDrmKeyId      = null
+                                    currentDrmKey        = null
+                                    currentDrmLicenseUrl = pairsToJwk(pairs)
+                                }
+                            }
+                        }
+                    }
+                    if (currentDrmScheme == null) currentDrmScheme = "clearkey"
+                }
+                trimmedLine.startsWith("#EXTINF:") -> {
+                    if (currentName.isNotEmpty()) {
+                        currentUserAgent     = null
+                        currentHeaders       = mutableMapOf()
+                        currentDrmScheme     = null
+                        currentDrmKeyId      = null
+                        currentDrmKey        = null
+                        currentDrmLicenseUrl = null
+                    }
+                    currentName  = extractChannelName(trimmedLine)
+                    currentLogo  = extractAttribute(trimmedLine, "tvg-logo")
+                    currentGroup = extractAttribute(trimmedLine, "group-title")
+                }
+                trimmedLine.startsWith("#EXTVLCOPT:http-user-agent=") -> {
+                    currentUserAgent = trimmedLine.substringAfter("=").trim()
+                }
+                trimmedLine.startsWith("#EXTVLCOPT:http-origin=") -> {
+                    currentHeaders["Origin"] = trimmedLine.substringAfter("=").trim()
+                }
+                trimmedLine.startsWith("#EXTVLCOPT:http-referrer=") -> {
+                    currentHeaders["Referer"] = trimmedLine.substringAfter("=").trim()
+                }
+                trimmedLine.startsWith("#EXTVLCOPT:http-cookie=") -> {
+                    currentHeaders["Cookie"] = trimmedLine.substringAfter("=").trim()
+                }
+                trimmedLine.startsWith("#EXTVLCOPT:http-header-add=") -> {
+                    val raw2 = trimmedLine.substringAfter("=").trim()
+                    val colonIdx = raw2.indexOf(':')
+                    if (colonIdx != -1) {
+                        currentHeaders[raw2.substring(0, colonIdx).trim()] = raw2.substring(colonIdx + 1).trim()
+                    }
+                }
+                trimmedLine.startsWith("#EXTHTTP:") -> {
+                    try {
+                        val jsonPart = trimmedLine.substringAfter("#EXTHTTP:").trim()
+                        if (jsonPart.startsWith("{")) {
+                            val json = JSONObject(jsonPart)
+                            json.keys().forEach { key ->
+                                val value = json.optString(key, "")
+                                when (key.lowercase()) {
+                                    "cookie"             -> currentHeaders["Cookie"] = value
+                                    "user-agent"         -> currentUserAgent = value
+                                    "referer","referrer" -> currentHeaders["Referer"] = value
+                                    "origin"             -> currentHeaders["Origin"] = value
+                                    else                 -> currentHeaders[key] = value
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {}
+                }
+                !trimmedLine.startsWith("#") -> {
+                    if (currentName.isNotEmpty() && trimmedLine.contains("://")) {
+                        val (streamUrl, inlineHeaders, inlineDrmInfo) = parseInlineMetadata(trimmedLine)
+                        val finalHeaders = currentHeaders.toMutableMap()
+                        finalHeaders.putAll(inlineHeaders)
+                        channels.add(M3uChannel(
+                            name          = currentName,
+                            logoUrl       = currentLogo,
+                            streamUrl     = streamUrl,
+                            groupTitle    = currentGroup,
+                            userAgent     = currentUserAgent,
+                            httpHeaders   = finalHeaders,
+                            drmScheme     = inlineDrmInfo.first  ?: currentDrmScheme,
+                            drmKeyId      = inlineDrmInfo.second ?: currentDrmKeyId,
+                            drmKey        = inlineDrmInfo.third  ?: currentDrmKey,
+                            drmLicenseUrl = currentDrmLicenseUrl,
+                        ))
+                        currentDrmScheme     = null
+                        currentDrmKeyId      = null
+                        currentDrmKey        = null
+                        currentDrmLicenseUrl = null
+                        currentUserAgent     = null
+                        currentHeaders       = mutableMapOf()
+                        currentName          = ""
+                        currentLogo          = ""
+                        currentGroup         = ""
+                    }
+                }
+            }
+        }
+
+        processLine(firstLine)
+        reader.forEachLine { processLine(it) }
         return channels
     }
 

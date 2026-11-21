@@ -19,6 +19,7 @@ import com.livetvpro.app.ui.appearance.SwitchPreferenceCard
 fun PlaybackScreen(preferencesManager: PreferencesManager) {
 
     var volumeBoosting by remember { mutableStateOf(preferencesManager.isVolumeBoostingEnabled()) }
+    var holdSpeed by remember { mutableStateOf(preferencesManager.isHoldSpeedEnabled()) }
     var autoSwitchStream by remember { mutableStateOf(preferencesManager.isAutoSwitchStreamEnabled()) }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -33,6 +34,22 @@ fun PlaybackScreen(preferencesManager: PreferencesManager) {
                     onCheckedChange = {
                         volumeBoosting = it
                         preferencesManager.setVolumeBoostingEnabled(it)
+                    },
+            )
+        }
+
+        item { Spacer(modifier = Modifier.height(24.dp)) }
+
+        item { PreferenceSectionHeader(title = "Gestures") }
+
+        item {
+            SwitchPreferenceCard(
+                    title   = "Hold to play at 2x speed",
+                    summary = "Press and hold anywhere on the player to play at 2x speed, release to return to normal",
+                    checked = holdSpeed,
+                    onCheckedChange = {
+                        holdSpeed = it
+                        preferencesManager.setHoldSpeedEnabled(it)
                     },
             )
         }

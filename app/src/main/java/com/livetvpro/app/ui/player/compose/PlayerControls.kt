@@ -380,7 +380,7 @@ fun PlayerControls(
         )
         HoldSpeedOsd(
             visible  = isHoldingSpeed,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 24.dp),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 14.dp),
         )
         BrightnessOsd(
             visible    = showBrightnessOsd,

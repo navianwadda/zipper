@@ -158,6 +158,8 @@ fun PlayerControls(
     initialVolume: Int = 100,
     initialBrightness: Int = 0,
     volumeBoostEnabled: Boolean = false,
+    holdSpeedEnabled: Boolean = false,
+    onHoldSpeedChange: (Boolean) -> Unit = {},
     showCastButton: Boolean = false,
     isCastConnected: Boolean = false,
     onCastClick: () -> Unit = {},
@@ -169,6 +171,7 @@ fun PlayerControls(
     var gestureBrightness by remember { mutableIntStateOf(initialBrightness) }
     var showVolumeOsd     by remember { mutableStateOf(false) }
     var showBrightnessOsd by remember { mutableStateOf(false) }
+    var isHoldingSpeed    by remember { mutableStateOf(false) }
 
     var isTvFocusWithinControls    by remember { mutableStateOf(false) }
     var isMouseHoverWithinControls by remember { mutableStateOf(false) }
@@ -211,6 +214,8 @@ fun PlayerControls(
                 ),
                 isLocked            = state.isLocked,
                 maxVolumePercent    = if (volumeBoostEnabled) 200 else 100,
+                holdSpeedEnabled    = holdSpeedEnabled,
+                onHoldSpeedChange   = { h -> isHoldingSpeed = h; onHoldSpeedChange(h) },
                 onVolumeChange      = { v -> gestureVolume = v; onVolumeSwipe(v) },
                 onBrightnessChange  = { b -> gestureBrightness = b; onBrightnessSwipe(b) },
                 onTap               = { state.show(scope) },
@@ -372,6 +377,10 @@ fun PlayerControls(
             visible  = showVolumeOsd,
             volume   = gestureVolume,
             modifier = Modifier.align(Alignment.Center),
+        )
+        HoldSpeedOsd(
+            visible  = isHoldingSpeed,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 24.dp),
         )
         BrightnessOsd(
             visible    = showBrightnessOsd,

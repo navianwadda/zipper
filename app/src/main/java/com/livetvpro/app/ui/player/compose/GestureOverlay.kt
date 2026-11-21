@@ -184,15 +184,29 @@ fun HoldSpeedOsd(visible: Boolean, modifier: Modifier = Modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .background(Color(0xFF1F1F1F).copy(alpha = 0.82f), RoundedCornerShape(20.dp))
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(50))
+                .padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
             Text(
-                text       = "2x  \u25B6\u25B6",
+                text       = "2x",
                 color      = Color.White,
-                fontSize   = 16.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontSize   = 13.sp,
+                fontWeight = FontWeight.Medium,
             )
+            Spacer(Modifier.width(4.dp))
+            androidx.compose.foundation.Canvas(modifier = Modifier.size(width = 14.dp, height = 10.dp)) {
+                val tw = size.width * 0.5f
+                for (i in 0..1) {
+                    val x = i * tw
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(x, 0f)
+                        lineTo(x + tw, size.height / 2f)
+                        lineTo(x, size.height)
+                        close()
+                    }
+                    drawPath(path, Color.White)
+                }
+            }
         }
     }
 }

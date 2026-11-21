@@ -34,6 +34,8 @@ fun GestureOverlay(
     pixelsPerPercent: Float = 8f,
     isLocked: Boolean = false,
     maxVolumePercent: Int = 100,
+    holdSpeedEnabled: Boolean = false,
+    onHoldSpeedChange: (Boolean) -> Unit = {},
     onVolumeChange: (Int) -> Unit = {},
     onBrightnessChange: (Int) -> Unit = {},
     onTap: () -> Unit = {},
@@ -45,6 +47,8 @@ fun GestureOverlay(
     var volumeAccum       by remember { mutableFloatStateOf(0f) }
     var brightnessAccum   by remember { mutableFloatStateOf(0f) }
     var totalWidth        by remember { mutableFloatStateOf(0f) }
+    val holdEnabled       by rememberUpdatedState(holdSpeedEnabled)
+    val holdCallback      by rememberUpdatedState(onHoldSpeedChange)
 
     Box(
         modifier = modifier
@@ -60,6 +64,36 @@ fun GestureOverlay(
 
                     if (zone == GestureZone.VOLUME)     volumeAccum     = 0f
                     if (zone == GestureZone.BRIGHTNESS) brightnessAccum = 0f
+
+                    if (holdEnabled && !isLocked) {
+                        val finished = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                            var done = false
+                            while (true) {
+                                val event  = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null) { done = true; break }
+                                if (!change.pressed) { onTap(); done = true; break }
+                                totalDy += -(change.position.y - change.previousPosition.y)
+                                if (abs(totalDy) > slopPx) { committed = true; break }
+                            }
+                            done
+                        }
+                        if (finished == true) return@awaitEachGesture
+                        if (finished == null) {
+                            holdCallback(true)
+                            try {
+                                while (true) {
+                                    val event  = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    change.consume()
+                                    if (!change.pressed) break
+                                }
+                            } finally {
+                                holdCallback(false)
+                            }
+                            return@awaitEachGesture
+                        }
+                    }
 
                     while (true) {
                         val event  = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -133,6 +167,30 @@ fun VolumeOsd(visible: Boolean, volume: Int, modifier: Modifier = Modifier) {
                 text       = "$volume%",
                 color      = if (isBoosted) Color(0xFFFF9800) else Color.White,
                 fontSize   = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+fun HoldSpeedOsd(visible: Boolean, modifier: Modifier = Modifier) {
+    AnimatedVisibility(
+        visible  = visible,
+        enter    = fadeIn(tween(120)),
+        exit     = fadeOut(tween(150)),
+        modifier = modifier,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .background(Color(0xFF1F1F1F).copy(alpha = 0.82f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text       = "2x  \u25B6\u25B6",
+                color      = Color.White,
+                fontSize   = 16.sp,
                 fontWeight = FontWeight.SemiBold,
             )
         }

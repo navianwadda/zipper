@@ -115,6 +115,18 @@ class PlayerActivity : ComponentActivity() {
 
     private var player: ExoPlayer? by mutableStateOf(null)
 
+    private var holdPrevSpeed = 1f
+
+    private fun setHoldSpeed(holding: Boolean) {
+        val p = player ?: return
+        if (holding) {
+            holdPrevSpeed = p.playbackParameters.speed
+            p.setPlaybackSpeed(2f)
+        } else {
+            p.setPlaybackSpeed(holdPrevSpeed)
+        }
+    }
+
     private var trackSelector: DefaultTrackSelector? = null
     private var playerListener: Player.Listener? = null
 
@@ -567,6 +579,8 @@ class PlayerActivity : ComponentActivity() {
                 initialVolume          = gestureVolume,
                 initialBrightness      = gestureBrightness,
                 volumeBoostEnabled     = preferencesManager.isVolumeBoostingEnabled(),
+                holdSpeedEnabled       = preferencesManager.isHoldSpeedEnabled(),
+                onHoldSpeedChange      = { holding -> setHoldSpeed(holding) },
                 showCastButton         = com.livetvpro.app.cast.CastManager.isAvailable(),
                 isCastConnected        = isCasting,
                 player                 = player,

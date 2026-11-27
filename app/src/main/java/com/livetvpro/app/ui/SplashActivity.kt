@@ -118,6 +118,10 @@ class SplashActivity : AppCompatActivity() {
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
+    ) { requestLocalNetworkPermission() }
+
+    private val localNetworkPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
     ) { startFetch() }
 
     private val installPermissionLauncher = registerForActivityResult(
@@ -192,8 +196,19 @@ class SplashActivity : AppCompatActivity() {
                 != PackageManager.PERMISSION_GRANTED
             ) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            } else startFetch()
-        } else startFetch()
+            } else requestLocalNetworkPermission()
+        } else requestLocalNetworkPermission()
+    }
+
+    private fun requestLocalNetworkPermission() {
+        if (Build.VERSION.SDK_INT >= 37) {
+            val permission = "android.permission.ACCESS_LOCAL_NETWORK"
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                localNetworkPermissionLauncher.launch(permission)
+                return
+            }
+        }
+        startFetch()
     }
 
     private fun startFetch() {

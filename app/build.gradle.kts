@@ -84,15 +84,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.media3.common.util.UnstableApi",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
-        )
-    }
-
     buildFeatures {
         viewBinding = true
         buildConfig = true
@@ -128,16 +119,26 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.media3.common.util.UnstableApi",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+        )
+    }
+}
+
 dependencies {
     // Core Android
-    implementation("androidx.core:core-ktx:1.17.0")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.13.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation("androidx.core:core-ktx:1.19.1")
+    implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("com.google.android.material:material:1.14.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.2")
     implementation("androidx.drawerlayout:drawerlayout:1.2.0")
 
     // Lifecycle Components
-    val lifecycleVersion = "2.9.1"
+    val lifecycleVersion = "2.11.1"
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion")
@@ -145,23 +146,23 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-process:$lifecycleVersion")
 
     // Navigation Components
-    val navVersion = "2.9.0"
+    val navVersion = "2.10.2"
     implementation("androidx.navigation:navigation-compose:$navVersion")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
 
     // Room Database
-    val roomVersion = "2.7.1"
+    val roomVersion = "2.8.5"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     implementation("androidx.room:room-paging:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    val pagingVersion = "3.3.6"
+    val pagingVersion = "3.5.3"
     implementation("androidx.paging:paging-runtime-ktx:$pagingVersion")
     implementation("androidx.paging:paging-compose:$pagingVersion")
 
     // Jetpack Compose - Required for PlayerActivity
-    val composeBom = platform("androidx.compose:compose-bom:2025.06.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -177,8 +178,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     
     // Activity Compose
-    implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.activity:activity-ktx:1.10.1")
+    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.activity:activity-ktx:1.13.0")
     
     // Compose Runtime
     implementation("androidx.compose.runtime:runtime")
@@ -204,7 +205,7 @@ dependencies {
     implementation("androidx.media3:media3-cast:$media3Version")
     // Google Cast
     implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
-    implementation("androidx.mediarouter:mediarouter:1.7.0")
+    implementation("androidx.mediarouter:mediarouter:1.9.0")
     // Prebuilt FFmpeg decoder AAR by Jellyfin (published to Maven Central).
     // androidx.media3:media3-exoplayer-ffmpeg is NOT on Maven â€” it needs manual native compilation.
     // This drop-in provides the same libffmpegjni.so for all ABIs from the same source.
@@ -226,7 +227,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutinesVersion")
 
     // Dependency Injection - Hilt
-    val hiltVersion = "2.56.2"
+    val hiltVersion = "2.58"
     implementation("com.google.dagger:hilt-android:$hiltVersion")
     ksp("com.google.dagger:hilt-compiler:$hiltVersion")
 
@@ -238,13 +239,13 @@ dependencies {
     implementation("com.caverock:androidsvg-aar:1.4")
 
     // Hilt Navigation Compose
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("androidx.hilt:hilt-navigation-compose:1.4.0")
 
     // RecyclerView
     implementation("androidx.recyclerview:recyclerview:1.4.0")
 
     // SwipeRefreshLayout
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
 
     // JSON - Gson
     implementation("com.google.code.gson:gson:2.13.1")
@@ -253,15 +254,15 @@ dependencies {
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     // Browser
-    implementation("androidx.browser:browser:1.8.0")
+    implementation("androidx.browser:browser:1.10.0")
 
     // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
-    implementation("com.google.firebase:firebase-crashlytics-ktx")
-    implementation("com.google.firebase:firebase-config-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-perf-ktx")
-    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-config")
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-perf")
+    implementation("com.google.firebase:firebase-messaging")
 
     // Lottie Animations
     implementation("com.airbnb.android:lottie:6.6.0")

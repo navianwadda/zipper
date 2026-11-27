@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
+import com.google.firebase.Firebase
+import com.google.firebase.remoteconfig.remoteConfig
 import com.livetvpro.app.data.repository.NativeDataRepository
 import com.livetvpro.app.utils.DeviceUtils
 import dagger.hilt.android.qualifiers.ApplicationContext

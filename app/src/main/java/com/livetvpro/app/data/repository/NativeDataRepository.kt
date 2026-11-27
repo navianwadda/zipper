@@ -1,9 +1,9 @@
 package com.livetvpro.app.data.repository
 
 import android.content.Context
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
-import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
+import com.google.firebase.Firebase
+import com.google.firebase.remoteconfig.remoteConfig
+import com.google.firebase.remoteconfig.remoteConfigSettings
 import com.google.gson.Gson
 import com.livetvpro.app.data.models.Category
 import com.livetvpro.app.data.models.Channel

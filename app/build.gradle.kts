@@ -131,14 +131,14 @@ kotlin {
 
 dependencies {
     // Core Android
-    implementation("androidx.core:core-ktx:1.19.1")
+    implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.appcompat:appcompat:1.8.0")
     implementation("com.google.android.material:material:1.14.0")
     implementation("androidx.constraintlayout:constraintlayout:2.2.2")
     implementation("androidx.drawerlayout:drawerlayout:1.2.0")
 
     // Lifecycle Components
-    val lifecycleVersion = "2.11.1"
+    val lifecycleVersion = "2.9.4"
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion")
@@ -146,7 +146,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-process:$lifecycleVersion")
 
     // Navigation Components
-    val navVersion = "2.10.2"
+    val navVersion = "2.9.6"
     implementation("androidx.navigation:navigation-compose:$navVersion")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
 
@@ -162,7 +162,7 @@ dependencies {
     implementation("androidx.paging:paging-compose:$pagingVersion")
 
     // Jetpack Compose - Required for PlayerActivity
-    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
+    val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -205,7 +205,7 @@ dependencies {
     implementation("androidx.media3:media3-cast:$media3Version")
     // Google Cast
     implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
-    implementation("androidx.mediarouter:mediarouter:1.9.0")
+    implementation("androidx.mediarouter:mediarouter:1.8.1")
     // Prebuilt FFmpeg decoder AAR by Jellyfin (published to Maven Central).
     // androidx.media3:media3-exoplayer-ffmpeg is NOT on Maven â€” it needs manual native compilation.
     // This drop-in provides the same libffmpegjni.so for all ABIs from the same source.
@@ -239,7 +239,7 @@ dependencies {
     implementation("com.caverock:androidsvg-aar:1.4")
 
     // Hilt Navigation Compose
-    implementation("androidx.hilt:hilt-navigation-compose:1.4.0")
+    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
 
     // RecyclerView
     implementation("androidx.recyclerview:recyclerview:1.4.0")

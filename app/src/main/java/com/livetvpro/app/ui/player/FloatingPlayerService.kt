@@ -1377,6 +1377,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 hideControlsHandlers[instanceId]?.removeCallbacksAndMessages(null)
                 hideControlsHandlers.remove(instanceId)
                 try {
+                    activeInstances[instanceId]?.playerView?.player = null
                     windowManager?.removeView(activeInstances[instanceId]?.floatingView)
                 } catch (_: Exception) {}
                 activeInstances.remove(instanceId)
@@ -1863,6 +1864,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
         try { instance.player.release() } catch (_: Exception) {}
 
         try {
+            instance.playerView.player = null
             windowManager?.removeView(instance.floatingView)
         } catch (_: Exception) {}
 

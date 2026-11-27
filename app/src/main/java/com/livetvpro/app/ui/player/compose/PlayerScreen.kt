@@ -407,20 +407,16 @@ private fun RelatedChannelCard(
                         .fillMaxSize()
                         .clip(CircleShape)
                         .background(CardLogoBg),
-                ) {
-                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-                        androidx.compose.ui.platform.LocalContext.current
-                    )
-                    GlideImage(
+                ) {                    GlideImage(
                         model              = channel.logoUrl.takeIf { it.isNotBlank() },
                         contentDescription = channel.name,
                         contentScale       = ContentScale.Crop,
                         modifier           = Modifier.fillMaxSize(),
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.ALL)
-                            .placeholder(appIconRes)
-                            .error(appIconRes)
-                            .fallback(appIconRes)
+                            .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
                     }
                 }
             }
@@ -475,11 +471,7 @@ private fun nowPlayingCardBackground(): Color {
 private fun NowPlayingTeamLogo(
     url: String,
     modifier: Modifier = Modifier,
-) {
-    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-        androidx.compose.ui.platform.LocalContext.current
-    )
-    GlideImage(
+) {    GlideImage(
         model = url.takeIf { it.isNotBlank() },
         contentDescription = null,
         contentScale = ContentScale.Crop,
@@ -488,9 +480,9 @@ private fun NowPlayingTeamLogo(
     ) {
         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
             .override(96, 96)
-            .placeholder(appIconRes)
-            .error(appIconRes)
-            .fallback(appIconRes)
+            .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+            .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+            .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
     }
 }
 

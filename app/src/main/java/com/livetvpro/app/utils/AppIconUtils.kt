@@ -1,6 +1,7 @@
 package com.livetvpro.app.utils
 
 import android.content.Context
+import android.os.Build
 import com.livetvpro.app.R
 
 object AppIconUtils {
@@ -9,6 +10,7 @@ object AppIconUtils {
     private const val KEY_APP_ICON_BLACK = "app_icon_black"
 
     fun isBlackIconActive(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(KEY_APP_ICON_BLACK, false)
     }

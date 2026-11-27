@@ -54,7 +54,7 @@ class LiveTVProApplication : Application() {
         CrashLogger.install(this)
         DeviceUtils.init(this)
         FloatingPlayerManager.initialize(preferencesManager)
-        Handler(Looper.getMainLooper()).post { CastManager.init(this) }
+        Handler(Looper.getMainLooper()).postDelayed({ CastManager.init(this) }, 4000L)
 
         applicationScope.launch {
             try {

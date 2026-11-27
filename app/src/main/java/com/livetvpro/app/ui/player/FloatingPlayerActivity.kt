@@ -1681,6 +1681,7 @@ class FloatingPlayerActivity : ComponentActivity() {
 
             val exo = try {
                 ExoPlayer.Builder(this@FloatingPlayerActivity)
+                    .setLoadControl(PlayerTuning.loadControl(this@FloatingPlayerActivity))
                     .setRenderersFactory(renderersFactory)
                     .setTrackSelector(ts)
                     .setMediaSourceFactory(mediaSourceFactory)
@@ -1699,6 +1700,7 @@ class FloatingPlayerActivity : ComponentActivity() {
                     val safeRenderersFactory = DefaultRenderersFactory(this@FloatingPlayerActivity)
                         .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
                     ExoPlayer.Builder(this@FloatingPlayerActivity)
+                    .setLoadControl(PlayerTuning.loadControl(this@FloatingPlayerActivity))
                         .setRenderersFactory(safeRenderersFactory)
                         .setTrackSelector(ts)
                         .setMediaSourceFactory(mediaSourceFactory)

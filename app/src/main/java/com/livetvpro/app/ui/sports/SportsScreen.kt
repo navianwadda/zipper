@@ -307,7 +307,11 @@ private fun SportChannelCard(
                         .fillMaxSize()
                         .clip(CircleShape)
                         .background(CardLogoBg)
-                ) {                    @OptIn(ExperimentalGlideComposeApi::class)
+                ) {
+                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
+                        androidx.compose.ui.platform.LocalContext.current
+                    )
+                    @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
                         model = channel.logoUrl.takeIf { it.isNotBlank() },
                         contentDescription = channel.name,
@@ -316,9 +320,9 @@ private fun SportChannelCard(
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                             .override(160, 160)
-                            .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
-                            .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
-                            .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .placeholder(appIconRes)
+                            .error(appIconRes)
+                            .fallback(appIconRes)
                     }
                 }
 

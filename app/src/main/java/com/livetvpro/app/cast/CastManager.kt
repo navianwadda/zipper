@@ -2,6 +2,9 @@ package com.livetvpro.app.cast
 
 import android.content.Context
 import android.view.ContextThemeWrapper
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.mediarouter.app.MediaRouteChooserDialog
 import androidx.mediarouter.app.MediaRouteControllerDialog
 import androidx.mediarouter.media.MediaRouteSelector
@@ -73,6 +76,7 @@ object CastManager {
     }
 
     private var castContext: CastContext? = null
+    private var castReady by mutableStateOf(false)
     private var currentSession: CastSession? = null
     private var pendingMedia: PendingCastMedia? = null
 
@@ -116,12 +120,13 @@ object CastManager {
         if (castContext != null) return
         val ctx = runCatching { CastContext.getSharedInstance(context.applicationContext) }.getOrNull() ?: return
         castContext = ctx
+        castReady = true
         ctx.sessionManager.addSessionManagerListener(sessionListener, CastSession::class.java)
         ctx.addCastStateListener(castStateListener)
         ctx.sessionManager.currentCastSession?.takeIf { it.isConnected }?.let { onConnected(it) }
     }
 
-    fun isAvailable(): Boolean = castContext != null
+    fun isAvailable(): Boolean = castReady
 
     fun isConnected(): Boolean = _connectionState.value == CastConnectionState.CONNECTED
 

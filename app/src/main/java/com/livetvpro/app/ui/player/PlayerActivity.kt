@@ -1845,6 +1845,7 @@ class PlayerActivity : ComponentActivity() {
             trackSelector = ts
             val exo = try {
                 ExoPlayer.Builder(this@PlayerActivity)
+                    .setLoadControl(PlayerTuning.loadControl(this@PlayerActivity))
                     .setRenderersFactory(renderersFactory)
                     .setTrackSelector(ts)
                     .setMediaSourceFactory(mediaSourceFactory)
@@ -1863,6 +1864,7 @@ class PlayerActivity : ComponentActivity() {
                     val safeRenderersFactory = DefaultRenderersFactory(this@PlayerActivity)
                         .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
                     ExoPlayer.Builder(this@PlayerActivity)
+                    .setLoadControl(PlayerTuning.loadControl(this@PlayerActivity))
                         .setRenderersFactory(safeRenderersFactory)
                         .setTrackSelector(ts)
                         .setMediaSourceFactory(mediaSourceFactory)

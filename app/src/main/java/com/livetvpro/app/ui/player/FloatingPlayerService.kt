@@ -586,6 +586,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     .build()
             }
             val player = ExoPlayer.Builder(this)
+                .setLoadControl(PlayerTuning.loadControl(this))
                 .setRenderersFactory(renderersFactory)
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(mediaSourceFactory)
@@ -968,6 +969,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     .build()
             }
             val player = ExoPlayer.Builder(this)
+                .setLoadControl(PlayerTuning.loadControl(this))
                 .setRenderersFactory(renderersFactory)
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(nsMediaSourceFactory)
@@ -1119,6 +1121,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     .build()
             }
             val newPlayer = ExoPlayer.Builder(this)
+                .setLoadControl(PlayerTuning.loadControl(this))
                 .setRenderersFactory(renderersFactory2)
                 .setTrackSelector(trackSelector2)
                 .setMediaSourceFactory(mediaSourceFactory)
@@ -1221,6 +1224,7 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                     .build()
             }
             val newPlayer = ExoPlayer.Builder(this)
+                .setLoadControl(PlayerTuning.loadControl(this))
                 .setRenderersFactory(renderersFactory)
                 .setTrackSelector(trackSelector)
                 .setMediaSourceFactory(mediaSourceFactory)
@@ -1819,6 +1823,7 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                         .build()
                 }
                 val newPlayer = ExoPlayer.Builder(this)
+                .setLoadControl(PlayerTuning.loadControl(this))
                     .setRenderersFactory(renderersFactory3)
                     .setTrackSelector(trackSelector3)
                     .setMediaSourceFactory(mediaSourceFactory)

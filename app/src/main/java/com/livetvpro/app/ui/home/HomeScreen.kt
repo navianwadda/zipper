@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.painterResource
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -231,11 +232,7 @@ private fun CategoryCard(
                         .fillMaxSize()
                         .clip(CircleShape)
                         .background(CardLogoBg)
-                ) {
-                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-                        androidx.compose.ui.platform.LocalContext.current
-                    )
-                    @OptIn(ExperimentalGlideComposeApi::class)
+                ) {                    @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
                         model = category.iconUrl?.takeIf { it.isNotBlank() },
                         contentDescription = "Category icon",
@@ -244,9 +241,9 @@ private fun CategoryCard(
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                             .override(160, 160)
-                            .placeholder(appIconRes)
-                            .error(appIconRes)
-                            .fallback(appIconRes)
+                            .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
                     }
                 }
             }

@@ -124,8 +124,7 @@ kotlin {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         freeCompilerArgs.addAll(
             "-opt-in=androidx.media3.common.util.UnstableApi",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-Xskip-metadata-version-check"
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
         )
     }
 }
@@ -258,7 +257,7 @@ dependencies {
     implementation("androidx.browser:browser:1.10.0")
 
     // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.17.0"))
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-config")
     implementation("com.google.firebase:firebase-analytics")

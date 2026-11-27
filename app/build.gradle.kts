@@ -227,7 +227,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutinesVersion")
 
     // Dependency Injection - Hilt
-    val hiltVersion = "2.58"
+    val hiltVersion = "2.60.1"
     implementation("com.google.dagger:hilt-android:$hiltVersion")
     ksp("com.google.dagger:hilt-compiler:$hiltVersion")
 

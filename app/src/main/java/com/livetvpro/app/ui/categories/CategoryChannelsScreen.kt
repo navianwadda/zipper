@@ -212,7 +212,7 @@ fun CategoryChannelsScreen(
                 ScrollableTabRow(
                     selectedTabIndex = selectedIndex,
                     edgePadding = 0.dp,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.weight(1f),
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 ) {

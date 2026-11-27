@@ -79,7 +79,10 @@ class TimerService : Service() {
         super.onCreate()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel()
-            startForeground(NOTIF_ID, buildNotification("Starting…"))
+            try {
+                startForeground(NOTIF_ID, buildNotification("Starting…"))
+            } catch (e: Exception) {
+            }
         }
     }
 
@@ -103,6 +106,13 @@ class TimerService : Service() {
                 }
             }
             else -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    createNotificationChannel()
+                    try {
+                        startForeground(NOTIF_ID, buildNotification("Starting…"))
+                    } catch (e: Exception) {
+                    }
+                }
                 durationSeconds = intent?.getLongExtra(EXTRA_DURATION, 30L) ?: 30L
                 remainingSeconds = durationSeconds
                 startTimeMs = System.currentTimeMillis()

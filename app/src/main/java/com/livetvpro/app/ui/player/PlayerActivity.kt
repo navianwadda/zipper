@@ -1204,7 +1204,11 @@ class PlayerActivity : ComponentActivity() {
     }
     private fun createMediaSession(exo: ExoPlayer) {
         mediaSession?.release()
-        mediaSession = MediaSession.Builder(this, exo).build()
+        mediaSession = null
+        val sessionId = "${packageName}.player.${System.nanoTime()}"
+        mediaSession = MediaSession.Builder(this, exo)
+            .setId(sessionId)
+            .build()
     }
     private fun releaseMediaSession() {
         mediaSession?.release()

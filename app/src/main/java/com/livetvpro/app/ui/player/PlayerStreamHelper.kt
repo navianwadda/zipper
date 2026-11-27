@@ -25,7 +25,7 @@ data class StreamInfo(
 
 object PlayerStreamHelper {
 
-    const val DEFAULT_USER_AGENT = "VLC/3.0.20 LibVLC/3.0.20"
+    const val DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
     fun describeError(error: androidx.media3.common.PlaybackException): String {
         val base = error.localizedMessage ?: "Playback error"

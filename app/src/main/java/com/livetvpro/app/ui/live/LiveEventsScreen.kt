@@ -106,6 +106,7 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
+import androidx.compose.ui.res.painterResource
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -408,11 +409,7 @@ private fun CategoryChip(
                     } else Modifier
                 )
                 .indication(interactionSource, ripple(color = Color.White))
-        ) {
-            val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-                androidx.compose.ui.platform.LocalContext.current
-            )
-            @OptIn(ExperimentalGlideComposeApi::class)
+        ) {            @OptIn(ExperimentalGlideComposeApi::class)
             GlideImage(
                 model = category.logoUrl.takeIf { it.isNotBlank() },
                 contentDescription = category.name,
@@ -424,9 +421,9 @@ private fun CategoryChip(
             ) {
                 it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                     .override(256, 256)
-                    .placeholder(appIconRes)
-                    .error(appIconRes)
-                    .fallback(appIconRes)
+                    .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                    .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                    .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
             }
             Box(
                 modifier = Modifier
@@ -609,11 +606,7 @@ fun LiveEventCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-                        androidx.compose.ui.platform.LocalContext.current
-                    )
-                    @OptIn(ExperimentalGlideComposeApi::class)
+                ) {                    @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
                         model = event.leagueLogo?.takeIf { it.isNotBlank() },
                         contentDescription = null,
@@ -622,9 +615,9 @@ fun LiveEventCard(
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                             .override(96, 96)
-                            .placeholder(appIconRes)
-                            .error(appIconRes)
-                            .fallback(appIconRes)
+                            .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
@@ -704,11 +697,7 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-            androidx.compose.ui.platform.LocalContext.current
-        )
-        @OptIn(ExperimentalGlideComposeApi::class)
+    ) {        @OptIn(ExperimentalGlideComposeApi::class)
         GlideImage(
             model = logoUrl?.takeIf { it.isNotBlank() },
             contentDescription = name,
@@ -719,9 +708,9 @@ private fun TeamSection(name: String, logoUrl: String, modifier: Modifier = Modi
         ) {
             it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                 .override(96, 96)
-                .placeholder(appIconRes)
-                .error(appIconRes)
-                .fallback(appIconRes)
+                .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
         }
         Spacer(modifier = Modifier.height(3.dp))
         Text(

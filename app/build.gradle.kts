@@ -13,12 +13,12 @@ plugins {
 
 android {
     namespace = "com.livetvpro.app"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.livetvpro.app"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 24
         versionName = "2.8"
 

@@ -325,11 +325,7 @@ private fun FavoriteCard(
                         .fillMaxSize()
                         .clip(CircleShape)
                         .background(CardLogoBg)
-                ) {
-                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-                        androidx.compose.ui.platform.LocalContext.current
-                    )
-                    @OptIn(ExperimentalGlideComposeApi::class)
+                ) {                    @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
                         model = favorite.logoUrl.takeIf { it.isNotBlank() },
                         contentDescription = "Channel logo",
@@ -338,9 +334,9 @@ private fun FavoriteCard(
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                             .override(160, 160)
-                            .placeholder(appIconRes)
-                            .error(appIconRes)
-                            .fallback(appIconRes)
+                            .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
                     }
                 }
 

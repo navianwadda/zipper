@@ -68,7 +68,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
@@ -210,11 +209,10 @@ fun CategoryChannelsScreen(
                         )
                     }
                 }
-                val screenWidth = LocalConfiguration.current.screenWidthDp.dp
                 ScrollableTabRow(
                     selectedTabIndex = selectedIndex,
                     edgePadding = 0.dp,
-                    modifier = Modifier.weight(1f).widthIn(max = screenWidth),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 ) {
@@ -384,11 +382,7 @@ private fun ChannelCard(
                         .fillMaxSize()
                         .clip(CircleShape)
                         .background(CardLogoBg)
-                ) {
-                    val appIconRes = com.livetvpro.app.utils.AppIconUtils.currentLauncherRoundIcon(
-                        androidx.compose.ui.platform.LocalContext.current
-                    )
-                    @OptIn(ExperimentalGlideComposeApi::class)
+                ) {                    @OptIn(ExperimentalGlideComposeApi::class)
                     GlideImage(
                         model = channel.logoUrl.takeIf { it.isNotBlank() },
                         contentDescription = "Channel logo",
@@ -397,9 +391,9 @@ private fun ChannelCard(
                     ) {
                         it.diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                             .override(160, 160)
-                            .placeholder(appIconRes)
-                            .error(appIconRes)
-                            .fallback(appIconRes)
+                            .placeholder(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .error(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
+                            .fallback(painterResource(com.livetvpro.app.R.mipmap.ic_launcher_round))
                     }
                 }
 

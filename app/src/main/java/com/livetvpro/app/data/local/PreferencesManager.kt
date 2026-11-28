@@ -36,6 +36,11 @@ class PreferencesManager @Inject constructor(
         private const val KEY_AUTO_SWITCH_STREAM_ENABLED = "auto_switch_stream_enabled"
         private const val KEY_SHOW_CATEGORY_COUNTS = "show_category_counts"
         private const val KEY_HOLD_SPEED_ENABLED = "hold_speed_enabled"
+        private const val KEY_DECODER_MODE = "decoder_mode"
+
+        const val DECODER_MODE_AUTO             = 0
+        const val DECODER_MODE_HARDWARE_ONLY    = 1
+        const val DECODER_MODE_PREFER_SOFTWARE  = 2
 
         const val LAYOUT_MODE_SEEKS_ONLY       = 0
         const val LAYOUT_MODE_SEEKS_AND_NAV    = 1
@@ -98,6 +103,9 @@ class PreferencesManager @Inject constructor(
 
     fun isAutoSwitchStreamEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_SWITCH_STREAM_ENABLED, true)
     fun setAutoSwitchStreamEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_AUTO_SWITCH_STREAM_ENABLED, enabled).apply()
+
+    fun getDecoderMode(): Int = prefs.getInt(KEY_DECODER_MODE, DECODER_MODE_AUTO)
+    fun setDecoderMode(mode: Int) = prefs.edit().putInt(KEY_DECODER_MODE, mode).apply()
 
     private val _showCategoryCounts = MutableStateFlow(prefs.getBoolean(KEY_SHOW_CATEGORY_COUNTS, true))
     val showCategoryCountsFlow: StateFlow<Boolean> = _showCategoryCounts

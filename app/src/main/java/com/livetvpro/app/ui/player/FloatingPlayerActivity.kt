@@ -1667,7 +1667,11 @@ class FloatingPlayerActivity : ComponentActivity() {
             }
 
             val renderersFactory = DefaultRenderersFactory(this@FloatingPlayerActivity)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                .setExtensionRendererMode(when (preferencesManager.getDecoderMode()) {
+                    PreferencesManager.DECODER_MODE_HARDWARE_ONLY -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                    PreferencesManager.DECODER_MODE_PREFER_SOFTWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                    else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                })
                 .setEnableDecoderFallback(true)
 
             val ts = DefaultTrackSelector(this@FloatingPlayerActivity).apply {

@@ -2,6 +2,7 @@ package com.livetvpro.app.ui.player
 
 import android.widget.FrameLayout
 import android.annotation.SuppressLint
+import com.livetvpro.app.data.local.PreferencesManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -576,7 +577,11 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
                 .setKeepPostFor302Redirects(true)
             val mediaSourceFactory = buildDrmMediaSourceFactory(effectiveStreamInfo, dataSourceFactory, headers)
             val renderersFactory = DefaultRenderersFactory(this)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                .setExtensionRendererMode(when (preferencesManager.getDecoderMode()) {
+                    PreferencesManager.DECODER_MODE_HARDWARE_ONLY -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                    PreferencesManager.DECODER_MODE_PREFER_SOFTWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                    else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                })
                 .setEnableDecoderFallback(true)
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
@@ -959,7 +964,11 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             val nsMediaSourceFactory = buildDrmMediaSourceFactory(nsStreamInfo, nsDataSourceFactory, headers)
 
             val renderersFactory = DefaultRenderersFactory(this)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                .setExtensionRendererMode(when (preferencesManager.getDecoderMode()) {
+                    PreferencesManager.DECODER_MODE_HARDWARE_ONLY -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                    PreferencesManager.DECODER_MODE_PREFER_SOFTWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                    else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                })
                 .setEnableDecoderFallback(true)
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
@@ -1111,7 +1120,11 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             try { instance.player.release() } catch (_: Exception) {}
 
             val renderersFactory2 = DefaultRenderersFactory(this)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                .setExtensionRendererMode(when (preferencesManager.getDecoderMode()) {
+                    PreferencesManager.DECODER_MODE_HARDWARE_ONLY -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                    PreferencesManager.DECODER_MODE_PREFER_SOFTWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                    else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                })
                 .setEnableDecoderFallback(true)
             val trackSelector2 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
@@ -1214,7 +1227,11 @@ activeInstances[instanceId]?.channelListCacheKey = parsedChannelListKey
             try { instance.player.release() } catch (_: Exception) {}
 
             val renderersFactory = DefaultRenderersFactory(this)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                .setExtensionRendererMode(when (preferencesManager.getDecoderMode()) {
+                    PreferencesManager.DECODER_MODE_HARDWARE_ONLY -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                    PreferencesManager.DECODER_MODE_PREFER_SOFTWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                    else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                })
                 .setEnableDecoderFallback(true)
             val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                 parameters = buildUponParameters()
@@ -1813,7 +1830,11 @@ inst?.channelListCacheKey?.let { putExtra("extra_channel_list_key", it) }
                 try { instance.player.release() } catch (_: Exception) {}
 
                 val renderersFactory3 = DefaultRenderersFactory(this)
-                    .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                    .setExtensionRendererMode(when (preferencesManager.getDecoderMode()) {
+                        PreferencesManager.DECODER_MODE_HARDWARE_ONLY -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                        PreferencesManager.DECODER_MODE_PREFER_SOFTWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                        else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                    })
                     .setEnableDecoderFallback(true)
                 val trackSelector3 = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(this).apply {
                     parameters = buildUponParameters()
